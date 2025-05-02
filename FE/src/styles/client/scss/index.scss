@@ -1,0 +1,36 @@
+
+@use './components/header';
+@use './components/footer';
+
+@use './mixin';
+@use './variables' as *;
+
+
+@use './pages/home';
+
+body{
+color:var(--text-color);
+font-family: var(--font-family);
+background-color: #e2e8ef;
+margin: 0 !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6, p , a {
+font-family: var(--font-family);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+}
+input[type="date"]::-moz-calendar-picker-indicator {
+    display: none;
+}
+  .swiper-slide {
+            width: auto; 
+        }

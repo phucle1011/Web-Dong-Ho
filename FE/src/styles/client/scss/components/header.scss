@@ -1,0 +1,17 @@
+#mobileMenu {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #mobileMenu {
+        display: block;
+    }
+    #menu{
+        display: none;
+    }
+ .header-content {
+        position: relative !important; 
+        top: 5%;
+        margin-top: 5%;
+    }
+}

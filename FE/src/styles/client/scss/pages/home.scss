@@ -1,0 +1,40 @@
+body:has(#home) header,
+body:has(#booktickets) header,
+body:has(#busDetail) header {
+    background-image: url('../../public/assets/images/main/background.webp');
+    min-height: 35rem;
+    background-size: cover;
+    color: white !important;
+}
+
+header{
+  color: white !important;
+
+}
+#home {
+
+   .content {
+      background-image: url('../../public/assets/images/main/area-banner-vn.webp');
+      background-size: cover;
+     background-position: center;
+      height: 34rem;
+   }
+
+   @keyframes busMove {
+      0% {
+         left: 100%;
+         opacity: 1;
+      }
+
+      100% {
+         left: 60%;
+         transform: translateX(-40%);
+         opacity: 1;
+      }
+   }
+
+   .bus-move {
+      animation: busMove 5s ease-out forwards;
+   }
+
+}
