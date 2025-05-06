@@ -1,34 +1,29 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const CategoryModel = connection.define('categories', {
+const PromotionComboModel = connection.define('promotion_combos', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true
     },
-    name: {
+    promotion_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    combo_name: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    slug: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
-    description: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    status: {
-        type: DataTypes.ENUM('active', 'inactive'),
-        allowNull: false,
-        defaultValue: 'active'
+    discount_value: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
     }
 }, {
-    tableName: 'categories',
+    tableName: 'promotion_combos',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
 });
 
-module.exports = CategoryModel;
+module.exports = PromotionComboModel;

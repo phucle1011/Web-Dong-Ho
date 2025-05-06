@@ -1,7 +1,7 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const CategoryModel = connection.define('categories', {
+const BrandModel = connection.define('brands', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -15,9 +15,17 @@ const CategoryModel = connection.define('categories', {
         type: DataTypes.STRING,
         allowNull: true
     },
+    country: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    logo: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     description: {
         type: DataTypes.TEXT,
-        allowNull: true
+        allowNull: false 
     },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
@@ -25,10 +33,10 @@ const CategoryModel = connection.define('categories', {
         defaultValue: 'active'
     }
 }, {
-    tableName: 'categories',
+    tableName: 'brands',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
 });
 
-module.exports = CategoryModel;
+module.exports = BrandModel;

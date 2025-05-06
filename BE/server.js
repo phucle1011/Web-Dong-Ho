@@ -10,8 +10,6 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
 app.use(cors());
 
-
-
 require('./models/connectModel');
 
 app.use(express.urlencoded({ extended: true }));
@@ -20,7 +18,7 @@ app.use('/public', express.static('public'));
 
 
 
-const port = 3000;
+const port = 5000;
 
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));

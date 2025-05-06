@@ -12,34 +12,34 @@ const PrivateRoute = ({ children }) => {
     const location = useLocation();
 
     const checkLogin = () => {
-        const token = cookies.token;
-        if (!token) {
-            navigate("/login");
-            toast.error("Vui lòng đăng nhập!");
-            return;
-        }
-        try {
-            const decode = jwtDecode(token);
-            const currentPath = location.pathname; 
+        // const token = cookies.token;
+        // if (!token) {
+        //     navigate("/login");
+        //     toast.error("Vui lòng đăng nhập!");
+        //     return;
+        // }
+        // try {
+        //     const decode = jwtDecode(token);
+        //     const currentPath = location.pathname; 
 
-            if (decode.role !== "admin") {
+        //     if (decode.role !== "admin") {
 
-                const allowedPaths = ["/profile", "/bookingHistory"];
-                if (decode.role === "customer" && allowedPaths.includes(currentPath)) {
-                    setIsAllowed(true); 
-                    return;
-                }
+        //         const allowedPaths = ["/profile", "/bookingHistory"];
+        //         if (decode.role === "customer" && allowedPaths.includes(currentPath)) {
+        //             setIsAllowed(true); 
+        //             return;
+        //         }
 
-                navigate("/");
-                toast.error("Bạn không có quyền truy cập trang này!");
+        //         navigate("/");
+        //         toast.error("Bạn không có quyền truy cập trang này!");
 
-            } else {
-                setIsAllowed(true);
-            }
-        } catch (error) {
-            toast.error("Token không hợp lệ!");
-            navigate("/login");
-        }
+        //     } else {
+        //         setIsAllowed(true);
+        //     }
+        // } catch (error) {
+        //     toast.error("Token không hợp lệ!");
+        //     navigate("/login");
+        // }
     };
 
     useEffect(() => {
