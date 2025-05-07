@@ -81,7 +81,7 @@ PromotionComboModel.hasMany(PromotionModel, { foreignKey: 'promotion_combo_id', 
 PromotionModel.belongsTo(PromotionComboModel, { foreignKey: 'promotion_combo_id', as: 'combo' });
 
 // Orders - OrderItems
-OrderModel.hasMany(OrderItemsModel, { foreignKey: 'order_id', as: 'orderDetails' });
+OrderModel.hasMany(OrderItemsModel, { foreignKey: 'order_id', as: 'orderDetails', onDelete: 'CASCADE' });
 OrderItemsModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order'});
 
 // OrderItems - Product

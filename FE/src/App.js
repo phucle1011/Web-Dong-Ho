@@ -17,6 +17,7 @@ import BookingTickets from "./pages/client/BookingTickets";
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
+import OrderDetail from "./pages/admin/order/detail";
 
 
 const AppRoutes = () => {
@@ -63,6 +64,7 @@ const AppRoutes = () => {
         <Route index element={<Dashboard />} />
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
+          <Route path="detail/:id" element={<OrderDetail/>}/>
         </Route>
 
       </Route>

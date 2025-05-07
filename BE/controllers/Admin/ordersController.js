@@ -1,6 +1,7 @@
 const OrderModel = require('../../models/ordersModel');
 const OrderItemsModel = require('../../models/orderItemsModel');
 const ProductModel = require('../../models/productsModel');
+const UserModel = require('../../models/usersModel'); 
 const { Op } = require('sequelize');
 
 class OrderController {
@@ -8,12 +9,12 @@ class OrderController {
     static async get(req, res) {
         try {
             const orders = await OrderModel.findAll({
-                order: [['created_at', 'DESC']], 
+                order: [['created_at', 'DESC']],
                 include: [
                     {
                         model: OrderItemsModel,
                         as: 'orderDetails',
-                        attributes: ['quantity'],
+                        attributes: ['quantity', 'price'],
                         include: [
                             {
                                 model: ProductModel,
@@ -21,14 +22,25 @@ class OrderController {
                                 attributes: ['name', 'discount_price']
                             }
                         ]
+                    },
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email', 'phone']
                     }
                 ]
             });
-            
+    
+            const result = orders.map(order => {
+                const orderData = order.toJSON();
+                delete orderData.user_id;
+                return orderData;
+            });
+    
             res.status(200).json({
                 status: 200,
                 message: "Lấy danh sách thành công",
-                data: orders,
+                data: result,
             });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -41,17 +53,22 @@ class OrderController {
             const order = await OrderModel.findByPk(id, {
                 include: [
                     {
-                        model: OrderItemsModel,  
-                        as: 'orderDetails',  
-                        attributes: ['quantity'],
+                        model: OrderItemsModel,
+                        as: 'orderDetails',
+                        attributes: ['quantity', 'price'],
                         include: [
                             {
-                                model: ProductModel, 
-                                as: 'product', 
-                                attributes: ['title', 'price'], 
-                            },
-                        ],
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['name', 'discount_price']
+                            }
+                        ]
                     },
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email', 'phone']
+                    }
                 ],
             });
     
@@ -59,15 +76,17 @@ class OrderController {
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
     
+            const orderData = order.toJSON();
+            delete orderData.user_id;
+    
             res.status(200).json({
                 status: 200,
-                data: order,
+                data: orderData,
             });
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
-    }
-    
+    }     
 
     static async update(req, res) {
         try {
@@ -118,7 +137,7 @@ class OrderController {
             }
 
             if (order.status !== "Chờ xác nhận") {
-                return res.status(400).json({ message: "Chỉ được xóa đơn hàng đang Chờ xác nhận" });
+                return res.status(400).json({ message: "Chỉ được xóa đơn hàng có trạng thái là 'Chờ xác nhận'" });
             }
 
             await order.destroy();
@@ -128,43 +147,6 @@ class OrderController {
             res.status(500).json({ error: error.message });
         }
     }
-
-    static async searchOrder(req, res) {
-        try {
-          const { searchTerm } = req.query;
-      
-          if (!searchTerm || searchTerm.trim() === '') {
-            return res.status(400).json({ message: 'Vui lòng cung cấp từ khóa tìm kiếm.' });
-          }
-      
-          console.log("Từ khóa tìm kiếm:", searchTerm);
-      
-          const orders = await OrderModel.findAll({
-            where: {
-              [Op.or]: [
-                { name: { [Op.like]: `%${searchTerm}%` } }  // Đổi lại đúng tên trường
-              ]
-            }
-          });
-      
-          if (orders.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy đơn hàng nào.' });
-          }
-      
-          const result = orders.map(order => ({
-            ...order.dataValues
-          }));
-      
-          return res.status(200).json({
-            message: 'Tìm kiếm đơn hàng thành công',
-            data: result
-          });
-      
-        } catch (error) {
-          console.error('Lỗi khi tìm kiếm đơn hàng:', error);
-          return res.status(500).json({ message: 'Lỗi server' });
-        }
-      }
 }
 
 module.exports = OrderController;
