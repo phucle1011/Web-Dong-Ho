@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Constants from "../../../Constants";
+import Constants from "../../../../Constants";
 import { Link } from "react-router-dom";
 
 function CartPage() {
@@ -43,9 +43,9 @@ function CartPage() {
                         <td><h6 className="fw-normal mb-0">{item.id}</h6></td>
                         <td><h6 className="fw-normal mb-0">{item.user_name}</h6></td>
                         <td><h6 className="fw-normal mb-0">{item.product_name}</h6></td>
-                        <td><h6 className="fw-normal mb-0">{Number(item.total_price).toLocaleString()} đ</h6></td>
+                        <td><h6 className="fw-normal mb-0">{Number(item.total_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</h6></td>
                         <td>
-                          <Link to={`/admin/cart/${item.id}`} className="btn btn-info btn-sm">
+                          <Link to={`/admin/carts/detail/${item.id}`} className="btn btn-info btn-sm">
                             Xem
                           </Link>
                         </td>

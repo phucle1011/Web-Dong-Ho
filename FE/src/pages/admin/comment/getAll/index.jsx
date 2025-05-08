@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Constants from "../../../Constants";
+import Constants from "../../../../Constants";
 import { Link } from "react-router-dom";
 function CommentPage() {
   const [comments, setComments] = useState([]);
@@ -46,13 +46,10 @@ function CommentPage() {
                         <td><p className="mb-0 fw-normal">{comment.comment_text}</p></td>
                         <td><p className="mb-0 fw-normal">{comment.rating}</p></td>
                         <td>
-                          {/* Sử dụng Link để điều hướng */}
-                          <Link to={`/admin/comment/${comment.id}`} className="btn btn-info btn-sm">
+                          <Link to={`/admin/comments/detail/${comment.id}`} className="btn btn-info btn-sm">
                             Xem chi tiết
                           </Link>
                         </td> 
-
-
                       </tr>
                     ))}
                     {comments.length === 0 && (

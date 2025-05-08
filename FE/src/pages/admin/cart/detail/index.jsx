@@ -49,7 +49,7 @@ function CartDetailPage() {
                     </div>
                     <div className="row mb-2">
                       <div className="col-md-3 fw-semibold">Giá:</div>
-                      <div className="col-md-9">{Number(item.price).toLocaleString()} đ</div>
+                      <div className="col-md-9">{Number(item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</div>
                     </div>
                     <div className="row mb-2">
                       <div className="col-md-3 fw-semibold">Số lượng:</div>
@@ -57,7 +57,7 @@ function CartDetailPage() {
                     </div>
                     <div className="row mb-2">
                       <div className="col-md-3 fw-semibold">Tổng tiền:</div>
-                      <div className="col-md-9">{Number(item.total_price).toLocaleString()} đ</div>
+                      <div className="col-md-9">{Number(item.total_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</div>
                     </div>
                     <div className="row mb-2">
                       <div className="col-md-3 fw-semibold">Thêm lúc:</div>

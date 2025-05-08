@@ -18,10 +18,10 @@ import BookingTickets from "./pages/client/BookingTickets";
 import OrderGetAll from "./pages/admin/order/getAll";
 import UserList from './pages/admin/user/getAll';
 import UserDetail from './pages/admin/user/detail';
-import CommentPage from "./pages/admin/comment/index";
-import CommentDetailPage from "./pages/admin/comment/comment-detail";
-import CartPage from "./pages/admin/cart/index";
-import CartDetailPage from "./pages/admin/cart/cart-detail/index";
+import CommentPage from "./pages/admin/comment/getAll";
+import CommentDetailPage from "./pages/admin/comment/detail";
+import CartPage from "./pages/admin/cart/getAll";
+import CartDetailPage from "./pages/admin/cart/detail";
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
@@ -71,22 +71,24 @@ const AppRoutes = () => {
         <Route index element={<Dashboard />} />
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
-          <Route path="detail/:id" element={<OrderDetail/>}/>
+          <Route path="detail/:id" element={<OrderDetail />} />
         </Route>
         <Route path="order_history">
-          <Route path="getAll" element={<OrderHistoryGetAll/>} />
-          <Route path="detail/:id" element={<OrderHistoryDetail/>}/>
+          <Route path="getAll" element={<OrderHistoryGetAll />} />
+          <Route path="detail/:id" element={<OrderHistoryDetail />} />
         </Route>
-
         <Route path="user">
           <Route path="getAll" element={<UserList />} />
           <Route path="detail/:id" element={<UserDetail />} />
         </Route>
-
-          <Route path="comment" element={<CommentPage />} />
-          <Route path="comment/:id" element={<CommentDetailPage />} />
-          <Route path="cart" element={<CartPage />} />
-          <Route path="cart/:id" element={<CartDetailPage />} />
+        <Route path="comments">
+          <Route path="getAll" element={<CommentPage />} />
+          <Route path="detail/:id" element={<CommentDetailPage />} />
+        </Route>
+        <Route path="carts">
+          <Route path="getAll" element={<CartPage />} />
+          <Route path="detail/:id" element={<CartDetailPage />} />
+        </Route>
       </Route>
     </Routes>
   );
