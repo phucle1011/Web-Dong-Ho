@@ -4,11 +4,14 @@ const ProductModel = require('../../models/productsModel');
 const UserModel = require('../../models/usersModel'); 
 const { Op } = require('sequelize');
 
-class OrderController {
+class OrderHistory {
 
     static async get(req, res) {
         try {
             const orders = await OrderModel.findAll({
+                where: {
+                    status: 'Đã giao hàng thành công'
+                },
                 order: [['created_at', 'DESC']],
                 include: [
                     {
@@ -45,12 +48,17 @@ class OrderController {
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
-    }
+    }     
     
     static async getById(req, res) {
         try {
             const { id } = req.params;
-            const order = await OrderModel.findByPk(id, {
+    
+            const order = await OrderModel.findOne({
+                where: {
+                    id: id,
+                    status: 'Đã giao hàng thành công'
+                },
                 include: [
                     {
                         model: OrderItemsModel,
@@ -69,11 +77,11 @@ class OrderController {
                         as: 'user',
                         attributes: ['id', 'name', 'email', 'phone']
                     }
-                ],
+                ]
             });
     
             if (!order) {
-                return res.status(404).json({ message: "Id không tồn tại" });
+                return res.status(404).json({ message: "Đơn hàng không tồn tại hoặc không ở trạng thái 'Đã giao hàng thành công'" });
             }
     
             const orderData = order.toJSON();
@@ -86,67 +94,7 @@ class OrderController {
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
-    }     
-
-    static async update(req, res) {
-        try {
-            const { id } = req.params;
-            const {
-                name,
-                status,
-                address,
-                phone,
-                email,
-                total_price,
-                payment_method_id
-            } = req.body;
-    
-            const order = await OrderModel.findByPk(id);
-            if (!order) {
-                return res.status(404).json({ message: "Id không tồn tại" });
-            }
-    
-            // Chỉ cập nhật nếu có dữ liệu truyền vào
-            if (name !== undefined) order.name = name;
-            if (status !== undefined) order.status = status;
-            if (address !== undefined) order.address = address;
-            if (phone !== undefined) order.phone = phone;
-            if (email !== undefined) order.email = email;
-            if (total_price !== undefined) order.total_price = total_price;
-            if (payment_method_id !== undefined) order.payment_method_id = payment_method_id;
-    
-            await order.save();
-    
-            res.status(200).json({
-                message: "Cập nhật thành công",
-                order
-            });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
-    
-
-    static async delete(req, res) {
-        try {
-            const { id } = req.params;
-
-            const order = await OrderModel.findByPk(id);
-            if (!order) {
-                return res.status(404).json({ message: "Id không tồn tại" });
-            }
-
-            if (order.status !== "Chờ xác nhận") {
-                return res.status(400).json({ message: "Chỉ được xóa đơn hàng có trạng thái là 'Chờ xác nhận'" });
-            }
-
-            await order.destroy();
-
-            res.status(200).json({ message: "Xóa thành công" });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
+    }    
 }
 
-module.exports = OrderController;
+module.exports = OrderHistory;

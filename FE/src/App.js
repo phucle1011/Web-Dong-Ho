@@ -18,6 +18,8 @@ import BookingTickets from "./pages/client/BookingTickets";
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
 import OrderDetail from "./pages/admin/order/detail";
+import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
+import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
 
 
 const AppRoutes = () => {
@@ -66,7 +68,10 @@ const AppRoutes = () => {
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail/>}/>
         </Route>
-
+        <Route path="order_history">
+          <Route path="getAll" element={<OrderHistoryGetAll/>} />
+          <Route path="detail/:id" element={<OrderHistoryDetail/>}/>
+        </Route>
       </Route>
     </Routes>
   );
