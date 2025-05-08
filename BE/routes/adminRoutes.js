@@ -3,7 +3,7 @@ const router = express.Router();
 const OrderController = require('../controllers/Admin/ordersController');
 const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 const CommentController = require('../controllers/Admin/commentsController');
-
+const CartController = require('../controllers/Admin/cartsControlles');
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
@@ -24,7 +24,8 @@ router.get('/comment/list', CommentController.getAllComments);
 router.get('/comment/:id', CommentController.getCommentById);
 
 
-
-
+//------------------[ CART ]------------------\
+router.get('/cart/list', CartController.getAllCart);
+router.get('/cart/:id', CartController.getCartDetail);
 
 module.exports = router;

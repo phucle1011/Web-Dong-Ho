@@ -18,6 +18,8 @@ import BookingTickets from "./pages/client/BookingTickets";
 import OrderGetAll from "./pages/admin/order/getAll";
 import CommentPage from "./pages/admin/comment/index";
 import CommentDetailPage from "./pages/admin/comment/comment-detail";
+import CartPage from "./pages/admin/cart/index";
+import CartDetailPage from "./pages/admin/cart/cart-detail/index";
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
@@ -75,6 +77,8 @@ const AppRoutes = () => {
         </Route>
           <Route path="comment" element={<CommentPage />} />
           <Route path="comment/:id" element={<CommentDetailPage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="cart/:id" element={<CartDetailPage />} />
       </Route>
     </Routes>
   );

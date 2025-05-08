@@ -4,8 +4,6 @@ class CommentController {
     // Lấy tất cả bình luận
     static async getAllComments(req, res) {
         try {
-            console.log("GET /comment/list - Fetching all comments...");
-
             const comments = await CommentModel.findAll({
                 include: [
                     {
@@ -40,7 +38,6 @@ class CommentController {
                 }))
             });
         } catch (error) {
-            console.error("Error fetching comments:", error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -49,8 +46,6 @@ class CommentController {
     static async getCommentById(req, res) {
         try {
             const { id } = req.params;
-            console.log(`GET /comment/${id} - Fetching comment by ID: ${id}`);
-
             const comment = await CommentModel.findByPk(id, {
                 include: [
                     {
@@ -84,7 +79,6 @@ class CommentController {
                 }
             });
         } catch (error) {
-            console.error("Error fetching comment by ID:", error);
             res.status(500).json({ error: error.message });
         }
     }
