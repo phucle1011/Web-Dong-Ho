@@ -8,7 +8,6 @@ import Bus from "./pages/client/Bus";
 import AboutUs from "./pages/client/About-us";
 import Blog from "./pages/client/Blog";
 import Contact from "./pages/client/Contact";
-import BusDetail from "./pages/client/BusDetail";
 import BookingHistory from "./pages/client/BookingHistory";
 import Profile from "./pages/client/Profile";
 import Login from "./pages/authenticator/Login";
@@ -17,6 +16,8 @@ import BookingTickets from "./pages/client/BookingTickets";
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
+import CommentPage from "./pages/admin/comment/index";
+import CommentDetailPage from "./pages/admin/comment/comment-detail";
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
@@ -72,6 +73,8 @@ const AppRoutes = () => {
           <Route path="getAll" element={<OrderHistoryGetAll/>} />
           <Route path="detail/:id" element={<OrderHistoryDetail/>}/>
         </Route>
+          <Route path="comment" element={<CommentPage />} />
+          <Route path="comment/:id" element={<CommentDetailPage />} />
       </Route>
     </Routes>
   );
