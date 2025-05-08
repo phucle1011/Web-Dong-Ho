@@ -112,8 +112,8 @@ function Aside() {
             <li className="nav-small-cap">
               <span className="hide-menu">Quản lý người dùng</span>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/users/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/users/getAll">
+            <li className={`sidebar-item ${location.pathname === "/admin/user/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/user/getAll">
                 <FaUser />
                 <span className="hide-menu">Quản lý người dùng</span>
               </Link>

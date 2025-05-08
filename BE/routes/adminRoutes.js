@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const OrderController = require('../controllers/Admin/ordersController');
+const UserController = require('../controllers/Admin/userController');
+
+
 const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 const CommentController = require('../controllers/Admin/commentsController');
 const CartController = require('../controllers/Admin/cartsControlles');
@@ -18,11 +21,16 @@ router.get('/order-history/:id', OrderHistoryController.getById);
 router.put('/orders/:id', OrderController.update); 
 router.delete("/orders/:id", OrderController.delete);
 
+//------------------[ USERS ]------------------
+router.get('/user/list', UserController.get);
+router.get('/user/search', UserController.searchUser);
+router.get('/user/:id', UserController.getById); 
+router.put('/user/:id/status', UserController.updateUserStatus);
+router.post('/user/:id/addresses', UserController.addAddressToUser);
 
 //------------------[ COMMENTS ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
 router.get('/comment/:id', CommentController.getCommentById);
-
 
 //------------------[ CART ]------------------\
 router.get('/cart/list', CartController.getAllCart);

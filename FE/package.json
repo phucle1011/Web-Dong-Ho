@@ -45,6 +45,7 @@
     "react-toastify": "^11.0.5",
     "simplebar": "^6.3.0",
     "simplebar-react": "^3.3.0",
+    "sweetalert2": "^11.21.0",
     "swiper": "^11.2.6",
     "timezone": "^1.0.23",
     "utc": "^0.1.0",

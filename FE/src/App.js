@@ -16,6 +16,8 @@ import BookingTickets from "./pages/client/BookingTickets";
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
+import UserList from './pages/admin/user/getAll';
+import UserDetail from './pages/admin/user/detail';
 import CommentPage from "./pages/admin/comment/index";
 import CommentDetailPage from "./pages/admin/comment/comment-detail";
 import CartPage from "./pages/admin/cart/index";
@@ -75,6 +77,12 @@ const AppRoutes = () => {
           <Route path="getAll" element={<OrderHistoryGetAll/>} />
           <Route path="detail/:id" element={<OrderHistoryDetail/>}/>
         </Route>
+
+        <Route path="user">
+          <Route path="getAll" element={<UserList />} />
+          <Route path="detail/:id" element={<UserDetail />} />
+        </Route>
+
           <Route path="comment" element={<CommentPage />} />
           <Route path="comment/:id" element={<CommentDetailPage />} />
           <Route path="cart" element={<CartPage />} />
