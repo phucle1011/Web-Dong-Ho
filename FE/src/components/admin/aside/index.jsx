@@ -81,7 +81,7 @@ function Aside() {
               </Link>
             </li>
             <li className={`sidebar-item ${location.pathname === "/admin/discounts/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/discountsType/getAll">
+              <Link className="sidebar-link" to="/admin/discounts/getAll">
                 <FaPercent />
                 <span className="hide-menu">Quản lý giảm giá</span>
               </Link>

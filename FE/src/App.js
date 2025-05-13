@@ -16,6 +16,14 @@ import BookingTickets from "./pages/client/BookingTickets";
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
+import CategoryGetAll from "./pages/admin/category/getAll";
+import CategoryCreate from "./pages/admin/category/Create";
+import CategoryEdit from "./pages/admin/category/Edit";
+
+
+
+
+
 import UserList from './pages/admin/user/getAll';
 import UserDetail from './pages/admin/user/detail';
 import CommentPage from "./pages/admin/comment/getAll";
@@ -89,6 +97,13 @@ const AppRoutes = () => {
           <Route path="getAll" element={<CartPage />} />
           <Route path="detail/:id" element={<CartDetailPage />} />
         </Route>
+
+        <Route path="categories">
+          <Route path="getAll" element={<CategoryGetAll />} />
+          <Route path="create" element={<CategoryCreate />} />
+          <Route path="edit/:id" element={<CategoryEdit />} />
+        </Route>
+
       </Route>
     </Routes>
   );

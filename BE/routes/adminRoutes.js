@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const OrderController = require('../controllers/Admin/ordersController');
+const categoryController = require('../controllers/Admin/categoryController');
+
 const UserController = require('../controllers/Admin/userController');
 
 
@@ -22,6 +24,14 @@ router.get('/order-history/list', OrderHistoryController.get);
 router.get('/order-history/:id', OrderHistoryController.getById); 
 router.put('/orders/:id', OrderController.update); 
 router.delete("/orders/:id", OrderController.delete);
+
+//------------------[ CATEGORY ]------------------
+router.get("/category/list", categoryController.getAll);
+router.post('/category/create', categoryController.create);
+router.get("/category/:id", categoryController.getById);
+router.put('/category/:id', categoryController.update);
+router.delete('/category/:id', categoryController.delete);
+
 
 //------------------[ USERS ]------------------
 router.get('/user/list', UserController.get);
