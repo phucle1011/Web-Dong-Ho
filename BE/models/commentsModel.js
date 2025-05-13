@@ -11,11 +11,7 @@ const CommentModel = connection.define('comments', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    product_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    },
-    order_id: {
+    order_detail_id: {
         type: DataTypes.INTEGER,
         allowNull: true
     },

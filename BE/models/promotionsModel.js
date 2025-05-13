@@ -31,6 +31,18 @@ const PromotionModel = connection.define('promotions', {
         type: DataTypes.DATE,
         allowNull: false 
     },
+    quantity: {
+        type: DataTypes.INTEGER,
+        allowNull: false 
+    },
+    applicable_to: {
+        type: DataTypes.ENUM('order', 'product'),
+        allowNull: false 
+    },
+    min_price_threshold: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false 
+    },
     status: {
         type: DataTypes.ENUM('active','inactive','upcoming','expired'),
         allowNull: false,

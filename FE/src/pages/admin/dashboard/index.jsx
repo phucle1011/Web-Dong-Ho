@@ -11,20 +11,20 @@ function Dashboard() {
   const [year, setYear] = useState(2025);
   const [revenue, setRevenue] = useState(0);
 
-  const fetchRevenue = async () => {
-    try {
-      const res = await fetch(`http://localhost:5000/admin/revenue?month=${month}&year=${year}`);
-      const data = await res.json();
-      console.log("Kết quả JSON:", data);
-      setRevenue(data.revenue);
-    } catch (err) {
-      console.error("Lỗi khi fetch doanh thu:", err);
-    }
-  };
+  // const fetchRevenue = async () => {
+  //   try {
+  //     const res = await fetch(`http://localhost:5000/admin/revenue?month=${month}&year=${year}`);
+  //     const data = await res.json();
+  //     console.log("Kết quả JSON:", data);
+  //     setRevenue(data.revenue);
+  //   } catch (err) {
+  //     console.error("Lỗi khi fetch doanh thu:", err);
+  //   }
+  // };
 
-  useEffect(() => {
-    fetchRevenue();
-  }, [month, year]);
+  // useEffect(() => {
+  //   fetchRevenue();
+  // }, [month, year]);
 
   // Gọi chart render
   useEffect(() => {
@@ -49,7 +49,7 @@ function Dashboard() {
       <div className="row">
         <div className="col-lg-8 d-flex align-items-stretch">
           <div className="card w-100">
-            <div className="card-body">
+            {/* <div className="card-body">
               <div className="row align-items-center mb-3">
                 <div className="col-md-6">
                   <h5 className="card-title fw-semibold mb-0">Tổng Quan Doanh Thu</h5>
@@ -83,7 +83,7 @@ function Dashboard() {
               <div className="alert alert-primary fw-bold text-center mb-0" role="alert">
   Tổng doanh thu tháng {month}, {year}: {revenue.toLocaleString('vi-VN')} VNĐ
 </div>
-            </div>
+            </div> */}
           </div>
         </div>
 

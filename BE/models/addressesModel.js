@@ -1,46 +1,41 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const DiscountModel = connection.define('discounts', {
+const AddressModel = connection.define('address', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true
     },
-    product_id: {
+    user_id: {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    code: {
+    address_line: {
         type: DataTypes.STRING,
         allowNull: true
     },
-    discount_percent: {
-        type: DataTypes.INTEGER,
+    city: {
+        type: DataTypes.STRING,
         allowNull: true
     },
-    discount_price: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true
-    },
-    start_date: {
-        type: DataTypes.DATE,
+    district: {
+        type: DataTypes.STRING,
         allowNull: false 
     },
-    end_date: {
-        type: DataTypes.DATE,
+    province: {
+        type: DataTypes.STRING,
         allowNull: false 
     },
-    status: {
-        type: DataTypes.ENUM('active','expired'),
-        allowNull: false,
-        defaultValue: 'active'
+    is_default: {
+        type: DataTypes.TINYINT,
+        allowNull: false 
     }
 }, {
-    tableName: 'discounts',
+    tableName: 'address',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'
 });
 
-module.exports = DiscountModel;
+module.exports = AddressModel;

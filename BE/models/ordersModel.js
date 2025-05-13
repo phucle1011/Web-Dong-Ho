@@ -11,6 +11,10 @@ const OrderModel = connection.define('orders', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    promotion_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     total_price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: true
@@ -43,12 +47,7 @@ const OrderModel = connection.define('orders', {
     note: {
         type: DataTypes.TEXT,
         allowNull: false 
-    },
-    is_deleted: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 0
-    }    
+    } 
 }, {
     tableName: 'orders',
     timestamps: true,

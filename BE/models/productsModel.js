@@ -15,8 +15,8 @@ const ProductModel = connection.define('products', {
             type: DataTypes.TEXT,
             allowNull: true
         },
-        stock: {
-            type: DataTypes.INTEGER,
+        slug: {
+            type: DataTypes.STRING,
             allowNull: true
         },
         brand_id: {
@@ -27,68 +27,12 @@ const ProductModel = connection.define('products', {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        discount_price: {
-            type: DataTypes.DECIMAL(10, 2),
-            allowNull: false
-        },
-        quantity: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        watch_type: {
+        thumbnail: {
             type: DataTypes.STRING,
-            allowNull: false
-        },
-        movement: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        dial_color: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        case_material: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        strap_material: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        water_resistance: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        glass_material: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        size: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        weight: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        battery_life: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        features: {
-            type: DataTypes.TEXT,
-            allowNull: false
-        },
-        image: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        gallery_images: {
-            type: DataTypes.JSON,
             allowNull: false
         },
         status: {
-            type: DataTypes.ENUM('active','inactive'),
+            type: DataTypes.TINYINT,
             allowNull: false,
             defaultValue: 'active'
         }

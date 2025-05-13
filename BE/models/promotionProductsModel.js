@@ -11,17 +11,9 @@ const PromotionProductModel = connection.define('promotion_products', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    product_id: {
+    product_variant_id: {
         type: DataTypes.INTEGER,
         allowNull: true
-    },
-    discount_type: {
-        type: DataTypes.ENUM('fixed','percentage'),
-        allowNull: true
-    },
-    discount_value: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
     }
 }, {
     tableName: 'promotion_roducts',

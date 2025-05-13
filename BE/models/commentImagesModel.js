@@ -1,24 +1,23 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const WishlistModel = connection.define('wishlists', {
+const CommentImagesModel = connection.define('comment_images', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true
     },
-    user_id: {
+    comment_id: {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    product_variant_id: {
-        type: DataTypes.INTEGER,
+    image_url: {
+        type: DataTypes.STRING,
         allowNull: true
     }
 }, {
-    tableName: 'wishlists',
-    timestamps: true,
-    createdAt: 'created_at'
+    tableName: 'comment_images',
+    timestamps: true
 });
 
-module.exports = WishlistModel;
+module.exports = CommentImagesModel;

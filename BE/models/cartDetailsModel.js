@@ -1,7 +1,7 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const CartModel = connection.define('carts', {
+const CartDetail = connection.define('cart_details', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -11,7 +11,7 @@ const CartModel = connection.define('carts', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    product_id: {
+    product_variant_id: {
         type: DataTypes.INTEGER,
         allowNull: false
     },
@@ -19,17 +19,9 @@ const CartModel = connection.define('carts', {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 1
-    },
-    price: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
-    },
-    total_price: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
     }
 }, {
-    tableName: 'carts',
+    tableName: 'cart_details',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
@@ -43,4 +35,4 @@ const CartModel = connection.define('carts', {
     }
 });
 
-module.exports = CartModel;
+module.exports = CartDetail;

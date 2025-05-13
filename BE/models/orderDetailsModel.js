@@ -1,13 +1,13 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const OrderitemModel = connection.define('order_items', {
+const OrderDetailModel = connection.define('order_items', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true
     },
-    product_id: {
+    product_variant_id: {
         type: DataTypes.INTEGER,
         allowNull: true
     },
@@ -30,4 +30,4 @@ const OrderitemModel = connection.define('order_items', {
     updatedAt: 'updated_at'
 });
 
-module.exports = OrderitemModel;
+module.exports = OrderDetailModel;

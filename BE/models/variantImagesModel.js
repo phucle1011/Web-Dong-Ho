@@ -1,24 +1,23 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const WishlistModel = connection.define('wishlists', {
+const VariantImagesModel = connection.define('variant_images', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true
     },
-    user_id: {
+    variant_id: {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    product_variant_id: {
-        type: DataTypes.INTEGER,
+    image_url: {
+        type: DataTypes.STRING,
         allowNull: true
     }
 }, {
-    tableName: 'wishlists',
-    timestamps: true,
-    createdAt: 'created_at'
+    tableName: 'variant_images',
+    timestamps: true
 });
 
-module.exports = WishlistModel;
+module.exports = VariantImagesModel;
