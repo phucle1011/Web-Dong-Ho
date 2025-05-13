@@ -75,7 +75,7 @@ function CommentDetailPage() {
                 </tbody>
               </table>
               <div className="mt-3">
-                <Link to="/admin/comment" className="btn btn-secondary btn-sm">
+                <Link to="/admin/comment/getAll" className="btn btn-secondary btn-sm">
                   Quay lại danh sách
                 </Link>
               </div>

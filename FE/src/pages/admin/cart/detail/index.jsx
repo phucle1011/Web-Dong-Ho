@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants";
 import { useParams } from "react-router-dom";
-
+import { Link } from "react-router-dom";
 function CartDetailPage() {
   const [cartItems, setCartItems] = useState([]);
   const { id } = useParams();

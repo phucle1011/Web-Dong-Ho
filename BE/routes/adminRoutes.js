@@ -9,6 +9,8 @@ const UserController = require('../controllers/Admin/userController');
 const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 const CommentController = require('../controllers/Admin/commentsController');
 const CartController = require('../controllers/Admin/cartsControlles');
+const AddressController = require('../controllers/Admin/addressController');
+const UserController = require('../controllers/Admin/userController');
 const DashboardController = require('../controllers/Admin/dashboardController');
 
 //------------------[ ADMIN ROUTES ]------------------
@@ -51,4 +53,13 @@ router.get('/cart/:id', CartController.getCartDetail);
 //------------------[ DISHBOARD ]------------------
 router.get('/revenue', DashboardController.getTotalRevenue);
 
+//------------------[ ADDRESS ]------------------\
+router.get('/address/list', AddressController.getAllAddresses);
+router.get('/address/:id', AddressController.getAddressById);
+router.post('/address/add', AddressController.addAddress);
+router.put('/address/edit/:id', AddressController.updateAddress);
+router.delete('/address/delete/:id', AddressController.deleteAddress);
+
+
+router.get('/user/list', UserController.getAllUsers);
 module.exports = router;
