@@ -7,6 +7,8 @@ const UserController = require('../controllers/Admin/userController');
 const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 const CommentController = require('../controllers/Admin/commentsController');
 const CartController = require('../controllers/Admin/cartsControlles');
+const DashboardController = require('../controllers/Admin/dashboardController');
+
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
@@ -35,5 +37,8 @@ router.get('/comment/:id', CommentController.getCommentById);
 //------------------[ CART ]------------------\
 router.get('/cart/list', CartController.getAllCart);
 router.get('/cart/:id', CartController.getCartDetail);
+
+//------------------[ DISHBOARD ]------------------
+router.get('/revenue', DashboardController.getTotalRevenue);
 
 module.exports = router;
