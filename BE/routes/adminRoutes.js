@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 // const OrderController = require('../controllers/Admin/ordersController');
-// const categoryController = require('../controllers/Admin/categoryController');
+const categoryController = require('../controllers/Admin/categoryController');
 // const UserController = require('../controllers/Admin/userController');
 // const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 // const CommentController = require('../controllers/Admin/commentsController');
@@ -25,11 +25,11 @@ const router = express.Router();
 // router.delete("/orders/:id", OrderController.delete);
 
 //------------------[ CATEGORY ]------------------
-// router.get("/category/list", categoryController.getAll);
-// router.post('/category/create', categoryController.create);
-// router.get("/category/:id", categoryController.getById);
-// router.put('/category/:id', categoryController.update);
-// router.delete('/category/:id', categoryController.delete);
+router.get("/category/list", categoryController.getAll);
+router.post('/category/create', categoryController.create);
+router.get("/category/:id", categoryController.getById);
+router.put('/category/:id', categoryController.update);
+router.delete('/category/:id', categoryController.delete);
 
 
 //------------------[ USERS ]------------------
