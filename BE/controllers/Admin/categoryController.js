@@ -3,7 +3,11 @@ const { Op } = require('sequelize');
 
 class CategoryController {
   static async getAll(req, res) {
-    const { searchTerm } = req.query;
+    const { searchTerm = '', page = 1, limit = 10 } = req.query;
+    const pageNumber = parseInt(page);
+    const pageSize = parseInt(limit);
+    const offset = (pageNumber - 1) * pageSize;
+
     try {
       const whereClause = searchTerm
         ? {
@@ -12,15 +16,25 @@ class CategoryController {
           },
         }
         : {};
-      const categories = await CategoryModel.findAll({
+      const { rows: categories, count: totalItems } = await CategoryModel.findAndCountAll({
         where: whereClause,
-        order: [["created_at", "DESC"]],
+        limit: pageSize,
+        offset: offset,
+        order: [['created_at', 'DESC']],
       });
+
+      const totalPages = Math.ceil(totalItems / pageSize);
 
       res.status(200).json({
         status: 200,
         message: "Lấy danh sách danh mục thành công",
         data: categories,
+        pagination: {
+          totalItems,
+          totalPages,
+          currentPage: pageNumber,
+          perPage: pageSize,
+        },
       });
     } catch (error) {
       console.error("Lỗi khi lấy danh sách danh mục:", error);
@@ -30,6 +44,7 @@ class CategoryController {
       });
     }
   }
+
 
 
   static async create(req, res) {

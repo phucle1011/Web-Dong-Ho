@@ -4,22 +4,32 @@ import axios from "axios";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import FormDelete from "../../../../components/formDelete";
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+} from "react-icons/fa";
 
 function CategoryGetAll() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const perPage = 10;
 
   useEffect(() => {
-    getCategories();
-  }, []);
+    getCategories(currentPage, searchTerm);
+  }, [currentPage]);
 
-  const getCategories = async (search = '') => {
+  const getCategories = async (page = 1, search = "") => {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/category/list`, {
-        params: { searchTerm: search }
+        params: { page, limit: perPage, searchTerm: search },
       });
       setCategories(res.data.data || []);
+      setTotalPages(res.data.pagination?.totalPages || 1);
       if (search && (res.data.data || []).length === 0) {
         toast.info("Không tìm thấy danh mục nào.");
       }
@@ -35,7 +45,11 @@ function CategoryGetAll() {
     try {
       await axios.delete(`${Constants.DOMAIN_API}/admin/category/${selectedCategory.id}`);
       toast.success("Xóa danh mục thành công");
-      getCategories(searchTerm);
+      if (categories.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        getCategories(currentPage, searchTerm);
+      }
     } catch (error) {
       console.error("Lỗi khi xóa danh mục:", error);
       if (error.response?.data?.error?.includes("foreign key constraint fails")) {
@@ -46,6 +60,77 @@ function CategoryGetAll() {
     } finally {
       setSelectedCategory(null);
     }
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    getCategories(1, searchTerm);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setCurrentPage(1);
+    getCategories(1, "");
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPagination = () => {
+    const pages = [];
+    const start = Math.max(1, currentPage - 1);
+    const end = Math.min(totalPages, currentPage + 1);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => handlePageChange(i)}
+          className={`px-3 py-1 border rounded ${i === currentPage ? "bg-blue-600 text-white" : "bg-white"}`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex justify-center items-center gap-1 mt-4">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => handlePageChange(1)}
+          className="px-2 py-1 border rounded disabled:opacity-50"
+        >
+          <FaAngleDoubleLeft />
+        </button>
+        <button
+          disabled={currentPage === 1}
+          onClick={() => handlePageChange(currentPage - 1)}
+          className="px-2 py-1 border rounded disabled:opacity-50"
+        >
+          <FaChevronLeft />
+        </button>
+
+        {pages}
+
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => handlePageChange(currentPage + 1)}
+          className="px-2 py-1 border rounded disabled:opacity-50"
+        >
+          <FaChevronRight />
+        </button>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => handlePageChange(totalPages)}
+          className="px-2 py-1 border rounded disabled:opacity-50"
+        >
+          <FaAngleDoubleRight />
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -68,19 +153,25 @@ function CategoryGetAll() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              getCategories(searchTerm);
-            }
+            if (e.key === "Enter") handleSearch();
           }}
         />
         <button
-          onClick={() => getCategories(searchTerm)}
-          className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
+          onClick={handleSearch}
+          className="bg-[#073272] text-white px-4 py-2 rounded"
         >
           <i className="fa fa-search"></i>
         </button>
-      </div>
 
+        {searchTerm && (
+          <button
+            onClick={handleClearSearch}
+           className="bg-[#073272] text-white px-4 py-2 text-sm rounded whitespace-nowrap"
+          >
+            Xem tất cả
+          </button>
+        )}
+      </div>
 
       <table className="w-full table-auto border border-collapse border-gray-300">
         <thead className="bg-gray-100">
@@ -96,7 +187,7 @@ function CategoryGetAll() {
         <tbody>
           {categories.map((cat, index) => (
             <tr key={cat.id} className="hover:bg-gray-50">
-              <td className="border p-2 text-center">{index + 1}</td>
+              <td className="border p-2 text-center">{(currentPage - 1) * perPage + index + 1}</td>
               <td className="border p-2">{cat.name}</td>
               <td className="border p-2">{cat.description || "-"}</td>
               <td className="border p-2 text-center">
@@ -130,6 +221,8 @@ function CategoryGetAll() {
           ))}
         </tbody>
       </table>
+
+      {renderPagination()}
 
       {selectedCategory && (
         <FormDelete
