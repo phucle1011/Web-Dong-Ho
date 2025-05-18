@@ -62,8 +62,8 @@ BrandModel.hasMany(ProductModel, { foreignKey: 'brand_id', as: 'products' });
 ProductModel.belongsTo(BrandModel, { foreignKey: 'brand_id', as: 'brand' });
 
 // Product - Promotion
-ProductModel.hasMany(PromotionModel, { foreignKey: 'product_id', as: 'promotions' });
-PromotionModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+// ProductModel.hasMany(PromotionModel, { foreignKey: 'product_id', as: 'promotions' });
+// PromotionModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
 
 // Orders - OrderDetails
 OrderModel.hasMany(OrderDetailModel, { foreignKey: 'order_id', as: 'orderDetails' });

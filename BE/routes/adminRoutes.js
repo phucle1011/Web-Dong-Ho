@@ -11,7 +11,7 @@ const OrderHistoryController = require('../controllers/Admin/orderHistoryControl
 // const AddressController = require('../controllers/Admin/addressController');
 // const UserController = require('../controllers/Admin/userController');
 // const DashboardController = require('../controllers/Admin/dashboardController');
-const  promotionProductsController  = require('../controllers/Admin/promotionProductsController');
+const promotionController = require('../controllers/Admin/promotionController');
 
 
 //------------------[ ADMIN ROUTES ]------------------
@@ -30,14 +30,6 @@ router.get('/order-history/list', OrderHistoryController.get);
 router.get('/order-history/:id', OrderHistoryController.getById); 
 router.put('/orders/:id', OrderController.update); 
 router.delete("/orders/:id", OrderController.delete);
-
-//------------------[ CATEGORY ]------------------
-router.get("/category/list", categoryController.getAll);
-router.post('/category/create', categoryController.create);
-router.get("/category/:id", categoryController.getById);
-router.put('/category/:id', categoryController.update);
-router.delete('/category/:id', categoryController.delete);
-
 
 //------------------[ USERS ]------------------
 // router.get('/user/list', UserController.get);
@@ -67,13 +59,19 @@ router.delete('/category/:id', categoryController.delete);
 //------------------[ USERS ]------------------\
 // router.get('/user/list', UserController.getAllUsers);
 
+//------------------[ CATEGORY ]------------------
+router.get("/category/list", categoryController.getAll);
+router.post('/category/create', categoryController.create);
+router.get("/category/:id", categoryController.getById);
+router.put('/category/:id', categoryController.update);
+router.delete('/category/:id', categoryController.delete);
 
-//------------------[ PROMOTION PRODUCTS ]-----------------
+//------------------[ promotions ]------------------
+router.get('/promotions/list', promotionController.getAll);
+router.post("/promotions/create", promotionController.create);
+router.get("/promotions/:id", promotionController.getById);
+router.put('/promotions/:id', promotionController.update);
+router.delete("/promotion/:id", promotionController.delete);
 
-router.get('/promotion', promotionProductsController.getAll);
-router.get('/promotion:id', promotionProductsController.getById);
-router.post('/promotion-products', promotionProductsController.create);
-// router.put('/promotion:id', controller.update);
-// router.delete('/promotion:id', controller.remove);
 
 module.exports = router;

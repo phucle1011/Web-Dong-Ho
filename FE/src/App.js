@@ -33,8 +33,9 @@ import UserDetail from './pages/admin/user/detail';
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
-import PromotionProductList from "./pages/admin/promotionProducts/getAll";
-import PromotionProductForm from "./pages/admin/promotionProducts/Create";
+import PromotionGetAll from "./pages/admin/promotions/getAll";
+import PromotionCreate from "./pages/admin/promotions/Create";
+import PromotionEdit from "./pages/admin/promotions/Edit";
 
 
 const AppRoutes = () => {
@@ -100,20 +101,22 @@ const AppRoutes = () => {
           <Route path="detail/:id" element={<CartDetailPage />} />
         </Route> */}
 
-        <Route path="categories">
-          <Route path="getAll" element={<CategoryGetAll />} />
-          <Route path="create" element={<CategoryCreate />} />
-          <Route path="edit/:id" element={<CategoryEdit />} />
-        </Route>
         <Route path="address">
           <Route path="getAll" element={<AddressList />} />
           <Route path="add" element={<AddressAdd />} />
           <Route path="edit/:id" element={<AddressEdit />} />
         </Route>
-         <Route path="promotion">
-          <Route path="getAll" element={<PromotionProductList />} />
-          <Route path="add" element={<PromotionProductForm />} />
 
+        <Route path="categories">
+          <Route path="getAll" element={<CategoryGetAll />} />
+          <Route path="create" element={<CategoryCreate />} />
+          <Route path="edit/:id" element={<CategoryEdit />} />
+        </Route>
+
+        <Route path="promotions">
+          <Route path="getAll" element={<PromotionGetAll />} />
+          <Route path="create" element={<PromotionCreate />} />
+          <Route path="edit/:id" element={<PromotionEdit />} />
         </Route>
 
       </Route>
