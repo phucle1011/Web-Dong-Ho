@@ -12,6 +12,9 @@ const OrderDetailModel = require('./orderDetailsModel');
 const BrandModel = require('./brandsModel');
 const ProductVariantModel = require('./productVariantsModel');
 const PromotionProductModel = require('./promotionProductsModel');
+const OrderDetailModel = require('../models/orderDetailsModel');
+const BrandModel = require('../models/brandsModel');
+const ProductVariantsModel = require('../models/productVariantsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
@@ -72,6 +75,17 @@ OrderDetailModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
 // OrderDetails - Product
 OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
 ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
+// OrderItems - Product
+OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' }); 
+ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
+
+// OrderDetailModel - ProductVariants
+OrderDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' }); 
+ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id', as: 'orderDetails' });
+
+// ProductVariantsModel - ProductModel
+ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'variantProduct' }); 
+ProductModel.hasMany(ProductVariantsModel, { foreignKey: 'product_id', as: 'variants' });
 
 // PromotionProduct - ProductVariant
 PromotionProductModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id' });

@@ -1,7 +1,7 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const OrderDetailModel = connection.define('order_items', {
+const OrderDetailModel = connection.define('order_details', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -24,7 +24,7 @@ const OrderDetailModel = connection.define('order_items', {
         allowNull: true
     }
 }, {
-    tableName: 'order_items',
+    tableName: 'order_details',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at'

@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const OrderController = require('../controllers/Admin/ordersController');
+// const categoryController = require('../controllers/Admin/categoryController');
 // const OrderController = require('../controllers/Admin/ordersController');
 const categoryController = require('../controllers/Admin/categoryController');
 // const UserController = require('../controllers/Admin/userController');
-// const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
+const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 // const CommentController = require('../controllers/Admin/commentsController');
 // const CartController = require('../controllers/Admin/cartsControlles');
 // const AddressController = require('../controllers/Admin/addressController');
@@ -15,16 +17,19 @@ const  promotionProductsController  = require('../controllers/Admin/promotionPro
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
-// router.get('/orders/list', OrderController.get);
-// router.get('/orders/:id', OrderController.getById); 
-// router.put('/orders/edit/:id', OrderController.update); 
-// router.delete("/orders/delete/:id", OrderController.delete);
+router.get('/orders/search', OrderController.searchOrders);
+router.get('/orders/track/:orderCode', OrderController.trackOrder);
+router.get('/orders/list', OrderController.get);
+router.get('/orders/:id', OrderController.getById); 
+router.put('/orders/edit/:id', OrderController.update); 
+router.delete("/orders/delete/:id", OrderController.delete);
 
 //------------------[ ORDERHISTORY ]------------------
-// router.get('/order-history/list', OrderHistoryController.get);
-// router.get('/order-history/:id', OrderHistoryController.getById); 
-// router.put('/orders/:id', OrderController.update); 
-// router.delete("/orders/:id", OrderController.delete);
+router.get('/order-history/search', OrderHistoryController.searchOrderHistory);
+router.get('/order-history/list', OrderHistoryController.get);
+router.get('/order-history/:id', OrderHistoryController.getById); 
+router.put('/orders/:id', OrderController.update); 
+router.delete("/orders/:id", OrderController.delete);
 
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getAll);
