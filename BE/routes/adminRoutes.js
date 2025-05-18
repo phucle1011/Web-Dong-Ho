@@ -1,16 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const OrderController = require('../controllers/Admin/ordersController');
-// const categoryController = require('../controllers/Admin/categoryController');
-// const OrderController = require('../controllers/Admin/ordersController');
 const categoryController = require('../controllers/Admin/categoryController');
-// const UserController = require('../controllers/Admin/userController');
+const UserController = require('../controllers/Admin/userController');
 const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
-// const CommentController = require('../controllers/Admin/commentsController');
-// const CartController = require('../controllers/Admin/cartsControlles');
-// const AddressController = require('../controllers/Admin/addressController');
-// const DashboardController = require('../controllers/Admin/dashboardController');
-// const  promotionProductsController  = require('../controllers/Admin/promotionProductsController');
 const WishlistController = require('../controllers/Admin/wishlistController')
 const promotionController = require('../controllers/Admin/promotionController');
 const PromotionProductController = require('../controllers/Admin/promotionProductsController');
@@ -26,28 +19,16 @@ router.get('/orders/:id', OrderController.getById);
 router.put('/orders/edit/:id', OrderController.update); 
 router.delete("/orders/delete/:id", OrderController.delete);
 
-
-//------------------[ USERS ]------------------
-router.get('/user/list', UserController.get);
-router.get('/user/search', UserController.searchUser);
-router.get('/user/:id', UserController.getById); 
-router.put('/user/:id/status', UserController.updateUserStatus);
-
-
-
-//------------------[ ORDERHISTORY ]------------------
-router.get('/order-history/search', OrderHistoryController.searchOrderHistory);
-router.get('/order-history/list', OrderHistoryController.get);
-router.get('/order-history/:id', OrderHistoryController.getById); 
-router.put('/orders/:id', OrderController.update); 
-router.delete("/orders/:id", OrderController.delete);
-
 //------------------[ USERS ]------------------
 // router.get('/user/list', UserController.get);
 // router.get('/user/search', UserController.searchUser);
 // router.get('/user/:id', UserController.getById); 
 // router.put('/user/:id/status', UserController.updateUserStatus);
-// router.post('/user/:id/addresses', UserController.addAddressToUser);
+
+//------------------[ ORDERHISTORY ]------------------
+router.get('/order-history/search', OrderHistoryController.searchOrderHistory);
+router.get('/order-history/list', OrderHistoryController.get);
+router.get('/order-history/:id', OrderHistoryController.getById); 
 
 //------------------[ COMMENTS ]------------------\
 // router.get('/comment/list', CommentController.getAllComments);
@@ -57,8 +38,6 @@ router.delete("/orders/:id", OrderController.delete);
 // router.get('/cart/list', CartController.getAllCart);
 // router.get('/cart/:id', CartController.getCartDetail);
 
-//------------------[ DISHBOARD ]------------------
-// router.get('/revenue', DashboardController.getTotalRevenue);
 
 //------------------[ ADDRESS ]------------------\
 // router.get('/address/list', AddressController.getAllAddresses);
@@ -80,17 +59,11 @@ router.delete("/orders/:id", OrderController.delete);
 // router.delete('/promotion:id', controller.remove);
 
 //------------------[ WISHLIST ]------------------
-// Lấy danh sách sản phẩm yêu thích của một người dùng
 router.get('/users/:userId/wishlist', WishlistController.getWishlistByUser);
-
-// Thêm sản phẩm vào danh sách yêu thích của người dùng
 router.post('/wishlist', WishlistController.addToWishlist);
-
-// Xóa sản phẩm khỏi danh sách yêu thích của người dùng
 router.delete('/users/:userId/wishlist/:productVariantId', WishlistController.removeFromWishlist);
-
-// Tìm kiếm sản phẩm yêu thích của người dùng theo tên sản phẩm
 router.get('/users/wishlist/search', WishlistController.searchWishlist);
+
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getAll);
 router.post('/category/create', categoryController.create);
@@ -106,11 +79,11 @@ router.put('/promotions/:id', promotionController.update);
 router.delete("/promotion/:id", promotionController.delete);
 
 //------------------[ PROMOTION PRODUCTS ]------------------
-router.get('/promotion', PromotionProductController.getAll);
-router.get('/promotion/:id', PromotionProductController.getById);
+router.get('/promotion-products', PromotionProductController.getAll);
+router.get('/promotion-products/:id', PromotionProductController.getById);
 router.post('/promotion-products', PromotionProductController.create);
-router.put('/promotion/:id', PromotionProductController.update);
-router.delete('/promotion/:id', PromotionProductController.remove);
+router.put('/promotion-products/:id', PromotionProductController.update);
+router.delete('/promotion-products/:id', PromotionProductController.remove);
 
 
 module.exports = router;

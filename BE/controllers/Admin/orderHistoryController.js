@@ -130,7 +130,7 @@ class OrderHistory {
             const orders = await OrderModel.findAll({
                 where: {
                     [Op.and]: [
-                        { status: 'Đã giao hàng thành công' },
+                        { status: 'delivered' },
                         {
                             [Op.or]: [
                                 {
