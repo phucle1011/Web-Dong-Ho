@@ -163,42 +163,84 @@ function OrderHistoryGetAll() {
       </div>
 
       <div className="flex justify-center mt-4 items-center">
-        <button
-          disabled={currentPage === 1}
-          onClick={() => handlePageChange(1)}
-          className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded mr-2"
-        >
-          <FaAngleDoubleLeft className="h-5 w-5" />
-        </button>
+        <div className="flex items-center space-x-1">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaAngleDoubleLeft />
+          </button>
 
-        <button
-          disabled={currentPage === 1}
-          onClick={() => handlePageChange(currentPage - 1)}
-          className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded mr-2"
-        >
-          <FaChevronLeft className="h-5 w-5" />
-        </button>
+          <button
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaChevronLeft />
+          </button>
 
-        <span className="mx-2">
-          Trang {currentPage} / {totalPages || 1}
-        </span>
+          {currentPage > 2 && (
+            <>
+              <button
+                onClick={() => handlePageChange(1)}
+                className="px-3 py-1 border rounded"
+              >
+                1
+              </button>
+              {currentPage > 3 && <span className="px-2">...</span>}
+            </>
+          )}
 
-        <button
-          disabled={currentPage === totalPages}
-          onClick={() => handlePageChange(currentPage + 1)}
-          className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded ml-2"
-        >
-          <FaChevronRight className="h-5 w-5" />
-        </button>
+          {[...Array(totalPages)].map((_, i) => {
+            const page = i + 1;
+            if (page >= currentPage - 1 && page <= currentPage + 1) {
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 border rounded ${currentPage === page
+                      ? "bg-blue-500 text-white"
+                      : "bg-blue-100 text-black hover:bg-blue-200"
+                    }`}
+                >
+                  {page}
+                </button>
+              );
+            }
+            return null;
+          })}
 
-        <button
-          disabled={currentPage === totalPages}
-          onClick={() => handlePageChange(totalPages)}
-          className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded ml-2"
-        >
-          <FaAngleDoubleRight className="h-5 w-5" />
-        </button>
+          {currentPage < totalPages - 1 && (
+            <>
+              {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                className="px-3 py-1 border rounded"
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaChevronRight />
+          </button>
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(totalPages)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaAngleDoubleRight />
+          </button>
+        </div>
       </div>
+
     </div>
   );
 }

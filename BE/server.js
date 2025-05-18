@@ -16,8 +16,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use('/public', express.static('public'));
 
-
-
 const port = 5000;
 
 app.use(express.json());

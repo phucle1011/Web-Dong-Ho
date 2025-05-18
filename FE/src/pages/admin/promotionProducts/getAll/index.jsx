@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom"; // ✅ Thêm dòng này
+import { Link } from "react-router-dom";
+import Constants from "../../../../Constants.jsx";
 
 const PromotionProductList = () => {
   const [promotionProducts, setPromotionProducts] = useState([]);
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/admin/promotion")
+      .get(`${Constants.DOMAIN_API}/admin/promotion`)
       .then((response) => {
         setPromotionProducts(response.data);
       })

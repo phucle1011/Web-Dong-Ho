@@ -10,11 +10,8 @@ const CartDetailModel = require('./cartDetailsModel');
 const PromotionModel = require('./promotionsModel');
 const OrderDetailModel = require('./orderDetailsModel');
 const BrandModel = require('./brandsModel');
-const ProductVariantModel = require('./productVariantsModel');
+const ProductVariantsModel = require('./productVariantsModel');
 const PromotionProductModel = require('./promotionProductsModel');
-const OrderDetailModel = require('../models/orderDetailsModel');
-const BrandModel = require('../models/brandsModel');
-const ProductVariantsModel = require('../models/productVariantsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
@@ -74,7 +71,7 @@ OrderDetailModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
 
 // OrderDetails - Product
 OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
-ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
+
 // OrderItems - Product
 OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' }); 
 ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
@@ -88,13 +85,13 @@ ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'va
 ProductModel.hasMany(ProductVariantsModel, { foreignKey: 'product_id', as: 'variants' });
 
 // PromotionProduct - ProductVariant
-PromotionProductModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id' });
+PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
 
 // ProductVariant - Product
-ProductVariantModel.belongsTo(ProductModel, { foreignKey: 'product_id' });
+ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id' });
 
 PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id' });
-PromotionProductModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id' });
+PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
 
 // Export all models
 module.exports = {
@@ -110,6 +107,6 @@ module.exports = {
   BrandModel,
   PromotionModel,
   OrderDetailModel,
-  ProductVariantModel,
+  ProductVariantsModel,
   PromotionProductModel
 };
