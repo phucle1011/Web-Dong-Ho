@@ -1,5 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import Constants from "../../../../Constants.jsx";
 import { useNavigate } from 'react-router-dom';
 
 import axios from 'axios';
@@ -17,7 +18,7 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const onSubmit = async (data) => {
     try {
-      await axios.post('http://localhost:3000/admin/promotion-products', data); // sửa URL nếu khác
+await axios.post(`${Constants.DOMAIN_API}/admin/promotion-products`, data); // sửa URL nếu khác
       alert('Thêm promotion_product thành công!');
     
       reset();

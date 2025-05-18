@@ -36,14 +36,40 @@ exports.getAll = async (req, res) => {
 };
 
 // GET by ID
+// exports.getById = async (req, res) => {
+//   try {
+//     const data = await PromotionProductModel.findByPk(req.params.id, {
+//       include: [
+//         {
+//           model: ProductVariant,
+//           attributes: ['sku', 'price', 'stock'],
+//           include: [{ model: ProductModel, attributes: ['name'] }]
+//         },
+//         {
+//           model: Promotion,
+//           attributes: ['name']
+//         }
+//       ]
+//     });
+//     if (!data) return res.status(404).json({ message: 'Not found' });
+//     res.json(data);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 exports.getById = async (req, res) => {
   try {
-    const data = await PromotionProductModel.findByPk(req.params.id, {
+    const id = req.params.id;
+    console.log('Received ID:', id);
+
+    const data = await PromotionProductModel.findByPk(id, {
       include: [
         {
           model: ProductVariant,
           attributes: ['sku', 'price', 'stock'],
-          include: [{ model: ProductModel, attributes: ['name'] }]
+          include: [
+            { model: ProductModel, attributes: ['name'] }
+          ]
         },
         {
           model: Promotion,
@@ -51,9 +77,15 @@ exports.getById = async (req, res) => {
         }
       ]
     });
-    if (!data) return res.status(404).json({ message: 'Not found' });
+
+    console.log('Data found:', data);
+
+    if (!data) {
+      return res.status(404).json({ message: 'Promotion product not found' });
+    }
     res.json(data);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };

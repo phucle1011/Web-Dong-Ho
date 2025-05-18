@@ -59,19 +59,13 @@ router.delete("/orders/:id", OrderController.delete);
 //------------------[ USERS ]------------------\
 // router.get('/user/list', UserController.getAllUsers);
 
-//------------------[ CATEGORY ]------------------
-router.get("/category/list", categoryController.getAll);
-router.post('/category/create', categoryController.create);
-router.get("/category/:id", categoryController.getById);
-router.put('/category/:id', categoryController.update);
-router.delete('/category/:id', categoryController.delete);
 
-//------------------[ promotions ]------------------
-router.get('/promotions/list', promotionController.getAll);
-router.post("/promotions/create", promotionController.create);
-router.get("/promotions/:id", promotionController.getById);
-router.put('/promotions/:id', promotionController.update);
-router.delete("/promotion/:id", promotionController.delete);
+//------------------[ PROMOTION PRODUCTS ]-----------------
 
+router.get('/promotion', promotionProductsController.getAll);
+router.get('/promotion/:id', promotionProductsController.getById);
+router.post('/promotion-products', promotionProductsController.create);
+router.put('/promotion/:id', promotionProductsController.update);
+router.delete('/promotion/:id', promotionProductsController.remove);
 
 module.exports = router;
