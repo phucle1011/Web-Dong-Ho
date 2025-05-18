@@ -5,11 +5,13 @@ const ProductModel = require('./productsModel');
 const CommentModel = require('./commentsModel');
 const OrderModel = require('./ordersModel');
 const WishlistModel = require('./wishlistsModel');
-const CategoriesModel = require('../models/categoriesModel');
-const CartDetailModel = require('../models/cartDetailsModel');
+const CategoriesModel = require('./categoriesModel');
+const CartDetailModel = require('./cartDetailsModel');
 const PromotionModel = require('./promotionsModel');
-const OrderDetailModel = require('../models/orderDetailsModel');
-const BrandModel = require('../models/brandsModel');
+const OrderDetailModel = require('./orderDetailsModel');
+const BrandModel = require('./brandsModel');
+const ProductVariantModel = require('./productVariantsModel');
+const PromotionProductModel = require('./promotionProductsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
@@ -63,26 +65,37 @@ ProductModel.belongsTo(BrandModel, { foreignKey: 'brand_id', as: 'brand' });
 ProductModel.hasMany(PromotionModel, { foreignKey: 'product_id', as: 'promotions' });
 PromotionModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
 
-// Orders - OrderItems
-OrderModel.hasMany(OrderDetailModel, { foreignKey: 'order_id', as: 'orderDetails', onDelete: 'CASCADE' });
-OrderDetailModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order'});
+// Orders - OrderDetails
+OrderModel.hasMany(OrderDetailModel, { foreignKey: 'order_id', as: 'orderDetails' });
+OrderDetailModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
 
-// OrderItems - Product
-OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product'});
-ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems'});
+// OrderDetails - Product
+OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
 
+// PromotionProduct - ProductVariant
+PromotionProductModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id' });
 
+// ProductVariant - Product
+ProductVariantModel.belongsTo(ProductModel, { foreignKey: 'product_id' });
+
+PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id' });
+PromotionProductModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id' });
+
+// Export all models
 module.exports = {
-    UserModel,
-    AddressesModel,
-    NotificationModel,
-    ProductModel,
-    CommentModel,
-    OrderModel,
-    WishlistModel,
-    CategoriesModel,
-    CartDetailModel,
-    BrandModel,
-    PromotionModel,
-    OrderDetailModel
+  UserModel,
+  AddressesModel,
+  NotificationModel,
+  ProductModel,
+  CommentModel,
+  OrderModel,
+  WishlistModel,
+  CategoriesModel,
+  CartDetailModel,
+  BrandModel,
+  PromotionModel,
+  OrderDetailModel,
+  ProductVariantModel,
+  PromotionProductModel
 };

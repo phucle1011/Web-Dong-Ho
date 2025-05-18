@@ -13,6 +13,8 @@ import Profile from "./pages/client/Profile";
 import Login from "./pages/authenticator/Login";
 import Register from "./pages/authenticator/Register";
 import BookingTickets from "./pages/client/BookingTickets";
+import { Link } from "react-router-dom";
+
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
@@ -31,6 +33,8 @@ import UserDetail from './pages/admin/user/detail';
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
+import PromotionProductList from "./pages/admin/promotionProducts/getAll";
+import PromotionProductForm from "./pages/admin/promotionProducts/Create";
 
 
 const AppRoutes = () => {
@@ -105,6 +109,11 @@ const AppRoutes = () => {
           <Route path="getAll" element={<AddressList />} />
           <Route path="add" element={<AddressAdd />} />
           <Route path="edit/:id" element={<AddressEdit />} />
+        </Route>
+         <Route path="promotion">
+          <Route path="getAll" element={<PromotionProductList />} />
+          <Route path="add" element={<PromotionProductForm />} />
+
         </Route>
 
       </Route>

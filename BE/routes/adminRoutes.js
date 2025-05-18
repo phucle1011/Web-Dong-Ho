@@ -9,6 +9,8 @@ const categoryController = require('../controllers/Admin/categoryController');
 // const AddressController = require('../controllers/Admin/addressController');
 // const UserController = require('../controllers/Admin/userController');
 // const DashboardController = require('../controllers/Admin/dashboardController');
+const  promotionProductsController  = require('../controllers/Admin/promotionProductsController');
+
 
 //------------------[ ADMIN ROUTES ]------------------
 
@@ -59,5 +61,14 @@ router.delete('/category/:id', categoryController.delete);
 
 //------------------[ USERS ]------------------\
 // router.get('/user/list', UserController.getAllUsers);
+
+
+//------------------[ PROMOTION PRODUCTS ]-----------------
+
+router.get('/promotion', promotionProductsController.getAll);
+router.get('/promotion:id', promotionProductsController.getById);
+router.post('/promotion-products', promotionProductsController.create);
+// router.put('/promotion:id', controller.update);
+// router.delete('/promotion:id', controller.remove);
 
 module.exports = router;
