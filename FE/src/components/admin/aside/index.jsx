@@ -50,12 +50,6 @@ function Aside() {
                 <span className="hide-menu">Quản lý thương hiệu</span>
               </Link>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/product_combos/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/product_combos/getAll">
-                <FaBox />
-                <span className="hide-menu">Quản lý sản phẩm combo</span>
-              </Link>
-            </li>
 
             <li className="nav-small-cap">
               <span className="hide-menu">Quản lý giảm giá</span>
@@ -142,12 +136,6 @@ function Aside() {
               <Link className="sidebar-link" to="/admin/notifications/getAll">
                 <FaBell />
                 <span className="hide-menu">Quản lý thông báo </span>
-              </Link>
-            </li>
-             <li className={`sidebar-item ${location.pathname === "/admin/product/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/product/getAll">
-                <FaBell />
-                <span className="hide-menu">Quản </span>
               </Link>
             </li>
           </ul>
