@@ -20,7 +20,7 @@ const OrderModel = connection.define('orders', {
         allowNull: true
     },
     status: {
-        type: DataTypes.ENUM('pending','paid','shipped','completed','canceled'),
+        type: DataTypes.ENUM('pending','confirmed','shipping','completed','delivered','cancelled'),
         allowNull: false,
         defaultValue: 'pending'
     },

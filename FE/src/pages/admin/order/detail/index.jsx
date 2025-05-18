@@ -33,7 +33,7 @@ function OrderDetail() {
   };
   
   const totalAmount = Array.isArray(orderDetails) ? orderDetails.reduce(
-    (sum, item) => sum + item.quantity * item.productVariant.price, 
+    (sum, item) => sum + item.quantity * item.price, 
     0
   ) : 0;
 

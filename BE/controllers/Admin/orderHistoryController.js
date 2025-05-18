@@ -14,7 +14,7 @@ class OrderHistory {
             const offset = (page - 1) * limit;
 
             const orders = await OrderModel.findAndCountAll({
-                where: { status: 'Đã giao hàng thành công' },
+                where: { status: 'delivered' },
                 order: [['created_at', 'DESC']],
                 limit: limit,
                 offset: offset,

@@ -161,11 +161,11 @@ class OrderController {
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
 
-            if (order.status !== "Chờ xác nhận") {
+            if (order.status !== "pending") {
                 return res.status(400).json({ message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'" });
             }
 
-            order.status = "Đã hủy";
+            order.status = "cancelled";
             await order.save();
 
             res.status(200).json({

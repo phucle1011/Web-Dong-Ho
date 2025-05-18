@@ -14,8 +14,26 @@ function OrderGetAll() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [trackingInfoMap, setTrackingInfoMap] = useState({});
-
   const recordsPerPage = 10;
+
+  const translateStatus = (status) => {
+    switch (status) {
+      case "pending":
+        return "Chờ xác nhận";
+      case "confirmed":
+        return "Đã xác nhận";
+      case "shipping":
+        return "Đang giao";
+      case "completed":
+        return "Hoàn thành";
+      case "delivered":
+        return "Đã giao hàng thành công";
+      case "cancelled":
+        return "Đã hủy";
+      default:
+        return status;
+    }
+  };
 
   useEffect(() => {
     fetchOrders(currentPage, searchTerm);
@@ -60,20 +78,20 @@ function OrderGetAll() {
 
   const getStatusesForOrder = (currentStatus) => {
     switch (currentStatus) {
-      case "Chờ xác nhận":
-        return ["Chờ xác nhận", "Đã xác nhận", "Đang giao", "Hoàn thành", "Đã giao hàng thành công", "Đã hủy"];
-      case "Đã xác nhận":
-        return ["Đã xác nhận", "Đang giao", "Hoàn thành", "Đã giao hàng thành công", "Đã hủy"];
-      case "Đang giao":
-        return ["Đang giao", "Hoàn thành", "Đã giao hàng thành công", "Đã hủy"];
-      case "Hoàn thành":
-        return ["Hoàn thành", "Đã giao hàng thành công", "Đã hủy"];
-      case "Đã giao hàng thành công":
-        return ["Đã giao hàng thành công", "Đã hủy"];
-      case "Đã hủy":
-        return ["Đã hủy"];
+      case "pending":
+        return ["pending", "confirmed", "shipping", "completed", "delivered", "cancelled"];
+      case "confirmed":
+        return ["confirmed", "shipping", "completed", "delivered", "cancelled"];
+      case "shipping":
+        return ["shipping", "completed", "delivered", "cancelled"];
+      case "completed":
+        return ["completed", "delivered", "cancelled"];
+      case "delivered":
+        return ["delivered", "cancelled"];
+      case "cancelled":
+        return ["cancelled"];
       default:
-        return ["Chờ xác nhận", "Đã xác nhận", "Đang giao", "Hoàn thành", "Đã giao hàng thành công", "Đã hủy"];
+        return ["pending", "confirmed", "shipping", "completed", "delivered", "cancelled"];
     }
   };
 
@@ -127,8 +145,8 @@ function OrderGetAll() {
             {
               time: new Date().toISOString(),
               location: "Kho Cần Thơ",
-              status: "Đang giao",
-              note: "Đã rời kho",
+              status: "Đã giao hàng thành công",
+              note: "Đã rời kho ở Bình Thủy",
             },
             {
               time: new Date(Date.now() - 3600 * 1000).toISOString(),
@@ -242,7 +260,7 @@ function OrderGetAll() {
                       >
                         {getStatusesForOrder(order.status).map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {translateStatus(status)}
                           </option>
                         ))}
                       </select>
@@ -282,7 +300,9 @@ function OrderGetAll() {
                           </p>
                           <p className="mb-4">
                             <span className="font-semibold">Trạng thái hiện tại:</span>{" "}
-                            <span className="text-green-600 font-medium">{order.status}</span>
+                            <span className="text-green-600 font-medium">
+                              {translateStatus(order.status)}
+                            </span>
                           </p>
 
                           <div className="relative ml-4 border-l-4 border-blue-500">
@@ -376,8 +396,8 @@ function OrderGetAll() {
                   key={page}
                   onClick={() => handlePageChange(page)}
                   className={`px-3 py-1 border rounded ${currentPage === page
-                      ? "bg-blue-500 text-white"
-                      : "bg-blue-100 text-black hover:bg-blue-200"
+                    ? "bg-blue-500 text-white"
+                    : "bg-blue-100 text-black hover:bg-blue-200"
                     }`}
                 >
                   {page}
