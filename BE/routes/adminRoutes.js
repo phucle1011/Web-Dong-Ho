@@ -12,6 +12,7 @@ const OrderHistoryController = require('../controllers/Admin/orderHistoryControl
 // const UserController = require('../controllers/Admin/userController');
 // const DashboardController = require('../controllers/Admin/dashboardController');
 const promotionController = require('../controllers/Admin/promotionController');
+const PromotionProductController = require('../controllers/Admin/promotionProductsController');
 
 
 //------------------[ ADMIN ROUTES ]------------------
@@ -59,13 +60,26 @@ router.delete("/orders/:id", OrderController.delete);
 //------------------[ USERS ]------------------\
 // router.get('/user/list', UserController.getAllUsers);
 
+//------------------[ CATEGORY ]------------------
+router.get("/category/list", categoryController.getAll);
+router.post('/category/create', categoryController.create);
+router.get("/category/:id", categoryController.getById);
+router.put('/category/:id', categoryController.update);
+router.delete('/category/:id', categoryController.delete);
 
-//------------------[ PROMOTION PRODUCTS ]-----------------
+//------------------[ PROMOTIONS ]------------------
+router.get('/promotions/list', promotionController.getAll);
+router.post("/promotions/create", promotionController.create);
+router.get("/promotions/:id", promotionController.getById);
+router.put('/promotions/:id', promotionController.update);
+router.delete("/promotion/:id", promotionController.delete);
 
-router.get('/promotion', promotionProductsController.getAll);
-router.get('/promotion/:id', promotionProductsController.getById);
-router.post('/promotion-products', promotionProductsController.create);
-router.put('/promotion/:id', promotionProductsController.update);
-router.delete('/promotion/:id', promotionProductsController.remove);
+//------------------[ PROMOTION PRODUCTS ]------------------
+router.get('/promotion', PromotionProductController.getAll);
+router.get('/promotion/:id', PromotionProductController.getById);
+router.post('/promotion-products', PromotionProductController.create);
+router.put('/promotion/:id', PromotionProductController.update);
+router.delete('/promotion/:id', PromotionProductController.remove);
+
 
 module.exports = router;

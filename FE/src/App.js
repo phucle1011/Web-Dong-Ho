@@ -36,6 +36,9 @@ import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
 import PromotionGetAll from "./pages/admin/promotions/getAll";
 import PromotionCreate from "./pages/admin/promotions/Create";
 import PromotionEdit from "./pages/admin/promotions/Edit";
+import PromotionProductList from "./pages/admin/promotionProducts/getAll";
+import PromotionProductForm from "./pages/admin/promotionProducts/Create";
+import PromotionProductEdit from "./pages/admin/promotionProducts/Edit";
 
 
 const AppRoutes = () => {
@@ -117,6 +120,12 @@ const AppRoutes = () => {
           <Route path="getAll" element={<PromotionGetAll />} />
           <Route path="create" element={<PromotionCreate />} />
           <Route path="edit/:id" element={<PromotionEdit />} />
+        </Route>
+
+        <Route path="promotion-products">
+          <Route path="getAll" element={<PromotionProductList />} />
+          <Route path="create" element={<PromotionProductForm />} />
+          <Route path="edit/:id" element={<PromotionProductEdit />} />
         </Route>
 
       </Route>

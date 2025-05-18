@@ -75,17 +75,6 @@ function OrderGetAll() {
       setSelectedOrder(null);
     }
   };
-      if (message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'") {
-        toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
-      } else if (message === "Id không tồn tại") {
-        toast.error("Đơn hàng không tồn tại");
-      } else {
-        toast.error("Không thể hủy đơn hàng");
-      }
-    } finally {
-      setSelectedOrder(null);
-    }
-  };
 
   const getStatusesForOrder = (currentStatus) => {
     switch (currentStatus) {
