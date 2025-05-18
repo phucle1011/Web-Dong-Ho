@@ -8,9 +8,14 @@ const WishlistModel = require('./wishlistsModel');
 const CategoriesModel = require('./categoriesModel');
 const CartDetailModel = require('./cartDetailsModel');
 const PromotionModel = require('./promotionsModel');
+const OrderDetailModel = require('../models/orderDetailsModel');
+const BrandModel = require('../models/brandsModel');
+const ProductVariantModel = require('./productVariantsModel');
+const ProductAttributeModel = require('./productAttributesModel');
+const ProductVariantAttributeValueModel = require('./productVariantAttributeValuesModel');
+const VariantImageModel = require('./variantImagesModel');
 const OrderDetailModel = require('./orderDetailsModel');
 const BrandModel = require('./brandsModel');
-const ProductVariantsModel = require('./productVariantsModel');
 const PromotionProductModel = require('./promotionProductsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
@@ -76,6 +81,21 @@ OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'produc
 OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' }); 
 ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
 
+// Product - ProductVariant
+ProductModel.hasMany(ProductVariantModel, { foreignKey: 'product_id', as: 'variants' });
+ProductVariantModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+
+// ProductVariant - ProductVariantAttributeValue
+ProductVariantModel.hasMany(ProductVariantAttributeValueModel, { foreignKey: 'product_variant_id', as: 'attributeValues' });
+ProductVariantAttributeValueModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id', as: 'variant' });
+
+// ProductAttribute - ProductVariantAttributeValue
+ProductAttributeModel.hasMany(ProductVariantAttributeValueModel, { foreignKey: 'product_attribute_id', as: 'values' });
+ProductVariantAttributeValueModel.belongsTo(ProductAttributeModel, { foreignKey: 'product_attribute_id', as: 'attribute' });
+
+// ProductVariant - VariantImage
+ProductVariantModel.hasMany(VariantImageModel, { foreignKey: 'variant_id', as: 'images' });
+VariantImageModel.belongsTo(ProductVariantModel, { foreignKey: 'variant_id', as: 'variant' })
 // OrderDetailModel - ProductVariants
 OrderDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' }); 
 ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id', as: 'orderDetails' });

@@ -92,7 +92,7 @@ const AppRoutes = () => {
           <Route path="detail/:id" element={<OrderHistoryDetail />} />
         </Route>
         <Route path="user">
-          <Route path="getAll" element={<UserList />} />
+          <Route path="getAll" element={<UserDetail />} />
           <Route path="detail/:id" element={<UserDetail />} />
         </Route>
         {/* <Route path="comments">

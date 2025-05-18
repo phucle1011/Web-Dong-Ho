@@ -144,6 +144,12 @@ function Aside() {
                 <span className="hide-menu">Quản lý thông báo </span>
               </Link>
             </li>
+             <li className={`sidebar-item ${location.pathname === "/admin/product/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/product/getAll">
+                <FaBell />
+                <span className="hide-menu">Quản </span>
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>

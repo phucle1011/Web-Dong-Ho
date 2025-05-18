@@ -17,7 +17,7 @@ const VariantImagesModel = connection.define('variant_images', {
     }
 }, {
     tableName: 'variant_images',
-    timestamps: true
+    timestamps: false
 });
 
 module.exports = VariantImagesModel;
