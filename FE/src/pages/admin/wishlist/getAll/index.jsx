@@ -68,34 +68,34 @@ function WishlistList() {
         }
     };
 
-    const handleSearchSubmit = async () => {
-        if (searchTerm.trim() === '') {
-            toast.warning("Vui lòng nhập tên sản phẩm cần tìm.");
-            return;
-        }
-        setCurrentPage(1);
-        setLoading(true);
-        try {
-            const userId = 1; // Thay thế bằng cách lấy userId thực tế
-            const res = await axios.get(`${Constants.DOMAIN_API}/api/wishlist/search?userId=${userId}&searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
-            if (res.data.data.length === 0) {
-                toast.warning("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
-                setSearchResults([]);
-            } else {
-                setSearchResults(res.data.data);
-            }
-            setTotalPages(res.data.totalPages);
-            setSearchError('');
-        } catch (error) {
-            console.error("Lỗi khi tìm kiếm trong danh sách yêu thích:", error);
-            toast.error("Lỗi khi tìm kiếm");
+   const handleSearchSubmit = async () => {
+    if (searchTerm.trim() === '') {
+        toast.warning("Vui lòng nhập tên sản phẩm cần tìm.");
+        return;
+    }
+    setCurrentPage(1);
+    setLoading(true);
+    try {
+        const userId = 1; // Thay thế bằng cách lấy userId thực tế
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/wishlist/search?userId=${userId}&searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
+        if (res.data.data.length === 0) {
+            toast.warning("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
             setSearchResults([]);
-            setTotalPages(1);
-            setSearchError("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
-        } finally {
-            setLoading(false);
+        } else {
+            setSearchResults(res.data.data);
         }
-    };
+        setTotalPages(res.data.totalPages);
+        setSearchError('');
+    } catch (error) {
+        console.error("Lỗi khi tìm kiếm trong danh sách yêu thích:", error);
+        toast.error("Lỗi khi tìm kiếm");
+        setSearchResults([]);
+        setTotalPages(1);
+        setSearchError("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleClearSearch = () => {
         setSearchTerm('');
