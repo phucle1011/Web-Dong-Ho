@@ -16,6 +16,7 @@ const ProductVariantAttributeValueModel = require('./productVariantAttributeValu
 const VariantImageModel = require('./variantImagesModel');
 const OrderDetailModel = require('./orderDetailsModel');
 const BrandModel = require('./brandsModel');
+const ProductVariantsModel = require('./productVariantsModel');
 const PromotionProductModel = require('./promotionProductsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
@@ -46,9 +47,13 @@ OrderModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 UserModel.hasMany(WishlistModel, { foreignKey: 'user_id', as: 'wishlists' });
 WishlistModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
-// Product - Wishlist
-ProductModel.hasMany(WishlistModel, { foreignKey: 'product_id', as: 'wishlists' });
-WishlistModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+// // Product - Wishlist
+// ProductModel.hasMany(WishlistModel, { foreignKey: 'product_id', as: 'wishlists' });
+// WishlistModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+
+// Wishlist - ProductVariant
+ProductVariantsModel.hasMany(WishlistModel, { foreignKey: 'product_variant_id', as: 'wishlists' });
+WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
 
 // Category - Product
 CategoriesModel.hasMany(ProductModel, { foreignKey: 'category_id', as: 'products' });
@@ -112,6 +117,7 @@ ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id' });
 
 PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id' });
 PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
+
 
 // Export all models
 module.exports = {

@@ -9,8 +9,9 @@ const OrderHistoryController = require('../controllers/Admin/orderHistoryControl
 // const CommentController = require('../controllers/Admin/commentsController');
 // const CartController = require('../controllers/Admin/cartsControlles');
 // const AddressController = require('../controllers/Admin/addressController');
-// const UserController = require('../controllers/Admin/userController');
 // const DashboardController = require('../controllers/Admin/dashboardController');
+// const  promotionProductsController  = require('../controllers/Admin/promotionProductsController');
+const WishlistController = require('../controllers/Admin/wishlistController')
 const promotionController = require('../controllers/Admin/promotionController');
 const PromotionProductController = require('../controllers/Admin/promotionProductsController');
 
@@ -24,6 +25,15 @@ router.get('/orders/list', OrderController.get);
 router.get('/orders/:id', OrderController.getById); 
 router.put('/orders/edit/:id', OrderController.update); 
 router.delete("/orders/delete/:id", OrderController.delete);
+
+
+//------------------[ USERS ]------------------
+router.get('/user/list', UserController.get);
+router.get('/user/search', UserController.searchUser);
+router.get('/user/:id', UserController.getById); 
+router.put('/user/:id/status', UserController.updateUserStatus);
+
+
 
 //------------------[ ORDERHISTORY ]------------------
 router.get('/order-history/search', OrderHistoryController.searchOrderHistory);
@@ -60,6 +70,27 @@ router.delete("/orders/:id", OrderController.delete);
 //------------------[ USERS ]------------------\
 // router.get('/user/list', UserController.getAllUsers);
 
+
+//------------------[ PROMOTION PRODUCTS ]-----------------
+
+// router.get('/promotion', promotionProductsController.getAll);
+// router.get('/promotion/:id', promotionProductsController.getById);
+// router.post('/promotion-products', promotionProductsController.create);
+// router.put('/promotion:id', controller.update);
+// router.delete('/promotion:id', controller.remove);
+
+//------------------[ WISHLIST ]------------------
+// Lấy danh sách sản phẩm yêu thích của một người dùng
+router.get('/users/:userId/wishlist', WishlistController.getWishlistByUser);
+
+// Thêm sản phẩm vào danh sách yêu thích của người dùng
+router.post('/wishlist', WishlistController.addToWishlist);
+
+// Xóa sản phẩm khỏi danh sách yêu thích của người dùng
+router.delete('/users/:userId/wishlist/:productVariantId', WishlistController.removeFromWishlist);
+
+// Tìm kiếm sản phẩm yêu thích của người dùng theo tên sản phẩm
+router.get('/users/wishlist/search', WishlistController.searchWishlist);
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getAll);
 router.post('/category/create', categoryController.create);

@@ -3,7 +3,7 @@ import { MdDirectionsBus, MdFeedback } from "react-icons/md";
 import { Link, useLocation } from "react-router-dom";
 
 function Aside() {
-  const location = useLocation(); 
+  const location = useLocation();
 
   return (
     <aside className="left-sidebar">
@@ -124,9 +124,9 @@ function Aside() {
                 <span className="hide-menu">Quản lý địa chỉ</span>
               </Link>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/wishlists/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link d-flex align-items-center" to="/admin/wishlists/getAll" title="Quản lý sản phẩm yêu thích">
-                <FaHeart className="me-2" />
+            <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link d-flex align-items-center" to="/admin/wishlist/getAll" title="Quản lý sản phẩm yêu thích">
+                <FaHeart />
                 <span className="hide-menu text-truncate" style={{ maxWidth: "160px", display: "inline-block", whiteSpace: "nowrap", overflow: "hidden" }}>
                   Quản lý sản phẩm yêu thích
                 </span>

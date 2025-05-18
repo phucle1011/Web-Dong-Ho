@@ -17,7 +17,7 @@ const WishlistModel = connection.define('wishlists', {
     }
 }, {
     tableName: 'wishlists',
-    timestamps: true,
+    timestamps: false,
     createdAt: 'created_at'
 });
 
