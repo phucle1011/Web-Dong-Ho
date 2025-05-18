@@ -54,12 +54,6 @@ function Aside() {
             <li className="nav-small-cap">
               <span className="hide-menu">Quản lý giảm giá</span>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/coupons/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/coupons/getAll">
-                <FaMoneyBillWave />
-                <span className="hide-menu">Quản lý phiếu giảm giá </span>
-              </Link>
-            </li>
             <li className={`sidebar-item ${location.pathname === "/admin/promotions/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link" to="/admin/promotions/getAll">
                 <FaTags />
@@ -70,14 +64,8 @@ function Aside() {
               <Link className="sidebar-link d-flex align-items-center" to="/admin/promotion-products/getAll" title="Quản lý sản phẩm khuyến mãi">
                 <FaTag className="me-2" />
                 <span className="hide-menu text-truncate" style={{ maxWidth: '150px' }}>
-                  Quản lý sản phẩm khuyến mãi
+                Quản lý sản phẩm khuyến mãi
                 </span>
-              </Link>
-            </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/discounts/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/discounts/getAll">
-                <FaPercent />
-                <span className="hide-menu">Quản lý giảm giá</span>
               </Link>
             </li>
 

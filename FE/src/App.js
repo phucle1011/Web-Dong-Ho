@@ -13,22 +13,15 @@ import Profile from "./pages/client/Profile";
 import Login from "./pages/authenticator/Login";
 import Register from "./pages/authenticator/Register";
 import BookingTickets from "./pages/client/BookingTickets";
-import { Link } from "react-router-dom";
-
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
-// import CommentPage from "./pages/admin/comment/getall/index";
-// import CommentDetailPage from "./pages/admin/comment/comment-detail";
-// import CartPage from "./pages/admin/cart/getAll/index";
-// import CartDetailPage from "./pages/admin/cart/cart-detail/index";
 import AddressList from "./pages/admin/address/getAll/index";
 import AddressAdd from "./pages/admin/address/add/index";
 import AddressEdit from "./pages/admin/address/edit/index";
 import CategoryGetAll from "./pages/admin/category/getAll";
 import CategoryCreate from "./pages/admin/category/Create";
 import CategoryEdit from "./pages/admin/category/Edit";
-import UserList from './pages/admin/user/getAll';
 import UserDetail from './pages/admin/user/detail';
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
@@ -39,8 +32,6 @@ import PromotionEdit from "./pages/admin/promotions/Edit";
 import PromotionProductList from "./pages/admin/promotionProducts/getAll";
 import PromotionProductForm from "./pages/admin/promotionProducts/Create";
 import WishlistList from "./pages/admin/wishlist/getAll";
-
-
 
 const AppRoutes = () => {
   return (
@@ -77,9 +68,6 @@ const AppRoutes = () => {
 
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
-      {/* <Route path="resetForm" element={<ResetForm />} />
-      <Route path="resetPassword/:token" element={<ResetPassword />} /> */}
-
 
       {/*--------------------ADMIN-------------------- */}
       <Route path="/admin" element={<AdminLayout />}>
@@ -97,14 +85,6 @@ const AppRoutes = () => {
           <Route path="getAll" element={<UserDetail />} />
           <Route path="detail/:id" element={<UserDetail />} />
         </Route>
-        {/* <Route path="comments">
-          <Route path="getAll" element={<CommentPage />} />
-          <Route path="detail/:id" element={<CommentDetailPage />} />
-        </Route>
-        <Route path="carts">
-          <Route path="getAll" element={<CartPage />} />
-          <Route path="detail/:id" element={<CartDetailPage />} />
-        </Route> */}
 
         <Route path="address">
           <Route path="getAll" element={<AddressList />} />
@@ -127,12 +107,10 @@ const AppRoutes = () => {
         <Route path="promotion-products">
           <Route path="getAll" element={<PromotionProductList />} />
           <Route path="add" element={<PromotionProductForm />} />
-
         </Route>
         
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />
-
         </Route>
 
       </Route>
