@@ -8,9 +8,40 @@ const { Op } = require('sequelize');
 const { Sequelize } = require('sequelize');
 
 // GET all promotion products
+// exports.getAll = async (req, res) => {
+//   try {
+//     const data = await PromotionProductModel.findAll({
+//       include: [
+//         {
+//           model: ProductVariant,
+//           attributes: ['sku', 'price', 'stock'],
+//           include: [
+//             {
+//               model: ProductModel,
+//               attributes: ['name']
+//             }
+//           ]
+//         },
+//         {
+//           model: Promotion,
+//           attributes: ['name']
+//         }
+//       ]
+//     });
+//     res.json(data);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 exports.getAll = async (req, res) => {
+  const { searchTerm = '', page = 1, limit = 10 } = req.query;
+  const pageNumber = parseInt(page);
+  const pageSize = parseInt(limit);
+  const offset = (pageNumber - 1) * pageSize;
+
   try {
-    const data = await PromotionProductModel.findAll({
+    const { count, rows } = await PromotionProductModel.findAndCountAll({
       include: [
         {
           model: ProductVariant,
@@ -18,7 +49,14 @@ exports.getAll = async (req, res) => {
           include: [
             {
               model: ProductModel,
-              attributes: ['name']
+              attributes: ['name'],
+              where: searchTerm
+                ? {
+                    name: {
+                      [Op.like]: `%${searchTerm}%`
+                    }
+                  }
+                : undefined
             }
           ]
         },
@@ -26,14 +64,27 @@ exports.getAll = async (req, res) => {
           model: Promotion,
           attributes: ['name']
         }
-      ]
+      ],
+      limit: pageSize,
+      offset: offset,
+      distinct: true // để đếm đúng số bản ghi khi có include
     });
-    res.json(data);
+
+    res.json({
+      data: rows,
+      pagination: {
+        total: count,
+        page: pageNumber,
+        limit: pageSize,
+        totalPages: Math.ceil(count / pageSize)
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // GET by ID
 // exports.getById = async (req, res) => {

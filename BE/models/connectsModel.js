@@ -15,7 +15,7 @@ const ProductVariantAttributeValueModel = require('../models/productVariantAttri
 const VariantImageModel = require('../models/variantImagesModel');
 const ProductVariantsModel = require('../models/productVariantsModel');
 const PromotionProductModel = require('../models/promotionProductsModel');
-
+const Promotion = require('../models/promotionsModel');
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
 // User - Address
@@ -92,9 +92,25 @@ VariantImageModel.belongsTo(ProductVariantsModel, { foreignKey: 'variant_id', as
 OrderDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
 ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id', as: 'orderDetails' });
 
-// PromotionProductModel - Promotion & ProductVariant
-PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
-PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'promoProductVariant' });
+// ProductVariantsModel - ProductModel
+ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'variantProduct' }); 
+
+// PromotionProduct - ProductVariant
+PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
+PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });  
+
+
+// ProductVariant - Product
+ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id' });
+
+PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id' });
+// Quan hệ một chiều đã có
+PromotionProductModel.belongsTo(Promotion, { foreignKey: 'promotion_id' });
+
+// ✅ Bổ sung chiều ngược lại
+Promotion.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });
+
+
 
 // Export all models
 module.exports = {

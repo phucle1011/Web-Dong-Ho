@@ -28,9 +28,9 @@ import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
 import PromotionGetAll from "./pages/admin/promotions/getAll";
 import PromotionCreate from "./pages/admin/promotions/Create";
-import PromotionEdit from "./pages/admin/promotions/Edit";
 import PromotionProductList from "./pages/admin/promotionProducts/getAll";
 import PromotionProductForm from "./pages/admin/promotionProducts/Create";
+import PromotionProductEdit from "./pages/admin/promotionProducts/Edit";
 import WishlistList from "./pages/admin/wishlist/getAll";
 
 const AppRoutes = () => {
@@ -98,10 +98,10 @@ const AppRoutes = () => {
           <Route path="edit/:id" element={<CategoryEdit />} />
         </Route>
 
-        <Route path="promotions">
-          <Route path="getAll" element={<PromotionGetAll />} />
-          <Route path="create" element={<PromotionCreate />} />
-          <Route path="edit/:id" element={<PromotionEdit />} />
+        <Route path="promotion">
+          <Route path="getAll" element={<PromotionProductList />} />
+          <Route path="add" element={<PromotionProductForm />} />
+          <Route path="edit/:id" element={<PromotionProductEdit />} />
         </Route>
 
         <Route path="promotion-products">
