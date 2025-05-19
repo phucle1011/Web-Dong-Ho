@@ -17,6 +17,7 @@ import BookingTickets from "./pages/client/BookingTickets";
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
 import AddressList from "./pages/admin/address/getAll";
+import AddressDetail from "./pages/admin/address/detail";
 import CategoryGetAll from "./pages/admin/category/getAll";
 import CategoryCreate from "./pages/admin/category/Create";
 import CategoryEdit from "./pages/admin/category/Edit";
@@ -100,6 +101,7 @@ const AppRoutes = () => {
         </Route>
         <Route path="address">
           <Route path="getAll" element={<AddressList />} />
+          <Route path="detail/user/:userId" element={<AddressDetail />} />
         </Route>
         <Route path="categories">
           <Route path="getAll" element={<CategoryGetAll />} />

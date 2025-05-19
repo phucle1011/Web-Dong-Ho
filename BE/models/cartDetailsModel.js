@@ -1,7 +1,7 @@
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const CartDetail = connection.define('cart_details', {
+const CartDetail = connection.define('cart_detail', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -21,7 +21,7 @@ const CartDetail = connection.define('cart_details', {
         defaultValue: 1
     }
 }, {
-    tableName: 'cart_details',
+    tableName: 'cart_detail',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',

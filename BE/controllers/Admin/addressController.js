@@ -58,7 +58,7 @@ class AddressController {
     }
   }
   static async getAddressesByUser(req, res) {
-  const { userId } = req.params;
+  const userId = req.params.id; 
   try {
     const addresses = await AddressModel.findAll({
       where: { user_id: userId },
@@ -77,6 +77,7 @@ class AddressController {
     return res.status(500).json({ success: false, message: 'Lỗi server khi lấy địa chỉ theo user' });
   }
 }
+
 
 }
 

@@ -1,6 +1,9 @@
 const CommentModel = require('../../models/commentsModel');
 const UserModel = require('../../models/usersModel');
 const ProductModel = require('../../models/productsModel');
+const OrderDetailModel = require('../../models/orderDetailsModel');
+const ProductVariantModel = require('../../models/productVariantsModel');
+const CommentImageModel = require('../../models/commentImagesModel');
 
 class CommentController {
     static async getAllComments(req, res) {
@@ -141,54 +144,54 @@ class CommentController {
         }
     }
     static async getCommentsByProductId(req, res) {
-        try {
-            const { product_id } = req.params;
+    try {
+        const { id } = req.params; // id ở đây là product_id
 
-            const comments = await CommentModel.findAll({
-                attributes: [
-                    'id',
-                    'user_id',
-                    'order_detail_id',
-                    'parent_id',
-                    'rating',
-                    'comment_text',
-                    'created_at',
-                    'updated_at'
-                ],
-                include: [
-                    {
-                        model: OrderDetailModel,
-                        as: 'orderDetail',
-                        attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
-                        include: [
-                            {
-                                model: ProductVariantModel,
-                                as: 'productVariant',
-                                attributes: ['id', 'sku', 'price', 'product_id'],
-                                where: { product_id }
-                            }
-                        ]
-                    },
-                    {
-                        model: UserModel,
-                        as: 'user',
-                        attributes: ['id', 'name', 'email']
-                    },
-                    {
-                        model: CommentImageModel,
-                        as: 'commentImages',
-                        attributes: ['id', 'image_url']
-                    }
-                ],
-                order: [['created_at', 'DESC']]
-            });
+        const comments = await CommentModel.findAll({
+            attributes: [
+                'id',
+                'user_id',
+                'order_detail_id',
+                'parent_id',
+                'rating',
+                'comment_text',
+                'created_at',
+                'updated_at'
+            ],
+            include: [
+                {
+                    model: OrderDetailModel,
+                    as: 'orderDetail',
+                    attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
+                    include: [
+                        {
+                            model: ProductVariantModel,
+                            as: 'productVariant',
+                            attributes: ['id', 'sku', 'price', 'product_id'],
+                            where: { product_id: id } 
+                        }
+                    ]
+                },
+                {
+                    model: UserModel,
+                    as: 'user',
+                    attributes: ['id', 'name', 'email']
+                },
+                {
+                    model: CommentImageModel,
+                    as: 'commentImages',
+                    attributes: ['id', 'image_url']
+                }
+            ],
+            order: [['created_at', 'DESC']]
+        });
 
-            return res.status(200).json({ success: true, data: comments });
-        } catch (error) {
-            console.error('Error in getCommentsByProductId:', error);
-            return res.status(500).json({ success: false, message: 'Lỗi server khi lấy bình luận theo sản phẩm' });
-        }
+        return res.status(200).json({ success: true, data: comments });
+    } catch (error) {
+        console.error('Error in getCommentsByProductId:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi server khi lấy bình luận theo sản phẩm' });
     }
+}
 }
 
 module.exports = CommentController;

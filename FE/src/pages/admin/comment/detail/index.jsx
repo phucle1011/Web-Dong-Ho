@@ -1,90 +1,120 @@
-// import { useEffect, useState } from "react";
-// import { useParams, Link } from "react-router-dom";
-// import axios from "axios";
-// import Constants from "../../../../Constants";
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import axios from "axios";
+import Constants from "../../../../Constants";
 
-// function CommentDetailPage() {
-//   const [comment, setComment] = useState(null);
-//   const { id } = useParams();
+function CommentDetailPage() {
+  const { id: productId } = useParams();
+  const [comments, setComments] = useState([]);
 
-//   useEffect(() => {
-//     fetchCommentDetail();
-//   }, []);
+  useEffect(() => {
+    fetchCommentsByProduct();
+  }, [productId]);
 
-//   const fetchCommentDetail = async () => {
-//     try {
-//       const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/${id}`);
-//       setComment(response.data.data);
-//     } catch (error) {
-//       console.error("Lỗi lấy chi tiết bình luận:", error);
-//     }
-//   };
+  const fetchCommentsByProduct = async () => {
+    try {
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/list`);
+      const allComments = response.data.data || [];
 
-//   const formatDate = (dateStr) => {
-//     const date = new Date(dateStr);
-//     return isNaN(date)
-//       ? "Không xác định"
-//       : date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-//   };
+      const filteredComments = allComments.filter(
+        (comment) => comment.orderDetail?.product_variant_id === Number(productId)
+      );
 
-//   if (!comment) {
-//     return (
-//       <div className="container-fluid">
-//         <div className="text-center py-5">Đang tải dữ liệu...</div>
-//       </div>
-//     );
-//   }
+      setComments(filteredComments);
+    } catch (error) {
+      console.error("Lỗi lấy bình luận sản phẩm:", error);
+    }
+  };
 
-//   return (
-//     <div className="container-fluid">
-//       <div className="row">
-//         <div className="col-12 d-flex align-items-stretch">
-//           <div className="card w-100">
-//             <div className="card-body p-4">
-//               <h5 className="card-title fw-semibold mb-4">Chi tiết bình luận</h5>
-//               <table className="table">
-//                 <tbody>
-//                   <tr>
-//                     <th scope="row">ID</th>
-//                     <td>{comment.id}</td>
-//                   </tr>
-//                   <tr>
-//                     <th scope="row">Tên người dùng</th>
-//                     <td>{comment.user_name}</td>
-//                   </tr>
-//                   <tr>
-//                     <th scope="row">Sản phẩm</th>
-//                     <td>{comment.product_name}</td>
-//                   </tr>
-//                   <tr>
-//                     <th scope="row">Đánh giá</th>
-//                     <td>{comment.rating}</td>
-//                   </tr>
-//                   <tr>
-//                     <th scope="row">Nội dung</th>
-//                     <td>{comment.comment_text}</td>
-//                   </tr>
-//                   <tr>
-//                     <th scope="row">Ngày tạo</th>
-//                     <td>{formatDate(comment.created_at)}</td>
-//                   </tr>
-//                   <tr>
-//                     <th scope="row">Ngày cập nhật</th>
-//                     <td>{formatDate(comment.updated_at)}</td>
-//                   </tr>
-//                 </tbody>
-//               </table>
-//               <div className="mt-3">
-//                 <Link to="/admin/comment/getAll" className="btn btn-secondary btn-sm">
-//                   Quay lại danh sách
-//                 </Link>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
+  const renderStars = (rating) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <i
+          key={i}
+          className={`fa${i <= rating ? "s" : "r"} fa-star text-warning me-1`}
+          aria-hidden="true"
+        ></i>
+      );
+    }
+    return stars;
+  };
 
-// export default CommentDetailPage;
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return isNaN(date)
+      ? "Không xác định"
+      : date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+  };
+
+  return (
+    <div className="container-fluid">
+      <div className="row">
+        <div className="col-12 d-flex align-items-stretch">
+          <div className="card w-100">
+            <div className="card-body p-4">
+              <h5 className="card-title fw-semibold mb-4">Chi tiết bình luận theo sản phẩm</h5>
+              <div className="table-responsive">
+                <table className="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Người dùng</th>
+                      <th>Đánh giá</th>
+                      <th>Nội dung</th>
+                      <th>Ảnh</th>
+                      <th>Trạng thái</th>
+                      <th>Ngày tạo</th>
+                      <th>Ngày cập nhật</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comments.length > 0 ? (
+                      comments.map((comment) => (
+                        <tr key={comment.id}>
+                          <td>{comment.id}</td>
+                          <td>{comment.user?.name || "N/A"}</td>
+                          <td>{renderStars(comment.rating)}</td>
+                          <td>{comment.comment_text || "Không có nội dung"}</td>
+                          <td>
+                            {comment.commentImages && comment.commentImages.length > 0 ? (
+                              comment.commentImages.map((img) => (
+                                <img
+                                  key={img.id}
+                                  src={img.image_url}
+                                  alt="Comment"
+                                  width="60"
+                                  className="me-2"
+                                />
+                              ))
+                            ) : (
+                              "Không có ảnh"
+                            )}
+                          </td>
+                          <td>{comment.status || "Không xác định"}</td>
+                          <td>{formatDate(comment.created_at)}</td>
+                          <td>{formatDate(comment.updated_at)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="9" className="text-center">
+                          Không có bình luận nào
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <Link to="/admin/comments/getAll" className="btn btn-secondary btn-sm mt-3">
+                Quay lại danh sách
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CommentDetailPage;

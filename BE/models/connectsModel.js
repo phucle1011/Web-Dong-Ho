@@ -54,6 +54,12 @@ WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id'
 CategoriesModel.hasMany(ProductModel, { foreignKey: 'category_id', as: 'products' });
 ProductModel.belongsTo(CategoriesModel, { foreignKey: 'category_id', as: 'category' });
 
+// comment - OrderDetail
+CommentModel.belongsTo(OrderDetailModel, { foreignKey: 'order_detail_id', as: 'orderDetail' });
+OrderDetailModel.hasMany(CommentModel, { foreignKey: 'order_detail_id', as: 'comments' });
+
+
+// Comment images 
 CommentModel.hasMany(CommentImageModel, { foreignKey: 'comment_id', as: 'commentImages' });
 CommentImageModel.belongsTo(CommentModel, { foreignKey: 'comment_id', as: 'comment' });
 
@@ -103,7 +109,6 @@ ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id
 // PromotionProduct - ProductVariant
 PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
 PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });  
-
 
 // ProductVariant - Product
 ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id' });
