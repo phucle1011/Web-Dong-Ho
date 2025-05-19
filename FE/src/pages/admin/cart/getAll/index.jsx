@@ -1,70 +1,207 @@
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import Constants from "../../../../Constants";
-// import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import Constants from "../../../../Constants";
+import { Link } from "react-router-dom";
+import {
+  FaAngleDoubleLeft,
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleRight,
+  FaSearch,
+} from "react-icons/fa";
 
-// function CartPage() {
-//   const [cartItems, setCartItems] = useState([]);
+function CartPage() {
+  const [cartItems, setCartItems] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-//   useEffect(() => {
-//     fetchAllCart();
-//   }, []);
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 5; 
+  const totalPages = Math.ceil(cartItems.length / limit);
+  const currentData = cartItems.slice((currentPage - 1) * limit, currentPage * limit);
 
-//   const fetchAllCart = async () => {
-//     try {
-//       const response = await axios.get(`${Constants.DOMAIN_API}/admin/cart/list`);
-//       setCartItems(response.data.data || []);
-//     } catch (error) {
-//       console.error("Error fetching cart:", error);
-//     }
-//   };
+  useEffect(() => {
+    fetchAllCart();
+  }, []);
 
-//   return (
-//     <div className="container-fluid">
-//       <div className="row">
-//         <div className="col-12 d-flex align-items-stretch">
-//           <div className="card w-100">
-//             <div className="card-body p-4">
-//               <h5 className="card-title fw-semibold mb-4">Danh sách giỏ hàng</h5>
-//               <div className="table-responsive">
-//                 <table className="table text-nowrap mb-0 align-middle">
-//                   <thead className="text-dark fs-4">
-//                     <tr>
-//                       <th><h6 className="fw-semibold mb-0">ID</h6></th>
-//                       <th><h6 className="fw-semibold mb-0">Người dùng</h6></th>
-//                       <th><h6 className="fw-semibold mb-0">Sản phẩm</h6></th>
-//                       <th><h6 className="fw-semibold mb-0">Tổng</h6></th>
-//                       <th><h6 className="fw-semibold mb-0">Chi tiết</h6></th>
-//                     </tr>
-//                   </thead>
-//                   <tbody>
-//                     {cartItems.map((item) => (
-//                       <tr key={item.id}>
-//                         <td><h6 className="fw-normal mb-0">{item.id}</h6></td>
-//                         <td><h6 className="fw-normal mb-0">{item.user_name}</h6></td>
-//                         <td><h6 className="fw-normal mb-0">{item.product_name}</h6></td>
-//                         <td><h6 className="fw-normal mb-0">{Number(item.total_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</h6></td>
-//                         <td>
-//                           <Link to={`/admin/carts/detail/${item.id}`} className="btn btn-info btn-sm">
-//                             Xem
-//                           </Link>
-//                         </td>
-//                       </tr>
-//                     ))}
-//                     {cartItems.length === 0 && (
-//                       <tr>
-//                         <td colSpan="9" className="text-center">Không có dữ liệu giỏ hàng</td>
-//                       </tr>
-//                     )}
-//                   </tbody>
-//                 </table>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
+  const fetchAllCart = async () => {
+    try {
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/cart/list`);
+      setCartItems(response.data.data || []);
+      setCurrentPage(1);
+      setSearchTerm(""); 
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
 
-// export default CartPage;
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      if (searchTerm.trim() === "") {
+        fetchAllCart();
+        return;
+      }
+
+      const response = await axios.get(
+        `${Constants.DOMAIN_API}/admin/cart/list?search=${encodeURIComponent(searchTerm)}`
+      );
+
+      setCartItems(response.data.data || []);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Error searching cart:", error);
+    }
+  };
+
+  return (
+    <div className="container-fluid">
+      <div className="row">
+        <div className="col-12 d-flex align-items-stretch">
+          <div className="card w-100">
+            <div className="card-body p-4">
+              <h5 className="card-title fw-semibold mb-4">Danh sách giỏ hàng</h5>
+
+              <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
+                <input
+                  type="text"
+                  className="form-control me-2"
+                  placeholder="Tìm theo tên người dùng..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <button className="btn btn-primary me-2" onClick={handleSearch}>
+                  <FaSearch />
+                </button>
+                <button className="btn btn-secondary" onClick={fetchAllCart}>
+                  Xem tất cả
+                </button>
+              </div>
+
+              <div className="table-responsive">
+                <table className="table text-nowrap mb-0 align-middle">
+                  <thead className="text-dark fs-4">
+                    <tr>
+                      <th>ID</th>
+                      <th>Người dùng</th>
+                      <th>Chi tiết</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentData.length > 0 ? (
+                      currentData.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.id}</td>
+                          <td>{item.user?.name || "Không rõ"}</td>
+                          <td>
+                            <Link
+                              to={`/admin/carts/detail/${item.id}`}
+                              className="btn btn-info btn-sm"
+                            >
+                              Xem
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="text-center">
+                          Không có dữ liệu giỏ hàng
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-center mt-4 items-center">
+                <div className="flex items-center space-x-1">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(1)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaAngleDoubleLeft />
+                  </button>
+
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaChevronLeft />
+                  </button>
+
+                  {currentPage > 2 && (
+                    <>
+                      <button
+                        onClick={() => handlePageChange(1)}
+                        className="px-3 py-1 border rounded"
+                      >
+                        1
+                      </button>
+                      {currentPage > 3 && <span className="px-2">...</span>}
+                    </>
+                  )}
+
+                  {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    if (page >= currentPage - 1 && page <= currentPage + 1) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-1 border rounded ${
+                            currentPage === page
+                              ? "bg-blue-500 text-white"
+                              : "bg-blue-100 text-black hover:bg-blue-200"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  {currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+                      <button
+                        onClick={() => handlePageChange(totalPages)}
+                        className="px-3 py-1 border rounded"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaChevronRight />
+                  </button>
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(totalPages)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaAngleDoubleRight />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CartPage;

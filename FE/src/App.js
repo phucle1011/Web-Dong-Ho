@@ -17,8 +17,7 @@ import BookingTickets from "./pages/client/BookingTickets";
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
 import AddressList from "./pages/admin/address/getAll/index";
-import AddressAdd from "./pages/admin/address/add/index";
-import AddressEdit from "./pages/admin/address/edit/index";
+import AddressDetailShow from "./pages/admin/address/detail/index";
 import CategoryGetAll from "./pages/admin/category/getAll";
 import CategoryCreate from "./pages/admin/category/Create";
 import CategoryEdit from "./pages/admin/category/Edit";
@@ -34,6 +33,10 @@ import WishlistList from "./pages/admin/wishlist/getAll";
 import PromotionGetAll from "./pages/admin/promotions/getAll";
 import PromotionEdit from "./pages/admin/promotions/Edit";
 import PromotionCreate from "./pages/admin/promotions/Create";
+import CommentPage from "./pages/admin/comment/getall/index";
+import CommentProductDetailPage from "./pages/admin/comment/detail/index";
+import CartPage from "./pages/admin/cart/getAll/index";
+import CartDetailPage from "./pages/admin/cart/detail/index";
 
 const AppRoutes = () => {
   return (
@@ -70,7 +73,8 @@ const AppRoutes = () => {
 
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
-
+      {/* <Route path="resetForm" element={<ResetForm />} />
+      <Route path="resetPassword/:token" element={<ResetPassword />} /> */}
       {/*--------------------ADMIN-------------------- */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
@@ -87,13 +91,18 @@ const AppRoutes = () => {
           <Route path="getAll" element={<UserList />} />
           <Route path="detail/:id" element={<UserDetail />} />
         </Route>
-
+        <Route path="comments">
+          <Route path="getAll" element={<CommentPage />} />
+          <Route path="detail/:id" element={<CommentProductDetailPage />} />
+        </Route>
+        <Route path="carts">
+          <Route path="getAll" element={<CartPage />} />
+          <Route path="detail/:id" element={<CartDetailPage />} />
+        </Route>
         <Route path="address">
           <Route path="getAll" element={<AddressList />} />
-          <Route path="add" element={<AddressAdd />} />
-          <Route path="edit/:id" element={<AddressEdit />} />
+          <Route path="detail/user/:userId" element={<AddressDetailShow />} />
         </Route>
-
         <Route path="categories">
           <Route path="getAll" element={<CategoryGetAll />} />
           <Route path="create" element={<CategoryCreate />} />

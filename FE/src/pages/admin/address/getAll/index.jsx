@@ -7,97 +7,189 @@
 //     const [addresses, setAddresses] = useState([]);
 //     const navigate = useNavigate();
 
-//     useEffect(() => {
-//         const fetchAddresses = async () => {
-//             try {
-//                 const response = await axios.get(`${Constants.DOMAIN_API}/admin/address/list`);
-//                 setAddresses(response.data.data || []);
-//             } catch (error) {
-//                 console.error("Lỗi khi tải địa chỉ:", error);
-//             }
-//         };
+  const totalPages = Math.ceil(addresses.length / limit);
 
-//         fetchAddresses();
-//     }, []);
+  const currentData = addresses.slice((currentPage - 1) * limit, currentPage * limit);
 
-//     return (
-//         <div className="container-fluid">
-//             <div className="row">
-//                 <div className="col-12 d-flex align-items-stretch">
-//                     <div className="card w-100">
-//                         <div className="card-body p-4">
-//                             <div className="d-flex justify-content-between align-items-center mb-4">
-//                                 <h5 className="card-title fw-semibold mb-0">Quản lý địa chỉ người dùng</h5>
-//                                 <button
-//                                     className="btn btn-success"
-//                                     onClick={() => navigate("/admin/address/add")}
-//                                 >
-//                                     + Thêm địa chỉ
-//                                 </button>
-//                             </div>
-//                             <div className="table-responsive">
-//                                 <table className="table text-nowrap mb-0 align-middle">
-//                                     <thead className="text-dark fs-4">
-//                                         <tr>
-//                                             <th>ID</th>
-//                                             <th>Người dùng</th>
-//                                             <th>Email</th>
-//                                             <th>Địa chỉ 1</th>
-//                                             <th>Địa chỉ 2</th>
-//                                             <th>Thành phố</th>
-//                                             <th>Quận/Huyện</th>
-//                                             <th>Tỉnh</th>
-//                                             <th>Mã bưu điện</th>
-//                                             <th>Mặc định</th>
-//                                             <th>Ngày tạo</th>
-//                                             <th></th>
-//                                         </tr>
-//                                     </thead>
-//                                     <tbody>
-//                                         {addresses.map((item) => (
-//                                             <tr key={item.id}>
-//                                                 <td>{item.id}</td>
-//                                                 <td>{item.user_name}</td>
-//                                                 <td>{item.user_email}</td>
-//                                                 <td>{item.address_line1}</td>
-//                                                 <td>{item.address_line2 || "-"}</td>
-//                                                 <td>{item.city || "-"}</td>
-//                                                 <td>{item.district}</td>
-//                                                 <td>{item.province}</td>
-//                                                 <td>{item.postal_code}</td>
-//                                                 <td>
-//                                                     <span className={`badge ${item.is_default ? "bg-success" : "bg-secondary"}`}>
-//                                                         {item.is_default ? "Có" : "Không"}
-//                                                     </span>
-//                                                 </td>
-//                                                 <td>{new Date(item.created_at).toLocaleString()}</td>
-//                                                 <td>
-//                                                     <div className="d-flex gap-2">
-//                                                         <Link to={`/admin/address/edit/${item.id}`} className="btn btn-sm btn-primary">
-//                                                             Sửa
-//                                                         </Link>
-//                                                         <button className="btn btn-sm btn-danger">Xóa</button>
-//                                                     </div>
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
 
-//                                                 </td>
-//                                             </tr>
-//                                         ))}
-//                                         {addresses.length === 0 && (
-//                                             <tr>
-//                                                 <td colSpan="12" className="text-center text-muted">
-//                                                     Không có địa chỉ nào.
-//                                                 </td>
-//                                             </tr>
-//                                         )}
-//                                     </tbody>
-//                                 </table>
-//                             </div>
-//                         </div>
-//                     </div>
-//                 </div>
-//             </div>
-//         </div>
-//     );
-// }
+  const fetchAddresses = async () => {
+    try {
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/address/list`);
+      setAddresses(response.data.data || []);
+      setCurrentPage(1);
+      setSearchTerm("");
+    } catch (error) {
+      console.error("Lỗi khi tải địa chỉ:", error);
+    }
+  };
 
-// export default AddressList;
+  const handleSearch = async () => {
+    try {
+      if (searchTerm.trim() === "") {
+        fetchAddresses();
+        return;
+      }
+
+      const response = await axios.get(
+        `${Constants.DOMAIN_API}/admin/address/list?search=${encodeURIComponent(searchTerm)}`
+      );
+
+      setAddresses(response.data.data || []);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Lỗi khi tìm kiếm địa chỉ:", error);
+    }
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+    }
+  };
+
+  return (
+    <div className="container-fluid">
+      <div className="row">
+        <div className="col-12 d-flex align-items-stretch">
+          <div className="card w-100">
+            <div className="card-body p-4">
+              <h5 className="card-title fw-semibold mb-4">Quản lý địa chỉ người dùng</h5>
+
+              <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
+                <input
+                  type="text"
+                  className="form-control me-2"
+                  placeholder="Tìm theo tên người dùng..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+                <button className="btn btn-primary me-2" onClick={handleSearch}>
+                  <FaSearch />
+                </button>
+                <button className="btn btn-secondary" onClick={fetchAddresses}>
+                  Xem tất cả
+                </button>
+              </div>
+
+              <div className="table-responsive">
+                <table className="table text-nowrap mb-0 align-middle">
+                  <thead className="text-dark fs-4">
+                    <tr>
+                      <th>ID người dùng</th>
+                      <th>Tên người dùng</th>
+                      <th>Chi tiết</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentData.length > 0 ? (
+                      currentData.map((addr) => (
+                        <tr key={addr.id}>
+                          <td>{addr.user?.id || "N/A"}</td>
+                          <td>{addr.user?.name || "Không rõ"}</td>
+                          <td>
+                            <button
+                              className="btn btn-info btn-sm"
+                              onClick={() => navigate(`/admin/address/detail/user/${addr.user?.id}`)}
+                              disabled={!addr.user?.id}
+                            >
+                              Xem địa chỉ
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="text-center text-muted">
+                          Không có người dùng nào.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-center mt-4 items-center">
+                <div className="flex items-center space-x-1">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(1)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaAngleDoubleLeft />
+                  </button>
+
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaChevronLeft />
+                  </button>
+
+                  {currentPage > 2 && (
+                    <>
+                      <button onClick={() => handlePageChange(1)} className="px-3 py-1 border rounded">
+                        1
+                      </button>
+                      {currentPage > 3 && <span className="px-2">...</span>}
+                    </>
+                  )}
+
+                  {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    if (page >= currentPage - 1 && page <= currentPage + 1) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-1 border rounded ${
+                            currentPage === page
+                              ? "bg-blue-500 text-white"
+                              : "bg-blue-100 text-black hover:bg-blue-200"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+
+                  {currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+                      <button onClick={() => handlePageChange(totalPages)} className="px-3 py-1 border rounded">
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaChevronRight />
+                  </button>
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(totalPages)}
+                    className="px-2 py-1 border rounded disabled:opacity-50"
+                  >
+                    <FaAngleDoubleRight />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default AddressList;

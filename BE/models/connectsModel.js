@@ -52,13 +52,23 @@ WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id'
 CategoriesModel.hasMany(ProductModel, { foreignKey: 'category_id', as: 'products' });
 ProductModel.belongsTo(CategoriesModel, { foreignKey: 'category_id', as: 'category' });
 
+CommentModel.hasMany(CommentImageModel, { foreignKey: 'comment_id', as: 'commentImages' });
+CommentImageModel.belongsTo(CommentModel, { foreignKey: 'comment_id', as: 'comment' });
+
+
 // User - Cart
 UserModel.hasMany(CartDetailModel, { foreignKey: 'user_id', as: 'carts' });
 CartDetailModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
-// Product - Cart
-ProductModel.hasMany(CartDetailModel, { foreignKey: 'product_id', as: 'carts' });
-CartDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'cartProduct' });
+
+// Product - ProductVariant
+ProductModel.hasMany(ProductVariantModel, { foreignKey: 'product_id', as: 'variants' });
+ProductVariantModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+
+
+// ProductVariant - Cart 
+ProductVariantModel.hasMany(CartDetailModel, { foreignKey: 'product_variant_id', as: 'carts' });
+CartDetailModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
 
 // Brand - Product
 BrandModel.hasMany(ProductModel, { foreignKey: 'brand_id', as: 'products' });
