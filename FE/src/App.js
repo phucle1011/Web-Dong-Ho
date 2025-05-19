@@ -23,15 +23,17 @@ import CategoryGetAll from "./pages/admin/category/getAll";
 import CategoryCreate from "./pages/admin/category/Create";
 import CategoryEdit from "./pages/admin/category/Edit";
 import UserDetail from './pages/admin/user/detail';
+import UserList from './pages/admin/user/getAll';
 import OrderDetail from "./pages/admin/order/detail";
 import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
 import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
-import PromotionGetAll from "./pages/admin/promotions/getAll";
-import PromotionCreate from "./pages/admin/promotions/Create";
 import PromotionProductList from "./pages/admin/promotionProducts/getAll";
 import PromotionProductForm from "./pages/admin/promotionProducts/Create";
 import PromotionProductEdit from "./pages/admin/promotionProducts/Edit";
 import WishlistList from "./pages/admin/wishlist/getAll";
+import PromotionGetAll from "./pages/admin/promotions/getAll";
+import PromotionEdit from "./pages/admin/promotions/Edit";
+import PromotionCreate from "./pages/admin/promotions/Create";
 
 const AppRoutes = () => {
   return (
@@ -98,15 +100,15 @@ const AppRoutes = () => {
           <Route path="edit/:id" element={<CategoryEdit />} />
         </Route>
 
-        <Route path="promotion">
-          <Route path="getAll" element={<PromotionProductList />} />
-          <Route path="add" element={<PromotionProductForm />} />
-          <Route path="edit/:id" element={<PromotionProductEdit />} />
+        <Route path="promotions">
+          <Route path="getAll" element={<PromotionGetAll />} />
+          <Route path="create" element={<PromotionCreate />} />
+          <Route path="edit/:id" element={<PromotionEdit />} />
         </Route>
 
         <Route path="promotion-products">
           <Route path="getAll" element={<PromotionProductList />} />
-          <Route path="add" element={<PromotionProductForm />} />
+          <Route path="create" element={<PromotionProductForm />} />
         </Route>
         
         <Route path="wishlist">

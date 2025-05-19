@@ -1,5 +1,3 @@
-// controllers/Admin/promotionProductsController.js
-
 const PromotionProductModel = require('../../models/promotionProductsModel'); 
 const ProductVariant = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
@@ -7,33 +5,6 @@ const Promotion = require('../../models/promotionsModel');
 const { Op } = require('sequelize');
 const { Sequelize } = require('sequelize');
 
-// GET all promotion products
-// exports.getAll = async (req, res) => {
-//   try {
-//     const data = await PromotionProductModel.findAll({
-//       include: [
-//         {
-//           model: ProductVariant,
-//           attributes: ['sku', 'price', 'stock'],
-//           include: [
-//             {
-//               model: ProductModel,
-//               attributes: ['name']
-//             }
-//           ]
-//         },
-//         {
-//           model: Promotion,
-//           attributes: ['name']
-//         }
-//       ]
-//     });
-//     res.json(data);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: err.message });
-//   }
-// };
 exports.getAll = async (req, res) => {
   const { searchTerm = '', page = 1, limit = 10 } = req.query;
   const pageNumber = parseInt(page);
@@ -67,7 +38,7 @@ exports.getAll = async (req, res) => {
       ],
       limit: pageSize,
       offset: offset,
-      distinct: true // để đếm đúng số bản ghi khi có include
+      distinct: true 
     });
 
     res.json({
@@ -85,29 +56,6 @@ exports.getAll = async (req, res) => {
   }
 };
 
-
-// GET by ID
-// exports.getById = async (req, res) => {
-//   try {
-//     const data = await PromotionProductModel.findByPk(req.params.id, {
-//       include: [
-//         {
-//           model: ProductVariant,
-//           attributes: ['sku', 'price', 'stock'],
-//           include: [{ model: ProductModel, attributes: ['name'] }]
-//         },
-//         {
-//           model: Promotion,
-//           attributes: ['name']
-//         }
-//       ]
-//     });
-//     if (!data) return res.status(404).json({ message: 'Not found' });
-//     res.json(data);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
 exports.getById = async (req, res) => {
   try {
     const id = req.params.id;
@@ -141,7 +89,6 @@ exports.getById = async (req, res) => {
   }
 };
 
-// CREATE (discount_value không bắt buộc)
 exports.create = async (req, res) => {
   try {
     const { promotion_id, product_variant_id, discount_value } = req.body;
@@ -151,7 +98,6 @@ exports.create = async (req, res) => {
       product_variant_id
     };
 
-    // Nếu discount_value được gửi, thì thêm vào payload
     if (discount_value !== undefined) {
       payload.discount_value = discount_value;
     }
@@ -163,7 +109,6 @@ exports.create = async (req, res) => {
   }
 };
 
-// UPDATE (discount_value không bắt buộc)
 exports.update = async (req, res) => {
   try {
     const { promotion_id, product_variant_id, discount_value } = req.body;
@@ -186,7 +131,6 @@ exports.update = async (req, res) => {
   }
 };
 
-// DELETE
 exports.remove = async (req, res) => {
   try {
     const data = await PromotionProductModel.findByPk(req.params.id);

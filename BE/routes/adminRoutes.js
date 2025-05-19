@@ -7,6 +7,8 @@ const OrderHistoryController = require('../controllers/Admin/orderHistoryControl
 const WishlistController = require('../controllers/Admin/wishlistController')
 const promotionController = require('../controllers/Admin/promotionController');
 const promotionProductsController = require('../controllers/Admin/promotionProductsController');
+const ProductController = require('../controllers/Admin/productController');
+
 
 //------------------[ ADMIN ROUTES ]------------------
 
@@ -56,5 +58,10 @@ router.post('/promotion-products', promotionProductsController.create);
 router.put('/promotion/:id', promotionProductsController.update);
 router.delete('/promotion/:id', promotionProductsController.remove);
 
-
+//------------------[ PRODUCT ]------------------\
+router.get('/products', ProductController.get); // GET /products
+router.get('/products/:id', ProductController.getById); // GET /products/:id
+router.post('/products', ProductController.createProduct); // POST /products
+router.post('/products/:product_id/variants', ProductController.addVariant); // POST /products/:product_id/variants
+router.delete('/products/:id', ProductController.delete); // DELETE /products/:id
 module.exports = router;

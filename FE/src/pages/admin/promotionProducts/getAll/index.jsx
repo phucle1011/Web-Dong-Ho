@@ -126,7 +126,7 @@ const PromotionProductList = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Danh sách khuyến mãi</h2>
         <Link
-          to="/admin/promotion/add"
+          to="/admin/promotion-products/create"
           className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
         >
           + Thêm khuyến mãi

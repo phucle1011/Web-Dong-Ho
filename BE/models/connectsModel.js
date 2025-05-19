@@ -92,9 +92,6 @@ VariantImageModel.belongsTo(ProductVariantsModel, { foreignKey: 'variant_id', as
 OrderDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
 ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id', as: 'orderDetails' });
 
-// ProductVariantsModel - ProductModel
-ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'variantProduct' }); 
-
 // PromotionProduct - ProductVariant
 PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
 PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });  
@@ -107,12 +104,10 @@ PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id' });
 // Quan hệ một chiều đã có
 PromotionProductModel.belongsTo(Promotion, { foreignKey: 'promotion_id' });
 
-// ✅ Bổ sung chiều ngược lại
+//Bổ sung chiều ngược lại
 Promotion.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });
 
 
-
-// Export all models
 module.exports = {
   UserModel,
   AddressesModel,
