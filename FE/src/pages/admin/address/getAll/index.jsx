@@ -1,14 +1,24 @@
-// import { useEffect, useState } from "react";
-// import axios from "axios";
-// import Constants from "../../../../Constants";
-// import { useNavigate } from "react-router-dom";
-// import { Link } from "react-router-dom";
-// function AddressList() {
-//     const [addresses, setAddresses] = useState([]);
-//     const navigate = useNavigate();
+import { useEffect, useState } from "react";
+import axios from "axios";
+import Constants from "../../../../Constants";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import {
+  FaSearch,
+  FaAngleDoubleLeft,
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleRight,
+} from "react-icons/fa";
+
+function AddressList() {
+  const [addresses, setAddresses] = useState([]);
+  const [limit] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   const totalPages = Math.ceil(addresses.length / limit);
-
   const currentData = addresses.slice((currentPage - 1) * limit, currentPage * limit);
 
   useEffect(() => {
@@ -111,6 +121,7 @@
                   </tbody>
                 </table>
               </div>
+
               <div className="flex justify-center mt-4 items-center">
                 <div className="flex items-center space-x-1">
                   <button
@@ -145,11 +156,10 @@
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded ${
-                            currentPage === page
+                          className={`px-3 py-1 border rounded ${currentPage === page
                               ? "bg-blue-500 text-white"
                               : "bg-blue-100 text-black hover:bg-blue-200"
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>

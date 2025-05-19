@@ -16,6 +16,8 @@ const VariantImageModel = require('../models/variantImagesModel');
 const ProductVariantsModel = require('../models/productVariantsModel');
 const PromotionProductModel = require('../models/promotionProductsModel');
 const Promotion = require('../models/promotionsModel');
+const CommentImageModel = require('../models/commentImagesModel');
+
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
 // User - Address
@@ -55,20 +57,17 @@ ProductModel.belongsTo(CategoriesModel, { foreignKey: 'category_id', as: 'catego
 CommentModel.hasMany(CommentImageModel, { foreignKey: 'comment_id', as: 'commentImages' });
 CommentImageModel.belongsTo(CommentModel, { foreignKey: 'comment_id', as: 'comment' });
 
-
 // User - Cart
 UserModel.hasMany(CartDetailModel, { foreignKey: 'user_id', as: 'carts' });
 CartDetailModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
-
 // Product - ProductVariant
-ProductModel.hasMany(ProductVariantModel, { foreignKey: 'product_id', as: 'variants' });
-ProductVariantModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
-
+ProductModel.hasMany(ProductVariantsModel, { foreignKey: 'product_id', as: 'variants' });
+ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
 
 // ProductVariant - Cart 
-ProductVariantModel.hasMany(CartDetailModel, { foreignKey: 'product_variant_id', as: 'carts' });
-CartDetailModel.belongsTo(ProductVariantModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
+ProductVariantsModel.hasMany(CartDetailModel, { foreignKey: 'product_variant_id', as: 'carts' });
+CartDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
 
 // Brand - Product
 BrandModel.hasMany(ProductModel, { foreignKey: 'brand_id', as: 'products' });
@@ -84,7 +83,6 @@ ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderIte
 
 // ProductVariants - Product
 ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'variantProduct' });
-ProductModel.hasMany(ProductVariantsModel, { as: 'variants', foreignKey: 'product_id' });
 
 // ProductVariant - ProductVariantAttributeValue
 ProductVariantsModel.hasMany(ProductVariantAttributeValueModel, { foreignKey: 'product_variant_id', as: 'attributeValues' });
