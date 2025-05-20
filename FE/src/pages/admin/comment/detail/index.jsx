@@ -37,7 +37,18 @@ function CommentDetailPage() {
         ></i>
       );
     }
-    return stars;
+
+    return (
+      <div className="position-relative d-inline-block text-center">
+        <div
+          className="position-absolute top-0 start-50 translate-middle-x text-primary fw-bold"
+          style={{ fontSize: "0.9rem" }}
+        >
+          {rating} sao
+        </div>
+        <div className="pt-4">{stars}</div>
+      </div>
+    );
   };
 
   const formatDate = (dateStr) => {
@@ -63,7 +74,6 @@ function CommentDetailPage() {
                       <th>Đánh giá</th>
                       <th>Nội dung</th>
                       <th>Ảnh</th>
-                      <th>Trạng thái</th>
                       <th>Ngày tạo</th>
                       <th>Ngày cập nhật</th>
                     </tr>
@@ -91,7 +101,6 @@ function CommentDetailPage() {
                               "Không có ảnh"
                             )}
                           </td>
-                          <td>{comment.status || "Không xác định"}</td>
                           <td>{formatDate(comment.created_at)}</td>
                           <td>{formatDate(comment.updated_at)}</td>
                         </tr>

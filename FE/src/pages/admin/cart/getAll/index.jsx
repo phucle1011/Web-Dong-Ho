@@ -15,7 +15,7 @@ function CartPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const limit = 5; 
+  const limit = 5;
   const totalPages = Math.ceil(cartItems.length / limit);
   const currentData = cartItems.slice((currentPage - 1) * limit, currentPage * limit);
 
@@ -28,7 +28,7 @@ function CartPage() {
       const response = await axios.get(`${Constants.DOMAIN_API}/admin/cart/list`);
       setCartItems(response.data.data || []);
       setCurrentPage(1);
-      setSearchTerm(""); 
+      setSearchTerm("");
     } catch (error) {
       console.error("Error fetching cart:", error);
     }
@@ -69,15 +69,15 @@ function CartPage() {
               <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
                 <input
                   type="text"
-                  className="form-control me-2"
+                  className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Tìm theo tên người dùng..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button className="btn btn-primary me-2" onClick={handleSearch}>
+                <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2" onClick={handleSearch}>
                   <FaSearch />
                 </button>
-                <button className="btn btn-secondary" onClick={fetchAllCart}>
+                <button className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded" onClick={fetchAllCart}>
                   Xem tất cả
                 </button>
               </div>
@@ -88,6 +88,7 @@ function CartPage() {
                     <tr>
                       <th>ID</th>
                       <th>Người dùng</th>
+                      <th>Sản Phẩm</th>
                       <th>Chi tiết</th>
                     </tr>
                   </thead>
@@ -97,6 +98,10 @@ function CartPage() {
                         <tr key={item.id}>
                           <td>{item.id}</td>
                           <td>{item.user?.name || "Không rõ"}</td>
+                          <td>
+                            {item.productVariant?.product?.name || "Không rõ"} - {item.productVariant?.sku}
+                          </td>
+
                           <td>
                             <Link
                               to={`/admin/carts/detail/${item.id}`}
@@ -154,11 +159,10 @@ function CartPage() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded ${
-                            currentPage === page
+                          className={`px-3 py-1 border rounded ${currentPage === page
                               ? "bg-blue-500 text-white"
                               : "bg-blue-100 text-black hover:bg-blue-200"
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>

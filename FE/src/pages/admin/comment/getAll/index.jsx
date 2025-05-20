@@ -81,16 +81,16 @@ function CommentPage() {
               <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
                 <input
                   type="text"
-                  className="form-control me-2"
-                  placeholder="Tìm theo SKU sản phẩm..."
+                  className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Tìm theo tên sản phẩm..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
-                <button className="btn btn-primary me-2" onClick={handleSearch}>
+                <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2" onClick={handleSearch}>
                   <FaSearch />
                 </button>
-                <button className="btn btn-secondary" onClick={fetchComments}>
+                <button className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded" onClick={fetchComments}>
                   Xem tất cả
                 </button>
               </div>
@@ -101,7 +101,7 @@ function CommentPage() {
                   <thead className="text-dark fs-4">
                     <tr>
                       <th>ID Sản phẩm</th>
-                      <th>Tên sản phẩm (SKU)</th>
+                      <th>Tên sản phẩm </th>
                       <th>Hành động</th>
                     </tr>
                   </thead>
