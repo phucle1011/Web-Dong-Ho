@@ -17,6 +17,7 @@ const ProductVariantsModel = require('../models/productVariantsModel');
 const PromotionProductModel = require('../models/promotionProductsModel');
 const Promotion = require('../models/promotionsModel');
 const CommentImageModel = require('../models/commentImagesModel');
+const PromotionUserModel = require('./promotionUsersModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
@@ -109,6 +110,10 @@ ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id
 // PromotionProduct - ProductVariant
 PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
 PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });  
+
+// Promotion - User (Many-to-Many thông qua promotion_users)
+PromotionModel.belongsToMany(UserModel, {through: PromotionUserModel, foreignKey: 'promotion_id',otherKey: 'user_id',as: 'users'});
+UserModel.belongsToMany(PromotionModel, {through: PromotionUserModel,foreignKey: 'user_id',otherKey: 'promotion_id',as: 'promotions'});
 
 // ProductVariant - Product
 ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id' });

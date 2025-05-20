@@ -75,7 +75,8 @@ class PromotionController {
         end_date,
         status,
         applicable_to = 'all_products',
-        min_price_threshold = 0
+        min_price_threshold = 0,
+        user_ids = [],
       } = req.body;
 
       if (!name) {
@@ -112,8 +113,12 @@ class PromotionController {
         end_date,
         status: promoStatus,
         applicable_to,
-        min_price_threshold: Number(min_price_threshold)
+        min_price_threshold: Number(min_price_threshold),
       });
+
+      if (Array.isArray(user_ids) && user_ids.length > 0) {
+        await promotion.setUsers(user_ids);
+      }
 
       res.status(201).json({ success: true, data: promotion });
     } catch (error) {
@@ -121,6 +126,7 @@ class PromotionController {
       res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
   }
+
 
 
   static async getById(req, res) {
@@ -207,17 +213,16 @@ class PromotionController {
     const { id } = req.params;
     try {
       const promotion = await PromotionModel.findByPk(id);
-
       if (!promotion) {
         return res.status(404).json({
           success: false,
           message: "Không tìm thấy khuyến mãi để xóa.",
         });
       }
-      if (promotion.status === "active") {
+      if (promotion.status !== "upcoming") {
         return res.status(400).json({
           success: false,
-          message: "Không thể xóa vì khuyến mãi đang diễn ra.",
+          message: "Chỉ có thể xóa khuyến mãi khi trạng thái là 'Sắp diễn ra'.",
         });
       }
       if (promotion.used_count > 0) {
@@ -239,6 +244,7 @@ class PromotionController {
       });
     }
   }
+
 }
 
 module.exports = PromotionController;

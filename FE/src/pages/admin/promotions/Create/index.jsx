@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -6,14 +6,21 @@ import Constants from "../../../../Constants";
 import { toast } from "react-toastify";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Select from "react-select";
+
 
 function PromotionCreate() {
   const navigate = useNavigate();
+  const [users, setUsers] = useState([]);
+  const [showUserList, setShowUserList] = useState(false);
+
   const {
     control,
     register,
     handleSubmit,
     watch,
+    setValue,
+    getValues,
     formState: { errors }
   } = useForm({
     defaultValues: {
@@ -26,9 +33,36 @@ function PromotionCreate() {
       end_date: null,
       status_visibility: "visible",
       applicable_to: "all_products",
-      min_price_threshold: 0
+      min_price_threshold: 0,
+      user_ids: []
     }
   });
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/list`);
+        setUsers(res.data.data);
+      } catch (err) {
+        console.error("Lỗi khi lấy danh sách người dùng:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  // Chuẩn bị options cho react-select
+  const userOptions = users.map(user => ({
+    value: user.id,
+    label: user.name || user.email || `User ${user.id}`,
+  }));
+
+
+  function formatDateToLocalISO(date) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 
   const onSubmit = async (data) => {
     if (data.start_date instanceof Date && data.end_date instanceof Date) {
@@ -38,18 +72,26 @@ function PromotionCreate() {
       }
     }
     const postData = { ...data };
+
     if (postData.status_visibility === "hidden") {
       postData.status = "inactive";
     } else {
       delete postData.status;
     }
     delete postData.status_visibility;
+
     if (postData.start_date instanceof Date) {
-      postData.start_date = postData.start_date.toISOString().split("T")[0];
+      postData.start_date = formatDateToLocalISO(postData.start_date);
     }
     if (postData.end_date instanceof Date) {
-      postData.end_date = postData.end_date.toISOString().split("T")[0];
+      postData.end_date = formatDateToLocalISO(postData.end_date);
     }
+
+    // Nếu toggle tắt thì không gửi user_ids hoặc gửi rỗng
+    if (!showUserList) {
+      postData.user_ids = [];
+    }
+
     try {
       await axios.post(`${Constants.DOMAIN_API}/admin/promotions/create`, postData);
       toast.success("Tạo khuyến mãi thành công");
@@ -64,8 +106,29 @@ function PromotionCreate() {
     }
   };
 
+
   const discountType = watch("discount_type");
   const startDate = watch("start_date");
+
+  const handleUserToggle = (userId) => {
+    const currentUserIds = getValues("user_ids") || [];
+    const updated = currentUserIds.includes(userId)
+      ? currentUserIds.filter((id) => id !== userId)
+      : [...currentUserIds, userId];
+    setValue("user_ids", updated);
+  };
+
+  const addUser = (userId) => {
+    const currentUserIds = getValues("user_ids") || [];
+    if (!currentUserIds.includes(userId)) {
+      setValue("user_ids", [...currentUserIds, userId]);
+    }
+  };
+
+  const removeUser = (userId) => {
+    const currentUserIds = getValues("user_ids") || [];
+    setValue("user_ids", currentUserIds.filter(id => id !== userId));
+  };
 
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
@@ -252,6 +315,47 @@ function PromotionCreate() {
             <option value="visible">Hiện</option>
             <option value="hidden">Ẩn</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block mb-1 font-medium flex items-center justify-between">
+            <span>Áp dụng cho khách hàng đặc biệt</span>
+            <label className="inline-flex relative items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={showUserList}
+                onChange={() => setShowUserList(prev => !prev)}
+              />
+              <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600
+                      peer-focus:ring-4 peer-focus:ring-green-300
+                      dark:peer-focus:ring-green-800
+                      peer-checked:after:translate-x-full
+                      peer-checked:after:border-white
+                      after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+                      after:bg-white after:border-gray-300 after:border after:rounded-full
+                      after:h-5 after:w-5 after:transition-all dark:border-gray-600">
+              </div>
+            </label>
+          </label>
+          <Controller
+            name="user_ids"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                options={userOptions}
+                isMulti
+                closeMenuOnSelect={false}
+                onChange={(selected) => {
+                  field.onChange(selected ? selected.map(item => item.value) : []);
+                }}
+                value={userOptions.filter(option => field.value.includes(option.value))}
+                placeholder="Chọn khách hàng..."
+                isDisabled={!showUserList}
+              />
+            )}
+          />
         </div>
 
         <button
