@@ -3,7 +3,6 @@ const router = express.Router();
 const OrderController = require('../controllers/Admin/ordersController');
 const categoryController = require('../controllers/Admin/categoryController');
 const UserController = require('../controllers/Admin/userController');
-const OrderHistoryController = require('../controllers/Admin/orderHistoryController');
 const WishlistController = require('../controllers/Admin/wishlistController')
 const promotionController = require('../controllers/Admin/promotionController');
 const promotionProductsController = require('../controllers/Admin/promotionProductsController');
@@ -21,11 +20,6 @@ router.get('/orders/list', OrderController.get);
 router.get('/orders/:id', OrderController.getById); 
 router.put('/orders/edit/:id', OrderController.update); 
 router.delete("/orders/delete/:id", OrderController.delete);
-
-//------------------[ ORDERHISTORY ]------------------
-router.get('/order-history/search', OrderHistoryController.searchOrderHistory);
-router.get('/order-history/list', OrderHistoryController.get);
-router.get('/order-history/:id', OrderHistoryController.getById); 
 
 //------------------[ USERS ]------------------\
 router.get('/user/list', UserController.get);

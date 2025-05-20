@@ -24,11 +24,8 @@ import CategoryEdit from "./pages/admin/category/Edit";
 import UserDetail from './pages/admin/user/detail';
 import UserList from './pages/admin/user/getAll';
 import OrderDetail from "./pages/admin/order/detail";
-import OrderHistoryGetAll from "./pages/admin/orderHistory/getAll";
-import OrderHistoryDetail from "./pages/admin/orderHistory/detail";
 import PromotionProductList from "./pages/admin/promotionProducts/getAll";
 import PromotionProductForm from "./pages/admin/promotionProducts/Create";
-import PromotionProductEdit from "./pages/admin/promotionProducts/Edit";
 import WishlistList from "./pages/admin/wishlist/getAll";
 import PromotionGetAll from "./pages/admin/promotions/getAll";
 import PromotionEdit from "./pages/admin/promotions/Edit";
@@ -85,11 +82,6 @@ const AppRoutes = () => {
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail />} />
-        </Route>
-
-        <Route path="order_history">
-          <Route path="getAll" element={<OrderHistoryGetAll />} />
-          <Route path="detail/:id" element={<OrderHistoryDetail />} />
         </Route>
         <Route path="user">
           <Route path="getAll" element={<UserList />} />

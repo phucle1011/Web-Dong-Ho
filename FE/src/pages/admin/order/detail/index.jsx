@@ -9,31 +9,51 @@ function OrderDetail() {
   const navigate = useNavigate();
   const [order, setOrder] = useState({});
   const [orderDetails, setOrderDetails] = useState([]);
-  const [user, setUser] = useState([]);
+  const [user, setUser] = useState({});
 
   useEffect(() => {
-    fetchOrderDetail();
-  }, []);
+  fetchOrderDetail();
+}, []);
 
-  const fetchOrderDetail = async () => {
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${id}`);
-      if (res.data.data) { 
-        setOrder(res.data.data); 
-        setOrderDetails(res.data.data.orderDetails);
-        setUser(res.data.data.user);  
-      } else {
-        setOrderDetails([]);
-      }
-    } catch (error) {
-      console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
-      toast.error("Không thể lấy chi tiết đơn hàng");
-      navigate("/admin/orders");
+const fetchOrderDetail = async () => {
+  try {
+    const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${id}`);
+    if (res.data.data) {
+      setOrder(res.data.data);
+      const details = Array.isArray(res.data.data.orderDetails) ? res.data.data.orderDetails : [];
+      setOrderDetails(details);
+      setUser(res.data.data.user || {});
+    } else {
+      setOrderDetails([]);
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy chi tiết đơn hàng:", error);
+    toast.error("Không thể lấy chi tiết đơn hàng");
+    navigate("/admin/orders");
+  }
+};
+
+  const translateStatus = (status) => {
+    switch (status) {
+      case "pending":
+        return "Chờ xác nhận";
+      case "confirmed":
+        return "Đã xác nhận";
+      case "shipping":
+        return "Đang giao";
+      case "completed":
+        return "Hoàn thành";
+      case "delivered":
+        return "Đã giao hàng thành công";
+      case "cancelled":
+        return "Đã hủy";
+      default:
+        return status;
     }
   };
-  
+
   const totalAmount = Array.isArray(orderDetails) ? orderDetails.reduce(
-    (sum, item) => sum + item.quantity * item.price, 
+    (sum, item) => sum + item.quantity * parseFloat(item.price),
     0
   ) : 0;
 
@@ -42,15 +62,71 @@ function OrderDetail() {
       <h2 className="text-xl font-bold mb-4">Chi tiết đơn hàng</h2>
 
       <div className="bg-white shadow-md rounded-md p-4 mb-6">
-        <h3 className="font-semibold mb-3">Thông tin khách hàng</h3>
+        <h1 className="text-xl font-semibold mb-1">Thông tin khách hàng</h1>
         <div className="grid grid-cols-2 gap-4">
-          <div><strong>Mã đơn:</strong> {order.order_code}</div>
-          <div><strong>Họ tên:</strong> {user.name}</div>
-          <div><strong>SĐT:</strong> {user.phone}</div>
-          <div><strong>Email:</strong> {user.email}</div>
-          <div><strong>Địa chỉ:</strong> {order.shipping_address}</div>
-          <div><strong>Phương thức thanh toán:</strong> {order.payment_method}</div>
-          <div><strong>Ngày đặt hàng:</strong> {new Date(order.created_at).toLocaleDateString()}</div> 
+          <div>
+            <label className="block text-sm font-medium mb-1">Mã đơn</label>
+            <input
+              type="text"
+              value={order.order_code || ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Họ tên</label>
+            <input
+              type="text"
+              value={user.name || ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Số điện thoại</label>
+            <input
+              type="text"
+              value={user.phone || ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="text"
+              value={user.email || ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Địa chỉ</label>
+            <input
+              type="text"
+              value={order.shipping_address || ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Phương thức thanh toán</label>
+            <input
+              type="text"
+              value={order.payment_method || ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Ngày đặt hàng</label>
+            <input
+              type="text"
+              value={order.created_at ? new Date(order.created_at).toLocaleDateString() : ""}
+              readOnly
+              className="w-full border rounded p-2 bg-gray-100"
+            />
+          </div>
         </div>
       </div>
 
@@ -67,15 +143,27 @@ function OrderDetail() {
             </tr>
           </thead>
           <tbody>
-            {orderDetails.map((item, index) => (
-              <tr key={index}>
-                <td className="border p-2">{order.status}</td>
-                <td className="border p-2">{item.productVariant.variantProduct.name}</td>
-                <td className="border p-2">{item.quantity}</td>
-                <td className="border p-2">{Number(item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</td>
-                <td className="border p-2">{Number(item.quantity * item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</td>
+            {orderDetails.length > 0 ? (
+              orderDetails.map((item, index) => (
+                <tr key={index}>
+                  <td className="border p-2">{translateStatus(order.status)}</td>
+                  <td className="border p-2">
+                    {item.productVariant?.variantProduct?.name || "Không có tên sản phẩm"}
+                  </td>
+                  <td className="border p-2">{item.quantity}</td>
+                  <td className="border p-2">
+                    {Number(item.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                  </td>
+                  <td className="border p-2">
+                    {(item.quantity * parseFloat(item.price)).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="border p-2 text-center">Không có sản phẩm nào</td>
               </tr>
-            ))}
+            )}
           </tbody>
           <tfoot>
             <tr>

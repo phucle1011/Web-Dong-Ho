@@ -12,13 +12,28 @@ class OrderController {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
-
             const offset = (page - 1) * limit;
+            const { status, searchTerm } = req.query;
+
+            const where = {};
+
+            if (status) {
+                where.status = status;
+            }
+
+            if (searchTerm) {
+                where[Op.or] = [
+                    { '$user.name$': { [Op.like]: `%${searchTerm}%` } },
+                    { '$user.phone$': { [Op.like]: `%${searchTerm}%` } },
+                    { code: { [Op.like]: `%${searchTerm}%` } }
+                ];
+            }
 
             const orders = await OrderModel.findAndCountAll({
+                where,
                 order: [['created_at', 'DESC']],
-                limit: limit,
-                offset: offset,
+                limit,
+                offset,
                 include: [
                     {
                         model: OrderDetailsModel,
@@ -53,13 +68,31 @@ class OrderController {
                 return orderData;
             });
 
+            const allStatuses = ['pending', 'confirmed', 'shipping', 'completed', 'delivered', 'cancelled'];
+            const countPromises = allStatuses.map(status =>
+                OrderModel.count({ where: { status: status } })
+            );
+            const countsByStatus = await Promise.all(countPromises);
+
+            const counts = {
+                all: await OrderModel.count(),
+                pending: countsByStatus[0],
+                confirmed: countsByStatus[1],
+                shipping: countsByStatus[2],
+                completed: countsByStatus[3],
+                delivered: countsByStatus[4],
+                cancelled: countsByStatus[5],
+            };
+
             res.status(200).json({
                 status: 200,
                 message: "Lấy danh sách thành công",
                 data: result,
                 totalPages: Math.ceil(orders.count / limit),
                 currentPage: page,
+                counts
             });
+
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
