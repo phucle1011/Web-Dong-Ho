@@ -44,8 +44,8 @@ function Aside() {
                 <span className="hide-menu">Quản lý sản phẩm</span>
               </Link>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/brands/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/brands/getAll">
+            <li className={`sidebar-item ${location.pathname === "/admin/brand/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/brand/getAll">
                 <FaTag />
                 <span className="hide-menu">Quản lý thương hiệu</span>
               </Link>

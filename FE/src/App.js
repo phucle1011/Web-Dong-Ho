@@ -37,6 +37,10 @@ import CommentPage from "./pages/admin/comment/getAll";
 import CommentProductDetailPage from "./pages/admin/comment/detail";
 import CartPage from "./pages/admin/cart/getAll";
 import CartDetailPage from "./pages/admin/cart/detail";
+import BrandList from "./pages/admin/brand/getAll";
+import BrandDetail from "./pages/admin/brand/detail";
+import BrandCreate from "./pages/admin/brand/Create";
+
 
 const AppRoutes = () => {
   return (
@@ -122,6 +126,15 @@ const AppRoutes = () => {
         
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />
+        </Route>
+
+        <Route path="brand">
+          <Route path="getAll" element={<BrandList />} />
+          <Route path="detail/:id" element={<BrandDetail />} />
+          <Route path="create" element={<BrandCreate />} />
+
+
+          
         </Route>
 
       </Route>

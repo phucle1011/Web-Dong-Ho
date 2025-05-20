@@ -11,6 +11,7 @@ const ProductController = require('../controllers/Admin/productController');
 const AddressController = require('../controllers/Admin/addressController');
 const CartController = require('../controllers/Admin/cartsControlles');
 const CommentController = require('../controllers/Admin/commentsController');
+const BrandController = require('../controllers/Admin/brandsController');
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
@@ -77,5 +78,15 @@ router.get('/cart/:id', CartController.getCartById);
 //------------------[ COMMENT ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
 router.get('/comment/product/:id', CommentController.getCommentsByProductId);
+
+//------------------[ BRAND ]------------------\
+router.get('/brand/list', BrandController.get);
+router.get('/brand/search', BrandController.search);
+router.get('/brand/active', BrandController.getActiveBrands);
+router.get('/brand/inactive', BrandController.getInactiveBrands);
+router.get('/brand/:id', BrandController.getById);
+router.post('/brand/create', BrandController.create);
+router.put('/brand/update/:id', BrandController.update);
+router.delete('/brand/delete/:id', BrandController.delete);
 
 module.exports = router;
