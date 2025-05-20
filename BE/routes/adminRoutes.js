@@ -60,11 +60,11 @@ router.put('/promotion/:id', promotionProductsController.update);
 router.delete('/promotion/:id', promotionProductsController.remove);
 
 //------------------[ PRODUCT ]------------------\
-router.get('/products', ProductController.get); // GET /products
-router.get('/products/:id', ProductController.getById); // GET /products/:id
-router.post('/products', ProductController.createProduct); // POST /products
-router.post('/products/:product_id/variants', ProductController.addVariant); // POST /products/:product_id/variants
-router.delete('/products/:id', ProductController.delete); // DELETE /products/:id
+router.get('/products', ProductController.get); 
+router.get('/products/:id', ProductController.getById); 
+router.post('/products', ProductController.createProduct); 
+router.post('/products/:product_id/variants', ProductController.addVariant);
+router.delete('/products/:id', ProductController.delete);
 
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);
@@ -77,4 +77,5 @@ router.get('/cart/:id', CartController.getCartById);
 //------------------[ COMMENT ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
 router.get('/comment/product/:id', CommentController.getCommentsByProductId);
+
 module.exports = router;
