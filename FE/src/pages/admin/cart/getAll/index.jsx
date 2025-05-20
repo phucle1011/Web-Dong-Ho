@@ -99,7 +99,7 @@ function CartPage() {
                           <td>{item.id}</td>
                           <td>{item.user?.name || "Không rõ"}</td>
                           <td>
-                            {item.productVariant?.product?.name || "Không rõ"} - {item.productVariant?.sku}
+                            {item.productVariant?.product?.name }  {item.productVariant?.sku}
                           </td>
 
                           <td>
