@@ -1,12 +1,12 @@
-const PromotionProductModel = require('../../models/promotionProductsModel'); 
-const ProductVariant = require('../../models/productVariantsModel');
-const ProductModel = require('../../models/productsModel');
-const Promotion = require('../../models/promotionsModel');
-const { Op } = require('sequelize');
-const { Sequelize } = require('sequelize');
+const { Op } = require("sequelize");
+const ProductVariantsModel = require("../../models/productVariantsModel");
+const ProductModel = require("../../models/productsModel");
+const PromotionProductModel = require("../../models/promotionProductsModel");
+const PromotionModel = require("../../models/promotionsModel");
 
+// GET ALL PromotionProducts with pagination and search by product name
 exports.getAll = async (req, res) => {
-  const { searchTerm = '', page = 1, limit = 10 } = req.query;
+  const { searchTerm = "", page = 1, limit = 10 } = req.query;
   const pageNumber = parseInt(page);
   const pageSize = parseInt(limit);
   const offset = (pageNumber - 1) * pageSize;
@@ -15,30 +15,33 @@ exports.getAll = async (req, res) => {
     const { count, rows } = await PromotionProductModel.findAndCountAll({
       include: [
         {
-          model: ProductVariant,
-          attributes: ['sku', 'price', 'stock'],
+          model: ProductVariantsModel,
+          as: "variant",
+          attributes: ["sku", "price", "stock"],
           include: [
             {
               model: ProductModel,
-              attributes: ['name'],
+              as: "product",
+              attributes: ["name"],
               where: searchTerm
                 ? {
                     name: {
-                      [Op.like]: `%${searchTerm}%`
-                    }
+                      [Op.like]: `%${searchTerm}%`,
+                    },
                   }
-                : undefined
-            }
-          ]
+                : undefined,
+            },
+          ],
         },
         {
-          model: Promotion,
-          attributes: ['name']
-        }
+          model: PromotionModel,
+          as: "promotion",
+          attributes: ["name"],
+        },
       ],
       limit: pageSize,
-      offset: offset,
-      distinct: true 
+      offset,
+      distinct: true,
     });
 
     res.json({
@@ -47,41 +50,45 @@ exports.getAll = async (req, res) => {
         total: count,
         page: pageNumber,
         limit: pageSize,
-        totalPages: Math.ceil(count / pageSize)
-      }
+        totalPages: Math.ceil(count / pageSize),
+      },
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
-
+// GET BY ID
 exports.getById = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log('Received ID:', id);
 
     const data = await PromotionProductModel.findByPk(id, {
       include: [
         {
-          model: ProductVariant,
-          attributes: ['sku', 'price', 'stock'],
+          model: ProductVariantsModel,
+          as: "variant",
+          attributes: ["sku", "price", "stock"],
           include: [
-            { model: ProductModel, attributes: ['name'] }
-          ]
+            {
+              model: ProductModel,
+              as: "product",
+              attributes: ["name"],
+            },
+          ],
         },
         {
-          model: Promotion,
-          attributes: ['name']
-        }
-      ]
+          model: PromotionModel,
+          as: "promotion",
+          attributes: ["name"],
+        },
+      ],
     });
 
-    console.log('Data found:', data);
-
     if (!data) {
-      return res.status(404).json({ message: 'Promotion product not found' });
+      return res.status(404).json({ message: "Promotion product not found" });
     }
+
     res.json(data);
   } catch (err) {
     console.error(err);
@@ -89,18 +96,15 @@ exports.getById = async (req, res) => {
   }
 };
 
+// CREATE
 exports.create = async (req, res) => {
   try {
-    const { promotion_id, product_variant_id, discount_value } = req.body;
+    const { product_variant_id, promotion_id } = req.body;
 
     const payload = {
+      product_variant_id,
       promotion_id,
-      product_variant_id
     };
-
-    if (discount_value !== undefined) {
-      payload.discount_value = discount_value;
-    }
 
     const data = await PromotionProductModel.create(payload);
     res.status(201).json(data);
@@ -109,20 +113,18 @@ exports.create = async (req, res) => {
   }
 };
 
+// UPDATE
 exports.update = async (req, res) => {
   try {
-    const { promotion_id, product_variant_id, discount_value } = req.body;
+    const { product_variant_id, promotion_id } = req.body;
     const data = await PromotionProductModel.findByPk(req.params.id);
-    if (!data) return res.status(404).json({ message: 'Not found' });
+
+    if (!data) return res.status(404).json({ message: "Not found" });
 
     const payload = {
+      product_variant_id,
       promotion_id,
-      product_variant_id
     };
-
-    if (discount_value !== undefined) {
-      payload.discount_value = discount_value;
-    }
 
     await data.update(payload);
     res.json(data);
@@ -131,13 +133,96 @@ exports.update = async (req, res) => {
   }
 };
 
+// DELETE
 exports.remove = async (req, res) => {
   try {
     const data = await PromotionProductModel.findByPk(req.params.id);
-    if (!data) return res.status(404).json({ message: 'Not found' });
+    if (!data) return res.status(404).json({ message: "Not found" });
+
     await data.destroy();
-    res.json({ message: 'Deleted successfully' });
+    res.json({ message: "Deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+// GET ALL PROMOTIONS with dynamic status updates
+
+
+
+exports.getAllPromotion = async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Cập nhật trạng thái các khuyến mãi
+    const promotions = await PromotionModel.findAll();
+    for (const promo of promotions) {
+      let newStatus = promo.status;
+
+      if (promo.status === 'inactive') {
+        newStatus = 'inactive';
+      } else if (promo.quantity === 0) {
+        newStatus = 'exhausted';
+      } else if (now < promo.start_date) {
+        newStatus = 'upcoming';
+      } else if (now >= promo.start_date && now <= promo.end_date) {
+        newStatus = 'active';
+      } else {
+        newStatus = 'expired';
+      }
+
+      if (promo.status !== newStatus) {
+        await promo.update({ status: newStatus });
+      }
+    }
+
+    // Lấy các promotion đang active từ bảng PromotionProduct
+    const promotionProducts = await PromotionProductModel.findAll({
+      include: [
+        {
+          model: PromotionModel,
+          as: "promotion",
+          attributes: ["id", "name"],
+          where: {
+            status: 'active',
+            start_date: { [Op.lte]: now },
+            end_date: { [Op.gte]: now },
+          },
+          required: true,
+        },
+      ],
+    });
+
+    if (!promotionProducts || promotionProducts.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy khuyến mãi nào đang hoạt động.",
+      });
+    }
+
+    // Trả về danh sách promotion id + name (unique)
+    const promotionsData = promotionProducts.map(item => ({
+      id: item.promotion.id,
+      name: item.promotion.name
+    }));
+
+    const uniquePromotions = Array.from(
+      new Map(promotionsData.map(p => [p.id, p])).values()
+    );
+
+    res.status(200).json({
+      success: true,
+      data: uniquePromotions,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách promotion:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ.",
+    });
+  }
+};
+
+
+
+

@@ -47,12 +47,13 @@ router.get("/promotions/:id", promotionController.getById);
 router.put('/promotions/:id', promotionController.update);
 router.delete("/promotion/:id", promotionController.delete);
 
-//------------------[ PROMOTION PRODUCTS ]------------------
-router.get('/promotion', promotionProductsController.getAll);
-router.get('/promotion/:id', promotionProductsController.getById);
-router.post('/promotion-products', promotionProductsController.create);
-router.put('/promotion/:id', promotionProductsController.update);
-router.delete('/promotion/:id', promotionProductsController.remove);
+    //------------------[ PROMOTION PRODUCTS ]------------------
+    router.get('/promotion', promotionProductsController.getAll);
+    router.get('/promotions/ss/all', promotionProductsController.getAllPromotion);    
+    router.get('/promotion/:id', promotionProductsController.getById);
+    router.post('/promotion-products', promotionProductsController.create);
+    router.put('/promotion/:id', promotionProductsController.update);
+    router.delete('/promotion/:id', promotionProductsController.remove);
 
 //------------------[ PRODUCT ]------------------\
 router.get('/products', ProductController.get); 

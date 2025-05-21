@@ -49,7 +49,7 @@ WishlistModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
 // Wishlist - ProductVariant
 ProductVariantsModel.hasMany(WishlistModel, { foreignKey: 'product_variant_id', as: 'wishlists' });
-WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
+WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' }); // ✅ alias: variant
 
 // Category - Product
 CategoriesModel.hasMany(ProductModel, { foreignKey: 'category_id', as: 'products' });
@@ -70,11 +70,11 @@ CartDetailModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
 // Product - ProductVariant
 ProductModel.hasMany(ProductVariantsModel, { foreignKey: 'product_id', as: 'variants' });
-ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' });
+ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'product' }); // ✅ alias: product
 
-// ProductVariant - Cart 
+// ProductVariant - Cart
 ProductVariantsModel.hasMany(CartDetailModel, { foreignKey: 'product_variant_id', as: 'carts' });
-CartDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
+CartDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' }); // ✅ alias: variant
 
 // Brand - Product
 BrandModel.hasMany(ProductModel, { foreignKey: 'brand_id', as: 'products' });
@@ -88,12 +88,9 @@ OrderDetailModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
 OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' });
 ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
 
-// ProductVariants - Product
-ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'variantProduct' });
-
 // ProductVariant - ProductVariantAttributeValue
 ProductVariantsModel.hasMany(ProductVariantAttributeValueModel, { foreignKey: 'product_variant_id', as: 'attributeValues' });
-ProductVariantAttributeValueModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' });
+ProductVariantAttributeValueModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' }); // ✅ alias: variant
 
 // ProductAttribute - ProductVariantAttributeValue
 ProductAttributeModel.hasMany(ProductVariantAttributeValueModel, { foreignKey: 'product_attribute_id', as: 'values' });
@@ -101,10 +98,10 @@ ProductVariantAttributeValueModel.belongsTo(ProductAttributeModel, { foreignKey:
 
 // ProductVariant - VariantImage
 ProductVariantsModel.hasMany(VariantImageModel, { foreignKey: 'variant_id', as: 'images' });
-VariantImageModel.belongsTo(ProductVariantsModel, { foreignKey: 'variant_id', as: 'variant' });
+VariantImageModel.belongsTo(ProductVariantsModel, { foreignKey: 'variant_id', as: 'variant' }); // ✅ alias: variant
 
-// OrderDetailModel - ProductVariants
-OrderDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'productVariant' });
+// OrderDetail - ProductVariant
+OrderDetailModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' });
 ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id', as: 'orderDetails' });
 
 // PromotionProduct - ProductVariant
@@ -143,5 +140,6 @@ module.exports = {
   PromotionProductModel,
   ProductAttributeModel,
   ProductVariantAttributeValueModel,
-  VariantImageModel
+  VariantImageModel,
+  CommentImageModel
 };
