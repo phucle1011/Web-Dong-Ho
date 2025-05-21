@@ -60,6 +60,16 @@ router.get('/products/:id', ProductController.getById);
 router.post('/products', ProductController.createProduct); 
 router.post('/products/:product_id/variants', ProductController.addVariant);
 router.delete('/products/:id', ProductController.delete);
+router.get('/products/productList/search', ProductController.searchProducts);
+router.post('/variants/:variant_id/images', ProductController.addVariantImages);
+router.put("/variants/:variant_id", ProductController.updateVariant);
+router.put("/products/:id", ProductController.update);
+router.delete('/variant-images/:image_id', ProductController.deleteSingleVariantImage);
+router.get("/product-attributes", ProductController.getAllAttributes);
+router.delete("/variants/:variant_id", ProductController.deleteVariant);
+router.get("/variants/:variant_id", ProductController.getVariantById);
+
+
 
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);

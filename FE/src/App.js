@@ -34,11 +34,14 @@ import CommentPage from "./pages/admin/comment/getAll";
 import CommentProductDetailPage from "./pages/admin/comment/detail";
 import CartPage from "./pages/admin/cart/getAll";
 import CartDetailPage from "./pages/admin/cart/detail";
+import ProductList from "./pages/admin/product/getAll";
+import ProductAdd from "./pages/admin/product/addProduct";
+import AddVariant from "./pages/admin/product/addVariant";
+import ProductDetail from "./pages/admin/product/detail";
+import EditVariant from "./pages/admin/product/editVariant";
 import BrandList from "./pages/admin/brand/getAll";
 import BrandDetail from "./pages/admin/brand/detail";
 import BrandCreate from "./pages/admin/brand/Create";
-
-
 const AppRoutes = () => {
   return (
     <Routes>
@@ -114,6 +117,16 @@ const AppRoutes = () => {
         <Route path="promotion-products">
           <Route path="getAll" element={<PromotionProductList />} />
           <Route path="create" element={<PromotionProductForm />} />
+        </Route>
+        <Route path="products">
+          <Route path="getAll" element={<ProductList />} />
+          <Route path="create" element={<ProductAdd />} />
+          <Route path="addVariant/:productId" element={<AddVariant />} />
+          <Route path="detail/:id" element={<ProductDetail />} />
+          <Route path="editVariant/:id" element={<EditVariant />} />
+
+
+
         </Route>
         
         <Route path="wishlist">
