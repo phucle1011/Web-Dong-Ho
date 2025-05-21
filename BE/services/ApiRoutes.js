@@ -1,28 +1,36 @@
 const axios = require('axios');
 const API_TOKEN = "e0c711d8-e3a7-11ef-9022-7e9c01851c55";
 
-exports.getProvinces = async (req, res) => {
+const fetchData = async (url, res) => {
   try {
-    const response = await axios.get("https://online-gateway.ghn.vn/shiip/public-api/master-data/province", {
+    const response = await axios.get(url, {
       headers: { "Token": API_TOKEN }
     });
-
-    const data = response.data; 
+    const data = response.data;
 
     if (data.code === 200) {
-      console.log("Tỉnh thành phố được lấy:", data.data);
-      res.json(data.data);  
+      return data.data;
     } else {
       res.status(data.code).json({
-        message: 'Lỗi khi lấy danh sách tỉnh',
+        message: 'Lỗi khi lấy dữ liệu',
         details: data.message
       });
+      return null;
     }
   } catch (error) {
     res.status(500).json({
       message: 'Có lỗi xảy ra khi kết nối đến API.',
       details: error.message
     });
+    return null;
+  }
+};
+
+exports.getProvinces = async (req, res) => {
+  const data = await fetchData("https://online-gateway.ghn.vn/shiip/public-api/master-data/province", res);
+  if (data) {
+    console.log("Tỉnh thành phố được lấy:", data);
+    res.json(data);
   }
 };
 
@@ -35,61 +43,22 @@ exports.getDistricts = async (req, res) => {
     });
   }
 
-  try {
-    const response = await axios.get(`https://online-gateway.ghn.vn/shiip/public-api/master-data/district?province_id=${provinceID}`, {
-      headers: { "Token": API_TOKEN }
-    });
-
-    const data = response.data;
-
-    if (data.code === 200) {
-      console.log("Quận huyện được lấy cho tỉnh", provinceID, ":", data.data);
-      res.json(data.data);  
-    } else {
-      res.status(data.code).json({
-        message: 'Lỗi khi lấy danh sách quận huyện',
-        details: data.message
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      message: 'Có lỗi xảy ra khi kết nối đến API.',
-      details: error.message
-    });
+  const data = await fetchData(`https://online-gateway.ghn.vn/shiip/public-api/master-data/district?province_id=${provinceID}`, res);
+  if (data) {
+    console.log("Quận huyện được lấy cho tỉnh", provinceID, ":", data);
+    res.json(data);
   }
 };
-
 
 exports.getWards = async (req, res) => {
-  try {
-    const districtID = req.query.districtId;  
-    if (!districtID) {
-      return res.status(400).json({ message: 'Thiếu district_id' });
-    }
+  const districtID = req.query.districtId;  
+  if (!districtID) {
+    return res.status(400).json({ message: 'Thiếu district_id' });
+  }
 
-    const response = await axios.get(`https://online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id=${districtID}`, {
-      headers: { "Token": API_TOKEN }
-    });
-
-    const data = response.data;
-
-    if (data.code === 200) {
-      console.log("Phường xã được lấy cho quận huyện", districtID, ":", data.data);
-      res.json(data.data);  
-    } else {
-      res.status(data.code).json({
-        message: 'Lỗi khi lấy danh sách phường xã',
-        details: data.message
-      });
-    }
-  } catch (error) {
-    console.error("Lỗi khi lấy phường xã:", error.message);
-    res.status(500).json({
-      message: 'Có lỗi xảy ra khi kết nối đến API.',
-      details: error.message
-    });
+  const data = await fetchData(`https://online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id=${districtID}`, res);
+  if (data) {
+    console.log("Phường xã được lấy cho quận huyện", districtID, ":", data);
+    res.json(data);
   }
 };
-
-
-

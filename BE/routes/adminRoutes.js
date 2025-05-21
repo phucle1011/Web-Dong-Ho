@@ -74,6 +74,9 @@ router.get("/variants/:variant_id", ProductController.getVariantById);
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);
 router.get('/address/user/:id', AddressController.getAddressesByUser);
+router.delete('/user/:userId/addresses/:id', AddressController.deleteAddress);
+router.put('/user/:userId/addresses/:id', AddressController.updateAddress);
+router.post('/user/:userId/addresses', AddressController.addAddress);
 
 //------------------[ CART ]------------------\
 router.get('/cart/list', CartController.getAllCart);
