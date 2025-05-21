@@ -62,7 +62,6 @@ function UserDetail() {
         });
     };
 
-    // Hàm xử lý việc gọi API để thêm địa chỉ mới cho người dùng
     const handleAddAddress = async (addressData) => {
         try {
             const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
@@ -71,7 +70,7 @@ function UserDetail() {
                 title: 'Thêm địa chỉ thành công!',
                 text: res.data.message,
             });
-            fetchUserDetail(); // Gọi lại hàm fetchUserDetail để cập nhật danh sách địa chỉ
+            fetchUserDetail();
         } catch (error) {
             console.error("Lỗi khi thêm địa chỉ:", error);
             Swal.fire({
@@ -82,48 +81,60 @@ function UserDetail() {
         }
     };
 
-    // Hàm hiển thị modal SweetAlert2 để thu thập thông tin địa chỉ mới từ người dùng
     const showAddAddressModal = () => {
         Swal.fire({
-            title: 'Thêm địa chỉ mới',
+            title: '<span class="text-xl font-bold text-gray-800">Thêm địa chỉ mới</span>',
             html: `
-            <div>
-                <label for="swal-address_line" class="block text-gray-700 text-sm font-bold mb-2">Địa chỉ:</label>
-                <input type="text" id="swal-address_line" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            <div class="p-4 bg-white rounded-lg space-y-4 text-left">
+                <div>
+                    <label for="swal-address_line" class="block text-gray-700 text-sm font-semibold mb-1">Địa chỉ:</label>
+                    <input type="text" id="swal-address_line" class="shadow-sm border border-gray-300 rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="swal-city" class="block text-gray-700 text-sm font-semibold mb-1">Thành phố:</label>
+                    <input type="text" id="swal-city" class="shadow-sm border border-gray-300 rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="swal-district" class="block text-gray-700 text-sm font-semibold mb-1">Quận/Huyện:</label>
+                    <input type="text" id="swal-district" class="shadow-sm border border-gray-300 rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="swal-province" class="block text-gray-700 text-sm font-semibold mb-1">Tỉnh/Thành phố:</label>
+                    <input type="text" id="swal-province" class="shadow-sm border border-gray-300 rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="swal-postal_code" class="block text-gray-700 text-sm font-semibold mb-1">Mã bưu điện:</label>
+                    <input type="text" id="swal-postal_code" class="shadow-sm border border-gray-300 rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="col-span-2 flex items-center mt-2">
+                    <input type="checkbox" id="swal-is_default" class="form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500">
+                    <label for="swal-is_default" class="ml-2 text-gray-700 text-sm">Đặt làm địa chỉ mặc định</label>
+                </div>
             </div>
-            <div>
-                <label for="swal-city" class="block text-gray-700 text-sm font-bold mb-2">Thành phố:</label>
-                <input type="text" id="swal-city" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div>
-                <label for="swal-district" class="block text-gray-700 text-sm font-bold mb-2">Quận/Huyện:</label>
-                <input type="text" id="swal-district" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div>
-                <label for="swal-province" class="block text-gray-700 text-sm font-bold mb-2">Tỉnh/Thành phố:</label>
-                <input type="text" id="swal-province" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div>
-                <label for="swal-postal_code" class="block text-gray-700 text-sm font-bold mb-2">Mã bưu điện:</label>
-                <input type="text" id="swal-postal_code" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div class="col-span-2">
-                <label for="swal-is_default" class="inline-flex items-center mt-2">
-                    <input type="checkbox" id="swal-is_default" class="form-checkbox h-5 w-5 text-green-500 rounded focus:outline-none focus:shadow-outline">
-                    <span class="ml-2 text-gray-700 text-sm">Đặt làm địa chỉ mặc định</span>
-                </label>
-            </div>
-        `,
-            // ... phần còn lại của modal
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Thêm địa chỉ',
+            cancelButtonText: 'Hủy',
+            customClass: {
+                confirmButton: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded',
+                cancelButton: 'bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded'
+            },
+            buttonsStyling: false, // Disable SweetAlert2 default styling
             preConfirm: () => {
-                return {
-                    address_line: document.getElementById('swal-address_line').value,
-                    city: document.getElementById('swal-city').value,
-                    district: document.getElementById('swal-district').value,
-                    province: document.getElementById('swal-province').value,
-                    postal_code: document.getElementById('swal-postal_code').value,
-                    is_default: document.getElementById('swal-is_default').checked,
-                };
+                const address_line = document.getElementById('swal-address_line').value;
+                const city = document.getElementById('swal-city').value;
+                const district = document.getElementById('swal-district').value;
+                const province = document.getElementById('swal-province').value;
+                const postal_code = document.getElementById('swal-postal_code').value;
+                const is_default = document.getElementById('swal-is_default').checked;
+
+                if (!address_line || !city || !district || !province) {
+                    Swal.showValidationMessage('Vui lòng điền đầy đủ các trường bắt buộc (Địa chỉ, Thành phố, Quận/Huyện, Tỉnh/Thành phố).');
+                    return false;
+                }
+
+                return { address_line, city, district, province, postal_code, is_default };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -148,62 +159,87 @@ function UserDetail() {
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h2 className="text-xl font-bold mb-4">Chi tiết người dùng</h2>
+        <div className="container mx-auto p-6 bg-gray-100 min-h-screen">
+            <h2 className="text-3xl font-extrabold text-gray-800 mb-6 text-center">Chi Tiết Người Dùng</h2>
 
-            <div className="bg-white shadow-md rounded-md p-4 mb-6">
-                <h3 className="font-semibold mb-3">Thông tin cơ bản</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <div><strong>ID:</strong> {user.id}</div>
-                    <div><strong>Họ tên:</strong> {user.name}</div>
-                    <div><strong>Email:</strong> {user.email}</div>
-                    <div><strong>SĐT:</strong> {user.phone}</div>
-                    <div><strong>Vai trò:</strong> <span className="capitalize">{user.role}</span></div>
-                    <div>
-                        <strong>Trạng thái:</strong> <span className="capitalize">{getVietnameseStatus(user.status)}</span>
-                        <select
-                            value={user.status}
-                            onChange={(e) => handleStatusChange(e.target.value)}
-                            className="border rounded px-2 py-1 ml-2"
-                        >
-                            <option value="active">Hoạt động</option>
-                            <option value="inactive">Ngưng hoạt động</option>
-                            <option value="pending">Chờ duyệt</option>
-                            <option value="locked">Bị khóa</option>
-                        </select>
+            <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">Thông Tin Cơ Bản</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">ID:</strong> <span className="text-gray-800">{user.id}</span>
                     </div>
-                    <div><strong>Ngày tạo:</strong> {user.created_at && new Date(user.created_at).toLocaleDateString()}</div>
-                    <div><strong>Ngày cập nhật:</strong> {user.updated_at && new Date(user.updated_at).toLocaleDateString()}</div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">Họ tên:</strong> <span className="text-gray-800">{user.name}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">Email:</strong> <span className="text-blue-600 hover:underline">{user.email}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">SĐT:</strong> <span className="text-gray-800">{user.phone || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">Vai trò:</strong> <span className="capitalize px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">{user.role}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">Trạng thái:</strong>
+                        <div className="flex items-center">
+                            <span className={`capitalize px-3 py-1 rounded-full text-sm font-medium
+                                ${user.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                                ${user.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
+                                ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                ${user.status === 'locked' ? 'bg-purple-100 text-purple-800' : ''}
+                            `}>
+                                {getVietnameseStatus(user.status)}
+                            </span>
+                            <select
+                                value={user.status}
+                                onChange={(e) => handleStatusChange(e.target.value)}
+                                className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            >
+                                <option value="active">Hoạt động</option>
+                                <option value="inactive">Ngưng hoạt động</option>
+                                <option value="pending">Chờ duyệt</option>
+                                <option value="locked">Bị khóa</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">Ngày tạo:</strong> <span className="text-gray-800">{user.created_at && new Date(user.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center">
+                        <strong className="text-gray-600 w-24">Ngày cập nhật:</strong> <span className="text-gray-800">{user.updated_at && new Date(user.updated_at).toLocaleDateString()}</span>
+                    </div>
                     {user.avatar && (
-                        <div className="col-span-2">
-                            <strong>Avatar:</strong>
-                            <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-32 h-32 object-cover rounded-full mt-2" />
+                        <div className="col-span-1 md:col-span-2 flex flex-col items-start mt-4">
+                            <strong className="text-gray-600 mb-2">Ảnh đại diện:</strong>
+                            <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300" />
                         </div>
                     )}
                 </div>
             </div>
 
             {addresses && addresses.length > 0 && (
-                <div className="bg-white shadow-md rounded-md p-4 mb-6">
-                    <h3 className="font-semibold mb-3">Địa chỉ</h3>
-                    <ul>
+                <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
+                    <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">Địa Chỉ</h3>
+                    <ul className="space-y-4">
                         {addresses.map((address) => (
-                            <li key={address.id} className="mb-2 flex items-center justify-between">
-                                <div>
-                                    {address.address_line} {/* Cập nhật thành address_line nếu đó là tên cột */}
-                                    {/* Hoặc giữ nguyên nếu bạn đã đổi tên thành address_line1 */}
-                                    {address.address_line2 && `, ${address.address_line2}`}
-                                    {address.district && `, ${address.district}`}
-                                    {address.city && `, ${address.city}`}
-                                    {address.province && `, ${address.province}`}
-                                    {address.postal_code && ` - ${address.postal_code}`}
-                                    {address.is_default === 1 && <span className="text-green-500 ml-2">(Mặc định)</span>}
+                            <li key={address.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition-colors duration-200">
+                                <div className="flex-1 mb-2 sm:mb-0">
+                                    <p className="text-gray-800 font-medium">
+                                        {address.address_line}
+                                        {address.address_line2 && `, ${address.address_line2}`}
+                                        {address.district && `, ${address.district}`}
+                                        {address.city && `, ${address.city}`}
+                                        {address.province && `, ${address.province}`}
+                                        {address.postal_code && ` - ${address.postal_code}`}
+                                    </p>
+                                    {address.is_default === 1 && <span className="mt-1 inline-block bg-green-200 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Địa chỉ mặc định</span>}
                                 </div>
-                                <div>
-                                    <button className="bg-blue-500 text-white px-2 py-1 rounded text-sm mr-1">
+                                <div className="flex space-x-2">
+                                    <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-3 py-1.5 rounded-md text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
                                         Cập nhật
                                     </button>
-                                    <button className="bg-red-500 text-white px-2 py-1 rounded text-sm">
+                                    <button className="bg-red-500 hover:bg-red-600 text-white font-semibold px-3 py-1.5 rounded-md text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">
                                         Xóa
                                     </button>
                                 </div>

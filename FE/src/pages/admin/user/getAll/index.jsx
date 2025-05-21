@@ -13,17 +13,17 @@ function UserList() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [loading, setLoading] = useState(false); // Thêm state loading
-    const [searchError, setSearchError] = useState(''); // State cho thông báo lỗi tìm kiếm
+    const [loading, setLoading] = useState(false);
+    const [searchError, setSearchError] = useState('');
     const navigate = useNavigate();
-    const limit = 10; // Số lượng item trên mỗi trang
+    const limit = 10;
 
     useEffect(() => {
         fetchUsers(currentPage);
-    }, [currentPage]); // Gọi fetchUsers khi currentPage thay đổi
+    }, [currentPage]);
 
     const fetchUsers = async (page) => {
-        setLoading(true); // Bắt đầu loading
+        setLoading(true);
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/list?page=${page}&limit=${limit}`);
             setUsers(res.data.data);
@@ -60,7 +60,7 @@ function UserList() {
                     axios.put(`${Constants.DOMAIN_API}/admin/user/${userId}/status`, { status: newStatus })
                         .then(response => {
                             toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
-                            fetchUsers(currentPage); // Reload trang hiện tại để thấy cập nhật
+                            fetchUsers(currentPage); 
                         })
                         .catch(error => {
                             console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
@@ -89,35 +89,11 @@ function UserList() {
         }
     };
 
-    const handleSearchChange = async (e) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        setCurrentPage(1); // Reset về trang 1 khi bắt đầu tìm kiếm mới
-        setSearchError(''); // Reset lỗi tìm kiếm khi input thay đổi
-        if (value.trim() !== '') {
-            setLoading(true);
-            try {
-                const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/search?searchTerm=${value}&page=${1}&limit=${limit}`);
-                setSearchResults(res.data.data);
-                setTotalPages(res.data.totalPages);
-                setShowDropdown(res.data.data.length > 0);
-                if (res.data.data.length === 0) {
-                    setSearchError("Không tìm thấy người dùng nào.");
-                }
-            } catch (error) {
-                console.error("Lỗi khi tìm kiếm người dùng:", error);
-                setSearchError("Không tìm thấy người dùng.");
-                setSearchResults([]);
-                setTotalPages(1);
-            } finally {
-                setLoading(false);
-            }
-        } else {
-            setSearchResults([]);
-            setShowDropdown(false);
-            fetchUsers(1); // Nếu search term rỗng, quay lại hiển thị tất cả người dùng ở trang 1
-            setSearchError('');
-        }
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
+        setSearchError('');
+        setSearchResults([]);
+        setShowDropdown(false);
     };
 
     const handleSearchSubmit = async () => {
@@ -130,20 +106,20 @@ function UserList() {
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/search?searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
             if (res.data.data.length === 0) {
-                toast.warning("Không tìm thấy người dùng nào.");
+                setSearchError("Không tìm thấy người dùng nào.");
                 setSearchResults([]);
+                setTotalPages(1);
             } else {
                 setSearchResults(res.data.data);
+                setTotalPages(res.data.totalPages);
+                setSearchError('');
             }
-            setTotalPages(res.data.totalPages);
             setShowDropdown(false);
-            setSearchError('');
         } catch (error) {
             console.error("Lỗi khi tìm kiếm người dùng:", error);
-            toast.error("Không tìm thấy người dùng");
+            setSearchError("Không tìm thấy người dùng.");
             setSearchResults([]);
             setTotalPages(1);
-            setSearchError("Không tìm thấy người dùng.");
         } finally {
             setLoading(false);
         }
@@ -190,7 +166,7 @@ function UserList() {
                         <FaSearch className="w-5 h-5" />
                     </button>
 
-                    {searchTerm.trim() !== '' && (
+                    {searchResults.length > 0 && (
                         <button
                             onClick={handleClearSearch}
                             className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
@@ -218,20 +194,18 @@ function UserList() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {(searchTerm.trim() === '' ? users : searchResults).map((user, index) => (
-                                    <tr key={user.id} className="border-b">
-                                        <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                                        <td className="p-2 border">{user.name}</td>
-                                        <td className="p-2 border">{user.email}</td>
-                                        <td className="p-2 border">{user.phone}</td>
-                                        <td className="p-2 border">
-                                            <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
-                                        </td>
-                                        <td className="p-2 border capitalize">{user.role}</td>
-                                        <td className="p-2 border capitalize">{getVietnameseStatus(user.status)}</td>
-                                        <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
-                                        <td className="p-2 border text-center align-middle">
-                                            <div className="flex justify-center gap-2 items-center h-full">
+                                {searchResults.length > 0 ? (
+                                    searchResults.map((user, index) => (
+                                        <tr key={user.id} className="border-b">
+                                            <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
+                                            <td className="p-2 border">{user.name}</td>
+                                            <td className="p-2 border">{user.email}</td>
+                                            <td className="p-2 border">{user.phone}</td>
+                                            <td className="p-2 border">
+                                                <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
+                                            </td>
+                                            <td className="p-2 border capitalize">{user.role}</td>
+                                            <td className="p-2 border capitalize">
                                                 <select
                                                     value={user.status}
                                                     onChange={(e) => handleStatusChange(user.id, e.target.value)}
@@ -242,18 +216,58 @@ function UserList() {
                                                     <option value="pending">Chờ duyệt</option>
                                                     <option value="locked">Bị khóa</option>
                                                 </select>
-                                                <Link
-                                                    to={`/admin/user/detail/${user.id}`}
-                                                    className="bg-blue-500 text-white py-1 px-3 rounded"
-                                                >
-                                                    Xem
-                                                </Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {(searchTerm.trim() !== '' && searchResults.length === 0) && searchError && (
+                                            </td>
+                                            <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
+                                            <td className="p-2 border text-center align-middle">
+                                                <div className="flex justify-center gap-2 items-center h-full">
+                                                    <Link
+                                                        to={`/admin/user/detail/${user.id}`}
+                                                        className="bg-blue-500 text-white py-1 px-3 rounded"
+                                                    >
+                                                        Xem
+                                                    </Link>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : searchError ? (
                                     <tr><td colSpan="9" className="p-4 text-center text-red-500">{searchError}</td></tr>
+                                ) : (
+                                    users.map((user, index) => (
+                                        <tr key={user.id} className="border-b">
+                                            <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
+                                            <td className="p-2 border">{user.name}</td>
+                                            <td className="p-2 border">{user.email}</td>
+                                            <td className="p-2 border">{user.phone}</td>
+                                            <td className="p-2 border">
+                                                <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
+                                            </td>
+                                            <td className="p-2 border capitalize">{user.role}</td>
+                                            <td className="p-2 border capitalize">
+                                                <select
+                                                    value={user.status}
+                                                    onChange={(e) => handleStatusChange(user.id, e.target.value)}
+                                                    className="border rounded px-2 py-1"
+                                                >
+                                                    <option value="active">Hoạt động</option>
+                                                    <option value="inactive">Ngưng hoạt động</option>
+                                                    <option value="pending">Chờ duyệt</option>
+                                                    <option value="locked">Bị khóa</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
+                                            <td className="p-2 border text-center align-middle">
+                                                <div className="flex justify-center gap-2 items-center h-full">
+                                                    <Link
+                                                        to={`/admin/user/detail/${user.id}`}
+                                                        className="bg-blue-500 text-white py-1 px-3 rounded"
+                                                    >
+                                                        Xem
+                                                    </Link>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>
