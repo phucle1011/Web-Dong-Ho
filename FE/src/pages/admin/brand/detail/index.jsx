@@ -37,12 +37,12 @@ function BrandDetail() {
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Vâng, đổi!',
+            confirmButtonText: 'OK',
             cancelButtonText: 'Hủy'
         }).then((result) => {
             if (result.isConfirmed) {
                 try {
-                    axios.put(`${Constants.DOMAIN_API}/admin/brands/edit/${id}`, { status: newStatus })
+                    axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${id}`, { status: newStatus })
                         .then(response => {
                             toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
                             fetchBrandDetail();
@@ -71,41 +71,63 @@ function BrandDetail() {
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h2 className="text-xl font-bold mb-4">Chi tiết thương hiệu</h2>
+        <div className="container mx-auto p-6 bg-gray-100 min-h-screen">
+            <h2 className="text-3xl font-extrabold text-gray-800 mb-6 text-center">Chi Tiết Thương Hiệu</h2>
 
             {brand.id ? (
-                <div className="bg-white shadow-md rounded-md p-4 mb-6">
-                    <h3 className="font-semibold mb-3">Thông tin cơ bản</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div><strong>ID:</strong> {brand.id}</div>
-                        <div><strong>Tên:</strong> {brand.name}</div>
-                        <div><strong>Slug:</strong> {brand.slug}</div>
-                        <div><strong>Quốc gia:</strong> {brand.country}</div>
+                <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
+                    <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">Thông Tin Cơ Bản</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">ID:</strong> <span className="text-gray-800">{brand.id}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">Tên:</strong> <span className="text-gray-800">{brand.name}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">Slug:</strong> <span className="text-gray-800">{brand.slug}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">Quốc gia:</strong> <span className="text-gray-800">{brand.country}</span>
+                        </div>
+                        <div className="col-span-1 md:col-span-2">
+                            <strong className="text-gray-600 w-24 block mb-2">Mô tả:</strong> <span className="text-gray-800">{brand.description || 'Không có mô tả'}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">Trạng thái:</strong>
+                            <div className="flex items-center">
+                                <span className={`capitalize px-3 py-1 rounded-full text-sm font-medium
+                                    ${brand.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                                    ${brand.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
+                                `}>
+                                    {getVietnameseStatus(brand.status)}
+                                </span>
+                                <select
+                                    value={brand.status}
+                                    onChange={(e) => handleStatusChange(e.target.value)}
+                                    className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                >
+                                    <option value="active">Hoạt động</option>
+                                    <option value="inactive">Ngưng hoạt động</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">Ngày tạo:</strong> <span className="text-gray-800">{brand.created_at && new Date(brand.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <strong className="text-gray-600 w-24">Ngày cập nhật:</strong> <span className="text-gray-800">{brand.updated_at && new Date(brand.updated_at).toLocaleDateString()}</span>
+                        </div>
                         {brand.logo && (
-                            <div className="col-span-2">
-                                <strong>Logo:</strong>
-                                <img src={`${Constants.DOMAIN_API}/uploads/${brand.logo}`} alt={brand.name} className="w-32 h-32 object-cover rounded-full mt-2" />
+                            <div className="col-span-1 md:col-span-2 flex flex-col items-start mt-4">
+                                <strong className="text-gray-600 mb-2">Logo:</strong>
+                                <img src={`${Constants.DOMAIN_API}/uploads/${brand.logo}`} alt={brand.name} className="w-32 h-32 object-contain shadow-md border-2 border-gray-300 rounded-lg" />
                             </div>
                         )}
-                        <div className="col-span-2"><strong>Mô tả:</strong> {brand.description}</div>
-                        <div>
-                            <strong>Trạng thái:</strong> <span className="capitalize">{getVietnameseStatus(brand.status)}</span>
-                            <select
-                                value={brand.status}
-                                onChange={(e) => handleStatusChange(e.target.value)}
-                                className="border rounded px-2 py-1 ml-2"
-                            >
-                                <option value="active">Hoạt động</option>
-                                <option value="inactive">Ngưng hoạt động</option>
-                            </select>
-                        </div>
-                        <div><strong>Ngày tạo:</strong> {brand.created_at && new Date(brand.created_at).toLocaleDateString()}</div>
-                        <div><strong>Ngày cập nhật:</strong> {brand.updated_at && new Date(brand.updated_at).toLocaleDateString()}</div>
                     </div>
                 </div>
             ) : (
-                <div className="bg-white shadow-md rounded-md p-4 mb-6">
+                <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200 text-center text-gray-700">
                     <p>Không tìm thấy thông tin thương hiệu.</p>
                 </div>
             )}

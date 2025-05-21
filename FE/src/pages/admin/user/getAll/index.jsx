@@ -52,7 +52,7 @@ function UserList() {
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Vâng, đổi!',
+            confirmButtonText: 'OK',
             cancelButtonText: 'Hủy'
         }).then((result) => {
             if (result.isConfirmed) {
