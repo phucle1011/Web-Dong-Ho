@@ -35,11 +35,11 @@ class CartController {
           },
           {
             model: ProductVariantModel,
-            as: 'productVariant',
+            as: 'variant',
             attributes: ['id', 'sku', 'price'],
             include: {
               model: ProductModel,
-              as: 'variantProduct',
+              as: 'product',
               attributes: ['name'],
               where: search ? whereProduct : undefined,
             },
@@ -67,7 +67,7 @@ class CartController {
           },
           {
             model: ProductVariantModel,
-            as: 'productVariant',
+            as: 'variant',
             attributes: ['id', 'sku', 'price'],
             include: {
               model: ProductModel,

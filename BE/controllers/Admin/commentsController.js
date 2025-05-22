@@ -28,7 +28,7 @@ class CommentController {
                         include: [
                             {
                                 model: ProductVariantModel,
-                                as: 'productVariant',
+                                as: 'variant',
                                 attributes: ['id', 'sku', 'price']
                             }
                         ]
@@ -70,7 +70,7 @@ class CommentController {
                         include: [
                             {
                                 model: ProductVariantModel,
-                                as: 'productVariant',
+                                as: 'variant',
                                 attributes: ['id', 'sku', 'price'] 
                             }
                         ]
@@ -166,7 +166,7 @@ class CommentController {
                     include: [
                         {
                             model: ProductVariantModel,
-                            as: 'productVariant',
+                            as: 'variant',
                             attributes: ['id', 'sku', 'price', 'product_id'],
                             where: { product_id: id } 
                         }

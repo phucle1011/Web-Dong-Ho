@@ -43,12 +43,12 @@ class OrderController {
                         include: [
                             {
                                 model: ProductVariantsModel,
-                                as: 'productVariant',
+                                as: 'variant',
                                 attributes: ['price'],
                                 include: [
                                     {
                                         model: ProductModel,
-                                        as: 'variantProduct',
+                                        as: 'product',
                                         attributes: ['name']
                                     }
                                 ]
@@ -111,12 +111,12 @@ class OrderController {
                         include: [
                             {
                                 model: ProductVariantsModel,
-                                as: 'productVariant',
+                                as: 'variant',
                                 attributes: ['price'],
                                 include: [
                                     {
                                         model: ProductModel,
-                                        as: 'variantProduct',
+                                        as: 'product',
                                         attributes: ['name']
                                     }
                                 ]
@@ -244,12 +244,12 @@ class OrderController {
                         include: [
                             {
                                 model: ProductVariantsModel,
-                                as: 'productVariant',
+                                as: 'variant',
                                 attributes: ['price'],
                                 include: [
                                     {
                                         model: ProductModel,
-                                        as: 'variantProduct',
+                                        as: 'product',
                                         attributes: ['name'],
                                     },
                                 ],
@@ -381,12 +381,12 @@ class OrderController {
                         include: [
                             {
                                 model: ProductVariantsModel,
-                                as: 'productVariant',
+                                as: 'variant',
                                 attributes: ['price'],
                                 include: [
                                     {
                                         model: ProductModel,
-                                        as: 'variantProduct',
+                                        as: 'product',
                                         attributes: ['name'],
                                     },
                                 ],
@@ -477,12 +477,12 @@ class OrderController {
                     include: [
                         {
                             model: ProductVariantsModel,
-                            as: 'productVariant',
+                            as: 'variant',
                             attributes: ['price'],
                             include: [
                                 {
                                     model: ProductModel,
-                                    as: 'variantProduct',
+                                    as: 'product',
                                     attributes: ['name']
                                 }
                             ]
