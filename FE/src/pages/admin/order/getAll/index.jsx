@@ -1,4 +1,6 @@
 import axios from "axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import React, { useEffect, useState } from "react";
 import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } from 'react-icons/fa';
 import Constants from "../../../../Constants.jsx";
@@ -14,6 +16,8 @@ function OrderGetAll() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [trackingInfoMap, setTrackingInfoMap] = useState({});
   const recordsPerPage = 10;
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [statusCounts, setStatusCounts] = useState({
     all: 0,
@@ -160,8 +164,41 @@ function OrderGetAll() {
     }
   };
 
+  const handleExcelExport = async () => {
+    if (!startDate || !endDate) {
+      toast.error("Vui lòng chọn đầy đủ khoảng thời gian.");
+      return;
+    }
+
+    const formatDateVN = (date) => {
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().split("T")[0];
+    };
+
+    const start = formatDateVN(startDate);
+    const end = formatDateVN(endDate);
+
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/export-excel`, {
+        params: {
+          start_date: start,
+          end_date: end,
+        },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `DonHang_${start}_den_${end}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+    } catch (error) {
+      console.error("Lỗi khi xuất Excel:", error);
+    }
+  };
+
   const handleTrackOrder = async (orderCode) => {
-    // Test cứng nha cô
     if (orderCode === "ORD012") {
       setTrackingInfoMap((prev) => ({
         ...prev,
@@ -220,10 +257,107 @@ function OrderGetAll() {
     setCurrentPage(page);
   };
 
+  const handleFilterByDate = async () => {
+    if (!startDate || !endDate) {
+      toast.warning("Vui lòng chọn cả ngày bắt đầu và ngày kết thúc");
+      return;
+    }
+
+    const formatDateVN = (date) => {
+      const offset = date.getTimezoneOffset() * 60000;
+      return new Date(date.getTime() - offset).toISOString().split("T")[0];
+    };
+    const start = formatDateVN(startDate);
+    const end = formatDateVN(endDate);
+
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/filter-by-date`, {
+        params: {
+          startDate: start,
+          endDate: end,
+        },
+      });
+
+      if (res.data.data.length === 0) {
+        toast.warning("Không có đơn hàng trong khoảng thời gian này.");
+      }
+
+      setOrders(res.data.data);
+      setTotalPages(1);
+      toast.success("Lọc đơn hàng theo ngày thành công");
+    } catch (error) {
+      console.error("Lỗi khi lọc đơn hàng:", error);
+      toast.error("Không thể lọc đơn hàng theo ngày");
+    }
+  };
+
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
-        <h2 className="text-xl font-semibold mb-2">Danh sách đơn hàng</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
+          <div className="mb-4">
+            <h3 className="font-semibold mb-2">Chọn khoảng thời gian để xuất Excel:</h3>
+            <div className="flex items-center gap-4 mb-2">
+              <div>
+                <label>Từ ngày:</label>
+                <DatePicker
+                  selected={startDate}
+                  onChange={(date) => setStartDate(date)}
+                  dateFormat="yyyy-MM-dd"
+                  className="border px-2 py-1 rounded"
+                  placeholderText="Chọn ngày bắt đầu"
+                />
+              </div>
+              <div>
+                <label>Đến ngày:</label>
+                <DatePicker
+                  selected={endDate}
+                  onChange={(date) => setEndDate(date)}
+                  dateFormat="yyyy-MM-dd"
+                  className="border px-2 py-1 rounded"
+                  placeholderText="Chọn ngày kết thúc"
+                />
+              </div>
+              <button
+                onClick={handleExcelExport}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Xuất Excel
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="whitespace-nowrap">Từ ngày:</label>
+              <DatePicker
+                selected={startDate}
+                onChange={(date) => setStartDate(date)}
+                dateFormat="yyyy-MM-dd"
+                className="border px-3 py-2 rounded w-40"
+                placeholderText="Chọn ngày bắt đầu"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="whitespace-nowrap">Đến ngày:</label>
+              <DatePicker
+                selected={endDate}
+                onChange={(date) => setEndDate(date)}
+                dateFormat="yyyy-MM-dd"
+                className="border px-3 py-2 rounded w-40"
+                placeholderText="Chọn ngày kết thúc"
+              />
+            </div>
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded self-end"
+              onClick={handleFilterByDate}
+            >
+              Lọc theo ngày
+            </button>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
           {[
             { key: "", label: "Tất cả", color: "bg-gray-800", textColor: "text-white", count: statusCounts.all },
@@ -248,17 +382,17 @@ function OrderGetAll() {
           ))}
         </div>
 
-        <div className="mb-4 relative flex">
+        <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
-            className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             placeholder="Vui lòng nhập mã đơn hàng hoặc tên khách hàng..."
             value={searchTerm}
             onChange={handleSearchChange}
           />
           <button
             type="button"
-            className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded flex items-center justify-center"
             onClick={handleSearchSubmit}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -272,13 +406,12 @@ function OrderGetAll() {
                 setSearchTerm('');
                 fetchOrders(currentPage);
               }}
-              className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
+              className="bg-blue-900 hover:bg-blue-800 text-white py-2 px-3 rounded"
             >
               Xem tất cả đơn hàng
             </button>
           )}
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
             <thead className="bg-gray-100 text-gray-600">
@@ -316,7 +449,7 @@ function OrderGetAll() {
                     <td className="p-2 border border-gray-300">{order.payment_method}</td>
                     <td className="p-2 border border-gray-300 flex gap-2">
                       <Link to={`/admin/orders/detail/${order.id}`} className="bg-blue-500 text-white py-1 px-3 rounded">Xem</Link>
-                      {["pending"].includes(order.status) && ( 
+                      {["pending"].includes(order.status) && (
                         <button onClick={() => setSelectedOrder(order)} className="bg-red-500 text-white py-1 px-3 rounded">Hủy</button>
                       )}
                       <button onClick={() => handleTrackOrder(order.order_code)} className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded">Vị trí</button>
