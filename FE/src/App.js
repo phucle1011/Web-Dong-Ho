@@ -26,6 +26,7 @@ import UserList from './pages/admin/user/getAll';
 import OrderDetail from "./pages/admin/order/detail";
 import PromotionProductList from "./pages/admin/promotionProducts/getAll";
 import PromotionProductForm from "./pages/admin/promotionProducts/Create";
+import PromotionProductEdit from "./pages/admin/promotionProducts/Edit";
 import WishlistList from "./pages/admin/wishlist/getAll";
 import PromotionGetAll from "./pages/admin/promotions/getAll";
 import PromotionEdit from "./pages/admin/promotions/Edit";
