@@ -43,6 +43,7 @@ import EditVariant from "./pages/admin/product/editVariant";
 import BrandList from "./pages/admin/brand/getAll";
 import BrandDetail from "./pages/admin/brand/detail";
 import BrandCreate from "./pages/admin/brand/Create";
+
 const AppRoutes = () => {
   return (
     <Routes>
