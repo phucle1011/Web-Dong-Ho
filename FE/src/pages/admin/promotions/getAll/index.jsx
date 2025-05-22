@@ -10,278 +10,361 @@ import {
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
 } from "react-icons/fa";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 function PromotionGetAll() {
-  const [promotions, setPromotions] = useState([]);
-  const [selectedPromotion, setSelectedPromotion] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const perPage = 10;
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [promotions, setPromotions] = useState([]);
+    const [selectedPromotion, setSelectedPromotion] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [statusCounts, setStatusCounts] = useState({
+        all: 0,
+        active: 0,
+        upcoming: 0,
+        expired: 0,
+        inactive: 0,
+        exhausted: 0,
+    });
 
-  useEffect(() => {
-    getPromotions(currentPage, searchTerm);
-  }, [currentPage]);
-
-  const getPromotions = async (page = 1, search = "") => {
-    try {
-      const res = await axios.get(
-        `${Constants.DOMAIN_API}/admin/promotions/list`,
-        {
-          params: { page, limit: perPage, searchTerm: search },
+    const exportToExcel = () => {
+        if (promotions.length === 0) {
+            toast.info("Không có dữ liệu để xuất.");
+            return;
         }
-      );
-      setPromotions(res.data.data || []);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      if (search && (res.data.data || []).length === 0) {
-        toast.info("Không tìm thấy khuyến mãi nào.");
-      }
-    } catch (error) {
-      console.error("Lỗi khi tải khuyến mãi:", error);
-      toast.error("Không thể tải danh sách khuyến mãi.");
-    }
-  };
+        const data = promotions.map((promo, index) => ([
+            (currentPage - 1) * perPage + index + 1,
+            promo.name,
+            promo.discount_type === "percentage"
+                ? `${promo.discount_value}%`
+                : `${promo.discount_value.toLocaleString()}đ`,
+            promo.quantity > 0 ? promo.quantity : "Hết lượt",
+            formatDate(promo.start_date),
+            formatDate(promo.end_date),
+            {
+                active: "Đang diễn ra",
+                upcoming: "Sắp diễn ra",
+                expired: "Đã hết hạn",
+                inactive: "Vô hiệu hóa",
+                exhausted: "Hết lượt sử dụng",
+            }[promo.status],
+        ]));
 
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
+        const worksheet = XLSX.utils.aoa_to_sheet([
+            [
+                "#",
+                "Tên khuyến mãi",
+                "% Giảm",
+                "Lượt",
+                "Ngày bắt đầu",
+                "Ngày kết thúc",
+                "Trạng thái",
+            ],
+            ...data,
+        ]);
+        worksheet["!cols"] = [
+            { wpx: 40 },
+            { wpx: 200 },
+            { wpx: 80 },
+            { wpx: 70 },
+            { wpx: 120 },
+            { wpx: 120 },
+            { wpx: 100 },
+        ];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Khuyến mãi");
+        const excelBuffer = XLSX.write(workbook, {
+            bookType: "xlsx",
+            type: "array",
+        });
+        const blob = new Blob([excelBuffer], {
+            type:
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+        });
+        saveAs(blob, `danh_sach_khuyen_mai_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    };
 
-  const deletePromotion = async () => {
-    if (!selectedPromotion) return;
+    const perPage = 10;
 
-    try {
-      await axios.delete(
-        `${Constants.DOMAIN_API}/admin/promotion/${selectedPromotion.id}`
-      );
-      toast.success("Xóa khuyến mãi thành công");
-      getPromotions(currentPage, searchTerm);
-    } catch (error) {
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error("Xóa thất bại. Vui lòng thử lại.");
-      }
-    } finally {
-      setSelectedPromotion(null);
-    }
-  };
+    useEffect(() => {
+        getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate);
+    }, [currentPage, filterStatus]);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN");
-  };
-
-  return (
-    <div className="container mx-auto p-4 bg-white shadow rounded">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Danh sách khuyến mãi</h2>
-        <Link
-          to="/admin/promotions/create"
-          className="bg-[#073272] text-white px-4 py-2 rounded"
-        >
-          + Thêm khuyến mãi
-        </Link>
-      </div>
-
-      <div className="mb-4 flex flex-wrap gap-2 items-stretch">
-        <input
-          type="text"
-          className="shadow border rounded w-full sm:w-auto flex-grow py-2 px-3 text-sm"
-          placeholder="Nhập tên khuyến mãi cần tìm..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setCurrentPage(1);
-              getPromotions(1, searchTerm);
+    const getPromotions = async (page = 1, search = "", status = "", start = "", end = "") => {
+        try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`, {
+                params: {
+                    page,
+                    limit: perPage,
+                    searchTerm: search,
+                    status,
+                    startDate: start,
+                    endDate: end
+                },
+            });
+            setPromotions(res.data.data || []);
+            setTotalPages(res.data.pagination?.totalPages || 1);
+            setStatusCounts(res.data.statusCounts || {});
+            if (search && (res.data.data || []).length === 0) {
+                toast.info("Không tìm thấy khuyến mãi nào.");
             }
-          }}
-        />
-        <button
-          onClick={() => {
-            setCurrentPage(1);
-            getPromotions(1, searchTerm);
-          }}
-          className="bg-[#073272] text-white px-4 py-2 text-sm rounded"
-        >
-          <i className="fa fa-search"></i>
-        </button>
+        } catch (error) {
+            console.error("Lỗi khi tải khuyến mãi:", error);
+            toast.error("Không thể tải danh sách khuyến mãi.");
+        }
+    };
 
-        {searchTerm.trim() !== "" && (
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setCurrentPage(1);
-              getPromotions(1, "");
-            }}
-            className="bg-[#073272] text-white px-4 py-2 text-sm rounded whitespace-nowrap"
-          >
-            Xem tất cả mã giảm giá
-          </button>
-        )}
-      </div>
+    const deletePromotion = async () => {
+        if (!selectedPromotion) return;
+        try {
+            await axios.delete(`${Constants.DOMAIN_API}/admin/promotion/${selectedPromotion.id}`);
+            toast.success("Xóa khuyến mãi thành công");
+            getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Xóa thất bại. Vui lòng thử lại.");
+        } finally {
+            setSelectedPromotion(null);
+        }
+    };
 
-      <table className="w-full table-auto border border-collapse border-gray-300 text-sm">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border p-2">#</th>
-            <th className="border p-2">Tên</th>
-            <th className="border p-2">% Giảm giá</th>
-            <th className="border p-2">Lượt còn lại</th>
-            <th className="border p-2">Bắt đầu</th>
-            <th className="border p-2">Kết thúc</th>
-            <th className="border p-2">Trạng thái</th>
-            <th className="border p-2">Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {promotions.map((promo, index) => (
-            <tr key={promo.id} className="hover:bg-gray-50">
-              <td className="border p-2 text-center">
-                {(currentPage - 1) * perPage + index + 1}
-              </td>
-              <td className="border p-2">{promo.name}</td>
-              <td className="border p-2 text-center">
-                {promo.discount_type === "percentage"
-                  ? `${promo.discount_value}%`
-                  : `${promo.discount_value.toLocaleString()}đ`}
-              </td>
-              <td className="border p-2 text-center">
-                {promo.quantity > 0 ? promo.quantity : "Hết lượt"}
-              </td>
-              <td className="border p-2 text-center">
-                {formatDate(promo.start_date)}
-              </td>
-              <td className="border p-2 text-center">
-                {formatDate(promo.end_date)}
-              </td>
-              <td className="border p-2 text-center">
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    promo.status === "expired"
-                      ? "bg-red-100 text-red-800"
-                      : promo.status === "inactive"
-                      ? "bg-gray-200 text-gray-800"
-                      : promo.status === "upcoming"
-                      ? "bg-blue-100 text-blue-800"
-                      : promo.status === "exhausted"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
-                  }`}
-                >
-                  {
-                    {
-                      active: "Đang diễn ra",
-                      upcoming: "Sắp diễn ra",
-                      expired: "Đã hết hạn",
-                      inactive: "Vô hiệu hóa",
-                      exhausted: "Hết lượt sử dụng",
-                    }[promo.status]
-                  }
-                </span>
-              </td>
-              <td className="border p-2 text-center space-x-2">
-                <Link
-                  to={`/admin/promotions/edit/${promo.id}`}
-                  className="bg-yellow-500 text-white py-1 px-3 rounded"
-                >
-                  <i className="fa-solid fa-pen-to-square"></i>
+    const handleFilterByDate = () => {
+        setCurrentPage(1);
+        getPromotions(1, searchTerm, filterStatus, startDate, endDate);
+    }
+
+    const formatDate = (dateString) => new Date(dateString).toLocaleDateString("vi-VN");
+
+    const statusList = [
+        { key: "all", label: "Tất cả", color: "bg-gray-800", textColor: "text-white" },
+        { key: "active", label: "Đang diễn ra", color: "bg-green-300", textColor: "text-green-800" },
+        { key: "upcoming", label: "Sắp diễn ra", color: "bg-blue-300", textColor: "text-blue-900" },
+        { key: "expired", label: "Đã hết hạn", color: "bg-red-300", textColor: "text-red-800" },
+        { key: "inactive", label: "Vô hiệu hóa", color: "bg-gray-300", textColor: "text-gray-800" },
+        { key: "exhausted", label: "Hết lượt", color: "bg-yellow-300", textColor: "text-yellow-800" },
+    ];
+
+    return (
+        <div className="container mx-auto p-4 bg-white shadow-md rounded">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold">Danh sách khuyến mãi</h2>
+                <Link to="/admin/promotions/create" className="bg-[#073272] hover:bg-[#05224f] text-white px-4 py-2 rounded shadow">
+                    + Thêm khuyến mãi
                 </Link>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+                <DatePicker
+                    selected={startDate}
+                    onChange={(date) => setStartDate(date)}
+                    selectsStart
+                    startDate={startDate}
+                    endDate={endDate}
+                    placeholderText="Chọn ngày bắt đầu"
+                    className="shadow border rounded py-2 px-3 text-sm"
+                    dateFormat="yyyy-MM-dd"
+                />
+                <DatePicker
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    selectsEnd
+                    startDate={startDate}
+                    endDate={endDate}
+                    minDate={startDate}
+                    placeholderText="Chọn ngày kết thúc"
+                    className="shadow border rounded py-2 px-3 text-sm ml-2"
+                    dateFormat="yyyy-MM-dd"
+                />
                 <button
-                  onClick={() => setSelectedPromotion(promo)}
-                  className="bg-red-500 text-white py-1 px-3 rounded"
+                    onClick={handleFilterByDate}
+                    className="bg-[#073272] hover:bg-[#05224f] text-white px-4 py-2 text-sm rounded ml-2"
                 >
-                  <i className="fa-solid fa-trash"></i>
+                    Lọc theo ngày
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="flex justify-center mt-4 items-center">
-        <div className="flex items-center space-x-1">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(1)}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            <FaAngleDoubleLeft />
-          </button>
-
-          <button
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            <FaChevronLeft />
-          </button>
-
-          {currentPage > 2 && (
-            <>
-              <button
-                onClick={() => handlePageChange(1)}
-                className="px-3 py-1 border rounded"
-              >
-                1
-              </button>
-              {currentPage > 3 && <span className="px-2">...</span>}
-            </>
-          )}
-
-          {[...Array(totalPages)].map((_, i) => {
-            const page = i + 1;
-            if (page >= currentPage - 1 && page <= currentPage + 1) {
-              return (
                 <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 border rounded ${
-                    currentPage === page
-                      ? "bg-blue-500 text-white"
-                      : "bg-blue-100 text-black hover:bg-blue-200"
-                  }`}
+                    onClick={exportToExcel}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm rounded ml-2"
                 >
-                  {page}
+                    Xuất Excel
                 </button>
-              );
-            }
-            return null;
-          })}
+            </div>
 
-          {currentPage < totalPages - 1 && (
-            <>
-              {currentPage < totalPages - 2 && (
-                <span className="px-2">...</span>
-              )}
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                className="px-3 py-1 border rounded"
-              >
-                {totalPages}
-              </button>
-            </>
-          )}
+            <div className="flex flex-wrap gap-2 mb-4">
+                {statusList.map(({ key, label, color, textColor }) => (
+                    <button
+                        key={key}
+                        onClick={() => {
+                            setFilterStatus(key === "all" ? "" : key);
+                            setCurrentPage(1);
+                            getPromotions(1, searchTerm, key === "all" ? "" : key, startDate, endDate);
+                        }}
+                        className={`flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm transition-all ${filterStatus === (key === "all" ? "" : key) ? "bg-[#073272] text-white" : "bg-white text-gray-700"
+                            }`}
+                    >
+                        {label}
+                        <span className={`px-2 py-0.5 rounded ${color} ${textColor} text-xs font-semibold`}>
+                            {statusCounts[key] ?? 0}
+                        </span>
+                    </button>
+                ))}
+            </div>
 
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            <FaChevronRight />
-          </button>
+            <div className="flex flex-col sm:flex-row gap-3 mb-4 items-stretch sm:items-center flex-wrap">
+                <input
+                    type="text"
+                    className="shadow border rounded w-full sm:w-auto flex-grow py-2 px-3 text-sm"
+                    placeholder="Nhập tên khuyến mãi..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            setCurrentPage(1);
+                            getPromotions(1, searchTerm, filterStatus, startDate, endDate);
+                        }
+                    }}
+                />
 
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => handlePageChange(totalPages)}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            <FaAngleDoubleRight />
-          </button>
-        </div>
-      </div>
+                <button
+                    onClick={() => {
+                        setSearchTerm("");
+                        setFilterStatus("");
+                        setStartDate("");
+                        setEndDate("");
+                        setCurrentPage(1);
+                        getPromotions(1, "", "", "", "");
+                    }}
+                    className="bg-[#073272] hover:bg-[#05224f] text-white px-4 py-2 text-sm rounded"
+                >
+                    Xem tất cả
+                </button>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full text-sm border border-collapse border-gray-300">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="border p-2">#</th>
+                            <th className="border p-2">Tên</th>
+                            <th className="border p-2">% Giảm</th>
+                            <th className="border p-2">Lượt</th>
+                            <th className="border p-2">Bắt đầu</th>
+                            <th className="border p-2">Kết thúc</th>
+                            <th className="border p-2">Trạng thái</th>
+                            <th className="border p-2">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {promotions.map((promo, index) => (
+                            <tr key={promo.id} className="hover:bg-gray-50">
+                                <td className="border p-2 text-center">{(currentPage - 1) * perPage + index + 1}</td>
+                                <td className="border p-2">{promo.name}</td>
+                                <td className="border p-2 text-center">
+                                    {promo.discount_type === "percentage"
+                                        ? `${promo.discount_value}%`
+                                        : `${promo.discount_value.toLocaleString()}đ`}
+                                </td>
+                                <td className="border p-2 text-center">{promo.quantity > 0 ? promo.quantity : "Hết lượt"}</td>
+                                <td className="border p-2 text-center">{formatDate(promo.start_date)}</td>
+                                <td className="border p-2 text-center">{formatDate(promo.end_date)}</td>
+                                <td className="border p-2 text-center">
+                                    <span
+                                        className={`px-2 py-1 rounded-full text-xs font-medium ${promo.status === "expired"
+                                            ? "bg-red-100 text-red-800"
+                                            : promo.status === "inactive"
+                                                ? "bg-gray-200 text-gray-800"
+                                                : promo.status === "upcoming"
+                                                    ? "bg-blue-100 text-blue-800"
+                                                    : promo.status === "exhausted"
+                                                        ? "bg-yellow-100 text-yellow-800"
+                                                        : "bg-green-100 text-green-800"
+                                            }`}
+                                    >
+                                        {{
+                                            active: "Đang diễn ra",
+                                            upcoming: "Sắp diễn ra",
+                                            expired: "Đã hết hạn",
+                                            inactive: "Vô hiệu hóa",
+                                            exhausted: "Hết lượt sử dụng",
+                                        }[promo.status]}
+                                    </span>
+                                </td>
+                                <td className="border p-2 text-center space-x-2">
+                                    <Link
+                                        to={`/admin/promotions/edit/${promo.id}`}
+                                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded"
+                                    >
+                                        <i className="fa-solid fa-pen-to-square" />
+                                    </Link>
+                                    <button
+                                        onClick={() => setSelectedPromotion(promo)}
+                                        className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
+                                    >
+                                        <i className="fa-solid fa-trash" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="flex justify-center mt-6">
+                <div className="flex items-center space-x-1">
+
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                        <FaAngleDoubleLeft />
+                    </button>
+
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((prev) => prev - 1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                        <FaChevronLeft />
+                    </button>
+
+                    {[...Array(totalPages)].map((_, i) => {
+                        const page = i + 1;
+                        if (page >= currentPage - 1 && page <= currentPage + 1) {
+                            return (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
+                                        }`}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        }
+                        return null;
+                    })}
+
+                    <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((prev) => prev + 1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                        <FaChevronRight />
+                    </button>
+                    <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(totalPages)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                        <FaAngleDoubleRight />
+                    </button>
+                </div>
+            </div>
 
       {selectedPromotion && (
         <FormDelete

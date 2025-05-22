@@ -3,13 +3,25 @@ const PromotionModel = require('../../models/promotionsModel');
 
 class PromotionController {
   static async getAll(req, res) {
-    const { searchTerm = '', page = 1, limit = 10 } = req.query;
+    const {
+      searchTerm = '',
+      page = 1,
+      limit = 10,
+      code,
+      status,
+      startDate,
+      endDate,
+      discount_type,
+      quantity
+    } = req.query;
+
     const currentPage = parseInt(page, 10);
     const perPage = parseInt(limit, 10);
     const offset = (currentPage - 1) * perPage;
 
     try {
       const whereClause = {};
+
       if (searchTerm) {
         whereClause.name = {
           [Op.and]: [
@@ -18,17 +30,54 @@ class PromotionController {
           ]
         };
       }
-      const { rows: promotions, count: totalItems } = await PromotionModel.findAndCountAll({
+
+      if (code) {
+        whereClause.code = {
+          [Op.like]: `%${code}%`
+        };
+      }
+
+      if (startDate) {
+        whereClause.start_date = {
+          ...(whereClause.start_date || {}),
+          [Op.gte]: new Date(startDate)
+        };
+      }
+
+      if (endDate) {
+        whereClause.end_date = {
+          ...(whereClause.end_date || {}),
+          [Op.lte]: new Date(endDate)
+        };
+      }
+
+      if (discount_type) {
+        whereClause.discount_type = discount_type;
+      }
+
+      if (quantity !== undefined) {
+        whereClause.quantity = {
+          [Op.gte]: parseInt(quantity, 10)
+        };
+      }
+
+      const allPromotions = await PromotionModel.findAll({
         where: whereClause,
-        order: [['created_at', 'DESC']],
-        limit: perPage,
-        offset: offset
+        order: [['created_at', 'DESC']]
       });
 
       const now = new Date();
+      const statusCounts = {
+        active: 0,
+        expired: 0,
+        upcoming: 0,
+        exhausted: 0,
+        inactive: 0
+      };
 
-      for (const promo of promotions) {
+      for (const promo of allPromotions) {
         let newStatus = promo.status;
+
         if (promo.status === 'inactive') {
           newStatus = 'inactive';
         } else if (promo.quantity === 0) {
@@ -40,20 +89,48 @@ class PromotionController {
         } else {
           newStatus = 'expired';
         }
+        console.log(`Promo ${promo.id} - oldStatus: ${promo.status}, newStatus: ${newStatus}`);
+        console.log('statusCounts after loop:', statusCounts);
+
+        const updateData = {};
+
         if (promo.status !== newStatus) {
-          await promo.update({ status: newStatus });
-          promo.status = newStatus;
+          updateData.status = newStatus;
         }
+
+        if (newStatus === 'exhausted' && promo.quantity !== 0) {
+          updateData.quantity = 0;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await promo.update(updateData);
+          Object.assign(promo, updateData);
+        }
+
+        statusCounts[newStatus] = (statusCounts[newStatus] || 0) + 1;
       }
+      statusCounts.all = allPromotions.length;
+
+      let filteredPromotions = allPromotions;
+      if (status) {
+        const statusArray = typeof status === 'string' ? status.split(',') : [status];
+        filteredPromotions = allPromotions.filter(promo => statusArray.includes(promo.status));
+      }
+
+      const totalFilteredItems = filteredPromotions.length;
+      const paginatedPromotions = filteredPromotions.slice(offset, offset + perPage);
+
       res.status(200).json({
         success: true,
-        data: promotions,
+        data: paginatedPromotions,
         pagination: {
-          totalItems,
+          totalItems: totalFilteredItems,
           currentPage,
-          totalPages: Math.ceil(totalItems / perPage),
-        }
+          totalPages: Math.ceil(totalFilteredItems / perPage),
+        },
+        statusCounts
       });
+
     } catch (error) {
       console.error("Lỗi khi lấy danh sách khuyến mãi:", error.message, error.stack);
       res.status(500).json({
@@ -62,6 +139,8 @@ class PromotionController {
       });
     }
   }
+
+
 
   static async create(req, res) {
     try {
