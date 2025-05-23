@@ -8,7 +8,7 @@ import Swal from "sweetalert2";
 function UserDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [user, setUser] = useState({});
+  const [user, setUser ] = useState({});
   const [addresses, setAddresses] = useState([]);
 
   useEffect(() => {
@@ -19,10 +19,10 @@ function UserDetail() {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/${id}`);
       if (res.data.data) {
-        setUser(res.data.data);
+        setUser (res.data.data);
         setAddresses(res.data.data.addresses || []);
       } else {
-        setUser({});
+        setUser ({});
         setAddresses([]);
       }
     } catch (error) {
@@ -35,9 +35,7 @@ function UserDetail() {
   const handleStatusChange = async (newStatus) => {
     Swal.fire({
       title: "Xác nhận đổi trạng thái",
-      text: `Bạn có chắc chắn muốn đổi trạng thái của người dùng "${user.name}" thành "${getVietnameseStatus(
-        newStatus
-      )}" không?`,
+      text: `Bạn có chắc chắn muốn đổi trạng thái của người dùng "${user.name}" thành "${getVietnameseStatus(newStatus)}" không?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -64,7 +62,6 @@ function UserDetail() {
 
   // Thêm địa chỉ mới
   const handleAddAddress = async (addressData) => {
-    // Nếu người dùng muốn đặt làm mặc định thì kiểm tra đã có chưa
     if (addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
       if (hasDefault) {
@@ -98,10 +95,8 @@ function UserDetail() {
     }
   };
 
-
   // Cập nhật địa chỉ
   const handleUpdateAddress = async (addressId, addressData) => {
-    // Nếu đặt làm mặc định, kiểm tra có địa chỉ mặc định khác không
     if (addressData.is_default === 1) {
       const hasOtherDefault = addresses.some(
         (addr) => addr.is_default === 1 && addr.id !== addressId
@@ -215,13 +210,14 @@ function UserDetail() {
   const showAddressModal = async (addressData = null) => {
     const provinces = await fetchProvinces();
 
-    let cityOptions = `<option value="">Chọn thành phố</option>`;
+    let cityOptions = `<option value="">${addressData?.city || ''}</option>`;
     provinces.forEach((province) => {
-      cityOptions += `<option value="${province.id}">${province.name}</option>`;
+      cityOptions += `<option value="${province.id}" ${addressData?.cityId === province.id ? 'selected' : ''}>${province.name}</option>`;
     });
 
     const isEdit = !!addressData;
-
+    console.log("addressData", addressData);
+    
     Swal.fire({
       title: isEdit ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới",
       html: `
@@ -238,98 +234,104 @@ function UserDetail() {
         ${cityOptions}
       </select>
     </div>
-
     <div class="mb-4">
       <label for="swal-district" class="form-label font-semibold block mb-1">Quận/Huyện:</label>
-      <select id="swal-district" class="form-select w-full border rounded px-3 py-2" disabled>
-        <option value="">Chọn quận/huyện</option>
+      <select id="swal-district" class="form-select w-full border rounded px-3 py-2" value="92" ${isEdit && addressData ? '' : 'disabled'}>
+        <option value="">${addressData?.district || ''}</option>
       </select>
     </div>
 
     <div class="mb-4">
       <label for="swal-province" class="form-label font-semibold block mb-1">Xã/Phường/Thị Trấn:</label>
-      <select id="swal-province" class="form-select w-full border rounded px-3 py-2" disabled>
-        <option value="">Chọn xã/phường</option>
+      <select id="swal-province" class="form-select w-full border rounded px-3 py-2" ${isEdit && addressData ? '' : 'disabled'}>
+        <option value="">${addressData?.province || ''}</option>
       </select>
     </div>
 
     <div class="form-check mb-3 flex items-center">
-      <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${addressData?.is_default === 1 ? "checked" : ""
-        }>
+      <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${addressData?.is_default === 1 ? "checked" : ""}>
       <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
     </div>
   </form>
 </div>
       `,
-      didOpen: async () => {
-        const citySelect = Swal.getPopup().querySelector("#swal-city");
-        const districtSelect = Swal.getPopup().querySelector("#swal-district");
-        const provinceSelect = Swal.getPopup().querySelector("#swal-province");
+didOpen: async () => {
+  const citySelect = Swal.getPopup().querySelector("#swal-city");
+  const districtSelect = Swal.getPopup().querySelector("#swal-district");
+  const wardSelect = Swal.getPopup().querySelector("#swal-province");
 
-        if (isEdit && addressData) {
-          citySelect.value = addressData.cityId || "";
-          if (addressData.cityId) {
-            districtSelect.disabled = false;
-            const districts = await fetchDistricts(addressData.cityId);
-            let districtOptions = '<option value="">Chọn quận/huyện</option>';
-            districts.forEach((d) => {
-              districtOptions += `<option value="${d.id}">${d.name}</option>`;
-            });
-            districtSelect.innerHTML = districtOptions;
+  if (isEdit && addressData) {
+    citySelect.value = addressData.cityId || "";
 
-            districtSelect.value = addressData.districtId || "";
+    if (addressData.cityId) {
+      districtSelect.disabled = false;
+      const districts = await fetchDistricts(addressData.cityId);
+      let districtOptions = '<option value="">Chọn quận/huyện</option>';
+      districts.forEach((d) => {
+        districtOptions += `<option value="${d.id}" ${parseInt(addressData.districtId) === d.id ? 'selected' : ''}>${d.name}</option>`;
+      });
+      districtSelect.innerHTML = districtOptions;
 
-            if (addressData.districtId) {
-              provinceSelect.disabled = false;
-              const wards = await fetchWards(addressData.districtId);
-              let wardOptions = '<option value="">Chọn xã/phường</option>';
-              wards.forEach((w) => {
-                wardOptions += `<option value="${w.id}">${w.name}</option>`;
-              });
-              provinceSelect.innerHTML = wardOptions;
+      if (districtSelect.querySelector(`option[value="${addressData.districtId}"]`)) {
+        districtSelect.value = addressData.districtId;
+      }
 
-              provinceSelect.value = addressData.provinceId || "";
-            }
-          }
+      if (addressData.districtId) {
+        wardSelect.disabled = false;
+        const wards = await fetchWards(addressData.districtId);
+        let wardOptions = '<option value="">Chọn xã/phường</option>';
+        wards.forEach((w) => {
+          wardOptions += `<option value="${w.id}" ${parseInt(addressData.wardId) === w.id ? 'selected' : ''}>${w.name}</option>`;
+        });
+        wardSelect.innerHTML = wardOptions;
+
+        if (wardSelect.querySelector(`option[value="${addressData.wardId}"]`)) {
+          wardSelect.value = addressData.wardId;
         }
+      }
+    }
+  }
 
-        citySelect.addEventListener("change", async (e) => {
-          const provinceId = e.target.value;
-          if (!provinceId) {
-            districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
-            districtSelect.disabled = true;
-            provinceSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-            provinceSelect.disabled = true;
-            return;
-          }
-          districtSelect.disabled = false;
-          const districts = await fetchDistricts(provinceId);
-          let districtOptions = '<option value="">Chọn quận/huyện</option>';
-          districts.forEach((d) => {
-            districtOptions += `<option value="${d.id}">${d.name}</option>`;
-          });
-          districtSelect.innerHTML = districtOptions;
+  citySelect.addEventListener("change", async (e) => {
+    const provinceId = e.target.value;
+    if (!provinceId) {
+      districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+      districtSelect.disabled = true;
+      wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+      wardSelect.disabled = true;
+      return;
+    }
+    districtSelect.disabled = false;
+    const districts = await fetchDistricts(provinceId);
+    let districtOptions = '<option value="">Chọn quận/huyện</option>';
+    districts.forEach((d) => {
+      districtOptions += `<option value="${d.id}">${d.name}</option>`;
+    });
+    districtSelect.innerHTML = districtOptions;
 
-          provinceSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-          provinceSelect.disabled = true;
-        });
+    wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+    wardSelect.disabled = true;
+  });
 
-        districtSelect.addEventListener("change", async (e) => {
-          const districtId = e.target.value;
-          if (!districtId) {
-            provinceSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-            provinceSelect.disabled = true;
-            return;
-          }
-          provinceSelect.disabled = false;
-          const wards = await fetchWards(districtId);
-          let wardOptions = '<option value="">Chọn xã/phường</option>';
-          wards.forEach((w) => {
-            wardOptions += `<option value="${w.id}">${w.name}</option>`;
-          });
-          provinceSelect.innerHTML = wardOptions;
-        });
-      },
+  
+  districtSelect.addEventListener("change", async (e) => {
+    const districtId = e.target.value;
+    if (!districtId) {
+      wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+      wardSelect.disabled = true;
+      return;
+    }
+    wardSelect.disabled = false;
+    const wards = await fetchWards(districtId);
+    let wardOptions = '<option value="">Chọn xã/phường</option>';
+    wards.forEach((w) => {
+      wardOptions += `<option value="${w.id}">${w.name}</option>`;
+    });
+    wardSelect.innerHTML = wardOptions;
+  });
+},
+
+
       showCancelButton: true,
       confirmButtonText: isEdit ? "Cập nhật" : "Thêm",
       cancelButtonText: "Hủy",

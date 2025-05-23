@@ -31,12 +31,12 @@ function CommentPage() {
       const productMap = {};
       comments.forEach((comment) => {
         const productId = comment?.orderDetail?.product_variant_id;
-        const productName = comment?.orderDetail?.productVariant?.sku;
+        const sku = comment?.orderDetail?.variant?.sku;
 
-        if (productId && !productMap[productId]) {
+        if (productId && sku && !productMap[productId]) {
           productMap[productId] = {
             product_id: productId,
-            product_name: productName,
+            product_sku: sku,
           };
         }
       });
@@ -56,7 +56,7 @@ function CommentPage() {
     }
 
     const filtered = products.filter((product) =>
-      product.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      product.product_sku?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     setProducts(filtered);
@@ -82,15 +82,21 @@ function CommentPage() {
                 <input
                   type="text"
                   className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Tìm theo tên sản phẩm..."
+                  placeholder="Tìm sản phẩm ..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
-                <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2" onClick={handleSearch}>
+                <button
+                  className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
+                  onClick={handleSearch}
+                >
                   <FaSearch />
                 </button>
-                <button className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded" onClick={fetchComments}>
+                <button
+                  className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
+                  onClick={fetchComments}
+                >
                   Xem tất cả
                 </button>
               </div>
@@ -101,7 +107,7 @@ function CommentPage() {
                   <thead className="text-dark fs-4">
                     <tr>
                       <th>ID Sản phẩm</th>
-                      <th>Tên sản phẩm </th>
+                      <th>sản phẩm </th>
                       <th>Hành động</th>
                     </tr>
                   </thead>
@@ -110,7 +116,7 @@ function CommentPage() {
                       currentData.map((product) => (
                         <tr key={product.product_id}>
                           <td>{product.product_id}</td>
-                          <td>{product.product_name}</td>
+                          <td>{product.product_sku}</td>
                           <td>
                             <Link
                               to={`/admin/comments/detail/${product.product_id}`}
@@ -158,10 +164,11 @@ function CommentPage() {
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`px-3 py-1 border rounded ${currentPage === page
-                              ? "bg-primary text-white"
-                              : "bg-light text-dark"
-                              }`}
+                            className={`px-3 py-1 border rounded ${
+                              currentPage === page
+                                ? "bg-primary text-white"
+                                : "bg-light text-dark"
+                            }`}
                           >
                             {page}
                           </button>

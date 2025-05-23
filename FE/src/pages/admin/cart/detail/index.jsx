@@ -50,11 +50,16 @@ function CartDetailPage() {
               </div>
 
               <div className="mb-3">
-                <label className="form-label fw-bold">Sản phẩm</label>
+                <label className="form-label fw-bold">SKU sản phẩm</label>
+                <input type="text" className="form-control" value={cartItem.variant?.sku || ""} disabled />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label fw-bold">Tên sản phẩm</label>
                 <input
                   type="text"
                   className="form-control"
-                  value={cartItem.productVariant?.product?.name || ""}
+                  value={cartItem.variant?.product?.name || ""}
                   disabled
                 />
               </div>
@@ -66,8 +71,8 @@ function CartDetailPage() {
                     type="text"
                     className="form-control"
                     value={
-                      cartItem.productVariant?.price
-                        ? Number(cartItem.productVariant.price).toLocaleString("vi-VN", {
+                      cartItem.variant?.price
+                        ? Number(cartItem.variant.price).toLocaleString("vi-VN", {
                             style: "currency",
                             currency: "VND",
                           })
@@ -82,6 +87,7 @@ function CartDetailPage() {
                   <input type="number" className="form-control" value={cartItem.quantity || 0} disabled />
                 </div>
               </div>
+
               <div className="row">
                 <div className="col-md-6 mb-3">
                   <label className="form-label fw-bold">Ngày tạo</label>
