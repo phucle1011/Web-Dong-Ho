@@ -99,8 +99,9 @@ function CartPage() {
                           <td>{item.id}</td>
                           <td>{item.user?.name || "Không rõ"}</td>
                           <td>
-                            {item.productVariant?.product?.name }  {item.productVariant?.sku}
+                            {item.variant?.product?.name} - {item.variant?.sku}
                           </td>
+
 
                           <td>
                             <Link
@@ -160,8 +161,8 @@ function CartPage() {
                           key={page}
                           onClick={() => handlePageChange(page)}
                           className={`px-3 py-1 border rounded ${currentPage === page
-                              ? "bg-blue-500 text-white"
-                              : "bg-blue-100 text-black hover:bg-blue-200"
+                            ? "bg-blue-500 text-white"
+                            : "bg-blue-100 text-black hover:bg-blue-200"
                             }`}
                         >
                           {page}
