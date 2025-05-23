@@ -21,15 +21,20 @@ class WishlistController {
                 include: [
                     {
                         model: ProductVariantsModel,
-                        as: 'productVariant',
+                        as: 'variant',
                         attributes: ['id', 'price'],
                         include: [
                             {
                                 model: ProductModel,
-                                as: 'variantProduct',
+                                as: 'product',
                                 attributes: ['id', 'name', 'slug', 'thumbnail'],
                             },
                         ],
+                    },
+                    { // Thêm include UserModel ở đây
+                        model: UserModel,
+                        as: 'user', // Đảm bảo 'user' là alias chính xác trong mối quan hệ của bạn
+                        attributes: ['id', 'name', 'email'], // Chọn các thuộc tính bạn muốn hiển thị
                     },
                 ],
             });
@@ -45,6 +50,7 @@ class WishlistController {
             res.status(500).json({ error: error.message });
         }
     }
+
 
     // Thêm sản phẩm vào danh sách yêu thích của người dùng
     static async addToWishlist(req, res) {
@@ -145,6 +151,11 @@ class WishlistController {
                                 },
                             },
                         ],
+                    },
+                    { // Thêm include UserModel ở đây
+                        model: UserModel,
+                        as: 'user', // Đảm bảo 'user' là alias chính xác trong mối quan hệ của bạn
+                        attributes: ['id', 'name', 'email'], // Chọn các thuộc tính bạn muốn hiển thị
                     },
                 ],
             });

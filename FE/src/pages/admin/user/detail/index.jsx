@@ -60,7 +60,6 @@ function UserDetail() {
     });
   };
 
-  // Thêm địa chỉ mới
   const handleAddAddress = async (addressData) => {
     if (addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
@@ -95,7 +94,6 @@ function UserDetail() {
     }
   };
 
-  // Cập nhật địa chỉ
   const handleUpdateAddress = async (addressId, addressData) => {
     if (addressData.is_default === 1) {
       const hasOtherDefault = addresses.some(
@@ -132,7 +130,6 @@ function UserDetail() {
     }
   };
 
-  // Xóa địa chỉ
   const handleDeleteAddress = async (addressId) => {
     Swal.fire({
       title: "Xác nhận xóa",
@@ -167,7 +164,6 @@ function UserDetail() {
     });
   };
 
-  // Hàm lấy danh sách tỉnh/quận/xã từ API
   const fetchProvinces = async () => {
     try {
       const response = await axios.get(
@@ -206,7 +202,6 @@ function UserDetail() {
     }
   };
 
-  // Hiển thị modal thêm hoặc cập nhật địa chỉ
   const showAddressModal = async (addressData = null) => {
     const provinces = await fetchProvinces();
 
@@ -402,39 +397,58 @@ didOpen: async () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">ID:</strong>
-            <span className="text-gray-800">{user.id}</span>
+            <input
+              type="text"
+              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+              value={user.id || ''}
+              readOnly
+            />
           </div>
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">Họ tên:</strong>
-            <span className="text-gray-800">{user.name}</span>
+            <input
+              type="text"
+              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+              value={user.name || ''}
+              readOnly
+            />
           </div>
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">Email:</strong>
-            <span className="text-blue-600 hover:underline">{user.email}</span>
+            <input
+              type="text"
+              className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer hover:underline focus:outline-none"
+              value={user.email || ''}
+              readOnly
+              onClick={() => user.email && window.open(`mailto:${user.email}`)}
+            />
           </div>
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">Vai trò:</strong>
-            <span className="capitalize px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-              {user.role}
-            </span>
+            <input
+              type="text"
+              className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
+              value={user.role || ''}
+              readOnly
+            />
           </div>
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">Trạng thái:</strong>
-            <div className="flex items-center">
+            <div className="flex items-center flex-grow">
               <span
                 className={`capitalize px-3 py-1 rounded-full text-sm font-medium
-              ${user.status === 'active' ? 'bg-green-100 text-green-800' : ''}
-              ${user.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
-              ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-              ${user.status === 'locked' ? 'bg-purple-100 text-purple-800' : ''}
-            `}
+                  ${user.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                  ${user.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
+                  ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                  ${user.status === 'locked' ? 'bg-purple-100 text-purple-800' : ''}
+                `}
               >
                 {getVietnameseStatus(user.status)}
               </span>
               <select
                 value={user.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex-grow"
               >
                 <option value="active">Hoạt động</option>
                 <option value="inactive">Ngưng hoạt động</option>
@@ -445,11 +459,21 @@ didOpen: async () => {
           </div>
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">Ngày tạo:</strong>
-            <span className="text-gray-800">{user.created_at && new Date(user.created_at).toLocaleDateString()}</span>
+            <input
+              type="text"
+              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+              value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
+              readOnly
+            />
           </div>
           <div className="flex items-center">
             <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
-            <span className="text-gray-800">{user.updated_at && new Date(user.updated_at).toLocaleDateString()}</span>
+            <input
+              type="text"
+              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+              value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ''}
+              readOnly
+            />
           </div>
           {user.avatar && (
             <div className="col-span-1 md:col-span-2 flex flex-col items-start mt-4">
@@ -539,6 +563,14 @@ didOpen: async () => {
           </div>
         )}
       </section>
+      <div className="mt-4 text-left">
+        <button
+          onClick={() => navigate("/admin/user/getAll")}
+          className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out"
+        >
+          Quay lại
+        </button>
+      </div>
     </div>
   );
 }

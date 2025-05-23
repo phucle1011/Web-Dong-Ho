@@ -79,23 +79,53 @@ function BrandDetail() {
                     <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">Thông Tin Cơ Bản</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
                         <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">ID:</strong> <span className="text-gray-800">{brand.id}</span>
+                            <strong className="text-gray-600 w-24">ID:</strong>
+                            <input
+                                type="text"
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                value={brand.id || ''}
+                                readOnly
+                            />
                         </div>
                         <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Tên:</strong> <span className="text-gray-800">{brand.name}</span>
+                            <strong className="text-gray-600 w-24">Tên:</strong>
+                            <input
+                                type="text"
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                value={brand.name || ''}
+                                readOnly
+                            />
                         </div>
                         <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Slug:</strong> <span className="text-gray-800">{brand.slug}</span>
+                            <strong className="text-gray-600 w-24">Slug:</strong>
+                            <input
+                                type="text"
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                value={brand.slug || ''}
+                                readOnly
+                            />
                         </div>
                         <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Quốc gia:</strong> <span className="text-gray-800">{brand.country}</span>
+                            <strong className="text-gray-600 w-24">Quốc gia:</strong>
+                            <input
+                                type="text"
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                value={brand.country || ''}
+                                readOnly
+                            />
                         </div>
                         <div className="col-span-1 md:col-span-2">
-                            <strong className="text-gray-600 w-24 block mb-2">Mô tả:</strong> <span className="text-gray-800">{brand.description || 'Không có mô tả'}</span>
+                            <strong className="text-gray-600 w-24 block mb-2">Mô tả:</strong>
+                            {/* Dùng textarea cho mô tả để hiển thị tốt hơn văn bản dài */}
+                            <textarea
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full min-h-[80px] focus:outline-none resize-y"
+                                value={brand.description || 'Không có mô tả'}
+                                readOnly
+                            ></textarea>
                         </div>
                         <div className="flex items-center">
                             <strong className="text-gray-600 w-24">Trạng thái:</strong>
-                            <div className="flex items-center">
+                            <div className="flex items-center flex-grow">
                                 <span className={`capitalize px-3 py-1 rounded-full text-sm font-medium
                                     ${brand.status === 'active' ? 'bg-green-100 text-green-800' : ''}
                                     ${brand.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
@@ -105,7 +135,7 @@ function BrandDetail() {
                                 <select
                                     value={brand.status}
                                     onChange={(e) => handleStatusChange(e.target.value)}
-                                    className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex-grow"
                                 >
                                     <option value="active">Hoạt động</option>
                                     <option value="inactive">Ngưng hoạt động</option>
@@ -113,10 +143,22 @@ function BrandDetail() {
                             </div>
                         </div>
                         <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Ngày tạo:</strong> <span className="text-gray-800">{brand.created_at && new Date(brand.created_at).toLocaleDateString()}</span>
+                            <strong className="text-gray-600 w-24">Ngày tạo:</strong>
+                            <input
+                                type="text"
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                value={brand.created_at ? new Date(brand.created_at).toLocaleDateString() : ''}
+                                readOnly
+                            />
                         </div>
                         <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Ngày cập nhật:</strong> <span className="text-gray-800">{brand.updated_at && new Date(brand.updated_at).toLocaleDateString()}</span>
+                            <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
+                            <input
+                                type="text"
+                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                value={brand.updated_at ? new Date(brand.updated_at).toLocaleDateString() : ''}
+                                readOnly
+                            />
                         </div>
                         {brand.logo && (
                             <div className="col-span-1 md:col-span-2 flex flex-col items-start mt-4">
@@ -132,15 +174,15 @@ function BrandDetail() {
                 </div>
             )}
 
-            <div className="mt-4">
+            <div className="mt-4 text-left">
                 <button
                     onClick={() => navigate("/admin/brand/getAll")}
-                    className="bg-gray-500 text-white px-4 py-2 rounded"
+                    className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out"
                 >
                     Quay lại
                 </button>
             </div>
-        </div>
+        </div>  
     );
 }
 

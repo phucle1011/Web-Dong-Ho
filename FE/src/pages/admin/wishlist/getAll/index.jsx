@@ -13,7 +13,7 @@ function WishlistList() {
   const [searchError, setSearchError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 10; // Số lượng item trên mỗi trang
+  const limit = 10;
 
   useEffect(() => {
     fetchWishlist(currentPage);
@@ -22,7 +22,7 @@ function WishlistList() {
   const fetchWishlist = async (page) => {
     setLoading(true);
     try {
-      const userId = 1; // Thay thế bằng cách lấy userId thực tế (ví dụ: từ context, localStorage)
+      const userId = 1;
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/${userId}/wishlist?page=${page}&limit=${limit}`);
       setWishlistItems(res.data.data);
       setTotalPages(res.data.totalPages);
@@ -52,16 +52,16 @@ function WishlistList() {
     setCurrentPage(1);
     setLoading(true);
     try {
-      const userId = 1; // Thay thế bằng cách lấy userId thực tế
+      const userId = 1;
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/wishlist/search?userId=${userId}&searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
       if (res.data.data.length === 0) {
         setSearchError("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
         setSearchResults([]);
         setTotalPages(1);
       } else {
-         setSearchResults(res.data.data);
-         setTotalPages(res.data.totalPages);
-         setSearchError('');
+        setSearchResults(res.data.data);
+        setTotalPages(res.data.totalPages);
+        setSearchError('');
       }
 
     } catch (error) {
@@ -128,12 +128,12 @@ function WishlistList() {
           <>
             <table className="w-full border-collapse border border-gray-300 mt-3">
               <thead>
-                <tr className="bg-gray-200">
-                  <th className="p-2 border">#</th>
-                  <th className="p-2 border">Tên sản phẩm</th>
-                  <th className="p-2 border">Hình ảnh</th>
-                  <th className="p-2 border">Giá</th>
-                  <th className="p-2 border">Hành động</th>
+                <tr>
+                  <th className="p-2 border text-left">STT</th>
+                  <th className="p-2 border text-left">Tên sản phẩm</th>
+                  <th className="p-2 border text-left">Hình ảnh</th>
+                  <th className="p-2 border text-left">Giá</th>
+                  <th className="p-2 border text-center">Hành động</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,63 +141,58 @@ function WishlistList() {
                   searchResults.map((item, index) => (
                     <tr key={item.id} className="border-b">
                       <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                      <td className="p-2 border">{item.productVariant?.variantProduct?.name}</td>
+                      <td className="p-2 border">{item.variant?.product?.name}</td>
                       <td className="p-2 border">
-                        {item.productVariant?.variantProduct?.thumbnail && (
+                        {item.variant?.product?.thumbnail && (
                           <img
-                            src={item.productVariant.variantProduct.thumbnail}
-                            alt={item.productVariant.variantProduct.name}
+                            src={`${Constants.DOMAIN_API}/uploads/${item.variant.product.thumbnail}`}
+                            alt={item.variant.product.name}
                             className="w-20 h-20 object-cover rounded"
                           />
                         )}
                       </td>
-                      <td className="p-2 border">{formatCurrency(item.productVariant?.price)}</td>
+                      <td className="p-2 border">{formatCurrency(item.variant?.price)}</td>
                       <td className="p-2 border text-center">
-                        {/* Thêm nút hoặc hành động bạn muốn (ví dụ: xem chi tiết, xóa khỏi yêu thích) */}
                         <Link
-                          to={`/product/${item.productVariant?.variantProduct?.slug}`} // Điều chỉnh đường dẫn nếu cần
+                          to={`/product/${item.variant?.product?.slug}`}
                           className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-700"
                         >
                           Xem
                         </Link>
-                        {/* Thêm nút xóa khỏi yêu thích nếu cần */}
                       </td>
                     </tr>
                   ))
                 ) : searchError ? (
-                    <tr><td colSpan="5" className="p-4 text-center text-red-500">{searchError}</td></tr>
-                  ) : (
-                    wishlistItems.map((item, index) => (
-                        <tr key={item.id} className="border-b">
-                            <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                            <td className="p-2 border">{item.productVariant?.variantProduct?.name}</td>
-                            <td className="p-2 border">
-                                {item.productVariant?.variantProduct?.thumbnail && (
-                                    <img
-                                        src={item.productVariant.variantProduct.thumbnail}
-                                        alt={item.productVariant.variantProduct.name}
-                                        className="w-20 h-20 object-cover rounded"
-                                    />
-                                )}
-                            </td>
-                            <td className="p-2 border">{formatCurrency(item.productVariant?.price)}</td>
-                            <td className="p-2 border text-center">
-                                {/* Thêm nút hoặc hành động bạn muốn (ví dụ: xem chi tiết, xóa khỏi yêu thích) */}
-                                <Link
-                                    to={`/product/${item.productVariant?.variantProduct?.slug}`} // Điều chỉnh đường dẫn nếu cần
-                                    className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-700"
-                                >
-                                    Xem
-                                </Link>
-                                {/* Thêm nút xóa khỏi yêu thích nếu cần */}
-                            </td>
-                        </tr>
-                    ))
+                  <tr><td colSpan="5" className="p-4 text-center text-red-500">{searchError}</td></tr>
+                ) : (
+                  wishlistItems.map((item, index) => (
+                    <tr key={item.id} className="border-b">
+                      <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
+                      <td className="p-2 border">{item.variant?.product?.name}</td>
+                      <td className="p-2 border">
+                        {item.variant?.product?.thumbnail && (
+                          <img
+                            src={`${Constants.DOMAIN_API}/uploads/${item.variant.product.thumbnail}`}
+                            alt={item.variant.product.name}
+                            className="w-20 h-20 object-cover rounded"
+                          />
+                        )}
+                      </td>
+                      <td className="p-2 border">{formatCurrency(item.variant?.price)}</td>
+                      <td className="p-2 border text-center">
+                        <Link
+                          to={`/product/${item.variant?.product?.slug}`}
+                          className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-700"
+                        >
+                          Xem
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
 
-            {/* Component phân trang giữ nguyên */}
             <div className="flex justify-center mt-4 items-center">
               <div className="flex items-center space-x-1">
                 <button

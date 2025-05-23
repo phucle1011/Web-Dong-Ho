@@ -2,48 +2,55 @@ import axios from "axios";
 import { useEffect, useState, useRef } from "react";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Swal from 'sweetalert2';
-import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaTrash } from 'react-icons/fa'; // Import FaTrash
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
 
 function BrandList() {
     const [brands, setBrands] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [showDropdown, setShowDropdown] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
     const [searchError, setSearchError] = useState('');
     const [isSearching, setIsSearching] = useState(false);
-    const navigate = useNavigate();
     const limit = 10;
     const searchInputRef = useRef(null);
     const [selectedDescription, setSelectedDescription] = useState(null);
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [deletingBrandId, setDeletingBrandId] = useState(null); // State to store the ID of the brand being deleted
+    const [filterStatus, setFilterStatus] = useState('');
+    const [deletingBrandId, setDeletingBrandId] = useState(null);
+    const [brandCounts, setBrandCounts] = useState({ all: 0, active: 0, inactive: 0 });
 
     useEffect(() => {
-        fetchBrands(currentPage, filterStatus);
-    }, [currentPage, filterStatus]);
+        if (isSearching && searchTerm.trim() !== '') {
+            handleSearchSubmit(currentPage);
+        } else {
+            fetchBrands(currentPage, filterStatus);
+        }
+    }, [currentPage, filterStatus, isSearching]);
 
-    const fetchBrands = async (page, status = 'all') => {
+    const fetchBrands = async (page, status = '') => {
         setLoading(true);
         let url = `${Constants.DOMAIN_API}/admin/brand/list?page=${page}&limit=${limit}`;
-        if (status !== 'all') {
+        if (status) {
             url = `${Constants.DOMAIN_API}/admin/brand/${status}?page=${page}&limit=${limit}`;
         }
         try {
             const res = await axios.get(url);
             setBrands(res.data.data);
             setTotalPages(res.data.totalPages);
-            if (!isSearching) {
-                setSearchResults([]);
-                setSearchError('');
+
+            if (res.data.counts) {
+                setBrandCounts(res.data.counts);
             }
+            setSearchError('');
         } catch (error) {
             console.error("Lỗi khi lấy danh sách thương hiệu:", error);
             toast.error("Lỗi khi tải danh sách thương hiệu");
+            setBrands([]);
+            setTotalPages(1);
+            setBrandCounts({ all: 0, active: 0, inactive: 0 });
+            setSearchError("Không thể tải danh sách thương hiệu.");
         } finally {
             setLoading(false);
         }
@@ -55,7 +62,7 @@ function BrandList() {
 
         Swal.fire({
             title: 'Xác nhận đổi trạng thái',
-            text: `Bạn có chắc chắn muốn đổi trạng thái của thương hiệu "${brand.name}" thành "${getVietnameseStatus(newStatus)}" không?`,
+            text: `Bạn có chắc chắn muốn đổi trạng thái của thương hiệu ${brand.name} thành ${getVietnameseStatus(newStatus)}`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -64,20 +71,22 @@ function BrandList() {
             cancelButtonText: 'Hủy'
         }).then((result) => {
             if (result.isConfirmed) {
-                try {
-                    axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${brandId}`, { status: newStatus })
-                        .then(response => {
-                            toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
+                axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${brandId}`, { status: newStatus })
+                    .then(response => {
+                        toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
+                        if (response.data.counts) {
+                            setBrandCounts(response.data.counts);
+                        }
+                        if (isSearching) {
+                            handleSearchSubmit(currentPage);
+                        } else {
                             fetchBrands(currentPage, filterStatus);
-                        })
-                        .catch(error => {
-                            console.error("Lỗi khi cập nhật trạng thái thương hiệu:", error);
-                            toast.error("Lỗi khi cập nhật trạng thái thương hiệu");
-                        });
-                } catch (error) {
-                    console.error("Lỗi không mong muốn:", error);
-                    toast.error("Đã có lỗi xảy ra");
-                }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Lỗi khi cập nhật trạng thái thương hiệu:", error);
+                        toast.error("Lỗi khi cập nhật trạng thái thương hiệu");
+                    });
             }
         });
     };
@@ -87,7 +96,7 @@ function BrandList() {
             case "active":
                 return "Hoạt động";
             case "inactive":
-                return "Ngưng hoạt động";
+                return "Ngừng hoạt động";
             default:
                 return englishStatus;
         }
@@ -95,36 +104,45 @@ function BrandList() {
 
     const handleSearchInputChange = (e) => {
         setSearchTerm(e.target.value);
-        setIsSearching(false);
+        if (e.target.value.trim() === '') {
+            setIsSearching(false);
+            setSearchError('');
+            setCurrentPage(1);
+            fetchBrands(1, filterStatus);
+        }
     };
 
-    const handleSearchSubmit = async () => {
+    const handleSearchSubmit = async (page = 1) => {
         if (searchTerm.trim() === '') {
             toast.warning("Vui lòng nhập tên hoặc quốc gia của thương hiệu cần tìm.");
             setIsSearching(false);
+            setSearchError('');
             return;
         }
         setIsSearching(true);
-        setCurrentPage(1);
+        setCurrentPage(page);
         setLoading(true);
         try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/search?searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
-            if (res.data.data.length === 0) {
-                toast.warning("Không tìm thấy thương hiệu nào.");
-                setSearchResults([]);
-                setSearchError("Không tìm thấy thương hiệu nào.");
-            } else {
-                setSearchResults(res.data.data);
-                setSearchError('');
-            }
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/search?searchTerm=${searchTerm}&page=${page}&limit=${limit}`);
+            setBrands(res.data.data);
             setTotalPages(res.data.totalPages);
-            setShowDropdown(false);
+            if (res.data.data.length === 0) {
+                setSearchError("Không tìm thấy thương hiệu nào phù hợp.");
+                toast.warning("Không tìm thấy thương hiệu nào.");
+            } else {
+                setSearchError('');
+                // Thông báo toast thành công đã được xóa theo yêu cầu
+            }
+            if (res.data.counts) {
+                setBrandCounts(res.data.counts);
+            }
         } catch (error) {
             console.error("Lỗi khi tìm kiếm thương hiệu:", error);
             toast.error("Không tìm thấy thương hiệu");
-            setSearchResults([]);
+            setBrands([]);
             setTotalPages(1);
-            setSearchError("Không tìm thấy thương hiệu.");
+            setSearchError("Lỗi khi tìm kiếm thương hiệu. Vui lòng thử lại.");
+            setBrandCounts({ all: 0, active: 0, inactive: 0 });
         } finally {
             setLoading(false);
         }
@@ -132,24 +150,13 @@ function BrandList() {
 
     const handleClearSearch = () => {
         setSearchTerm('');
-        setSearchResults([]);
-        setShowDropdown(false);
-        setCurrentPage(1);
         setIsSearching(false);
+        setCurrentPage(1);
         fetchBrands(1, filterStatus);
         setSearchError('');
         if (searchInputRef.current) {
             searchInputRef.current.focus();
         }
-    };
-
-    const handleSelectBrand = (brandId) => {
-        navigate(`/admin/brand/detail/${brandId}`);
-        setSearchTerm('');
-        setSearchResults([]);
-        setShowDropdown(false);
-        setSearchError('');
-        setIsSearching(false);
     };
 
     const handlePageChange = (page) => {
@@ -175,13 +182,16 @@ function BrandList() {
     const handleFilterChange = (status) => {
         setFilterStatus(status);
         setCurrentPage(1);
+        setIsSearching(false);
+        setSearchTerm('');
+        setSearchError('');
     };
 
     const handleDeleteBrand = (brandId) => {
-        setDeletingBrandId(brandId); // Set the ID of the brand to be deleted
+        setDeletingBrandId(brandId);
         Swal.fire({
             title: 'Xác nhận xóa',
-            text: 'Bạn có chắc chắn muốn xóa thương hiệu này?',
+            text: 'Bạn có chắc chắn muốn xóa thương hiệu này? Thao tác này không thể hoàn tác!',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -190,10 +200,9 @@ function BrandList() {
             cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
-                // User confirmed, proceed with deletion
                 performDeleteBrand(brandId);
             } else {
-                setDeletingBrandId(null); // Reset deletingBrandId if the user cancels
+                setDeletingBrandId(null);
             }
         });
     };
@@ -202,10 +211,18 @@ function BrandList() {
         try {
             const response = await axios.delete(`${Constants.DOMAIN_API}/admin/brand/delete/${brandId}`);
             toast.success('Xóa thương hiệu thành công!');
-            fetchBrands(currentPage, filterStatus); // Refresh the brand list
+            if (response.data.counts) {
+                setBrandCounts(response.data.counts);
+            }
+            if (isSearching) {
+                handleSearchSubmit(currentPage);
+            } else {
+                fetchBrands(currentPage, filterStatus);
+            }
         } catch (error) {
             console.error('Lỗi khi xóa thương hiệu:', error);
-            toast.error('Lỗi khi xóa thương hiệu!');
+            const errorMessage = error.response?.data?.message || 'Lỗi khi xóa thương hiệu!';
+            toast.error(errorMessage);
         } finally {
             setDeletingBrandId(null);
         }
@@ -215,7 +232,7 @@ function BrandList() {
         <div className="container mx-auto p-2">
             <div className="bg-white p-4 shadow rounded-md">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold mb-4">Danh sách thương hiệu</h2>
+                    <h2 className="text-xl font-semibold">Danh sách thương hiệu</h2>
                     <Link
                         to="/admin/brand/Create"
                         className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
@@ -223,257 +240,211 @@ function BrandList() {
                         + Thêm thương hiệu
                     </Link>
                 </div>
-                <div className="mb-4 relative flex">
+
+                {/* Thanh tìm kiếm */}
+                <div className="mb-6 flex items-center gap-2">
                     <input
                         type="text"
-                        className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
                         placeholder="Tìm kiếm theo tên hoặc quốc gia..."
                         value={searchTerm}
                         onChange={handleSearchInputChange}
                         ref={searchInputRef}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                handleSearchSubmit();
+                            }
+                        }}
                     />
                     <button
                         type="button"
-                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
-                        onClick={handleSearchSubmit}
+                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded flex items-center justify-center"
+                        onClick={() => handleSearchSubmit()}
                     >
                         <FaSearch className="w-5 h-5" />
                     </button>
-
-                    {searchTerm.trim() !== '' && isSearching && searchResults.length > 0 && (
+                    {searchTerm.trim() !== '' && (
                         <button
                             onClick={handleClearSearch}
-                            className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
+                            className="bg-blue-900 hover:bg-blue-800 text-white py-2 px-3 rounded"
                         >
                             Xem tất cả
                         </button>
                     )}
                 </div>
 
-                {/* Thêm các nút lọc trạng thái */}
-                <div className="mb-4">
-                    <button
-                        onClick={() => handleFilterChange('all')}
-                        className={`px-4 py-2 rounded ${filterStatus === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                        Tất cả
-                    </button>
-                    <button
-                        onClick={() => handleFilterChange('active')}
-                        className={`px-4 py-2 rounded ml-2 ${filterStatus === 'active' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                        Hoạt động
-                    </button>
-                    <button
-                        onClick={() => handleFilterChange('inactive')}
-                        className={`px-4 py-2 rounded ml-2 ${filterStatus === 'inactive' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    >
-                        Ngừng hoạt động
-                    </button>
+                {/* Các nút lọc trạng thái */}
+                <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
+                    {[
+                        { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
+                        { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
+                        { key: "inactive", label: "Ngừng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
+                    ].map(({ key, label, color, textColor, countKey }) => (
+                        <button
+                            key={key}
+                            onClick={() => handleFilterChange(key)}
+                            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${filterStatus === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
+                        >
+                            <span>{label}</span>
+                            <span className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}>
+                                {brandCounts[countKey] || 0}
+                            </span>
+                        </button>
+                    ))}
                 </div>
 
                 {loading ? (
                     <div className="text-center py-4">Đang tải dữ liệu...</div>
                 ) : (
                     <>
-                        <table className="w-full border-collapse border border-gray-300 mt-3">
-                            <thead>
-                                <tr className="bg-gray-200">
-                                    <th className="p-2 border">#</th>
-                                    <th className="p-2 border">Tên</th>
-                                    <th className="p-2 border">Quốc gia</th>
-                                    <th className="p-2 border">Logo</th>
-                                    <th className="p-2 border">Mô tả</th>
-                                    <th className="p-2 border">Trạng thái</th>
-                                    <th className="p-2 border">Ngày tạo</th>
-                                    <th className="p-2 border">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(isSearching ? searchResults : brands).map((brand, index) => (
-                                    <tr key={brand.id} className="border-b">
-                                        <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                                        <td className="p-2 border">{brand.name}</td>
-                                        <td className="p-2 border">{brand.country}</td>
-                                        <td className="p-2 border">
-                                            <img src={`${Constants.DOMAIN_API}/uploads/${brand.logo}`} alt={brand.name} className="w-16 h-16 object-cover rounded-full" />
-                                        </td>
-                                        <td
-                                            className="p-2 border cursor-pointer"
-                                            onClick={() => openDescriptionDialog(brand.description)}
-                                            title="Nhấn để xem đầy đủ mô tả"
-                                        >
-                                            {shortenDescription(brand.description)}
-                                        </td>
-                                        <td className="p-2 border">
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    value={brand.status}
-                                                    onChange={(e) => handleStatusChange(brand.id, e.target.value)}
-                                                    className="border rounded px-2 py-1"
-                                                >
-                                                    <option value="active">Hoạt động</option>
-                                                    <option value="inactive">Ngưng hoạt động</option>
-                                                </select>
-                                            </div>
-                                        </td>
-                                        <td className="p-2 border">{new Date(brand.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
-                                        <td className="p-2 border text-center align-middle">
-                                            <div className="flex items-center justify-center gap-2"> {/* Added a wrapping div for buttons */}
-                                                <Link
-                                                    to={`/admin/brand/detail/${brand.id}`}
-                                                    className="bg-blue-500 text-white py-1 px-3 rounded"
-                                                >
-                                                    Xem
-                                                </Link>
-                                                <button
-                                                    onClick={() => handleDeleteBrand(brand.id)}
-                                                    className="bg-red-500 text-white py-1 px-3 rounded"
-                                                    disabled={deletingBrandId === brand.id}
-                                                >
-                                                    <i className="fa-solid fa-trash"></i>
-                                                    
-                                                </button>
-                                            </div>
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
+                                <thead className="bg-gray-100 text-gray-600">
+                                    <tr>
+                                        <th className="w-12 px-6 py-3 border border-gray-300">#</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold cursor-pointer">Tên thương hiệu</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Quốc gia</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Logo</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Mô tả</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Trạng thái</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Ngày tạo</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Hành động</th>
                                     </tr>
-                                ))}
-                                {searchError && isSearching && (
-                                    <tr><td colSpan="8" className="p-4 text-center text-red-500">{searchError}</td></tr>
-                                )}
-                                {!isSearching && brands.length === 0 && !loading && (
-                                    <tr><td colSpan="8" className="p-4 text-center">Không có thương hiệu nào.</td></tr>
-                                )}
-                                {isSearching && searchResults.length === 0 && !loading && searchError === '' && searchTerm.trim() !== '' && (
-                                    <tr><td colSpan="8" className="p-4 text-center">Không tìm thấy thương hiệu nào.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-
-                        <div className="flex justify-center mt-4 items-center">
-                            {!isSearching && totalPages > 1 && (
-                                <div className="flex items-center space-x-1">
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => handlePageChange(1)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaAngleDoubleLeft />
-                                    </button>
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaChevronLeft />
-                                    </button>
-                                    {[...Array(totalPages)].map((_, i) => {
-                                        const page = i + 1;
-                                        if (page >= currentPage - 1 && page <= currentPage + 1) {
-                                            return (
-                                                <button
-                                                    key={page}
-                                                    onClick={() => handlePageChange(page)}
-                                                    className={`px-3 py-1 border rounded ${currentPage === page
-                                                        ? "bg-blue-500 text-white"
-                                                        : "bg-blue-100 text-black hover:bg-blue-200"
-                                                        }`}
+                                </thead>
+                                <tbody>
+                                    {brands.length > 0 ? (
+                                        brands.map((brand, index) => (
+                                            <tr key={brand.id} className="border-b">
+                                                <td className="p-2 border border-gray-300">{(currentPage - 1) * limit + index + 1}</td>
+                                                <td className="p-2 border border-gray-300">{brand.name}</td>
+                                                <td className="p-2 border border-gray-300">{brand.country}</td>
+                                                <td className="p-2 border border-gray-300">
+                                                    <img src={`${Constants.DOMAIN_API}/uploads/${brand.logo}`} alt={brand.name} className="w-16 h-16 object-cover rounded-full" />
+                                                </td>
+                                                <td
+                                                    className="p-2 border border-gray-300 cursor-pointer"
+                                                    onClick={() => openDescriptionDialog(brand.description)}
+                                                    title="Nhấn để xem đầy đủ mô tả"
                                                 >
-                                                    {page}
-                                                </button>
-                                            );
-                                        }
-                                        return null;
-                                    })}
-                                    {currentPage < totalPages - 1 && (
-                                        <>
-                                            {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-                                            <button
-                                                onClick={() => handlePageChange(totalPages)}
-                                                className="px-3 py-1 border rounded"
-                                            >
-                                                {totalPages}
-                                            </button>
-                                        </>
+                                                    {shortenDescription(brand.description)}
+                                                </td>
+                                                <td className="p-2 border border-gray-300">
+                                                    <div className="flex items-center gap-2">
+                                                        <select
+                                                            value={brand.status}
+                                                            onChange={(e) => handleStatusChange(brand.id, e.target.value)}
+                                                            className="capitalize border rounded px-2 py-1"
+                                                        >
+                                                            <option value="active">Hoạt động</option>
+                                                            <option value="inactive">Ngừng hoạt động</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td className="p-2 border border-gray-300">{new Date(brand.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
+                                                <td className="p-2 border border-gray-300 text-center align-middle">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Link
+                                                            to={`/admin/brand/detail/${brand.id}`}
+                                                            className="bg-blue-500 text-white py-1 px-3 rounded"
+                                                        >
+                                                            Xem
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => handleDeleteBrand(brand.id)}
+                                                            className="bg-red-500 text-white py-1 px-3 rounded"
+                                                            disabled={deletingBrandId === brand.id}
+                                                        >
+                                                            <i className="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="8" className="p-4 text-center text-gray-500">
+                                                {searchError || "Không có thương hiệu nào để hiển thị."}
+                                            </td>
+                                        </tr>
                                     )}
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaChevronRight />
-                                    </button>
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => handlePageChange(totalPages)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaAngleDoubleRight />
-                                    </button>
-                                </div>
-                            )}
-                            {isSearching && searchResults.length > 0 && totalPages > 1 && (
-                                <div className="flex items-center space-x-1">
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => handlePageChange(1)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaAngleDoubleLeft />
-                                    </button>
-                                    <button
-                                        disabled={currentPage === 1}
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaChevronLeft />
-                                    </button>
-                                    {[...Array(totalPages)].map((_, i) => {
-                                        const page = i + 1;
-                                        if (page >= currentPage - 1 && page <= currentPage + 1) {
-                                            return (
-                                                <button
-                                                    key={page}
-                                                    onClick={() => handlePageChange(page)}
-                                                    className={`px-3 py-1 border rounded ${currentPage === page
-                                                        ? "bg-blue-500 text-white"
-                                                        : "bg-blue-100 text-black hover:bg-blue-200"
-                                                        }`}
-                                                >
-                                                    {page}
-                                                </button>
-                                            );
-                                        }
-                                        return null;
-                                    })}
-                                    {currentPage < totalPages - 1 && (
-                                        <>
-                                            {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-                                            <button
-                                                onClick={() => handlePageChange(totalPages)}
-                                                className="px-3 py-1 border rounded"
-                                            >
-                                                {totalPages}
-                                            </button>
-                                        </>
-                                    )}
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaChevronRight />
-                                    </button>
-                                    <button
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => handlePageChange(totalPages)}
-                                        className="px-2 py-1 border rounded disabled:opacity-50"
-                                    >
-                                        <FaAngleDoubleRight />
-                                    </button>
-                                </div>
-                            )}
+                                </tbody>
+                            </table>
                         </div>
+
+                        {/* Phân trang */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-center mt-4 items-center">
+                                <div className="flex items-center space-x-1">
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => handlePageChange(1)}
+                                        className="px-2 py-1 border rounded disabled:opacity-50"
+                                    >
+                                        <FaAngleDoubleLeft />
+                                    </button>
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        className="px-2 py-1 border rounded disabled:opacity-50"
+                                    >
+                                        <FaChevronLeft />
+                                    </button>
+
+                                    {currentPage > 2 && (
+                                        <>
+                                            <button onClick={() => handlePageChange(1)} className="px-3 py-1 border rounded">1</button>
+                                            {currentPage > 3 && <span className="px-2">...</span>}
+                                        </>
+                                    )}
+
+                                    {[...Array(totalPages)].map((_, i) => {
+                                        const page = i + 1;
+                                        if (page >= currentPage - 1 && page <= currentPage + 1) {
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => handlePageChange(page)}
+                                                    className={`px-3 py-1 border rounded ${currentPage === page
+                                                        ? "bg-blue-500 text-white"
+                                                        : "bg-blue-100 text-black hover:bg-blue-200"
+                                                        }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+
+                                    {currentPage < totalPages - 1 && (
+                                        <>
+                                            {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+                                            <button
+                                                onClick={() => handlePageChange(totalPages)}
+                                                className="px-3 py-1 border rounded"
+                                            >
+                                                {totalPages}
+                                            </button>
+                                        </>
+                                    )}
+
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        className="px-2 py-1 border rounded disabled:opacity-50"
+                                    >
+                                        <FaChevronRight />
+                                    </button>
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => handlePageChange(totalPages)}
+                                        className="px-2 py-1 border rounded disabled:opacity-50"
+                                    >
+                                        <FaAngleDoubleRight />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
