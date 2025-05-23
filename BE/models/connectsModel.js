@@ -122,7 +122,13 @@ PromotionProductModel.belongsTo(Promotion, { foreignKey: 'promotion_id' });
 //Bổ sung chiều ngược lại
 Promotion.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });
 
+// ✅ FIXED: PromotionProduct - ProductVariant
+PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' }); // CHUẨN
+ProductVariantsModel.hasMany(PromotionProductModel, { foreignKey: 'product_variant_id', as: 'promotionProducts' });
 
+// ✅ FIXED: PromotionProduct - Promotion
+PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' }); // CHUẨN
+PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 'promotionProducts' });
 module.exports = {
   UserModel,
   AddressesModel,
