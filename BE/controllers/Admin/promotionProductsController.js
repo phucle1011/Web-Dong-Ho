@@ -155,64 +155,71 @@ exports.getAllPromotion = async (req, res) => {
     const now = new Date();
 
     // Cập nhật trạng thái các khuyến mãi
-    const promotions = await PromotionModel.findAll();
-    for (const promo of promotions) {
-      let newStatus = promo.status;
+    // const promotions = await PromotionModel.findAll();
+    // for (const promo of promotions) {
+    //   let newStatus = promo.status;
 
-      if (promo.status === 'inactive') {
-        newStatus = 'inactive';
-      } else if (promo.quantity === 0) {
-        newStatus = 'exhausted';
-      } else if (now < promo.start_date) {
-        newStatus = 'upcoming';
-      } else if (now >= promo.start_date && now <= promo.end_date) {
-        newStatus = 'active';
-      } else {
-        newStatus = 'expired';
-      }
+    //   if (promo.status === 'inactive') {
+    //     newStatus = 'inactive';
+    //   } else if (promo.quantity === 0) {
+    //     newStatus = 'exhausted';
+    //   } else if (now < promo.start_date) {
+    //     newStatus = 'upcoming';
+    //   } else if (now >= promo.start_date && now <= promo.end_date) {
+    //     newStatus = 'active';
+    //   } else {
+    //     newStatus = 'expired';
+    //   }
 
-      if (promo.status !== newStatus) {
-        await promo.update({ status: newStatus });
-      }
-    }
+    //   if (promo.status !== newStatus) {
+    //     await promo.update({ status: newStatus });
+    //   }
+    // }
 
     // Lấy các promotion đang active từ bảng PromotionProduct
-    const promotionProducts = await PromotionProductModel.findAll({
-      include: [
-        {
-          model: PromotionModel,
-          as: "promotion",
-          attributes: ["id", "name"],
-          where: {
+    const promotionProducts = await PromotionModel.findAll({
+       where: {
             status: 'active',
-            start_date: { [Op.lte]: now },
-            end_date: { [Op.gte]: now },
+            applicable_to: 'product',
+            // start_date: { [Op.lte]: now },
+            // end_date: { [Op.gte]: now },
           },
-          required: true,
-        },
-      ],
+      // include: [
+      //   {
+      //     // model: PromotionModel,
+      //     // as: "promotion",
+      //     // attributes: ["id", "name"],
+      //     where: {
+      //       status: 'active',
+      //       applicable_to: 'product',
+      //       // start_date: { [Op.lte]: now },
+      //       // end_date: { [Op.gte]: now },
+      //     },
+      //     // required: true,
+      //   },
+      // ],
     });
 
-    if (!promotionProducts || promotionProducts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy khuyến mãi nào đang hoạt động.",
-      });
-    }
+    // if (!promotionProducts || promotionProducts.length === 0) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Không tìm thấy khuyến mãi nào đang hoạt động.",
+    //   });
+    // }
 
     // Trả về danh sách promotion id + name (unique)
-    const promotionsData = promotionProducts.map(item => ({
-      id: item.promotion.id,
-      name: item.promotion.name
-    }));
+    // const promotionsData = promotionProducts.map(item => ({
+    //   id: item.promotion.id,
+    //   name: item.promotion.name
+    // }));
 
-    const uniquePromotions = Array.from(
-      new Map(promotionsData.map(p => [p.id, p])).values()
-    );
+    // const uniquePromotions = Array.from(
+    //   new Map(promotionsData.map(p => [p.id, p])).values()
+    // );
 
     res.status(200).json({
       success: true,
-      data: uniquePromotions,
+      data: promotionProducts,
     });
   } catch (error) {
     console.error("Lỗi khi lấy danh sách promotion:", error.message);

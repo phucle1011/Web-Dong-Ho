@@ -21,7 +21,7 @@ const PromotionProductEdit = () => {
 
   // Load data cho dropdown
   useEffect(() => {
-    axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`)
+    axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`)
       .then(res => setPromotions(res.data.data))
       .catch(err => console.error("Lỗi load promotions:", err));
 
