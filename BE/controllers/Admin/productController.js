@@ -613,7 +613,29 @@ static async deleteAttribute(req, res) {
   }
 }
 
+static async getAllVariants(req, res) {
+  try {
+    const variants = await ProductVariant.findAll({
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+    });
 
+    res.status(200).json({
+      status: 200,
+      message: "Lấy danh sách biến thể sản phẩm thành công",
+      data: variants,
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 }
 

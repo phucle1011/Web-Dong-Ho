@@ -11,6 +11,7 @@ const AddressController = require('../controllers/Admin/addressController');
 const CartController = require('../controllers/Admin/cartsControlles');
 const CommentController = require('../controllers/Admin/commentsController');
 const BrandController = require('../controllers/Admin/brandsController');
+const notificationController = require('../controllers/Admin/notification.controller');
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
@@ -72,7 +73,7 @@ router.get("/product-attributes", ProductController.getAllAttributes);
 router.delete("/variants/:variant_id", ProductController.deleteVariant);
 router.get("/variants/:variant_id", ProductController.getVariantById);
 
-
+router.get('/product-variants', ProductController.getAllVariants); // GET /product-variants
 
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);
@@ -98,5 +99,15 @@ router.get('/brand/:id', BrandController.getById);
 router.post('/brand/create', BrandController.create);
 router.put('/brand/update/:id', BrandController.update);
 router.delete('/brand/delete/:id', BrandController.delete);
+
+
+
+//------------------[ Notifications ]------------------\
+router.get('/notification', notificationController.getAll);
+router.get('/unread', notificationController.getUnread);
+router.post('/create', notificationController.createNotificationForAllUsers);
+router.patch('/:id', notificationController.markAsRead);
+router.patch('/mark-all-read', notificationController.markAllAsRead);
+router.delete('/:id', notificationController.remove);
 
 module.exports = router;
