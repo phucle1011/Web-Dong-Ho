@@ -59,7 +59,6 @@ ProductModel.belongsTo(CategoriesModel, { foreignKey: 'category_id', as: 'catego
 CommentModel.belongsTo(OrderDetailModel, { foreignKey: 'order_detail_id', as: 'orderDetail' });
 OrderDetailModel.hasMany(CommentModel, { foreignKey: 'order_detail_id', as: 'comments' });
 
-
 // Comment images 
 CommentModel.hasMany(CommentImageModel, { foreignKey: 'comment_id', as: 'commentImages' });
 CommentImageModel.belongsTo(CommentModel, { foreignKey: 'comment_id', as: 'comment' });

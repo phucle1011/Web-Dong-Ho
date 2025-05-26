@@ -11,8 +11,8 @@ const AddressController = require('../controllers/Admin/addressController');
 const CartController = require('../controllers/Admin/cartsControlles');
 const CommentController = require('../controllers/Admin/commentsController');
 const BrandController = require('../controllers/Admin/brandsController');
+const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
-// const notificationController = require('../controllers/Admin/notification.controller');
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
@@ -21,14 +21,14 @@ router.get('/orders/track/:orderCode', OrderController.trackOrder);
 router.get('/orders/export-excel', OrderController.exportExcel);
 router.get('/orders/filter-by-date', OrderController.filterByDate);
 router.get('/orders/list', OrderController.get);
-router.get('/orders/:id', OrderController.getById); 
-router.put('/orders/edit/:id', OrderController.update); 
+router.get('/orders/:id', OrderController.getById);
+router.put('/orders/edit/:id', OrderController.update);
 router.delete("/orders/delete/:id", OrderController.delete);
 
 //------------------[ USERS ]------------------\
 router.get('/user/list', UserController.get);
 router.get('/user/search', UserController.searchUser);
-router.get('/user/:id', UserController.getById); 
+router.get('/user/:id', UserController.getById);
 router.put('/user/:id/status', UserController.updateUserStatus);
 
 //------------------[ WISHLIST ]------------------
@@ -53,18 +53,18 @@ router.get("/promotions/:id", promotionController.getById);
 router.put('/promotions/:id', promotionController.update);
 router.delete("/promotion/:id", promotionController.delete);
 
-    //------------------[ PROMOTION PRODUCTS ]------------------
-    router.get('/promotion', promotionProductsController.getAll);
-    router.get('/promotions/ss/all', promotionProductsController.getAllPromotion);    
-    router.get('/promotion/:id', promotionProductsController.getById);
-    router.post('/promotion-products', promotionProductsController.create);
-    router.put('/promotion/:id', promotionProductsController.update);
-    router.delete('/promotion/:id', promotionProductsController.remove);
+//------------------[ PROMOTION PRODUCTS ]------------------
+router.get('/promotion', promotionProductsController.getAll);
+router.get('/promotions/ss/all', promotionProductsController.getAllPromotion);
+router.get('/promotion/:id', promotionProductsController.getById);
+router.post('/promotion-products', promotionProductsController.create);
+router.put('/promotion/:id', promotionProductsController.update);
+router.delete('/promotion/:id', promotionProductsController.remove);
 
 //------------------[ PRODUCT ]------------------\
-router.get('/products', ProductController.get); 
-router.get('/products/:id', ProductController.getById); 
-router.post('/products', ProductController.createProduct); 
+router.get('/products', ProductController.get);
+router.get('/products/:id', ProductController.getById);
+router.post('/products', ProductController.createProduct);
 router.post('/products/:product_id/variants', ProductController.addVariant);
 router.delete('/products/:id', ProductController.delete);
 router.get('/products/productList/search', ProductController.searchProducts);
@@ -75,7 +75,9 @@ router.delete('/variant-images/:image_id', ProductController.deleteSingleVariant
 router.get("/product-attributes", ProductController.getAllAttributes);
 router.delete("/variants/:variant_id", ProductController.deleteVariant);
 router.get("/variants/:variant_id", ProductController.getVariantById);
-router.get('/product-variants', ProductController.getAllVariants); // GET /product-variants
+router.get('/product-variants', ProductController.getAllVariants);
+
+
 
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);
@@ -110,12 +112,9 @@ router.post('/brand/create', BrandController.create);
 router.put('/brand/update/:id', BrandController.update);
 router.delete('/brand/delete/:id', BrandController.delete);
 
-// //------------------[ Notifications ]------------------\
-// router.get('/notification', notificationController.getAll);
-// router.get('/unread', notificationController.getUnread);
-// router.post('/create', notificationController.createNotificationForAllUsers);
-// router.patch('/:id', notificationController.markAsRead);
-// router.patch('/mark-all-read', notificationController.markAllAsRead);
-// router.delete('/:id', notificationController.remove);
+//------------------[ DASHBOARD ]------------------\
+router.get('/dashboard/counts', DashboardController.getCounts);
+router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMonth);
+router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
 
 module.exports = router;

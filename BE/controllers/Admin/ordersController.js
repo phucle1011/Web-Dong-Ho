@@ -24,9 +24,7 @@ class OrderController {
 
             if (searchTerm) {
                 where[Op.or] = [
-                    { '$user.name$': { [Op.like]: `%${searchTerm}%` } },
-                    { '$user.phone$': { [Op.like]: `%${searchTerm}%` } },
-                    { code: { [Op.like]: `%${searchTerm}%` } }
+                    { '$user.name$': { [Op.like]: `%${searchTerm}%` } }
                 ];
             }
 
@@ -223,11 +221,6 @@ class OrderController {
             const orders = await OrderModel.findAll({
                 where: {
                     [Op.or]: [
-                        {
-                            order_code: {
-                                [Op.like]: `%${searchTerm}%`,
-                            },
-                        },
                         {
                             '$user.name$': {
                                 [Op.like]: `%${searchTerm}%`,

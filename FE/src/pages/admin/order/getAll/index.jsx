@@ -109,11 +109,11 @@ function OrderGetAll() {
       case "confirmed":
         return ["confirmed", "shipping", "completed", "delivered", "cancelled"];
       case "shipping":
-        return ["shipping", "completed", "delivered", "cancelled"];
+        return ["shipping", "completed", "delivered"];
       case "completed":
-        return ["completed", "delivered", "cancelled"];
+        return ["completed", "delivered"];
       case "delivered":
-        return ["delivered", "cancelled"];
+        return ["delivered"];
       case "cancelled":
         return ["cancelled"];
       default:
@@ -284,7 +284,6 @@ function OrderGetAll() {
 
       setOrders(res.data.data);
       setTotalPages(1);
-      toast.success("Lọc đơn hàng theo ngày thành công");
     } catch (error) {
       console.error("Lỗi khi lọc đơn hàng:", error);
       toast.error("Không thể lọc đơn hàng theo ngày");
@@ -358,7 +357,7 @@ function OrderGetAll() {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
+        <div className="flex flex-nowrap items-center gap-6 border-b border-gray-200 px-6 py-4 overflow-x-auto">
           {[
             { key: "", label: "Tất cả", color: "bg-gray-800", textColor: "text-white", count: statusCounts.all },
             { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800", count: statusCounts.pending },
@@ -371,11 +370,10 @@ function OrderGetAll() {
             <button
               key={key}
               onClick={() => handleFilterClick(key)}
-              className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"
-                }`}
+              className={`btn rounded-pill px-3 py-1.5 text-nowrap ${statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
             >
               <span>{label}</span>
-              <span className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}>
+              <span className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}>
                 {count}
               </span>
             </button>
@@ -386,7 +384,7 @@ function OrderGetAll() {
           <input
             type="text"
             className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
-            placeholder="Vui lòng nhập mã đơn hàng hoặc tên khách hàng..."
+            placeholder="Vui lòng nhập tên khách hàng cần tìm..."
             value={searchTerm}
             onChange={handleSearchChange}
           />
@@ -452,7 +450,12 @@ function OrderGetAll() {
                       {["pending"].includes(order.status) && (
                         <button onClick={() => setSelectedOrder(order)} className="bg-red-500 text-white py-1 px-3 rounded">Hủy</button>
                       )}
-                      <button onClick={() => handleTrackOrder(order.order_code)} className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded">Vị trí</button>
+                      <button
+                        onClick={() => handleTrackOrder(order.order_code)}
+                        className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded whitespace-nowrap"
+                      >
+                        Vị trí
+                      </button>
                     </td>
                   </tr>
                   {trackingInfoMap[order.order_code] && (
