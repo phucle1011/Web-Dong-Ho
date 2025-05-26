@@ -31,10 +31,12 @@ router.get('/user/:id', UserController.getById);
 router.put('/user/:id/status', UserController.updateUserStatus);
 
 //------------------[ WISHLIST ]------------------
+router.get('/wishlist', WishlistController.getAllWishlists);
 router.get('/users/:userId/wishlist', WishlistController.getWishlistByUser);
 router.post('/wishlist', WishlistController.addToWishlist);
 router.delete('/users/:userId/wishlist/:productVariantId', WishlistController.removeFromWishlist);
 router.get('/users/wishlist/search', WishlistController.searchWishlist);
+router.get('/users/:userId/wishlist/search', WishlistController.searchWishlistByUserProduct);
 
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getAll);

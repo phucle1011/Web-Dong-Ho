@@ -165,15 +165,6 @@ function UserList() {
                     >
                         <FaSearch className="w-5 h-5" />
                     </button>
-
-                    {searchResults.length > 0 && (
-                        <button
-                            onClick={handleClearSearch}
-                            className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
-                        >
-                            Xem tất cả
-                        </button>
-                    )}
                 </div>
                 {loading ? (
                     <div className="text-center py-4">Đang tải dữ liệu...</div>

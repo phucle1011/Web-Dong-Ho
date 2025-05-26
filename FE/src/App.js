@@ -43,6 +43,7 @@ import EditVariant from "./pages/admin/product/editVariant";
 import BrandList from "./pages/admin/brand/getAll";
 import BrandDetail from "./pages/admin/brand/detail";
 import BrandCreate from "./pages/admin/brand/Create";
+import WishlistDetail from "./pages/admin/wishlist/detail";
 
 const AppRoutes = () => {
   return (
@@ -134,6 +135,7 @@ const AppRoutes = () => {
         
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />
+          <Route path="detail/:id" element={<WishlistDetail />}/>
         </Route>
 
         <Route path="brand">

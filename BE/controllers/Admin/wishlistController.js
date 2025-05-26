@@ -5,6 +5,52 @@ const UserModel = require('../../models/usersModel');
 const { Op } = require('sequelize');
 
 class WishlistController {
+
+    // Lấy toàn bộ wishlist (có thể dùng ở admin để xem tổng quan wishlist hệ thống)
+    static async getAllWishlists(req, res) {
+        try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
+
+            const wishlists = await WishlistModel.findAndCountAll({
+                limit: limit,
+                offset: offset,
+                order: [['created_at', 'DESC']],
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'price'],
+                        include: [
+                            {
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['id', 'name', 'slug', 'thumbnail'],
+                            },
+                        ],
+                    },
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email'],
+                    },
+                ],
+            });
+
+            res.status(200).json({
+                status: 200,
+                message: "Lấy danh sách wishlist thành công",
+                data: wishlists.rows,
+                totalPages: Math.ceil(wishlists.count / limit),
+                currentPage: page,
+            });
+        } catch (error) {
+            console.error("Lỗi khi lấy toàn bộ wishlist:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     // Lấy danh sách sản phẩm yêu thích của một người dùng
     static async getWishlistByUser(req, res) {
         try {
@@ -50,7 +96,6 @@ class WishlistController {
             res.status(500).json({ error: error.message });
         }
     }
-
 
     // Thêm sản phẩm vào danh sách yêu thích của người dùng
     static async addToWishlist(req, res) {
@@ -118,56 +163,131 @@ class WishlistController {
     // Tìm kiếm (có thể tìm kiếm danh sách yêu thích của người dùng theo tên sản phẩm)
     static async searchWishlist(req, res) {
         try {
-            const { userId, searchTerm } = req.query;
+            const { searchTerm } = req.query;
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
             const offset = (page - 1) * limit;
 
             if (!searchTerm || searchTerm.trim() === '') {
-                return res.status(400).json({ message: 'Vui lòng nhập từ khóa để tìm kiếm.' });
+                return res.status(400).json({ message: 'Vui lòng nhập từ khóa tìm kiếm.' });
             }
 
             const wishlists = await WishlistModel.findAndCountAll({
-                where: {
-                    user_id: userId,
-                },
-                limit: limit,
-                offset: offset,
+                limit,
+                offset,
                 order: [['created_at', 'DESC']],
                 include: [
                     {
                         model: ProductVariantsModel,
-                        as: 'productVariant',
+                        as: 'variant',
                         attributes: ['id', 'price'],
                         include: [
                             {
                                 model: ProductModel,
-                                as: 'variantProduct',
+                                as: 'product',
                                 attributes: ['id', 'name', 'slug', 'thumbnail'],
                                 where: {
                                     name: {
                                         [Op.like]: `%${searchTerm}%`,
                                     },
                                 },
+                                required: false // Cho phép không match product
                             },
                         ],
                     },
-                    { // Thêm include UserModel ở đây
+                    {
                         model: UserModel,
-                        as: 'user', // Đảm bảo 'user' là alias chính xác trong mối quan hệ của bạn
-                        attributes: ['id', 'name', 'email'], // Chọn các thuộc tính bạn muốn hiển thị
+                        as: 'user',
+                        attributes: ['id', 'name', 'email'],
+                        where: {
+                            name: {
+                                [Op.like]: `%${searchTerm}%`, // Tìm theo tên người dùng
+                            },
+                        },
+                        required: false // Cho phép không match user
                     },
                 ],
+                where: {
+                    [Op.or]: [
+                        { '$variant.product.name$': { [Op.like]: `%${searchTerm}%` } },
+                        { '$user.name$': { [Op.like]: `%${searchTerm}%` } },
+                    ],
+                },
             });
 
             res.status(200).json({
                 status: 200,
-                message: `Tìm kiếm trong danh sách yêu thích của người dùng ${userId} thành công`,
+                message: "Tìm kiếm danh sách yêu thích thành công",
                 data: wishlists.rows,
                 totalPages: Math.ceil(wishlists.count / limit),
                 currentPage: page,
             });
         } catch (error) {
+            console.error("Lỗi khi tìm kiếm wishlist:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+    
+    // Tìm kiếm sản phẩm yêu thích của người dùng cụ thể
+    static async searchWishlistByUserProduct(req, res) {
+        try {
+            const { userId } = req.params;
+            const { searchTerm } = req.query;
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
+
+            if (!searchTerm || searchTerm.trim() === '') {
+                return res.status(400).json({ message: 'Vui lòng nhập từ khóa tìm kiếm.' });
+            }
+
+            const wishlists = await WishlistModel.findAndCountAll({
+                where: { user_id: userId },
+                limit,
+                offset,
+                order: [['created_at', 'DESC']],
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'price'],
+                        include: [
+                            {
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['id', 'name', 'slug', 'thumbnail'],
+                                where: {
+                                    name: {
+                                        [Op.like]: `%${searchTerm}%`,
+                                    },
+                                },
+                                required: false
+                            },
+                        ],
+                    },
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email'],
+                    },
+                ],
+                where: {
+                    [Op.and]: [
+                        { user_id: userId },
+                        { '$variant.product.name$': { [Op.like]: `%${searchTerm}%` } }
+                    ]
+                }
+            });
+
+            res.status(200).json({
+                status: 200,
+                message: `Tìm kiếm sản phẩm yêu thích của người dùng ${userId} thành công`,
+                data: wishlists.rows,
+                totalPages: Math.ceil(wishlists.count / limit),
+                currentPage: page,
+            });
+        } catch (error) {
+            console.error("Lỗi khi tìm kiếm sản phẩm yêu thích:", error);
             res.status(500).json({ error: error.message });
         }
     }

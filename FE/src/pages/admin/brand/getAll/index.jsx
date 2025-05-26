@@ -39,7 +39,6 @@ function BrandList() {
             const res = await axios.get(url);
             setBrands(res.data.data);
             setTotalPages(res.data.totalPages);
-
             if (res.data.counts) {
                 setBrandCounts(res.data.counts);
             }
@@ -128,10 +127,8 @@ function BrandList() {
             setTotalPages(res.data.totalPages);
             if (res.data.data.length === 0) {
                 setSearchError("Không tìm thấy thương hiệu nào phù hợp.");
-                toast.warning("Không tìm thấy thương hiệu nào.");
             } else {
                 setSearchError('');
-                // Thông báo toast thành công đã được xóa theo yêu cầu
             }
             if (res.data.counts) {
                 setBrandCounts(res.data.counts);
@@ -166,9 +163,9 @@ function BrandList() {
     const shortenDescription = (description, maxLength = 50) => {
         if (!description) return "";
         if (description.length > maxLength) {
-            return description.substring(0, maxLength) + "...";
+            return description.substring(0, maxLength);
         }
-        return description;
+        return description; // Nếu ngắn hơn maxLength → trả về đầy đủ, không có '...'
     };
 
     const openDescriptionDialog = (description) => {
@@ -242,10 +239,10 @@ function BrandList() {
                 </div>
 
                 {/* Thanh tìm kiếm */}
-                <div className="mb-6 flex items-center gap-2">
+                <div className="mb-4 relative flex">
                     <input
                         type="text"
-                        className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+                        className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Tìm kiếm theo tên hoặc quốc gia..."
                         value={searchTerm}
                         onChange={handleSearchInputChange}
@@ -258,19 +255,11 @@ function BrandList() {
                     />
                     <button
                         type="button"
-                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded flex items-center justify-center"
+                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
                         onClick={() => handleSearchSubmit()}
                     >
                         <FaSearch className="w-5 h-5" />
                     </button>
-                    {searchTerm.trim() !== '' && (
-                        <button
-                            onClick={handleClearSearch}
-                            className="bg-blue-900 hover:bg-blue-800 text-white py-2 px-3 rounded"
-                        >
-                            Xem tất cả
-                        </button>
-                    )}
                 </div>
 
                 {/* Các nút lọc trạng thái */}
@@ -319,14 +308,21 @@ function BrandList() {
                                                 <td className="p-2 border border-gray-300">{brand.name}</td>
                                                 <td className="p-2 border border-gray-300">{brand.country}</td>
                                                 <td className="p-2 border border-gray-300">
-                                                    <img src={`${Constants.DOMAIN_API}/uploads/${brand.logo}`} alt={brand.name} className="w-16 h-16 object-cover rounded-full" />
+                                                    <img src={`${Constants.DOMAIN_API}/Uploads/${brand.logo}`} alt={brand.name} className="w-16 h-16 object-cover rounded-full" />
                                                 </td>
-                                                <td
-                                                    className="p-2 border border-gray-300 cursor-pointer"
-                                                    onClick={() => openDescriptionDialog(brand.description)}
-                                                    title="Nhấn để xem đầy đủ mô tả"
-                                                >
-                                                    {shortenDescription(brand.description)}
+                                                <td className="p-2 border border-gray-300">
+                                                    {brand.description && brand.description.length > 50 ? (
+                                                        <span
+                                                            className="cursor-pointer hover:underline"
+                                                            onClick={() => openDescriptionDialog(brand.description)}
+                                                            title="Nhấn để xem đầy đủ mô tả"
+                                                        >
+                                                            {shortenDescription(brand.description)}...
+                                                            <span className="text-blue-600 ml-1">Xem thêm</span>
+                                                        </span>
+                                                    ) : (
+                                                        brand.description || ""
+                                                    )}
                                                 </td>
                                                 <td className="p-2 border border-gray-300">
                                                     <div className="flex items-center gap-2">
@@ -362,7 +358,7 @@ function BrandList() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="8" className="p-4 text-center text-gray-500">
+                                            <td colSpan="8" className="p-4 text-center text-red-600">
                                                 {searchError || "Không có thương hiệu nào để hiển thị."}
                                             </td>
                                         </tr>
@@ -372,7 +368,7 @@ function BrandList() {
                         </div>
 
                         {/* Phân trang */}
-                        {totalPages > 1 && (
+                        {totalPages >= 1 && (
                             <div className="flex justify-center mt-4 items-center">
                                 <div className="flex items-center space-x-1">
                                     <button
@@ -389,14 +385,17 @@ function BrandList() {
                                     >
                                         <FaChevronLeft />
                                     </button>
-
                                     {currentPage > 2 && (
                                         <>
-                                            <button onClick={() => handlePageChange(1)} className="px-3 py-1 border rounded">1</button>
+                                            <button
+                                                onClick={() => handlePageChange(1)}
+                                                className="px-3 py-1 border rounded"
+                                            >
+                                                1
+                                            </button>
                                             {currentPage > 3 && <span className="px-2">...</span>}
                                         </>
                                     )}
-
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
                                         if (page >= currentPage - 1 && page <= currentPage + 1) {
@@ -415,7 +414,6 @@ function BrandList() {
                                         }
                                         return null;
                                     })}
-
                                     {currentPage < totalPages - 1 && (
                                         <>
                                             {currentPage < totalPages - 2 && <span className="px-2">...</span>}
@@ -427,7 +425,6 @@ function BrandList() {
                                             </button>
                                         </>
                                     )}
-
                                     <button
                                         disabled={currentPage === totalPages}
                                         onClick={() => handlePageChange(currentPage + 1)}

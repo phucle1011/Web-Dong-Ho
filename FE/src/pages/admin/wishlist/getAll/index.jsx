@@ -6,30 +6,44 @@ import { Link } from "react-router-dom";
 import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
 
 function WishlistList() {
-  const [wishlistItems, setWishlistItems] = useState([]);
+  const [groupedWishlistItems, setGroupedWishlistItems] = useState([]); // Lưu trữ dữ liệu đã nhóm
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 10;
-
   useEffect(() => {
-    fetchWishlist(currentPage);
+    fetchGroupedWishlist(currentPage);
   }, [currentPage]);
 
-  const fetchWishlist = async (page) => {
+  // Hàm để nhóm dữ liệu từ API
+  const groupWishlistData = (data) => {
+    const grouped = {};
+    data.forEach(item => {
+      const userId = item.user?.id;
+      if (userId) {
+        if (!grouped[userId]) {
+          grouped[userId] = {
+            user: item.user,
+            wishlistItems: [] // Chứa các mục sản phẩm yêu thích
+          };
+        }
+        grouped[userId].wishlistItems.push(item); // Thêm toàn bộ item vào mảng
+      }
+    });
+    return Object.values(grouped); // Chuyển đổi thành mảng các nhóm người dùng
+  };
+
+  const fetchGroupedWishlist = async (page) => {
     setLoading(true);
     try {
-      const userId = 1;
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/${userId}/wishlist?page=${page}&limit=${limit}`);
-      setWishlistItems(res.data.data);
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist?page=${page}&limit=${limit}`);
+      // Nhóm dữ liệu nhận được từ API theo user_id
+      const groupedData = groupWishlistData(res.data.data);
+      setGroupedWishlistItems(groupedData);
       setTotalPages(res.data.totalPages);
-      if (searchTerm.trim() === '') {
-        setSearchResults([]);
-        setSearchError('');
-      }
+      setSearchError('');
     } catch (error) {
       console.error("Lỗi khi lấy danh sách yêu thích:", error);
       toast.error("Lỗi khi tải danh sách yêu thích");
@@ -37,37 +51,39 @@ function WishlistList() {
       setLoading(false);
     }
   };
-
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setSearchError('');
-    setSearchResults([]);
   };
 
   const handleSearchSubmit = async () => {
-    if (searchTerm.trim() === '') {
-      toast.warning("Vui lòng nhập tên sản phẩm cần tìm.");
+    const value = searchTerm.trim();
+    if (!value) {
+      toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
       return;
     }
-    setCurrentPage(1);
+
     setLoading(true);
     try {
-      const userId = 1;
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/wishlist/search?userId=${userId}&searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
-      if (res.data.data.length === 0) {
-        setSearchError("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
-        setSearchResults([]);
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/users/wishlist/search?searchTerm=${value}&page=1&limit=${limit}`
+      );
+
+      const groupedSearchData = groupWishlistData(res.data.data);
+
+      if (groupedSearchData.length === 0) {
+        setSearchError("Không tìm thấy kết quả phù hợp.");
+        setGroupedWishlistItems([]);
         setTotalPages(1);
       } else {
-        setSearchResults(res.data.data);
-        setTotalPages(res.data.totalPages);
+        setGroupedWishlistItems(groupedSearchData);
+        setTotalPages(res.data.totalPages || 1);
         setSearchError('');
       }
-
     } catch (error) {
-      console.error("Lỗi khi tìm kiếm trong danh sách yêu thích:", error);
-      setSearchError("Không tìm thấy sản phẩm nào trong danh sách yêu thích.");
-      setSearchResults([]);
+      console.error("Lỗi khi tìm kiếm:", error);
+      setSearchError("Không thể tải kết quả tìm kiếm.");
+      setGroupedWishlistItems([]);
       setTotalPages(1);
     } finally {
       setLoading(false);
@@ -76,10 +92,8 @@ function WishlistList() {
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    setSearchResults([]);
     setCurrentPage(1);
-    fetchWishlist(1);
-    setSearchError('');
+    fetchGroupedWishlist(1);
   };
 
   const handlePageChange = (page) => {
@@ -100,27 +114,24 @@ function WishlistList() {
         <div className="mb-4 relative flex">
           <input
             type="text"
-            className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Tìm kiếm theo tên sản phẩm..."
+            placeholder="Tìm kiếm theo tên người dùng..."
             value={searchTerm}
-            onChange={handleSearchChange}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchTerm(value);
+              if (!value.trim()) {
+                handleClearSearch(); // Tự động load lại toàn bộ danh sách
+              }
+            }}
+            className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="button"
             className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
             onClick={handleSearchSubmit}
           >
-            <FaSearch className="w-5 h-5" />
+            Tìm
           </button>
-
-          {searchResults.length > 0 && (
-            <button
-              onClick={handleClearSearch}
-              className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
-            >
-              Xem tất cả
-            </button>
-          )}
         </div>
         {loading ? (
           <div className="text-center py-4">Đang tải dữ liệu...</div>
@@ -130,65 +141,70 @@ function WishlistList() {
               <thead>
                 <tr>
                   <th className="p-2 border text-left">STT</th>
-                  <th className="p-2 border text-left">Tên sản phẩm</th>
-                  <th className="p-2 border text-left">Hình ảnh</th>
-                  <th className="p-2 border text-left">Giá</th>
+                  <th className="p-2 border text-left">Tên Người dùng</th>
+                  <th className="p-2 border text-left">Email</th>
+                  <th className="p-2 border text-left">Sản phẩm yêu thích</th>
                   <th className="p-2 border text-center">Hành động</th>
                 </tr>
               </thead>
               <tbody>
-                {searchResults.length > 0 ? (
-                  searchResults.map((item, index) => (
-                    <tr key={item.id} className="border-b">
-                      <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                      <td className="p-2 border">{item.variant?.product?.name}</td>
+                {searchError ? (
+                  <tr>
+                    <td colSpan="5" className="p-4 text-center text-red-500">{searchError}</td>
+                  </tr>
+                ) : groupedWishlistItems.length > 0 ? (
+                  groupedWishlistItems.map((userGroup, userIndex) => (
+                    <tr key={userGroup.user.id} className="border-b hover:bg-gray-50 transition">
                       <td className="p-2 border">
-                        {item.variant?.product?.thumbnail && (
-                          <img
-                            src={`${Constants.DOMAIN_API}/uploads/${item.variant.product.thumbnail}`}
-                            alt={item.variant.product.name}
-                            className="w-20 h-20 object-cover rounded"
-                          />
+                        {(currentPage - 1) * limit + userIndex + 1}
+                      </td>
+                      <td className="p-2 border font-medium">{userGroup.user.name}</td>
+                      <td className="p-2 border text-blue-600">{userGroup.user.email}</td>
+                      <td className="p-2 border">
+                        {userGroup.wishlistItems.length > 0 ? (
+                          <div className="space-y-2">
+                            {userGroup.wishlistItems.slice(0, 2).map((item) => {
+                              const product = item.variant?.product;
+                              return (
+                                <div key={item.id} className="flex items-center space-x-3 p-2 border rounded-md">
+                                  {product?.thumbnail && (
+                                    <img
+                                      src={`${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
+                                      alt={product.name}
+                                      className="w-16 h-16 object-cover rounded"
+                                    />
+                                  )}
+                                  <div>
+                                    <p className="font-medium">{product?.name}</p>
+                                    <p className="text-gray-600">{formatCurrency(item.variant?.price)}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {userGroup.wishlistItems.length > 2 && (
+                              <div className="text-gray-500 italic mt-1">... Xem thêm</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span>Không có sản phẩm nào trong danh sách yêu thích.</span>
                         )}
                       </td>
-                      <td className="p-2 border">{formatCurrency(item.variant?.price)}</td>
                       <td className="p-2 border text-center">
                         <Link
-                          to={`/product/${item.variant?.product?.slug}`}
-                          className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-700"
+                          to={`/admin/wishlist/detail/${userGroup.user.id}`}
+                          className="bg-green-500 text-white py-1 px-3 rounded hover:bg-green-600 whitespace-nowrap"
                         >
-                          Xem
+                          Xem chi tiết
                         </Link>
                       </td>
                     </tr>
                   ))
-                ) : searchError ? (
-                  <tr><td colSpan="5" className="p-4 text-center text-red-500">{searchError}</td></tr>
                 ) : (
-                  wishlistItems.map((item, index) => (
-                    <tr key={item.id} className="border-b">
-                      <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                      <td className="p-2 border">{item.variant?.product?.name}</td>
-                      <td className="p-2 border">
-                        {item.variant?.product?.thumbnail && (
-                          <img
-                            src={`${Constants.DOMAIN_API}/uploads/${item.variant.product.thumbnail}`}
-                            alt={item.variant.product.name}
-                            className="w-20 h-20 object-cover rounded"
-                          />
-                        )}
-                      </td>
-                      <td className="p-2 border">{formatCurrency(item.variant?.price)}</td>
-                      <td className="p-2 border text-center">
-                        <Link
-                          to={`/product/${item.variant?.product?.slug}`}
-                          className="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-700"
-                        >
-                          Xem
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                  <tr>
+                    <td colSpan="5" className="p-4 text-center text-gray-500 italic">
+                      {loading ? "Đang tải dữ liệu..." : "Không có dữ liệu"}
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

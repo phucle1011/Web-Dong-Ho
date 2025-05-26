@@ -8,45 +8,39 @@ class BrandController {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
             const offset = (page - 1) * limit;
-            const { status, searchTerm } = req.query; // Lấy status và searchTerm từ query params
+            const { status, searchTerm } = req.query;
 
-            const whereClause = {}; // Đối tượng chứa điều kiện WHERE cho truy vấn
+            const whereClause = {};
 
-            // Xử lý điều kiện tìm kiếm theo searchTerm
+            // Nếu có searchTerm, tìm theo name, country
             if (searchTerm) {
                 whereClause[Op.or] = [
-                    { name: { [Op.like]: `%${searchTerm}%` } }, // Tìm kiếm theo tên thương hiệu
-                    { country: { [Op.like]: `%${searchTerm}%` } } // Tìm kiếm theo quốc gia
+                    { name: { [Op.like]: `%${searchTerm}%` } },
+                    { country: { [Op.like]: `%${searchTerm}%` } }
                 ];
             }
 
-            // Xử lý điều kiện lọc theo status (nếu có và không phải đang tìm kiếm chung)
-            // Nếu có searchTerm, chúng ta muốn tìm kiếm trên tất cả các trạng thái
-            // Nếu không có searchTerm, chúng ta áp dụng filterStatus
+            // Nếu có status cụ thể và không có searchTerm thì lọc theo status
             if (status && status !== 'all' && !searchTerm) {
                 whereClause.status = status;
             }
 
-            // Lấy danh sách thương hiệu theo các điều kiện đã thiết lập
             const brands = await BrandModel.findAndCountAll({
-                where: whereClause, // Áp dụng điều kiện WHERE
+                where: whereClause,
                 order: [['created_at', 'DESC']],
-                limit: limit,
-                offset: offset,
+                limit,
+                offset
             });
 
-            // Lấy tổng số lượng thương hiệu cho từng trạng thái
             const allStatuses = ['active', 'inactive'];
-            const countPromises = allStatuses.map(s =>
-                BrandModel.count({ where: { status: s } })
+            const [activeCount, inactiveCount] = await Promise.all(
+                allStatuses.map(s => BrandModel.count({ where: { status: s } }))
             );
 
-            const countsByStatus = await Promise.all(countPromises);
-
             const counts = {
-                all: await BrandModel.count(), // Tổng số tất cả thương hiệu
-                active: countsByStatus[0],
-                inactive: countsByStatus[1],
+                all: await BrandModel.count(),
+                active: activeCount,
+                inactive: inactiveCount
             };
 
             res.status(200).json({
@@ -55,7 +49,7 @@ class BrandController {
                 data: brands.rows,
                 totalPages: Math.ceil(brands.count / limit),
                 currentPage: page,
-                counts // Trả về số lượng theo trạng thái
+                counts
             });
 
         } catch (error) {
@@ -85,49 +79,77 @@ class BrandController {
     }
 
     static async create(req, res) {
+        console.log("Dữ liệu nhận được từ req.body:", req.body);
+
         try {
             const { name, country, description, status } = req.body;
-            const slug = slugify(name, { lower: true });
+            let errors = {};
 
-            // Kiểm tra xem có file logo được tải lên không
-            let logo = null;
-            if (req.file) {
-                // Xử lý file logo ở đây (ví dụ: lưu vào thư mục trên server)
-                // Ví dụ:
-                const logoPath = `/uploads/${req.file.filename}`; // Đường dẫn tương đối đến file đã lưu
-                logo = logoPath; // Lưu đường dẫn vào biến logo
-                console.log("logoPath:", logoPath); // Log đường dẫn logo
-            } else {
-                const errorMessage = "Vui lòng tải lên logo cho thương hiệu.";
-                console.log(errorMessage);
-                return res.status(400).json({ message: errorMessage });
+            // Kiểm tra dữ liệu đầu vào
+            if (!name || typeof name !== 'string' || name.trim() === '') {
+                errors.name = "Tên thương hiệu không được để trống và phải là chuỗi.";
+            } else if (name.trim().length < 2) {
+                errors.name = "Tên thương hiệu phải ít nhất 2 ký tự.";
             }
 
-            // Validate dữ liệu (ví dụ: sử dụng thư viện như express-validator)
-            if (!name || !country || !description || !status) {
-                const errorMessage = "Vui lòng nhập đầy đủ thông tin cho thương hiệu.";
-                console.log(errorMessage);
-                return res.status(400).json({ message: errorMessage });
+            if (!country || typeof country !== 'string' || country.trim() === '') {
+                errors.country = "Quốc gia không được để trống và phải là chuỗi.";
+            }
+
+            if (description !== undefined && typeof description !== 'string') {
+                errors.description = "Mô tả phải là chuỗi.";
+            }
+
+            if (!status || (status !== 'active' && status !== 'inactive')) {
+                errors.status = "Trạng thái không hợp lệ.";
+            }
+
+            if (Object.keys(errors).length > 0) {
+                console.log("Lỗi kiểm tra dữ liệu đầu vào:", errors);
+                return res.status(400).json({
+                    status: 400,
+                    message: "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường.",
+                    errors: errors
+                });
+            }
+
+            const cleanName = name.trim();
+            const cleanCountry = country.trim();
+            const cleanDescription = description ? description.trim() : null;
+            const slug = slugify(cleanName, { lower: true, locale: 'vi' });
+
+            const existingBrand = await BrandModel.findOne({ where: { slug } });
+            if (existingBrand) {
+                return res.status(400).json({
+                    status: 400,
+                    message: "Tên thương hiệu đã tồn tại.",
+                    errors: { name: "Tên thương hiệu này đã tồn tại. Vui lòng chọn tên khác." }
+                });
             }
 
             const newBrand = await BrandModel.create({
-                name,
+                name: cleanName,
                 slug,
-                country,
-                logo, // Sử dụng đường dẫn đã xử lý ở trên
-                description,
+                country: cleanCountry,
+                logo: null, // Không xử lý ảnh
+                description: cleanDescription,
                 status,
             });
-            console.log("newBrand:", newBrand); // Log newBrand
+
+            console.log("Thương hiệu mới đã tạo:", newBrand);
 
             res.status(201).json({
                 status: 201,
                 message: "Tạo thương hiệu thành công",
                 data: newBrand,
             });
+
         } catch (error) {
-            console.error("Lỗi trong hàm create:", error); // Log lỗi
-            res.status(500).json({ error: error.message });
+            console.error("Lỗi trong hàm tạo thương hiệu:", error);
+            res.status(500).json({
+                message: "Lỗi nội bộ máy chủ khi tạo thương hiệu.",
+                error: error.message
+            });
         }
     }
 
@@ -233,30 +255,61 @@ class BrandController {
 
     static async search(req, res) {
         try {
-            const { searchTerm } = req.query;
+            const { searchTerm, page = 1, limit = 10 } = req.query;
+            const currentPage = parseInt(page);
+            const currentLimit = parseInt(limit);
+            const offset = (currentPage - 1) * currentLimit;
 
-            if (!searchTerm || searchTerm.trim() === '') {
-                return res.status(400).json({ message: "Vui lòng nhập từ khóa để tìm kiếm thương hiệu." });
+            if (!searchTerm?.trim()) {
+                return res.status(400).json({
+                    status: 400,
+                    message: "Vui lòng nhập từ khóa để tìm kiếm."
+                });
             }
 
-            const brands = await BrandModel.findAll({
+            const brands = await BrandModel.findAndCountAll({
                 where: {
                     [Op.or]: [
                         { name: { [Op.like]: `%${searchTerm}%` } },
                         { country: { [Op.like]: `%${searchTerm}%` } },
-                        { description: { [Op.like]: `%${searchTerm}%` } },
-                    ],
+                    ]
                 },
                 order: [['created_at', 'DESC']],
+                limit: currentLimit,
+                offset: offset
             });
 
-            res.status(200).json({
+            const { count, rows } = brands;
+
+            if (count === 0) {
+                return res.status(200).json({
+                    status: 200,
+                    message: "Không tìm thấy thương hiệu nào phù hợp.",
+                    data: [],
+                    totalPages: 1,
+                    currentPage: currentPage
+                });
+            }
+
+            return res.status(200).json({
                 status: 200,
                 message: "Tìm kiếm thương hiệu thành công",
-                data: brands,
+                data: rows,
+                totalPages: Math.ceil(count / currentLimit),
+                currentPage: currentPage,
+                counts: {
+                    all: await BrandModel.count(),
+                    active: await BrandModel.count({ where: { status: 'active' } }),
+                    inactive: await BrandModel.count({ where: { status: 'inactive' } })
+                }
             });
+
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            console.error("Lỗi khi tìm kiếm thương hiệu:", error);
+            return res.status(500).json({
+                status: 500,
+                error: error.message
+            });
         }
     }
 
