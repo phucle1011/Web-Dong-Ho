@@ -53,41 +53,42 @@ class CartController {
       return res.status(500).json({ success: false, message: 'Lỗi server khi lấy giỏ hàng' });
     }
   }
-  static async getCartById(req, res) {
-    try {
-      const { id } = req.params;
+  static async getCartByUserId(req, res) {
+  try {
+    const { userId } = req.params;
 
-      const cart = await CartDetailModel.findOne({
-        where: { id },
-        include: [
-          {
-            model: UserModel,
-            as: 'user',
-            attributes: ['id', 'name', 'email']
-          },
-          {
-            model: ProductVariantModel,
-            as: 'variant',
-            attributes: ['id', 'sku', 'price'],
-            include: {
-              model: ProductModel,
-              as: 'product',
-              attributes: ['name']
-            }
+    const cartDetails = await CartDetailModel.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: UserModel,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        },
+        {
+          model: ProductVariantModel,
+          as: 'variant',
+          attributes: ['id', 'sku', 'price'],
+          include: {
+            model: ProductModel,
+            as: 'product',
+            attributes: ['name']
           }
-        ]
-      });
+        }
+      ]
+    });
 
-      if (!cart) {
-        return res.status(404).json({ success: false, message: 'Giỏ hàng không tồn tại' });
-      }
-
-      return res.status(200).json({ success: true, data: cart });
-    } catch (error) {
-      console.error('Error in CartController.getCartById:', error);
-      return res.status(500).json({ success: false, message: 'Lỗi server khi lấy chi tiết giỏ hàng' });
+    if (!cartDetails || cartDetails.length === 0) {
+      return res.status(404).json({ success: false, message: 'Giỏ hàng không tồn tại' });
     }
+
+    return res.status(200).json({ success: true, data: cartDetails });
+  } catch (error) {
+    console.error('Error in getCartByUserId:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi lấy giỏ hàng' });
   }
+}
+
 }
 
 module.exports = CartController;

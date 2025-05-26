@@ -2,10 +2,24 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import Constants from "../../../../Constants";
+import { Modal, Carousel } from "react-bootstrap";
+import {
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 
 function CommentDetailPage() {
   const { id: productId } = useParams();
   const [comments, setComments] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [startIndex, setStartIndex] = useState(0);
+
+  // Phân trang state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5; // số bình luận mỗi trang
 
   useEffect(() => {
     fetchCommentsByProduct();
@@ -21,9 +35,24 @@ function CommentDetailPage() {
       );
 
       setComments(filteredComments);
+      setCurrentPage(1); // reset trang khi load mới
     } catch (error) {
       console.error("Lỗi lấy bình luận sản phẩm:", error);
     }
+  };
+
+  // Tính tổng số trang
+  const totalPages = Math.ceil(comments.length / ITEMS_PER_PAGE);
+
+  // Lấy dữ liệu của trang hiện tại
+  const currentComments = comments.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
   };
 
   const renderStars = (rating) => {
@@ -58,15 +87,23 @@ function CommentDetailPage() {
       : date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
   };
 
+  const handleImageClick = (images, index) => {
+    setSelectedImages(images);
+    setStartIndex(index);
+    setShowModal(true);
+  };
+
   return (
     <div className="container-fluid">
       <div className="row">
         <div className="col-12 d-flex align-items-stretch">
           <div className="card w-100">
             <div className="card-body p-4">
-              <h5 className="card-title fw-semibold mb-4">Chi tiết bình luận theo sản phẩm</h5>
+              <h5 className="card-title fw-semibold mb-4">
+                Chi tiết bình luận theo sản phẩm
+              </h5>
               <div className="table-responsive">
-                <table className="table table-striped">
+                <table className="table table-striped align-middle">
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -79,8 +116,8 @@ function CommentDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {comments.length > 0 ? (
-                      comments.map((comment) => (
+                    {currentComments.length > 0 ? (
+                      currentComments.map((comment) => (
                         <tr key={comment.id}>
                           <td>{comment.id}</td>
                           <td>{comment.user?.name || "N/A"}</td>
@@ -88,15 +125,15 @@ function CommentDetailPage() {
                           <td>{comment.comment_text || "Không có nội dung"}</td>
                           <td>
                             {comment.commentImages && comment.commentImages.length > 0 ? (
-                              comment.commentImages.map((img) => (
-                                <img
-                                  key={img.id}
-                                  src={img.image_url}
-                                  alt="Comment"
-                                  width="60"
-                                  className="me-2"
-                                />
-                              ))
+                              <img
+                                key={comment.commentImages[0].id}
+                                src={comment.commentImages[0].image_url}
+                                alt="Comment"
+                                width="60"
+                                className="me-2 img-thumbnail"
+                                style={{ cursor: "pointer" }}
+                                onClick={() => handleImageClick(comment.commentImages, 0)}
+                              />
                             ) : (
                               "Không có ảnh"
                             )}
@@ -107,7 +144,7 @@ function CommentDetailPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="9" className="text-center">
+                        <td colSpan="7" className="text-center">
                           Không có bình luận nào
                         </td>
                       </tr>
@@ -115,6 +152,64 @@ function CommentDetailPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Phân trang */}
+              {totalPages > 0 && (
+                <div className="flex justify-center mt-4 items-center">
+                  <div className="flex items-center space-x-1">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange(1)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaAngleDoubleLeft />
+                    </button>
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaChevronLeft />
+                    </button>
+
+                    {[...Array(totalPages)].map((_, i) => {
+                      const page = i + 1;
+                      if (page >= currentPage - 1 && page <= currentPage + 1) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-1 border rounded ${
+                              currentPage === page
+                                ? "bg-primary text-white"
+                                : "bg-light text-dark"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
+
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaChevronRight />
+                    </button>
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => handlePageChange(totalPages)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaAngleDoubleRight />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <Link to="/admin/comments/getAll" className="btn btn-secondary btn-sm mt-3">
                 Quay lại danh sách
               </Link>
@@ -122,6 +217,34 @@ function CommentDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal hiển thị ảnh lớn */}
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        size="lg"
+        centered
+        backdrop="static"
+        animation={true}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Xem ảnh bình luận</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Carousel interval={null} defaultActiveIndex={startIndex}>
+            {selectedImages.map((img) => (
+              <Carousel.Item key={img.id}>
+                <img
+                  className="d-block w-100"
+                  src={img.image_url}
+                  alt="Bình luận"
+                  style={{ maxHeight: "70vh", objectFit: "contain" }}
+                />
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }

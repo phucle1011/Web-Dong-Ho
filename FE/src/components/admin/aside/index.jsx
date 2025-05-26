@@ -94,10 +94,10 @@ function Aside() {
                 <span className="hide-menu">Quản lý người dùng</span>
               </Link>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/address/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/address/getAll">
+            <li className={`sidebar-item ${location.pathname === "/admin/blog/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/blog/getAll">
                 <FaMapMarkerAlt />
-                <span className="hide-menu">Quản lý địa chỉ</span>
+                <span className="hide-menu">Quản lý bài viết</span>
               </Link>
             </li>
             <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>

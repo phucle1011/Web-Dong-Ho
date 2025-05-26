@@ -4,19 +4,28 @@ import { useParams, Link } from "react-router-dom";
 import Constants from "../../../../Constants";
 
 function CartDetailPage() {
-  const { id } = useParams();
-  const [cartItem, setCartItem] = useState(null);
+  const { id } = useParams(); // id là userId trong trường hợp này
+  const [cartItems, setCartItems] = useState([]); // mảng các cart detail
+  const [userInfo, setUserInfo] = useState(null); // lưu thông tin user để hiển thị chung
 
   useEffect(() => {
-    fetchCartDetail();
+    fetchCartByUserId();
   }, [id]);
 
-  const fetchCartDetail = async () => {
+  const fetchCartByUserId = async () => {
     try {
-      const response = await axios.get(`${Constants.DOMAIN_API}/admin/cart/${id}`);
-      setCartItem(response.data.data || null);
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/cart/user/${id}`);
+      if (response.data.success && response.data.data.length > 0) {
+        setCartItems(response.data.data);
+        setUserInfo(response.data.data[0].user); // Lấy thông tin user từ item đầu tiên
+      } else {
+        setCartItems([]);
+        setUserInfo(null);
+      }
     } catch (error) {
-      console.error("Lỗi khi tải chi tiết giỏ hàng:", error);
+      console.error("Lỗi khi tải giỏ hàng:", error);
+      setCartItems([]);
+      setUserInfo(null);
     }
   };
 
@@ -24,7 +33,7 @@ function CartDetailPage() {
     <div className="container-fluid mt-4">
       <div className="card">
         <div className="card-body">
-          <h4 className="card-title mb-4">Chi tiết giỏ hàng #{id}</h4>
+          <h4 className="card-title mb-4">Chi tiết giỏ hàng của người dùng #{id}</h4>
 
           <div className="mb-4">
             <Link to="/admin/carts/getAll" className="btn btn-secondary">
@@ -32,86 +41,61 @@ function CartDetailPage() {
             </Link>
           </div>
 
-          {cartItem ? (
-            <div className="mb-4 border p-3 rounded">
-              <div className="mb-3">
-                <label className="form-label fw-bold">ID giỏ hàng</label>
-                <input type="text" className="form-control" value={cartItem.id || ""} disabled />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label fw-bold">Tên người dùng</label>
-                <input type="text" className="form-control" value={cartItem.user?.name || ""} disabled />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label fw-bold">Email người dùng</label>
-                <input type="text" className="form-control" value={cartItem.user?.email || ""} disabled />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label fw-bold">SKU sản phẩm</label>
-                <input type="text" className="form-control" value={cartItem.variant?.sku || ""} disabled />
-              </div>
-
-              <div className="mb-3">
-                <label className="form-label fw-bold">Tên sản phẩm</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={cartItem.variant?.product?.name || ""}
-                  disabled
-                />
-              </div>
-
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label fw-bold">Giá</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={
-                      cartItem.variant?.price
-                        ? Number(cartItem.variant.price).toLocaleString("vi-VN", {
-                            style: "currency",
-                            currency: "VND",
-                          })
-                        : ""
-                    }
-                    disabled
-                  />
+          {userInfo ? (
+            <>
+              {/* Thông tin người dùng */}
+              <div className="mb-4 border p-3 rounded">
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Tên người dùng</label>
+                  <input type="text" className="form-control" value={userInfo.name} disabled />
                 </div>
-
-                <div className="col-md-6 mb-3">
-                  <label className="form-label fw-bold">Số lượng</label>
-                  <input type="number" className="form-control" value={cartItem.quantity || 0} disabled />
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Email người dùng</label>
+                  <input type="text" className="form-control" value={userInfo.email} disabled />
                 </div>
               </div>
 
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label fw-bold">Ngày tạo</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={new Date(cartItem.created_at).toLocaleString() || ""}
-                    disabled
-                  />
-                </div>
-
-                <div className="col-md-6 mb-3">
-                  <label className="form-label fw-bold">Cập nhật lần cuối</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={new Date(cartItem.updated_at).toLocaleString() || ""}
-                    disabled
-                  />
-                </div>
-              </div>
-            </div>
+              {/* Danh sách sản phẩm trong giỏ hàng */}
+              <table className="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>SKU sản phẩm</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item, index) => (
+                      <tr key={item.id}>
+                        <td>{index + 1}</td>
+                        <td>{item.variant?.sku || ""}</td>
+                        <td>{item.variant?.product?.name || ""}</td>
+                        <td>
+                          {item.variant?.price
+                            ? Number(item.variant.price).toLocaleString("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              })
+                            : ""}
+                        </td>
+                        <td>{item.quantity}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center">
+                        Giỏ hàng chưa có sản phẩm nào.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </>
           ) : (
-            <div className="alert alert-warning">Không tìm thấy giỏ hàng này.</div>
+            <div className="alert alert-warning">Không tìm thấy giỏ hàng của người dùng này.</div>
           )}
         </div>
       </div>

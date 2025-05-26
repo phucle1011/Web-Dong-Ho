@@ -43,6 +43,10 @@ import EditVariant from "./pages/admin/product/editVariant";
 import BrandList from "./pages/admin/brand/getAll";
 import BrandDetail from "./pages/admin/brand/detail";
 import BrandCreate from "./pages/admin/brand/Create";
+import BlogList from "./pages/admin/blog/getall";
+import BlogDetail from "./pages/admin/blog/detail";
+import BlogAdd from "./pages/admin/blog/add";
+import EditBlog from "./pages/admin/blog/edit";
 import WishlistDetail from "./pages/admin/wishlist/detail";
 
 const AppRoutes = () => {
@@ -110,7 +114,12 @@ const AppRoutes = () => {
           <Route path="create" element={<CategoryCreate />} />
           <Route path="edit/:id" element={<CategoryEdit />} />
         </Route>
-
+        <Route path="blog">
+          <Route path="getAll" element={<BlogList />} />
+          <Route path="detail/:id" element={<BlogDetail />} />
+          <Route path="add" element={<BlogAdd />} />
+          <Route path="edit/:id" element={<EditBlog />} />
+        </Route>
         <Route path="promotions">
           <Route path="getAll" element={<PromotionGetAll />} />
           <Route path="create" element={<PromotionCreate />} />
@@ -128,9 +137,6 @@ const AppRoutes = () => {
           <Route path="addVariant/:productId" element={<AddVariant />} />
           <Route path="detail/:id" element={<ProductDetail />} />
           <Route path="editVariant/:id" element={<EditVariant />} />
-
-
-
         </Route>
         
         <Route path="wishlist">

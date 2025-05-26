@@ -11,24 +11,48 @@ import {
 } from "react-icons/fa";
 
 function CartPage() {
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState([]); // raw data từ API
+  const [groupedUsers, setGroupedUsers] = useState([]); // dữ liệu nhóm theo user
   const [searchTerm, setSearchTerm] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 5;
-  const totalPages = Math.ceil(cartItems.length / limit);
-  const currentData = cartItems.slice((currentPage - 1) * limit, currentPage * limit);
+  const totalPages = Math.ceil(groupedUsers.length / limit);
+  const currentData = groupedUsers.slice((currentPage - 1) * limit, currentPage * limit);
 
   useEffect(() => {
     fetchAllCart();
   }, []);
 
+  // Lấy dữ liệu và gom nhóm theo user
   const fetchAllCart = async () => {
     try {
       const response = await axios.get(`${Constants.DOMAIN_API}/admin/cart/list`);
-      setCartItems(response.data.data || []);
+      const data = response.data.data || [];
+
+      setCartItems(data);
       setCurrentPage(1);
       setSearchTerm("");
+
+      // Gom nhóm theo user id
+      const grouped = data.reduce((acc, item) => {
+        const userId = item.user?.id;
+        if (!userId) return acc;
+
+        if (!acc[userId]) {
+          acc[userId] = {
+            userId,
+            userName: item.user.name || "Không rõ",
+            productsCount: 0,
+          };
+        }
+        acc[userId].productsCount += 1; // cộng sản phẩm trong giỏ
+
+        return acc;
+      }, {});
+
+      // Chuyển từ object sang mảng
+      setGroupedUsers(Object.values(grouped));
     } catch (error) {
       console.error("Error fetching cart:", error);
     }
@@ -47,12 +71,32 @@ function CartPage() {
         return;
       }
 
+      // Gọi API tìm kiếm (giả sử API trả dữ liệu theo từng sản phẩm)
       const response = await axios.get(
         `${Constants.DOMAIN_API}/admin/cart/list?search=${encodeURIComponent(searchTerm)}`
       );
+      const data = response.data.data || [];
 
-      setCartItems(response.data.data || []);
+      setCartItems(data);
       setCurrentPage(1);
+
+      // Gom nhóm lại như fetchAllCart
+      const grouped = data.reduce((acc, item) => {
+        const userId = item.user?.id;
+        if (!userId) return acc;
+
+        if (!acc[userId]) {
+          acc[userId] = {
+            userId,
+            userName: item.user.name || "Không rõ",
+            productsCount: 0,
+          };
+        }
+        acc[userId].productsCount += 1;
+
+        return acc;
+      }, {});
+      setGroupedUsers(Object.values(grouped));
     } catch (error) {
       console.error("Error searching cart:", error);
     }
@@ -74,10 +118,16 @@ function CartPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2" onClick={handleSearch}>
+                <button
+                  className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
+                  onClick={handleSearch}
+                >
                   <FaSearch />
                 </button>
-                <button className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded" onClick={fetchAllCart}>
+                <button
+                  className="ms-2 p-2 border flex gap-2 bg-blue-900 hover:bg-blue-800 text-white py-1 px-3 rounded"
+                  onClick={fetchAllCart}
+                >
                   Xem tất cả
                 </button>
               </div>
@@ -86,26 +136,22 @@ function CartPage() {
                 <table className="table text-nowrap mb-0 align-middle">
                   <thead className="text-dark fs-4">
                     <tr>
-                      <th>ID</th>
+                      <th>ID</th> {/* Cột ID thứ tự */}
                       <th>Người dùng</th>
-                      <th>Sản Phẩm</th>
+                      <th>Số sản phẩm</th>
                       <th>Chi tiết</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentData.length > 0 ? (
-                      currentData.map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.id}</td>
-                          <td>{item.user?.name || "Không rõ"}</td>
-                          <td>
-                            {item.variant?.product?.name} - {item.variant?.sku}
-                          </td>
-
-
+                      currentData.map((user, index) => (
+                        <tr key={user.userId}>
+                          <td>{(currentPage - 1) * limit + index + 1}</td> {/* ID tăng dần */}
+                          <td>{user.userName}</td>
+                          <td>{user.productsCount}</td>
                           <td>
                             <Link
-                              to={`/admin/carts/detail/${item.id}`}
+                              to={`/admin/carts/detail/${user.userId}`}
                               className="btn btn-info btn-sm"
                             >
                               Xem
@@ -115,7 +161,7 @@ function CartPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="3" className="text-center">
+                        <td colSpan="4" className="text-center">
                           Không có dữ liệu giỏ hàng
                         </td>
                       </tr>
@@ -123,6 +169,7 @@ function CartPage() {
                   </tbody>
                 </table>
               </div>
+
               <div className="flex justify-center mt-4 items-center">
                 <div className="flex items-center space-x-1">
                   <button
@@ -160,10 +207,11 @@ function CartPage() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded ${currentPage === page
-                            ? "bg-blue-500 text-white"
-                            : "bg-blue-100 text-black hover:bg-blue-200"
-                            }`}
+                          className={`px-3 py-1 border rounded ${
+                            currentPage === page
+                              ? "bg-blue-500 text-white"
+                              : "bg-blue-100 text-black hover:bg-blue-200"
+                          }`}
                         >
                           {page}
                         </button>

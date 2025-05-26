@@ -11,6 +11,7 @@ const AddressController = require('../controllers/Admin/addressController');
 const CartController = require('../controllers/Admin/cartsControlles');
 const CommentController = require('../controllers/Admin/commentsController');
 const BrandController = require('../controllers/Admin/brandsController');
+const BlogController = require('../controllers/Admin/blogsController');
 // const notificationController = require('../controllers/Admin/notification.controller');
 //------------------[ ADMIN ROUTES ]------------------
 
@@ -74,7 +75,6 @@ router.delete('/variant-images/:image_id', ProductController.deleteSingleVariant
 router.get("/product-attributes", ProductController.getAllAttributes);
 router.delete("/variants/:variant_id", ProductController.deleteVariant);
 router.get("/variants/:variant_id", ProductController.getVariantById);
-
 router.get('/product-variants', ProductController.getAllVariants); // GET /product-variants
 
 //------------------[ ADDRESS ]------------------\
@@ -86,7 +86,15 @@ router.post('/user/:userId/addresses', AddressController.addAddress);
 
 //------------------[ CART ]------------------\
 router.get('/cart/list', CartController.getAllCart);
-router.get('/cart/:id', CartController.getCartById);
+router.get('/cart/user/:userId', CartController.getCartByUserId);
+
+//------------------[ Blog ]------------------\
+router.get('/blog/list', BlogController.getAll);
+router.get('/blog/:id', BlogController.getById);
+router.post('/blog/add', BlogController.create);
+router.put('/blog/:id', BlogController.update);
+router.delete('/blog/:id', BlogController.delete);
+
 
 //------------------[ COMMENT ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
