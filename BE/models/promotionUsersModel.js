@@ -14,7 +14,12 @@ const PromotionUserModel = connection.define('promotion_user', {
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: false
-  }
+  },
+  email_sent: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
 }, {
   tableName: 'promotion_users',
   timestamps: true,

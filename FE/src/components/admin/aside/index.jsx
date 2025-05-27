@@ -67,6 +67,11 @@ function Aside() {
                 Quản lý sản phẩm khuyến mãi
                 </span>
               </Link>
+            </li> <li className={`sidebar-item ${location.pathname === "/admin/promotionusers/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/promotionusers/getAll">
+                <FaTags />
+                <span className="hide-menu">Quản lý khách hàng ĐB</span>
+              </Link>
             </li>
 
             <li className="nav-small-cap">

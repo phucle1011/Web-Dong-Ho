@@ -107,9 +107,16 @@ ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id
 PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
 PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });  
 
+UserModel.belongsToMany(PromotionModel, { through: PromotionUserModel, foreignKey: 'user_id', otherKey: 'promotion_id' });
+PromotionModel.belongsToMany(UserModel, { through: PromotionUserModel, foreignKey: 'promotion_id', otherKey: 'user_id' });
+
 // Promotion - User (Many-to-Many thông qua promotion_users)
-PromotionModel.belongsToMany(UserModel, {through: PromotionUserModel, foreignKey: 'promotion_id',otherKey: 'user_id',as: 'users'});
-UserModel.belongsToMany(PromotionModel, {through: PromotionUserModel,foreignKey: 'user_id',otherKey: 'promotion_id',as: 'promotions'});
+UserModel.hasMany(PromotionUserModel, { foreignKey: 'user_id', as: 'promotionUsers' });
+PromotionUserModel.belongsTo(UserModel, { foreignKey: 'user_id' });
+
+// PromotionUser belongsTo Promotion
+PromotionUserModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'Promotion' });
+PromotionModel.hasMany(PromotionUserModel, { foreignKey: 'promotion_id', as: 'promotionUsers' });
 
 // ProductVariant - Product
 ProductVariantsModel.belongsTo(ProductModel, { foreignKey: 'product_id' });

@@ -1,0 +1,398 @@
+import { useEffect, useState, useMemo } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
+import Constants from "../../../../Constants.jsx";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import { FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+
+function PromotionList() {
+  const [promotions, setPromotions] = useState([]);
+  const [selectedPromotionId, setSelectedPromotionId] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailContent, setEmailContent] = useState("");
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 10;
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  useEffect(() => {
+    fetchPromotions();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPromotionId) {
+      fetchCustomersByPromotion(selectedPromotionId);
+    } else {
+      setCustomers([]);
+    }
+    setSelectedCustomerIds([]);
+    setCurrentPage(1);
+    setSearchTerm("");
+    setSearchInput("");
+  }, [selectedPromotionId]);
+
+  const fetchPromotions = async () => {
+    setLoadingPromotions(true);
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`);
+      const data = res.data.data || [];
+      setPromotions(data);
+      if (data.length > 0) setSelectedPromotionId(data[0].id);
+    } catch (err) {
+      toast.error("Không thể tải danh sách mã giảm.");
+    } finally {
+      setLoadingPromotions(false);
+    }
+  };
+
+  const fetchCustomersByPromotion = async (promotionId) => {
+    setLoadingCustomers(true);
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotionusers/list`, {
+        params: { promotionId },
+      });
+      setCustomers(res.data.data || []);
+    } catch {
+      toast.error("Không thể tải danh sách khách hàng.");
+      setCustomers([]);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(
+      (cus) =>
+        cus.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cus.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [customers, searchTerm]);
+
+  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
+  const paginatedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredCustomers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredCustomers, currentPage]);
+
+  const handleCheckboxChange = (id) => {
+    setSelectedCustomerIds((prev) =>
+      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e) => {
+    const idsOnPage = paginatedCustomers.map((c) => c.id);
+    if (e.target.checked) {
+      setSelectedCustomerIds((prev) => [...new Set([...prev, ...idsOnPage])]);
+    } else {
+      setSelectedCustomerIds((prev) => prev.filter((id) => !idsOnPage.includes(id)));
+    }
+  };
+
+  const handleSendEmails = async () => {
+    if (!emailSubject.trim() || !emailContent.trim()) {
+      toast.warning("Vui lòng nhập tiêu đề và nội dung email.");
+      return;
+    }
+    if (selectedCustomerIds.length === 0) {
+      toast.warning("Vui lòng chọn ít nhất một khách hàng.");
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      await axios.post(`${Constants.DOMAIN_API}/admin/send-promotion-emails`, {
+        customerIds: selectedCustomerIds,
+        subject: emailSubject,
+        content: emailContent,
+        promotionId: selectedPromotionId,
+      });
+
+      toast.success("Gửi email thành công!");
+      setCustomers((prev) =>
+        prev.map((c) =>
+          selectedCustomerIds.includes(c.id)
+            ? { ...c, emailSent: 1 }
+            : c
+        )
+      );
+      setSelectedCustomerIds([]);
+      setEmailSubject("");
+      setEmailContent("");
+      setIsEmailModalOpen(false);
+    } catch {
+      toast.error("Không thể gửi email.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const selectedPromotion = promotions.find((p) => p.id === selectedPromotionId);
+  const promotionTitle = selectedPromotion
+    ? `cho mã giảm (${selectedPromotion.name || "Mã không tên"})`
+    : "";
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput.trim());
+    setCurrentPage(1);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-6 bg-white shadow rounded-lg flex gap-8 min-h-[600px]">
+      <div className="w-1/3 border rounded-lg shadow-sm p-4 flex flex-col">
+        <h3 className="text-xl font-semibold mb-4 text-blue-700 border-b pb-2">
+          Danh sách mã giảm giá
+        </h3>
+        {loadingPromotions ? (
+          <div className="text-center text-gray-500 mt-10">Đang tải...</div>
+        ) : promotions.length === 0 ? (
+          <div className="text-center text-gray-400 mt-10">Không có mã giảm.</div>
+        ) : (
+          <ul className="overflow-auto max-h-[460px] custom-scrollbar pr-2">
+            {promotions.map((promo) => (
+              <li
+                key={promo.id}
+                onClick={() => setSelectedPromotionId(promo.id)}
+                className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id
+                  ? "bg-blue-100 shadow"
+                  : "hover:bg-blue-50"
+                  }`}
+              >
+                <div className="font-semibold text-base text-blue-900">
+                  {promo.name || "Mã không tên"}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {promo.discount_value !== undefined
+                    ? promo.promotionType === "percentage"
+                      ? `Giảm ${promo.discount_value}%`
+                      : `Giảm ${promo.discount_value.toLocaleString()}đ`
+                    : "Chưa xác định"}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="w-2/3 flex flex-col">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold text-gray-800">
+            Danh sách khách hàng {promotionTitle}
+          </h3>
+          <button
+            className={`bg-green-600 text-white px-5 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0
+              ? "opacity-50 cursor-not-allowed"
+              : "hover:bg-green-700"
+              }`}
+            onClick={() => setIsEmailModalOpen(true)}
+            disabled={selectedCustomerIds.length === 0}
+          >
+            Soạn Email ({selectedCustomerIds.length})
+          </button>
+        </div>
+
+        <div className="flex mb-3 gap-2">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-grow p-2 border rounded-md"
+            placeholder="Tìm kiếm theo tên hoặc email..."
+          />
+          <button
+            onClick={handleSearch}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Tìm kiếm
+          </button>
+        </div>
+        {loadingCustomers ? (
+          <div className="text-center text-gray-500 mt-10">Đang tải...</div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="text-center text-gray-400 mt-16">
+            Không tìm thấy khách hàng.
+          </div>
+        ) : (
+          <>
+            <div className="overflow-auto border rounded-lg shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    <th className="border p-2">#</th>
+                    <th className="p-3 text-center w-12">
+                      <input
+                        type="checkbox"
+                        checked={paginatedCustomers.every((c) =>
+                          selectedCustomerIds.includes(c.id)
+                        )}
+                        onChange={handleSelectAll}
+                      />
+                    </th>
+                    <th className="border p-2">Tên</th>
+                    <th className="border p-2">Email</th>
+                    <th className="border p-2">Số điện thoại</th>
+                    <th className="border p-2">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedCustomers.map((cus, index) => (
+                    <tr
+                      key={cus.id}
+                      className={`hover:bg-gray-50 ${selectedCustomerIds.includes(cus.id) ? "bg-blue-50" : ""
+                        }`}
+                    >
+                      <td className="border p-2 text-centerr">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                      </td>
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedCustomerIds.includes(cus.id)}
+                          onChange={() => handleCheckboxChange(cus.id)}
+                        />
+                      </td>
+                      <td className="border p-2 text-center">{cus.name}</td>
+                      <td className="border p-2 text-center">{cus.email}</td>
+                      <td className="border p-2 text-center">{cus.phone}</td>
+                      <td className="border p-2 text-center">
+                        {cus.promotions.some(
+                          (p) => p.promotionId === selectedPromotionId && p.emailSent
+                        ) ? (
+                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            Đã gửi
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                            Chưa gửi
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-center mt-6">
+              <div className="flex items-center space-x-1">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(1)}
+                  className="px-2 py-1 border rounded disabled:opacity-50"
+                >
+                  <FaAngleDoubleLeft />
+                </button>
+
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => prev - 1)}
+                  className="px-2 py-1 border rounded disabled:opacity-50"
+                >
+                  <FaChevronLeft />
+                </button>
+
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  if (page >= currentPage - 1 && page <= currentPage + 1) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  }
+                  return null;
+                })}
+
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                  className="px-2 py-1 border rounded disabled:opacity-50"
+                >
+                  <FaChevronRight />
+                </button>
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="px-2 py-1 border rounded disabled:opacity-50"
+                >
+                  <FaAngleDoubleRight />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {isEmailModalOpen && (
+          <div className="fixed inset-0 bg-gray-700 bg-opacity-40 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg shadow-lg w-3/4 max-w-3xl p-6 relative max-h-[90vh] overflow-auto">
+              <h3 className="text-xl font-semibold mb-4">Soạn email {promotionTitle}</h3>
+              <div className="mb-3">
+                <label className="block font-semibold mb-1">Tiêu đề:</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full p-2 border rounded-md"
+                  placeholder="Nhập tiêu đề email"
+                />
+              </div>
+              <div className="mb-3">
+                <label className="block font-semibold mb-1">Nội dung:</label>
+                <ReactQuill
+                  theme="snow"
+                  value={emailContent}
+                  onChange={setEmailContent}
+                  className="min-h-[200px]"
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                  onClick={() => setIsEmailModalOpen(false)}
+                  disabled={sendingEmail}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={handleSendEmails}
+                  disabled={sendingEmail}
+                >
+                  {sendingEmail ? "Đang gửi..." : "Gửi email"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default PromotionList;

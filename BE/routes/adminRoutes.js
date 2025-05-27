@@ -11,6 +11,8 @@ const AddressController = require('../controllers/Admin/addressController');
 const CartController = require('../controllers/Admin/cartsControlles');
 const CommentController = require('../controllers/Admin/commentsController');
 const BrandController = require('../controllers/Admin/brandsController');
+const PromotionUserController = require('../controllers/Admin/promotionUserController');
+const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 //------------------[ ADMIN ROUTES ]------------------
@@ -112,10 +114,13 @@ router.post('/brand/create', BrandController.create);
 router.put('/brand/update/:id', BrandController.update);
 router.delete('/brand/delete/:id', BrandController.delete);
 
+//------------------[ PROMOTION-USER ]------------------\
+router.get('/promotionusers/list',PromotionUserController.get);
+router.post('/send-promotion-emails', EmailController.sendPromotionEmails);
+
 //------------------[ DASHBOARD ]------------------\
 router.get('/dashboard/counts', DashboardController.getCounts);
 router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMonth);
 router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
 router.get('/dashboard/revenue', DashboardController.getRevenueByCustomRange);
-
 module.exports = router;

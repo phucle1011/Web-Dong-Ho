@@ -48,6 +48,8 @@ import BlogDetail from "./pages/admin/blog/detail";
 import BlogAdd from "./pages/admin/blog/add";
 import EditBlog from "./pages/admin/blog/edit";
 import WishlistDetail from "./pages/admin/wishlist/detail";
+import PromotionList from "./pages/admin/promotionUsers/getAll";
+
 
 const AppRoutes = () => {
   return (
@@ -138,7 +140,7 @@ const AppRoutes = () => {
           <Route path="detail/:id" element={<ProductDetail />} />
           <Route path="editVariant/:id" element={<EditVariant />} />
         </Route>
-        
+
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />
           <Route path="detail/:id" element={<WishlistDetail />}/>
@@ -150,7 +152,11 @@ const AppRoutes = () => {
           <Route path="create" element={<BrandCreate />} />
 
 
-          
+
+        </Route>
+
+        <Route path="promotionusers">
+          <Route path="getAll" element={<PromotionList />} />
         </Route>
 
       </Route>
