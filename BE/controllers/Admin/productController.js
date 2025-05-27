@@ -99,45 +99,56 @@ static async getAllAttributes(req, res) {
 
   // Lấy chi tiết theo ID
   static async getById(req, res) {
-    try {
-      const { id } = req.params;
-      const product = await Product.findByPk(id, {
-        include: [
-          {
-            model: ProductVariant,
-            as: "variants",
-            include: [
-              {
-                model: ProductVariantAttributeValue,
-                as: "attributeValues",
-                include: [
-                  {
-                    model: ProductAttribute,
-                    as: "attribute",
-                  },
-                ],
-              },
-              {
-                model: VariantImage,
-                as: "images",
-              },
-            ],
-          },
-        ],
-      });
+  try {
+    const { id } = req.params;
+    const product = await Product.findByPk(id, {
+      include: [
+        {
+          model: ProductVariant,
+          as: "variants",
+          include: [
+            {
+              model: ProductVariantAttributeValue,
+              as: "attributeValues",
+              include: [
+                {
+                  model: ProductAttribute,
+                  as: "attribute",
+                },
+              ],
+            },
+            {
+              model: VariantImage,
+              as: "images",
+            },
+          ],
+        },
+        {
+          model: CategoryModel,
+          as: "category", // cần đúng alias trong quan hệ
+          attributes: ["id", "name"],
+        },
+        {
+          model: BrandModel,
+          as: "brand", // cần đúng alias trong quan hệ
+          attributes: ["id", "name"],
+        },
+      ],
+    });
 
-      if (!product) {
-        return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-      }
-
-      res.status(200).json({
-        status: 200,
-        data: product,
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
+
+    res.status(200).json({
+      status: 200,
+      data: product,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
+}
+
 
   // Tạo mới sản phẩm + biến thể
   static async createProduct(req, res) {
@@ -588,30 +599,26 @@ static async getVariantById(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
-// Xóa thuộc tính sản phẩm theo id
-static async deleteAttribute(req, res) {
+
+static async deleteAttributeValueById (req, res){
   try {
     const { id } = req.params;
 
-    const attribute = await ProductAttribute.findByPk(id);
-    if (!attribute) {
-      return res.status(404).json({ message: "Thuộc tính không tồn tại" });
-    }
-
-    // Xóa các giá trị thuộc tính của biến thể liên quan đến thuộc tính này
-    await ProductVariantAttributeValue.destroy({
-      where: { product_attribute_id: id },
+    const deleted = await ProductVariantAttributeValue.destroy({
+      where: { id }
     });
 
-    // Xóa thuộc tính
-    await attribute.destroy();
+    if (deleted === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy thuộc tính để xoá' });
+    }
 
-    res.status(200).json({ message: "Xóa thuộc tính thành công" });
+    res.status(200).json({ message: 'Xoá thuộc tính thành công' });
   } catch (error) {
-    console.error("Lỗi khi xóa thuộc tính:", error);
-    res.status(500).json({ error: error.message });
+    console.error('Lỗi xoá thuộc tính:', error);
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
-}
+};
+
 
 static async getAllVariants(req, res) {
   try {

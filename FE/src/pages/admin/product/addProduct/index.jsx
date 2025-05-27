@@ -27,7 +27,7 @@ const AddProduct = () => {
       try {
         const [catRes, brandRes] = await Promise.all([
           axios.get(`${Constants.DOMAIN_API}/admin/category/list`),
-          axios.get(`${Constants.DOMAIN_API}/admin/category/list`),
+          axios.get(`${Constants.DOMAIN_API}/admin//brand/list`),
         ]);
 
         setCategories(catRes.data.data || []);
@@ -75,129 +75,144 @@ const AddProduct = () => {
 
   return (
     <div className="max-w-screen-xl mx-auto bg-white p-8 rounded shadow mt-8">
-      <h2 className="text-2xl font-semibold mb-6">Thêm sản phẩm mới</h2>
+  <h2 className="text-2xl font-semibold mb-6">Thêm sản phẩm mới</h2>
 
-      {message && <p className="mb-4 text-sm text-blue-600">{message}</p>}
+  {message && <p className="mb-4 text-sm text-blue-600">{message}</p>}
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Tên sản phẩm *</label>
-          <input
-            type="text"
-            className="w-full border px-4 py-3 rounded"
-            {...register("name", {
-              required: "Tên sản phẩm không được để trống",
-              minLength: { value: 3, message: "Tối thiểu 3 ký tự" },
-            })}
-          />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
-          )}
-        </div>
+  <form onSubmit={handleSubmit(onSubmit)} noValidate>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Tên sản phẩm */}
+      <div>
+        <label className="block font-medium mb-2">Tên sản phẩm *</label>
+        <input
+          type="text"
+          className="w-full border px-4 py-3 rounded"
+          {...register("name", {
+            required: "Tên sản phẩm không được để trống",
+            minLength: { value: 3, message: "Tối thiểu 3 ký tự" },
+          })}
+        />
+        {errors.name && (
+          <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+        )}
+      </div>
 
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Slug *</label>
-          <input
-            type="text"
-            className="w-full border px-4 py-3 rounded"
-            {...register("slug", { required: "Slug không được để trống" })}
-          />
-          {errors.slug && (
-            <p className="text-red-500 text-sm mt-1">{errors.slug.message}</p>
-          )}
-        </div>
+      {/* Slug */}
+      <div>
+        <label className="block font-medium mb-2">Slug *</label>
+        <input
+          type="text"
+          className="w-full border px-4 py-3 rounded"
+          {...register("slug", { required: "Slug không được để trống" })}
+        />
+        {errors.slug && (
+          <p className="text-red-500 text-sm mt-1">{errors.slug.message}</p>
+        )}
+      </div>
 
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Mô tả *</label>
-          <textarea
-            rows={4}
-            className="w-full border px-4 py-3 rounded"
-            {...register("description", {
-              required: "Mô tả không được để trống",
-            })}
-          ></textarea>
-          {errors.description && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.description.message}
-            </p>
-          )}
-        </div>
+      {/* Mô tả */}
+      <div className="md:col-span-2">
+        <label className="block font-medium mb-2">Mô tả *</label>
+        <textarea
+          rows={4}
+          className="w-full border px-4 py-3 rounded"
+          {...register("description", {
+            required: "Mô tả không được để trống",
+          })}
+        ></textarea>
+        {errors.description && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.description.message}
+          </p>
+        )}
+      </div>
 
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Thương hiệu *</label>
-          <select
-            className="w-full border px-4 py-3 rounded"
-            {...register("brand_id", { required: "Vui lòng chọn thương hiệu" })}
-          >
-            <option value="">-- Chọn thương hiệu --</option>
-            {Array.isArray(brands) &&
-              brands.map((brand) => (
-                <option key={brand.id} value={brand.id}>
-                  {brand.name}
-                </option>
-              ))}
-          </select>
-          {errors.brand_id && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.brand_id.message}
-            </p>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Danh mục *</label>
-          <select
-            className="w-full border px-4 py-3 rounded"
-            {...register("category_id", { required: "Vui lòng chọn danh mục" })}
-          >
-            <option value="">-- Chọn danh mục --</option>
-            {Array.isArray(categories) &&
-              categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-          </select>
-          {errors.category_id && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.category_id.message}
-            </p>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Ảnh sản phẩm *</label>
-          <input
-            type="file"
-            className="w-full border px-4 py-3 rounded"
-            accept="image/*"
-            onChange={(e) => setThumbnailFile(e.target.files[0])}
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Trạng thái *</label>
-          <select
-            className="w-full border px-4 py-3 rounded"
-            {...register("status", { required: "Trạng thái là bắt buộc" })}
-          >
-            <option value="1">Hiển thị</option>
-            <option value="0">Ẩn</option>
-          </select>
-          {errors.status && (
-            <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+      {/* Thương hiệu */}
+      <div>
+        <label className="block font-medium mb-2">Thương hiệu *</label>
+        <select
+          className="w-full border px-4 py-3 rounded"
+          {...register("brand_id", { required: "Vui lòng chọn thương hiệu" })}
         >
-          {loading ? "Đang thêm..." : "Thêm sản phẩm"}
-        </button>
-      </form>
+          <option value="">-- Chọn thương hiệu --</option>
+          {Array.isArray(brands) &&
+            brands.map((brand) => (
+              <option key={brand.id} value={brand.id}>
+                {brand.name}
+              </option>
+            ))}
+        </select>
+        {errors.brand_id && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.brand_id.message}
+          </p>
+        )}
+      </div>
+
+      {/* Danh mục */}
+      <div>
+        <label className="block font-medium mb-2">Danh mục *</label>
+        <select
+          className="w-full border px-4 py-3 rounded"
+          {...register("category_id", {
+            required: "Vui lòng chọn danh mục",
+          })}
+        >
+          <option value="">-- Chọn danh mục --</option>
+          {Array.isArray(categories) &&
+            categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+        </select>
+        {errors.category_id && (
+          <p className="text-red-500 text-sm mt-1">
+            {errors.category_id.message}
+          </p>
+        )}
+      </div>
+
+      {/* Ảnh sản phẩm */}
+      <div>
+        <label className="block font-medium mb-2">Ảnh sản phẩm *</label>
+        <input
+          type="file"
+          className="w-full border px-4 py-3 rounded"
+          accept="image/*"
+          onChange={(e) => setThumbnailFile(e.target.files[0])}
+        />
+      </div>
+
+      {/* Trạng thái */}
+      <div>
+        <label className="block font-medium mb-2">Trạng thái *</label>
+        <select
+          className="w-full border px-4 py-3 rounded"
+          {...register("status", { required: "Trạng thái là bắt buộc" })}
+        >
+          <option value="1">Hiển thị</option>
+          <option value="0">Ẩn</option>
+        </select>
+        {errors.status && (
+          <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>
+        )}
+      </div>
     </div>
+
+    {/* Nút submit */}
+    <div className="mt-8">
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+      >
+        {loading ? "Đang thêm..." : "Thêm sản phẩm"}
+      </button>
+    </div>
+  </form>
+</div>
+
   );
 };
 

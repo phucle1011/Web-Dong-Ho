@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import FormDelete from "../../../../components/formDelete";
 import { toast } from "react-toastify";
 import Constants from "../../../../Constants.jsx";
-
 
 const AdminProductDetail = () => {
   const { id } = useParams();
@@ -14,26 +13,31 @@ const AdminProductDetail = () => {
   const [saving, setSaving] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-
   const fetchProduct = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/admin/products/${id}`);
       setProduct(res.data.data);
       setFormData(res.data.data);
+      console.log(res.data.data);
+      
     } catch (error) {
-      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+      console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
     }
   };
 
   useEffect(() => {
     fetchProduct();
+    
   }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "price" || name === "discount_price" ? parseFloat(value) : value,
+      [name]:
+        name === "price" || name === "discount_price"
+          ? parseFloat(value)
+          : value,
     }));
   };
 
@@ -44,12 +48,12 @@ const AdminProductDetail = () => {
       alert("Cập nhật sản phẩm thành công!");
       fetchProduct(); // Cập nhật lại dữ liệu
     } catch (error) {
-      console.error('Lỗi khi cập nhật sản phẩm:', error);
+      console.error("Lỗi khi cập nhật sản phẩm:", error);
     } finally {
       setSaving(false);
     }
   };
-const deleteProduct = async () => {
+  const deleteProduct = async () => {
     if (!selectedProduct) return;
 
     try {
@@ -57,7 +61,6 @@ const deleteProduct = async () => {
         `${Constants.DOMAIN_API}/admin/variants/${selectedProduct.id}`
       );
       toast.success("Xóa sản phẩm thành công");
-      
     } catch (error) {
       console.error("Lỗi khi xóa sản phẩm:", error);
       if (
@@ -125,7 +128,7 @@ const deleteProduct = async () => {
               <input
                 type="text"
                 className="border rounded p-2 w-full"
-                value={formData.category?.name || 'Không có'}
+                value={formData.category?.name || "Không có"}
                 readOnly
               />
             </div>
@@ -138,7 +141,7 @@ const deleteProduct = async () => {
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
             disabled={saving}
           >
-            {saving ? 'Đang lưu...' : 'Lưu'}
+            {saving ? "Đang lưu..." : "Lưu"}
           </button>
           <Link
             to="/admin/products"
@@ -150,75 +153,87 @@ const deleteProduct = async () => {
 
         {/* Bảng biến thể vẫn giữ nguyên như cũ */}
         {product.variants?.length > 0 && (
-  <div className="mt-6">
-    <h3 className="text-lg font-semibold mb-2">Biến thể sản phẩm:</h3>
-    <table className="w-full border-collapse border border-gray-300">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="p-2 border">SKU</th>
-          <th className="p-2 border">Giá</th>
-          <th className="p-2 border">Thuộc tính</th>
-          <th className="p-2 border">Ảnh</th>
-          <th className="p-2 border">Hành động</th> {/* ✅ Thêm cột hành động */}
-        </tr>
-      </thead>
-      <tbody>
-        {product.variants.map((variant) => (
-          <tr key={variant.id} className="border-b">
-            <td className="p-2 border">{variant.sku}</td>
-            <td className="p-2 border">{Number(variant.price).toLocaleString()} đ</td>
-            <td className="p-2 border">
-              {variant.attributeValues?.map(av => (
-                <div key={av.id}>
-                  <strong>{av.attribute?.name}:</strong> {av.value}
-                </div>
-              ))}
-            </td>
-            <td className="p-2 border">
-              <div className="flex gap-2">
-                {variant.images?.map((img) => (
-                  <img
-                    key={img.id}
-                    src={img.image_url}
-                    alt="variant"
-                    className="w-16 h-16 object-cover rounded"
-                  />
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-2">Biến thể sản phẩm:</h3>
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="p-2 border">SKU</th>
+                  <th className="p-2 border">Giá</th>
+                  <th className="p-2 border">Thuộc tính</th>
+                  <th className="p-2 border">Ảnh</th>
+                  <th className="p-2 border">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {product.variants.map((variant) => (
+                  <tr key={variant.id} className="border-b">
+                    <td className="p-2 border">{variant.sku}</td>
+                    <td className="p-2 border">
+                      {Number(variant.price).toLocaleString()} đ
+                    </td>
+                    <td className="p-2 border">
+                      {variant.attributeValues?.map((av) => (
+                        <div
+                          key={av.id}
+                          className="flex items-center gap-2 mb-1"
+                        >
+                          <strong>{av.attribute?.name}:</strong>
+                          {av.attribute?.name.toLowerCase() === "color" ? (
+                            <div
+                              className="w-6 h-6 rounded border"
+                              style={{ backgroundColor: av.value }}
+                              title={av.value}
+                            ></div>
+                          ) : (
+                            <span>{av.value}</span>
+                          )}
+                        </div>
+                      ))}
+                    </td>
+                    <td className="p-2 border">
+                      <div className="flex gap-2">
+                        {variant.images?.map((img) => (
+                          <img
+                            key={img.id}
+                            src={img.image_url}
+                            alt="variant"
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="p-2 border text-center">
+                      <div className="flex gap-2 justify-center">
+                        <Link
+                          to={`/admin/products/editVariant/${variant.id}`}
+                          className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-sm"
+                        >
+                          Sửa
+                        </Link>
+                        <button
+                          onClick={() => setSelectedProduct(variant)}
+                          className="bg-red-500 text-white py-1 px-3 rounded"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </td>
-            <td className="p-2 border text-center">
-              <div className="flex gap-2 justify-center">
-                <Link
-                  to={`/admin/products/editVariant/${variant.id}`}
-                  className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-sm"
-                >
-                  Sửa
-                </Link>
-                <button
-                      onClick={() => setSelectedProduct(variant)}
-                      className="bg-red-500 text-white py-1 px-3 rounded"
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-    {selectedProduct && (
-            <FormDelete
-              isOpen={true}
-              onClose={() => setSelectedProduct(null)}
-              onConfirm={deleteProduct}
-              message={`Bạn có chắc chắn muốn xóa sản phẩm "${selectedProduct.name}" không?`}
-            />
-          )}
-  </div>
-)}
-
+              </tbody>
+            </table>
+            {selectedProduct && (
+              <FormDelete
+                isOpen={true}
+                onClose={() => setSelectedProduct(null)}
+                onConfirm={deleteProduct}
+                message={`Bạn có chắc chắn muốn xóa sản phẩm "${selectedProduct.name}" không?`}
+              />
+            )}
+          </div>
+        )}
       </div>
-
     </div>
   );
 };

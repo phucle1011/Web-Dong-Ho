@@ -78,6 +78,8 @@ router.get("/product-attributes", ProductController.getAllAttributes);
 router.delete("/variants/:variant_id", ProductController.deleteVariant);
 router.get("/variants/:variant_id", ProductController.getVariantById);
 router.get('/product-variants', ProductController.getAllVariants);
+router.get('/product-variants/deleteAttributeValueById/:id', ProductController.getAllVariants);
+
 
 
 

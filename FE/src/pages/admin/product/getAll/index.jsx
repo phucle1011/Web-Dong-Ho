@@ -139,7 +139,15 @@ const AdminProductList = () => {
       <div className="bg-white p-4 shadow rounded-md">
         <h2 className="text-xl font-semibold mb-4">Danh sách sản phẩm</h2>
 
-        {/* Search box */}
+        <div className="flex justify-end mb-2">
+          <Link
+            to="/admin/products/create"
+            className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+          >
+            + Thêm sản phẩm
+          </Link>
+        </div>
+
         <div className="mb-3 flex gap-2">
           <input
             type="text"

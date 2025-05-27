@@ -7,12 +7,14 @@ import { useNavigate } from "react-router-dom";
 
 function AddVariantForm() {
   const { productId } = useParams();
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
-  const [attributes, setAttributes] = useState([{ attribute_id: "", value: "" }]);
+  const [attributes, setAttributes] = useState([
+    { attribute_id: "", value: "" },
+  ]);
   const [images, setImages] = useState([]);
   const [allAttributes, setAllAttributes] = useState([]);
   const [errors, setErrors] = useState({}); // <-- lưu lỗi
@@ -37,8 +39,10 @@ function AddVariantForm() {
   const validateForm = () => {
     const newErrors = {};
     if (!sku.trim()) newErrors.sku = "Vui lòng nhập mã SKU.";
-    if (!price || parseFloat(price) <= 0) newErrors.price = "Giá phải lớn hơn 0.";
-    if (!stock || parseInt(stock) < 0) newErrors.stock = "Tồn kho không hợp lệ.";
+    if (!price || parseFloat(price) <= 0)
+      newErrors.price = "Giá phải lớn hơn 0.";
+    if (!stock || parseInt(stock) < 0)
+      newErrors.stock = "Tồn kho không hợp lệ.";
 
     attributes.forEach((attr, i) => {
       if (!attr.attribute_id) newErrors[`attr_${i}_id`] = "Chọn thuộc tính.";
@@ -59,14 +63,21 @@ function AddVariantForm() {
 
     try {
       const data = { sku, price, stock, attributes, images };
-      await axios.post(`http://localhost:5000/admin/products/${productId}/variants`, data);
+      await axios.post(
+        `http://localhost:5000/admin/products/${productId}/variants`,
+        data
+      );
       toast.success("Tạo biến thể thành công!");
-          navigate("/admin/products/getAll");
-
+      navigate("/admin/products/getAll");
     } catch (err) {
       console.error("Lỗi tạo biến thể:", err);
       toast.error(err.response?.data?.error || "Đã có lỗi xảy ra");
     }
+  };
+  const removeAttributeRow = (index) => {
+    const updated = [...attributes];
+    updated.splice(index, 1);
+    setAttributes(updated);
   };
 
   return (
@@ -83,7 +94,9 @@ function AddVariantForm() {
             onChange={(e) => setSku(e.target.value)}
             className="w-full border px-4 py-3 rounded"
           />
-          {errors.sku && <p className="text-red-600 text-sm mt-1">{errors.sku}</p>}
+          {errors.sku && (
+            <p className="text-red-600 text-sm mt-1">{errors.sku}</p>
+          )}
         </div>
 
         {/* Giá */}
@@ -95,7 +108,9 @@ function AddVariantForm() {
             onChange={(e) => setPrice(e.target.value)}
             className="w-full border px-4 py-3 rounded"
           />
-          {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
+          {errors.price && (
+            <p className="text-red-600 text-sm mt-1">{errors.price}</p>
+          )}
         </div>
 
         {/* Tồn kho */}
@@ -107,53 +122,103 @@ function AddVariantForm() {
             onChange={(e) => setStock(e.target.value)}
             className="w-full border px-4 py-3 rounded"
           />
-          {errors.stock && <p className="text-red-600 text-sm mt-1">{errors.stock}</p>}
+          {errors.stock && (
+            <p className="text-red-600 text-sm mt-1">{errors.stock}</p>
+          )}
         </div>
 
         {/* Thuộc tính biến thể */}
         <div>
-          <label className="block font-medium mb-2">Thuộc tính biến thể *</label>
-          {attributes.map((attr, index) => (
-            <div key={index} className="flex gap-4 mb-2">
-              <div className="w-1/2">
-                <select
-                  value={attr.attribute_id}
-                  onChange={(e) =>
-                    handleAttributeChange(index, "attribute_id", e.target.value)
-                  }
-                  className="w-full border px-4 py-3 rounded"
-                >
-                  <option value="">-- Chọn thuộc tính --</option>
-                  {allAttributes.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.name}
-                    </option>
-                  ))}
-                </select>
-                {errors[`attr_${index}_id`] && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors[`attr_${index}_id`]}
-                  </p>
+          <label className="block font-medium mb-2">
+            Thuộc tính biến thể *
+          </label>
+          {attributes.map((attr, index) => {
+            const selectedAttr = allAttributes.find(
+              (a) => a.id.toString() === attr.attribute_id.toString()
+            );
+            const isColor = selectedAttr?.name?.toLowerCase() === "color";
+
+            return (
+              <div key={index} className="flex gap-4 mb-2 items-center">
+                {/* Tên thuộc tính (không thay đổi sau khi đã chọn) */}
+                <div className="w-1/2">
+                  {selectedAttr ? (
+                    <input
+                      type="text"
+                      value={selectedAttr.name}
+                      disabled
+                      className="w-full border px-4 py-3 rounded bg-gray-100 text-gray-600"
+                    />
+                  ) : (
+                    <select
+                      value={attr.attribute_id}
+                      onChange={(e) =>
+                        handleAttributeChange(
+                          index,
+                          "attribute_id",
+                          e.target.value
+                        )
+                      }
+                      className="w-full border px-4 py-3 rounded"
+                    >
+                      <option value="">-- Chọn thuộc tính --</option>
+                      {allAttributes
+                        .filter((opt) => {
+                          // Lọc bỏ những attribute_id đã được chọn ở các dòng khác
+                          return !attributes.some(
+                            (a, i) =>
+                              a.attribute_id === opt.id.toString() &&
+                              i !== index
+                          );
+                        })
+                        .map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.name}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                  {errors[`attr_${index}_id`] && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors[`attr_${index}_id`]}
+                    </p>
+                  )}
+                </div>
+
+                {/* Giá trị thuộc tính */}
+                <div className="w-1/2">
+                  <input
+                    type={isColor ? "color" : "text"}
+                    placeholder={isColor ? "" : "Giá trị"}
+                    value={attr.value}
+                    onChange={(e) =>
+                      handleAttributeChange(index, "value", e.target.value)
+                    }
+                    className={`w-full border rounded ${
+                      isColor ? "h-12 p-1" : "px-4 py-3"
+                    }`}
+                  />
+
+                  {errors[`attr_${index}_value`] && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors[`attr_${index}_value`]}
+                    </p>
+                  )}
+                </div>
+
+                {attributes.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeAttributeRow(index)}
+                    className="text-red-600 hover:underline text-sm"
+                  >
+                    X
+                  </button>
                 )}
               </div>
-              <div className="w-1/2">
-                <input
-                  type="text"
-                  placeholder="Giá trị"
-                  value={attr.value}
-                  onChange={(e) =>
-                    handleAttributeChange(index, "value", e.target.value)
-                  }
-                  className="w-full border px-4 py-3 rounded"
-                />
-                {errors[`attr_${index}_value`] && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors[`attr_${index}_value`]}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
+
           <button
             type="button"
             onClick={addAttributeRow}

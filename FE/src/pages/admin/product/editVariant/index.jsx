@@ -20,24 +20,30 @@ const EditVariantForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const attrRes = await axios.get("http://localhost:5000/admin/product-attributes");
+        const attrRes = await axios.get(
+          "http://localhost:5000/admin/product-attributes"
+        );
         setAttributesList(attrRes.data.data);
 
-        const res = await axios.get(`http://localhost:5000/admin/variants/${id}`);
+        const res = await axios.get(
+          `http://localhost:5000/admin/variants/${id}`
+        );
         const data = res.data.data;
         setVariant(data);
         setFormData({
           sku: data.sku || "",
           price: data.price || "",
           stock: data.stock || "",
-          attributes: data.attributeValues?.map((attr) => ({
-            attribute_id: attr.product_attribute_id,
-            value: attr.value,
-          })) || [],
-          images: data.images?.map((img) => ({
-            id: img.id,
-            url: img.image_url,
-          })) || [],
+          attributes:
+            data.attributeValues?.map((attr) => ({
+              attribute_id: attr.product_attribute_id,
+              value: attr.value,
+            })) || [],
+          images:
+            data.images?.map((img) => ({
+              id: img.id,
+              url: img.image_url,
+            })) || [],
         });
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
@@ -84,10 +90,14 @@ const EditVariantForm = () => {
 
   const handleDeleteAttribute = async (index) => {
     const attribute = formData.attributes[index];
+    console.log(attribute);
+    
 
     if (attribute.id) {
       try {
-        await axios.delete(`http://localhost:5000/admin/variant-attributes/${attribute.id}`);
+        await axios.delete(
+          `http://localhost:5000/admin/product-variants/deleteAttributeValueById/${attribute.id}`
+        );
       } catch (error) {
         console.error("Lỗi khi xóa thuộc tính:", error);
         toast.error("Xoá thuộc tính thất bại!");
@@ -107,7 +117,9 @@ const EditVariantForm = () => {
 
     if (image.id) {
       try {
-        await axios.delete(`http://localhost:5000/admin/variant-images/${image.id}`);
+        await axios.delete(
+          `http://localhost:5000/admin/variant-images/${image.id}`
+        );
       } catch (error) {
         console.error("Lỗi khi xóa ảnh:", error);
         toast.error("Xoá ảnh thất bại!");
@@ -137,7 +149,10 @@ const EditVariantForm = () => {
     };
 
     try {
-      await axios.put(`http://localhost:5000/admin/variants/${id}`, preparedData);
+      await axios.put(
+        `http://localhost:5000/admin/variants/${id}`,
+        preparedData
+      );
       toast.success("Cập nhật biến thể thành công!");
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);
@@ -150,89 +165,172 @@ const EditVariantForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-4 bg-white shadow rounded"
+      className="max-w-5xl mx-auto p-8 bg-white shadow-lg rounded-lg"
     >
-      <h2 className="text-xl font-bold mb-4">Sửa Biến Thể</h2>
+      <h2 className="text-2xl font-bold text-center">Chỉnh sửa biến thể</h2>
 
-      {/* SKU, price, stock giữ nguyên */}
-      <div className="mb-4">
-        <label className="block font-medium mb-2">Thuộc tính</label>
-        {formData.attributes.map((attr, index) => (
-          <div key={index} className="mb-2 flex gap-2">
-            <select
-              value={attr.attribute_id}
-              onChange={(e) =>
-                handleAttributeChange(index, "attribute_id", e.target.value)
-              }
-              className="border p-2 w-1/3 rounded"
-            >
-              <option value="">Chọn thuộc tính</option>
-              {attributesList.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              placeholder="Giá trị"
-              value={attr.value}
-              onChange={(e) =>
-                handleAttributeChange(index, "value", e.target.value)
-              }
-              className="border p-2 w-2/3 rounded"
-            />
-          </div>
-        ))}
+      {console.log(formData)}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">SKU</label>
+          <input
+            type="text"
+            name="sku"
+            value={formData.sku}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            placeholder="Mã SKU"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Giá</label>
+          <input
+            type="number"
+            name="price"
+            value={formData.price}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            placeholder="Giá"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Tồn kho</label>
+          <input
+            type="number"
+            name="stock"
+            value={formData.stock}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+            placeholder="Tồn kho"
+          />
+        </div>
+      </div>
+
+      {/* Thuộc tính */}
+      <div className="border rounded p-4">
+        <label className="block font-semibold mb-3 text-lg">Thuộc tính</label>
+        {formData.attributes.map((attr, index) => {
+          const selectedAttr = attributesList.find(
+            (item) => item.id === parseInt(attr.attribute_id)
+          );
+          const isColor =
+            selectedAttr?.name.toLowerCase() === "color" ||
+            selectedAttr?.name.toLowerCase() === "màu";
+
+          return (
+            <div key={index} className="flex items-center gap-4 mb-3">
+              <select
+                value={attr.attribute_id}
+                onChange={(e) =>
+                  handleAttributeChange(index, "attribute_id", e.target.value)
+                }
+                className="border p-2 rounded w-1/3"
+              >
+                <option value="">Chọn thuộc tính</option>
+                {attributesList
+                  .filter((item) => {
+                    const isSelected = formData.attributes.some(
+                      (a, i) =>
+                        i !== index && parseInt(a.attribute_id) === item.id
+                    );
+                    console.log();
+                    
+                    return !isSelected;
+                  })
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+              </select>
+
+              {isColor ? (
+                <input
+                  type="color"
+                  value={attr.value}
+                  onChange={(e) =>
+                    handleAttributeChange(index, "value", e.target.value)
+                  }
+                  className="border p-1 rounded w-1/3 h-10"
+                />
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Giá trị"
+                  value={attr.value}
+                  onChange={(e) =>
+                    handleAttributeChange(index, "value", e.target.value)
+                  }
+                  className="border p-2 rounded w-1/3"
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleDeleteAttribute(index)}
+                className="text-red-500 hover:underline"
+              >
+                Xoá
+              </button>
+            </div>
+          );
+        })}
+
         <button
           type="button"
           onClick={addAttributeField}
-          className="mt-2 text-blue-600 underline"
+          className="text-blue-600 hover:underline mt-2"
         >
           + Thêm thuộc tính
         </button>
       </div>
 
-      <div className="mb-4">
-        <label className="block font-medium mb-2">Ảnh biến thể</label>
+      {/* Ảnh */}
+      <div className="border rounded p-4">
+        <label className="block font-semibold mb-3 text-lg">Ảnh biến thể</label>
         {formData.images.map((img, index) => (
-          <div key={index} className="mb-2">
+          <div key={index} className="flex items-center gap-4 mb-3">
             {img.url && (
-              <div className="flex items-center gap-2">
-                <img src={img.url} alt={`image-${index}`} className="h-16" />
-                <button
-                  type="button"
-                  onClick={() => handleDeleteImage(index)}
-                  className="text-red-600 hover:underline"
-                >
-                  Xoá
-                </button>
-              </div>
+              <img
+                src={img.url}
+                alt={`image-${index}`}
+                className="h-16 w-16 object-cover rounded"
+              />
             )}
             <input
               type="file"
               accept="image/*"
               onChange={(e) => handleImageChange(e, index)}
-              className="block w-full border p-2 rounded"
+              className="flex-1 border p-2 rounded"
             />
+            <button
+              type="button"
+              onClick={() => handleDeleteImage(index)}
+              className="text-red-500 hover:underline"
+            >
+              Xoá
+            </button>
           </div>
         ))}
 
         <button
           type="button"
           onClick={addImageField}
-          className="mt-2 text-blue-600 underline"
+          className="text-blue-600 hover:underline mt-2"
         >
           + Thêm ảnh
         </button>
       </div>
 
-      <button
-        type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-      >
-        Cập nhật
-      </button>
+      {/* Nút submit */}
+      <div className="text-center">
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded text-lg"
+        >
+          Cập nhật
+        </button>
+      </div>
     </form>
   );
 };
