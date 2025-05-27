@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 
 function CommentPage() {
-  const [allProducts, setAllProducts] = useState([]); // tất cả sản phẩm có bình luận
+  const [allProducts, setAllProducts] = useState([]); // Tất cả sản phẩm có bình luận
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(5);
@@ -23,7 +23,7 @@ function CommentPage() {
     fetchComments();
   }, []);
 
-  // Khi allProducts hoặc filter thay đổi thì áp dụng filter
+  // Khi allProducts hoặc statusFilter thay đổi thì áp dụng filter
   useEffect(() => {
     applyFilter();
   }, [allProducts, statusFilter]);
@@ -33,40 +33,50 @@ function CommentPage() {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // Lấy tổng số cho từng filter để hiển thị số lượng
+  // Tính số lượng theo từng filter
   const countAll = allProducts.length;
 
-  // Số lượng sản phẩm nhiều bình luận nhất (lấy tất cả để phân trang, ở đây vẫn là allProducts)
-  // Nhưng để thống nhất, filter lấy sản phẩm có ít nhất 1 comment
   const countMostComments = allProducts.filter((p) => p.total_comments > 0).length;
 
-  // Số lượng sản phẩm đánh giá cao nhất (ví dụ, rating trên 4)
-  const countHighestRating = allProducts.filter((p) => parseFloat(p.average_rating) >= 4).length;
+  const countHighestRating = allProducts.filter(
+    (p) => parseFloat(p.average_rating) >= 4
+  ).length;
 
-  // Số lượng sản phẩm đánh giá thấp nhất (rating dưới 2)
-  const countLowestRating = allProducts.filter((p) => parseFloat(p.average_rating) <= 2).length;
+  const countLowestRating = allProducts.filter(
+    (p) => parseFloat(p.average_rating) <= 2
+  ).length;
 
-  // Áp dụng filter theo statusFilter
+  // Debug log để kiểm tra sản phẩm có rating thấp
+  useEffect(() => {
+    console.log("Sản phẩm có rating thấp (<=2):", allProducts.filter(
+      (p) => parseFloat(p.average_rating) <= 2
+    ));
+  }, [allProducts]);
+
+  // Hàm áp dụng filter theo statusFilter
   const applyFilter = () => {
     let data = [...allProducts];
 
     switch (statusFilter) {
       case "most_comments":
-        data = data.filter(p => p.total_comments > 0);
+        data = data.filter((p) => p.total_comments > 0);
         data.sort((a, b) => b.total_comments - a.total_comments);
         break;
+
       case "highest_rating":
-        data = data.filter(p => parseFloat(p.average_rating) >= 4);
+        data = data.filter((p) => parseFloat(p.average_rating) >= 4);
         data.sort(
           (a, b) => parseFloat(b.average_rating) - parseFloat(a.average_rating)
         );
         break;
+
       case "lowest_rating":
-        data = data.filter(p => parseFloat(p.average_rating) <= 2);
+        data = data.filter((p) => parseFloat(p.average_rating) <= 2);
         data.sort(
           (a, b) => parseFloat(a.average_rating) - parseFloat(b.average_rating)
         );
         break;
+
       case "all":
       default:
         data.sort((a, b) => a.product_sku.localeCompare(b.product_sku));
@@ -77,7 +87,7 @@ function CommentPage() {
     setCurrentPage(1);
   };
 
-  // Lọc theo searchTerm trực tiếp trên filteredProducts
+  // Lọc theo searchTerm trên filteredProducts
   const filteredAndSearched = filteredProducts.filter((product) =>
     product.product_sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -184,17 +194,19 @@ function CommentPage() {
                   <button
                     key={key}
                     onClick={() => setStatusFilter(key)}
-                    className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${statusFilter === key
+                    className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${
+                      statusFilter === key
                         ? "bg-blue-900 text-white"
                         : "bg-white text-gray-700"
-                      }`}
+                    }`}
                   >
                     <span>{label}</span>
                     <span
-                      className={`inline-block ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${statusFilter === key
+                      className={`inline-block ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+                        statusFilter === key
                           ? "bg-white text-blue-900"
                           : `${color} ${textColor}`
-                        }`}
+                      }`}
                     >
                       {count}
                     </span>
@@ -202,12 +214,8 @@ function CommentPage() {
                 ))}
               </div>
 
-
               {/* Tìm kiếm */}
-              <div
-                className="mb-4 d-flex"
-                style={{ maxWidth: "100%" }}
-              >
+              <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
                 <input
                   type="text"
                   className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -284,10 +292,11 @@ function CommentPage() {
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
-                            className={`px-3 py-1 border rounded ${currentPage === page
+                            className={`px-3 py-1 border rounded ${
+                              currentPage === page
                                 ? "bg-primary text-white"
                                 : "bg-light text-dark"
-                              }`}
+                            }`}
                           >
                             {page}
                           </button>

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Constants from "../../../../Constants";
 import { FaArrowLeft } from "react-icons/fa";
+import 'tinymce/skins/ui/oxide/skin.min.css';
+import 'tinymce/skins/content/default/content.min.css';
 
 function BlogDetail() {
     const { id } = useParams();
@@ -68,15 +70,15 @@ function BlogDetail() {
                                             />
                                         </td>
                                     </tr>
-<tr>
-  <th>Nội dung:</th>
-  <td>
-    <div
-      dangerouslySetInnerHTML={{ __html: blog.content }}
-      style={{ maxWidth: "600px", wordBreak: "break-word" }}
-    />
-  </td>
-</tr>
+                                    <tr>
+                                        <th>Nội dung:</th>
+                                        <td>
+                                            <div
+                                                dangerouslySetInnerHTML={{ __html: blog.content }}
+                                                style={{ maxWidth: "600px", wordBreak: "break-word" }}
+                                            />
+                                        </td>
+                                    </tr>
 
                                     <tr>
                                         <th>Người viết (ID):</th>
