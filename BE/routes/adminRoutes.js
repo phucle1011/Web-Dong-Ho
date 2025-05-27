@@ -116,5 +116,6 @@ router.delete('/brand/delete/:id', BrandController.delete);
 router.get('/dashboard/counts', DashboardController.getCounts);
 router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMonth);
 router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
+router.get('/dashboard/revenue', DashboardController.getRevenueByCustomRange);
 
 module.exports = router;

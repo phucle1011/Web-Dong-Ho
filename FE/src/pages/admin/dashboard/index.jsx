@@ -18,6 +18,7 @@ import { Pie, Bar } from 'react-chartjs-2';
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
 function Dashboard() {
+
   const [counts, setCounts] = useState({
     total_user: 0,
     total_category: 0,
@@ -32,8 +33,17 @@ function Dashboard() {
     total_promotion: 0,
   });
 
-  const [timeRange, setTimeRange] = useState('month');
   const [customRange, setCustomRange] = useState({ from: '', to: '' });
+
+  const changePercent = counts.revenueLastMonth === 0
+    ? (counts.revenueCurrentMonth > 0 ? 100 : 0)
+    : ((counts.revenueCurrentMonth - counts.revenueLastMonth) / counts.revenueLastMonth) * 100;
+
+  const changePercentYear = counts.revenueLastYear === 0
+    ? (counts.revenueCurrentYear > 0 ? 100 : 0)
+    : ((counts.revenueCurrentYear - counts.revenueLastYear) / counts.revenueLastYear) * 100;
+
+    const [hoveredSection, setHoveredSection] = useState(null);
 
   const [revenueData, setRevenueData] = useState({
     labels: [],
@@ -45,6 +55,8 @@ function Dashboard() {
       borderWidth: 1
     }]
   });
+
+    const totalRevenueSelectedMonth = revenueData.datasets[0]?.data.reduce((sum, val) => sum + val, 0) || 0;
 
   const formatVND = (number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(number);
@@ -67,36 +79,37 @@ function Dashboard() {
   useEffect(() => {
     async function fetchRevenue() {
       try {
-        let params = {};
-        if (timeRange === 'custom') {
-          if (!customRange.from || !customRange.to) {
-            setRevenueData({
-              labels: [],
-              datasets: [{
-                label: 'Doanh thu',
-                data: [],
-                backgroundColor: '#007bff',
-                borderColor: '#007bff',
-                borderWidth: 1
-              }]
-            });
-            return;
-          }
-          params = { from: customRange.from, to: customRange.to };
-        } else {
-          params = { range: timeRange };
+        if (!customRange.from || !customRange.to) {
+          setRevenueData({
+            labels: [],
+            datasets: [{
+              label: 'Doanh thu',
+              data: [],
+              backgroundColor: '#007bff',
+              borderRadius: 5,
+              borderColor: '#007bff',
+              borderWidth: 1,
+            }]
+          });
+          return;
         }
+
+        const params = { from: customRange.from, to: customRange.to };
 
         const res = await axios.get(`${Constants.DOMAIN_API}/admin/dashboard/revenue`, { params });
         if (res.data.status === 200 && res.data.data) {
-          const data = res.data.data;
+          let { items } = res.data.data;
+
+          items = items.filter(item => item.revenue > 0);
+
           setRevenueData({
-            labels: data.labels,
+            labels: items.map(item => item.date),
             datasets: [{
               label: 'Doanh thu',
-              data: data.data,
+              data: items.map(item => item.revenue),
               backgroundColor: 'rgba(0, 123, 255, 0.5)',
               borderColor: 'rgba(0, 123, 255, 1)',
+              borderRadius: 5,
               borderWidth: 1,
             }]
           });
@@ -107,7 +120,7 @@ function Dashboard() {
     }
 
     fetchRevenue();
-  }, [timeRange, customRange]);
+  }, [customRange]);
 
   const pieData = {
     labels: ['Người dùng', 'Loại sản phẩm', 'Sản phẩm', 'Bình luận', 'Đơn hàng', 'Khuyến mãi'],
@@ -154,21 +167,24 @@ function Dashboard() {
       tooltip: {
         enabled: true,
         callbacks: {
-          label: ctx => ` ${ctx.parsed.y} mục`,
+          label: ctx => ` Số lượng: ${ctx.parsed.y}`,
         },
       },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: { stepSize: 1 },
-        title: { display: true, text: 'Số lượng' },
-      },
-      x: {
-        title: { display: true, text: 'Loại thống kê' },
-      },
-    },
+    }
   };
+
+  const barOptionsWithCurrency = {
+  responsive: true,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      enabled: true,
+      callbacks: {
+        label: ctx => ` Giá tiền: ${formatVND(ctx.parsed.y)}`,  
+      },
+    },
+  }
+};
 
   const statsCards = [
     { key: 'total_user', icon: <FaUsers size={24} />, label: 'Người dùng', bg: 'bg-info' },
@@ -178,6 +194,19 @@ function Dashboard() {
     { key: 'total_order', icon: <FaShoppingCart size={24} />, label: 'Đơn hàng', bg: 'bg-secondary' },
     { key: 'total_promotion', icon: <FaTag size={24} />, label: 'Khuyến mãi', bg: 'bg-dark' },
   ];
+
+  const handleMonthChange = (e) => {
+    const monthYear = e.target.value;
+    if (!monthYear) return;
+
+    const from = `${monthYear}-01`;
+
+    const [year, month] = monthYear.split('-');
+    const lastDay = new Date(year, month, 0).getDate();
+    const to = `${monthYear}-${lastDay}`;
+
+    setCustomRange({ from, to });
+  };
 
   return (
     <div className="page-wrapper">
@@ -227,39 +256,104 @@ function Dashboard() {
           ))}
         </div>
 
-        <div className="row mt-4">
-          <div className="col-12">
-            <div className="card h-100">
-              <div className="card-header d-flex align-items-center justify-content-between">
-                <h5 className="mb-0">Biểu đồ doanh thu</h5>
-                <div>
-                  <select className="form-select form-select-sm" value={timeRange} onChange={(e) => setTimeRange(e.target.value)} >
-                    <option value="month">Theo tháng</option>
-                    <option value="year">Theo năm</option>
-                    <option value="custom">Tùy chọn</option>
-                  </select>
+        <div className="row">
+         <div className="col-lg-8 d-flex align-items-stretch">
+  <div className="card w-100">
+    <div className="card-body">
+      <div className="d-sm-flex d-block align-items-center justify-content-between mb-9">
+        <div className="mb-3 mb-sm-0">
+          {customRange.from ? (
+            <h5 className="card-title fw-semibold">
+              Tổng Quan Doanh Thu: {formatVND(totalRevenueSelectedMonth)}
+            </h5>
+          ) : (
+            <h5 className="card-title fw-semibold text-danger">
+              Vui lòng chọn tháng năm bạn muốn xem doanh thu
+            </h5>
+          )}
+        </div>
+        <div>
+          <input
+            type="month"
+            className="form-select"
+            onChange={handleMonthChange}
+            value={customRange.from ? customRange.from.slice(0, 7) : ''}
+          />
+        </div>
+      </div>
+      {customRange.from && (
+        <Bar data={revenueData} options={barOptionsWithCurrency} />
+      )}
+    </div>
+  </div>
+</div>
+
+          <div className="col-lg-4">
+            <div className="row">
+              <div className="col-lg-12">
+                <div className="card overflow-hidden">
+                  <div className="card-body p-4">
+                    <h5 className="card-title mb-9 fw-semibold">Tổng Kết Năm</h5>
+                    <div className="row align-items-center">
+                      <div className="col-8">
+                        <h4 className="fw-semibold mb-3">
+                          {counts ? formatVND(counts.revenueCurrentYear) : '...'}
+                        </h4>
+                        {counts && (
+                          <div className="d-flex align-items-center pb-1">
+                            <span className={`me-2 rounded-circle round-20 d-flex align-items-center justify-content-center ${changePercentYear >= 0 ? 'bg-light-success' : 'bg-light-danger'}`}>
+                              <i className={`ti ${changePercentYear >= 0 ? 'ti-arrow-up-right text-success' : 'ti-arrow-down-right text-danger'}`}></i>
+                            </span>
+                            <p className={`text-dark me-1 fs-3 mb-0 ${changePercentYear >= 0 ? 'text-success' : 'text-danger'}`}>
+                              {Math.abs(changePercentYear).toFixed(1)}%
+                            </p>
+                            <p className="fs-3 mb-0">so với năm trước</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="col-4">
+                        <div className="d-flex justify-content-end">
+                          <div className="text-white bg-secondary rounded-circle p-6 d-flex align-items-center justify-content-center">
+                            <i className="ti ti-currency-dollar fs-6"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="card-body">
-                {timeRange === 'custom' && (
-                  <div className="mb-3 row g-2 align-items-center">
-                    <div className="col-auto">
-                      <label htmlFor="fromDate" className="col-form-label">Từ ngày:</label>
-                    </div>
-                    <div className="col-auto">
-                      <input type="date" id="fromDate" className="form-control form-control-sm" value={customRange.from} onChange={e => setCustomRange(prev => ({ ...prev, from: e.target.value }))} />
-                    </div>
-                    <div className="col-auto">
-                      <label htmlFor="toDate" className="col-form-label">Đến ngày:</label>
-                    </div>
-                    <div className="col-auto">
-                      <input type="date" id="toDate" className="form-control form-control-sm" value={customRange.to} onChange={e => setCustomRange(prev => ({ ...prev, to: e.target.value }))} />
+              <div className="col-lg-12">
+                <div className="card">
+                  <div className="card-body">
+                    <div className="row align-items-start">
+                      <div className="col-8">
+                        <h5 className="card-title mb-9 fw-semibold">Doanh Thu Tháng</h5>
+                        <h4 className="fw-semibold mb-3">
+                          {counts ? formatVND(counts.revenueCurrentMonth) : '...'}
+                        </h4>
+                        {counts && (
+                          <div className="d-flex align-items-center pb-1">
+                            <span className={`me-2 rounded-circle round-20 d-flex align-items-center justify-content-center ${changePercent >= 0 ? 'bg-light-success' : 'bg-light-danger'}`}>
+                              <i className={`ti ${changePercent >= 0 ? 'ti-arrow-up-right text-success' : 'ti-arrow-down-right text-danger'}`}></i>
+                            </span>
+                            <p className={`text-dark me-1 fs-3 mb-0 ${changePercent >= 0 ? 'text-success' : 'text-danger'}`}>
+                              {Math.abs(changePercent).toFixed(1)}%
+                            </p>
+                            <p className="fs-3 mb-0">so với tháng trước</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="col-4">
+                        <div className="d-flex justify-content-end">
+                          <div className="text-white bg-secondary rounded-circle p-6 d-flex align-items-center justify-content-center">
+                            <i className="ti ti-currency-dollar fs-6"></i>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-
-                <Bar data={revenueData} options={barOptions} />
+                </div>
               </div>
             </div>
           </div>
@@ -268,7 +362,7 @@ function Dashboard() {
         <div className="row mt-4">
           <div className="col-lg-6">
             <div className="card h-100">
-              <div className="card-header">Biểu đồ phân phối</div>
+              <div className="card-header">Biểu đồ tổng quan số lượng</div>
               <div className="card-body">
                 <Pie data={pieData} />
               </div>
@@ -278,7 +372,7 @@ function Dashboard() {
           <div className="col-lg-6">
             <div className="card h-100">
               <div className="card-header">Biểu đồ tổng quan số lượng</div>
-              <div className="card-body">
+              <div className="card-body d-flex justify-content-center align-items-center">
                 <Bar data={totalStats} options={barOptions} />
               </div>
             </div>

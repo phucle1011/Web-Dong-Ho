@@ -101,14 +101,13 @@ class DashboardController {
 
   static async getRevenueByMonthsInYear(req, res) {
   try {
-    const { year } = req.query; // yyyy
+    const { year } = req.query; 
     if (!year) {
       return res.status(400).json({ status: 400, message: 'Thiếu tham số year' });
     }
 
     const yearNum = parseInt(year, 10);
 
-    // Mảng doanh thu theo tháng, mặc định 0
     const revenueByMonth = Array(12).fill(0);
 
     const startDate = new Date(yearNum, 0, 1);
@@ -155,24 +154,21 @@ class DashboardController {
 
 static async getRevenueByDaysInMonth(req, res) {
   try {
-    const { year, month } = req.query; // yyyy, mm
+    const { year, month } = req.query; 
     if (!year || !month) {
       return res.status(400).json({ status: 400, message: 'Thiếu tham số year hoặc month' });
     }
 
     const yearNum = parseInt(year, 10);
-    const monthNum = parseInt(month, 10) - 1; // vì JS tính tháng từ 0
+    const monthNum = parseInt(month, 10) - 1;
 
     const daysInMonth = new Date(yearNum, monthNum + 1, 0).getDate();
 
-    // Khởi tạo mảng doanh thu cho từng ngày, mặc định 0
     const revenueByDay = Array(daysInMonth).fill(0);
 
-    // Lấy ngày đầu và cuối tháng
     const startDate = new Date(yearNum, monthNum, 1);
     const endDate = new Date(yearNum, monthNum, daysInMonth, 23, 59, 59, 999);
 
-    // Lấy dữ liệu doanh thu theo ngày
     const revenueResults = await OrderDetailModel.findAll({
       attributes: [
         [Sequelize.fn('DAY', Sequelize.col('order.created_at')), 'day'],
@@ -193,7 +189,6 @@ static async getRevenueByDaysInMonth(req, res) {
       raw: true,
     });
 
-    // Gán dữ liệu vào mảng doanh thu theo ngày
     revenueResults.forEach(item => {
       const dayIndex = item.day - 1;
       revenueByDay[dayIndex] = parseInt(item.revenue, 10) || 0;
@@ -210,6 +205,68 @@ static async getRevenueByDaysInMonth(req, res) {
   } catch (error) {
     console.error('Error in getRevenueByDaysInMonth:', error);
     return res.status(500).json({ status: 500, message: 'Lỗi server khi lấy doanh thu theo ngày' });
+  }
+}
+
+static async getRevenueByCustomRange(req, res) {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ status: 400, message: 'Thiếu tham số from hoặc to' });
+    }
+
+    const startDate = new Date(from);
+    const endDate = new Date(to);
+    endDate.setHours(23, 59, 59, 999);
+
+    const revenueResults = await OrderDetailModel.findAll({
+      attributes: [
+        [Sequelize.fn('DATE', Sequelize.col('order.created_at')), 'date'],
+        [Sequelize.fn('SUM', Sequelize.literal('price * quantity')), 'revenue'],
+      ],
+      include: [
+        {
+          model: OrderModel,
+          as: 'order',
+          where: {
+            status: 'delivered',
+            created_at: { [Op.between]: [startDate, endDate] }
+          },
+          attributes: [],
+        }
+      ],
+      group: ['date'],
+      order: [[Sequelize.literal('date'), 'ASC']],
+      raw: true,
+    });
+
+    const dateMap = {};
+    revenueResults.forEach(item => {
+      dateMap[item.date] = parseFloat(item.revenue) || 0;
+    });
+
+    let current = new Date(startDate);
+    const items = [];
+    while (current <= endDate) {
+      const dateStr = current.toISOString().split('T')[0];
+      items.push({
+        date: dateStr,
+        revenue: dateMap[dateStr] || 0,
+      });
+      current.setDate(current.getDate() + 1);
+    }
+
+    const totalRevenue = items.reduce((sum, item) => sum + item.revenue, 0);
+
+    return res.status(200).json({
+      status: 200,
+      message: 'Lấy doanh thu theo khoảng thời gian thành công',
+      data: { items, totalRevenue },
+    });
+
+  } catch (error) {
+    console.error('Error in getRevenueByCustomRange:', error);
+    return res.status(500).json({ status: 500, message: 'Lỗi server khi lấy doanh thu theo khoảng thời gian' });
   }
 }
 
