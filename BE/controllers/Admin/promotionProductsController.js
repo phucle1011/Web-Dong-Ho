@@ -36,7 +36,8 @@ exports.getAll = async (req, res) => {
         {
           model: PromotionModel,
           as: "promotion",
-          attributes: ["name"],
+       attributes: ["name", "quantity","start_date", "end_date"], 
+
         },
       ],
       limit: pageSize,
@@ -97,19 +98,49 @@ exports.getById = async (req, res) => {
 };
 
 // CREATE
+// controller: promotion-product.controller.js
 exports.create = async (req, res) => {
   try {
     const { product_variant_id, promotion_id } = req.body;
 
-    const payload = {
-      product_variant_id,
-      promotion_id,
-    };
+    // Đảm bảo cả hai đều là mảng
+    const variantIds = Array.isArray(product_variant_id)
+      ? product_variant_id
+      : [product_variant_id];
 
-    const data = await PromotionProductModel.create(payload);
-    res.status(201).json(data);
+    const promotionIds = Array.isArray(promotion_id)
+      ? promotion_id
+      : [promotion_id];
+
+    if (variantIds.length === 0 || promotionIds.length === 0) {
+      return res.status(400).json({
+        error: "Vui lòng cung cấp ít nhất 1 promotion và 1 product_variant",
+      });
+    }
+
+    // Kết hợp nhiều khuyến mãi và biến thể => tạo dữ liệu
+    const payloads = [];
+    for (const promoId of promotionIds) {
+      for (const variantId of variantIds) {
+        payloads.push({
+          promotion_id: promoId,
+          product_variant_id: variantId,
+        });
+      }
+    }
+
+    // Lưu vào DB
+    const data = await PromotionProductModel.bulkCreate(payloads, {
+      ignoreDuplicates: true, // tránh trùng nếu cần
+    });
+
+    return res.status(201).json({
+      message: "Thêm nhiều promotion_product thành công",
+      data,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Lỗi khi thêm promotion_product:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 };
 
@@ -148,74 +179,17 @@ exports.remove = async (req, res) => {
 
 // GET ALL PROMOTIONS with dynamic status updates
 
-
-
 exports.getAllPromotion = async (req, res) => {
   try {
     const now = new Date();
 
-    // Cập nhật trạng thái các khuyến mãi
-    // const promotions = await PromotionModel.findAll();
-    // for (const promo of promotions) {
-    //   let newStatus = promo.status;
-
-    //   if (promo.status === 'inactive') {
-    //     newStatus = 'inactive';
-    //   } else if (promo.quantity === 0) {
-    //     newStatus = 'exhausted';
-    //   } else if (now < promo.start_date) {
-    //     newStatus = 'upcoming';
-    //   } else if (now >= promo.start_date && now <= promo.end_date) {
-    //     newStatus = 'active';
-    //   } else {
-    //     newStatus = 'expired';
-    //   }
-
-    //   if (promo.status !== newStatus) {
-    //     await promo.update({ status: newStatus });
-    //   }
-    // }
-
     // Lấy các promotion đang active từ bảng PromotionProduct
     const promotionProducts = await PromotionModel.findAll({
-       where: {
-            status: 'active',
-            applicable_to: 'product',
-            // start_date: { [Op.lte]: now },
-            // end_date: { [Op.gte]: now },
-          },
-      // include: [
-      //   {
-      //     // model: PromotionModel,
-      //     // as: "promotion",
-      //     // attributes: ["id", "name"],
-      //     where: {
-      //       status: 'active',
-      //       applicable_to: 'product',
-      //       // start_date: { [Op.lte]: now },
-      //       // end_date: { [Op.gte]: now },
-      //     },
-      //     // required: true,
-      //   },
-      // ],
+      where: {
+        status: "active",
+        applicable_to: "product",
+      },
     });
-
-    // if (!promotionProducts || promotionProducts.length === 0) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: "Không tìm thấy khuyến mãi nào đang hoạt động.",
-    //   });
-    // }
-
-    // Trả về danh sách promotion id + name (unique)
-    // const promotionsData = promotionProducts.map(item => ({
-    //   id: item.promotion.id,
-    //   name: item.promotion.name
-    // }));
-
-    // const uniquePromotions = Array.from(
-    //   new Map(promotionsData.map(p => [p.id, p])).values()
-    // );
 
     res.status(200).json({
       success: true,
@@ -229,7 +203,3 @@ exports.getAllPromotion = async (req, res) => {
     });
   }
 };
-
-
-
-

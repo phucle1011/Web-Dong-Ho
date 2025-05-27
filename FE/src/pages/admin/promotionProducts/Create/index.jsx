@@ -3,28 +3,26 @@ import { useForm } from "react-hook-form";
 import Constants from "../../../../Constants.jsx";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import Select from "react-select";
 
 const PromotionProductForm = ({ onSuccess }) => {
   const navigate = useNavigate();
   const [promotions, setPromotions] = useState([]);
-  const [products, setProducts] = useState([]); // Thêm products
   const [productVariants, setProductVariants] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    trigger,
     formState: { errors },
   } = useForm();
 
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
-        const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/promotions/ss/all`
-        );
-        console.log("Fetch promotions res.data:", res.data);
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`);
         const { data } = res.data;
         if (Array.isArray(data)) {
           setPromotions(data);
@@ -39,23 +37,9 @@ const PromotionProductForm = ({ onSuccess }) => {
   }, []);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/admin/products`);
-        setProducts(res.data.data);
-      } catch (error) {
-        console.error("Lỗi khi tải products:", error);
-      }
-    };
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
     const fetchProductVariants = async () => {
       try {
-        const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/product-variants`
-        );
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
         setProductVariants(res.data.data);
       } catch (error) {
         console.error("Lỗi khi tải product variants:", error);
@@ -65,14 +49,13 @@ const PromotionProductForm = ({ onSuccess }) => {
   }, []);
 
   const onSubmit = async (data) => {
-    console.log("Dữ liệu gửi lên:", data);
+    const payload = {
+      promotion_id: data.promotion_id,
+      product_variant_id: data.product_variant_id, // array of variant IDs
+    };
 
     try {
-      console.log("Dữ liệu gửi đi:", data); // <-- LỖI: Data không tồn tại, phải là data
-      await axios.post(
-        `${Constants.DOMAIN_API}/admin/promotion-products`,
-        data
-      );
+      await axios.post(`${Constants.DOMAIN_API}/admin/promotion-products`, payload);
       alert("Thêm promotion_product thành công!");
       reset();
       if (onSuccess) onSuccess();
@@ -87,7 +70,7 @@ const PromotionProductForm = ({ onSuccess }) => {
     <div className="card p-4">
       <h4>Thêm mới Promotion Product</h4>
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Select Promotion ID */}
+        {/* Chọn Khuyến mãi */}
         <div className="mb-3">
           <label className="form-label">Khuyến mãi</label>
           <select
@@ -108,49 +91,34 @@ const PromotionProductForm = ({ onSuccess }) => {
           )}
         </div>
 
-        {/* Select Product */}
+        {/* Chọn nhiều biến thể */}
         <div className="mb-3">
-          <label className="form-label">Sản phẩm</label>
-          <select
-            className="form-select"
-            value={selectedProductId}
-            onChange={(e) => setSelectedProductId(e.target.value)}
-          >
-            <option value="">-- Chọn Sản phẩm --</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Select Product Variant */}
-        <div className="mb-3">
-          <label className="form-label">Biến thể sản phẩm</label>
-          <select
-            className="form-select"
+          <label className="form-label">Chọn các biến thể sản phẩm</label>
+          <Select
+            isMulti
+            options={productVariants.map((variant) => ({
+              value: variant.id,
+              label: `${variant.sku} (${variant.product?.name || "Tên SP không xác định"})`,
+            }))}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            onChange={(selectedOptions) => {
+              const selectedIds = selectedOptions ? selectedOptions.map((opt) => opt.value) : [];
+              setValue("product_variant_id", selectedIds);
+              trigger("product_variant_id"); // validate lại
+            }}
+          />
+          {/* Input hidden để react-hook-form biết trường này */}
+          <input
+            type="hidden"
             {...register("product_variant_id", {
-              required: "Vui lòng chọn product variant",
+              required: "Vui lòng chọn ít nhất một biến thể sản phẩm",
+              validate: (value) =>
+                value && value.length > 0 || "Vui lòng chọn ít nhất một biến thể sản phẩm",
             })}
-            disabled={!selectedProductId}
-          >
-            <option value="">-- Chọn Biến thể sản phẩm --</option>
-            {productVariants
-              .filter(
-                (variant) =>
-                  String(variant.product_id) === String(selectedProductId)
-              )
-              .map((variant) => (
-                <option key={variant.id} value={variant.id}>
-                  {variant.sku}
-                </option>
-              ))}
-          </select>
+          />
           {errors.product_variant_id && (
-            <small className="text-danger">
-              {errors.product_variant_id.message}
-            </small>
+            <small className="text-danger">{errors.product_variant_id.message}</small>
           )}
         </div>
 
