@@ -1,10 +1,38 @@
-// UserController.js
 const UserModel = require('../../models/usersModel');
 const AddressModel = require('../../models/addressesModel');
+const nodemailer = require('nodemailer');
+const getEmailTemplate = require('../../utils/emailTemplate');
 const { Op } = require('sequelize');
+
+// Hàm tạo transporter với cấu hình SMTP (ví dụ dùng Gmail)
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// Helper: Gửi email với template chuyên nghiệp
+const sendEmail = async (to, subject, htmlContent) => {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to,
+        subject,
+        html: htmlContent
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Đã gửi email đến ${to}`);
+    } catch (error) {
+        console.error("Lỗi gửi email:", error.message);
+    }
+};
 
 class UserController {
 
+    // Lấy danh sách người dùng phân trang
     static async get(req, res) {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -14,6 +42,7 @@ class UserController {
             const { count, rows: users } = await UserModel.findAndCountAll({
                 order: [['created_at', 'DESC']],
                 attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
+                include: [],
                 limit: limit,
                 offset: offset
             });
@@ -31,41 +60,45 @@ class UserController {
         }
     }
 
-   static async getById(req, res) {
-    try {
-        const { id } = req.params;
-        const user = await UserModel.findByPk(id, {
-            attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
-            include: [
-                {
-                    model: AddressModel, // Sequelize sẽ tự động hiểu đây là bảng 'addresses'
+    // Lấy thông tin chi tiết người dùng theo ID
+    static async getById(req, res) {
+        try {
+            const { id } = req.params;
+            const user = await UserModel.findByPk(id, {
+                attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
+                include: [{
+                    model: AddressModel,
                     as: 'addresses',
-                    attributes: ['id', 'address_line', 'city', 'district', 'province', 'is_default', 'created_at', 'updated_at'] // Cập nhật tên cột cho phù hợp
-                }
-            ]
-        });
+                    attributes: ['id', 'address_line', 'city', 'district', 'province', 'is_default', 'created_at', 'updated_at']
+                }]
+            });
 
-        if (!user) {
-            return res.status(404).json({ message: "Người dùng không tồn tại" });
+            if (!user) {
+                return res.status(404).json({ message: "Người dùng không tồn tại" });
+            }
+
+            res.status(200).json({
+                status: 200,
+                data: user,
+            });
+        } catch (error) {
+            console.error("Lỗi khi lấy chi tiết người dùng:", error);
+            res.status(500).json({ error: error.message });
         }
-
-        res.status(200).json({
-            status: 200,
-            data: user,
-        });
-    } catch (error) {
-        console.error("Lỗi khi lấy chi tiết người dùng:", error);
-        res.status(500).json({ error: error.message });
     }
-}
 
+    // Cập nhật trạng thái người dùng
     static async updateUserStatus(req, res) {
         try {
             const { id } = req.params;
-            const { status } = req.body;
+            const { status, reason } = req.body;
 
             if (!['active', 'inactive', 'pending', 'locked'].includes(status)) {
                 return res.status(400).json({ message: "Trạng thái không hợp lệ." });
+            }
+
+            if (!reason || typeof reason !== 'string' || reason.trim() === '') {
+                return res.status(400).json({ message: "Vui lòng nhập lý do thay đổi trạng thái." });
             }
 
             const user = await UserModel.findByPk(id);
@@ -73,10 +106,18 @@ class UserController {
                 return res.status(404).json({ message: "Người dùng không tồn tại." });
             }
 
+            // Cập nhật trạng thái
             user.status = status;
             await user.save();
 
-            res.status(200).json({ message: `Cập nhật trạng thái người dùng thành công thành: ${status}` });
+            // Gửi email thông báo lý do
+            const htmlContent = getEmailTemplate(user.name, status, reason);
+
+            await sendEmail(user.email, "Thông báo thay đổi trạng thái tài khoản", htmlContent);
+
+            res.status(200).json({
+                message: `Cập nhật trạng thái người dùng thành công thành: ${status}`
+            });
 
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
@@ -84,11 +125,12 @@ class UserController {
         }
     }
 
+    // Tìm kiếm người dùng
     static async searchUser(req, res) {
         try {
             const { searchTerm, page = 1, limit = 10 } = req.query;
-            const currentPage = parseInt(page); // Chuyển page thành số nguyên
-            const currentLimit = parseInt(limit); // Chuyển limit thành số nguyên
+            const currentPage = parseInt(page);
+            const currentLimit = parseInt(limit);
             const offset = (currentPage - 1) * currentLimit;
 
             if (!searchTerm || searchTerm.trim() === '') {
@@ -104,8 +146,8 @@ class UserController {
                     ]
                 },
                 attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
-                limit: currentLimit, // Sử dụng limit đã chuyển đổi
-                offset: offset,       // Sử dụng offset đã tính toán với số nguyên
+                limit: currentLimit,
+                offset: offset,
                 order: [['created_at', 'DESC']]
             });
 
@@ -123,7 +165,7 @@ class UserController {
                 status: 200,
                 message: 'Tìm kiếm người dùng thành công',
                 data: users,
-                totalPages: Math.ceil(count / currentLimit), // Sử dụng limit đã chuyển đổi
+                totalPages: Math.ceil(count / currentLimit),
                 currentPage: currentPage
             });
 

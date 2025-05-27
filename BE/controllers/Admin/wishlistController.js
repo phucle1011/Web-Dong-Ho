@@ -2,6 +2,11 @@ const WishlistModel = require('../../models/wishlistsModel');
 const ProductVariantsModel = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
 const UserModel = require('../../models/usersModel');
+const ProductVariantAttributeValueModel = require("../../models/productVariantAttributeValuesModel");
+const ProductAttributeModel = require("../../models/productAttributesModel");
+const VariantImageModel = require("../../models/variantImagesModel");
+
+
 const { Op } = require('sequelize');
 
 class WishlistController {
@@ -16,7 +21,7 @@ class WishlistController {
             const wishlists = await WishlistModel.findAndCountAll({
                 limit: limit,
                 offset: offset,
-                order: [['created_at', 'DESC']],
+                order: [['id', 'DESC']],
                 include: [
                     {
                         model: ProductVariantsModel,
@@ -63,24 +68,40 @@ class WishlistController {
                 where: { user_id: userId },
                 limit: limit,
                 offset: offset,
-                order: [['created_at', 'DESC']],
+                order: [['id', 'DESC']],
                 include: [
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
-                        attributes: ['id', 'price'],
+                        attributes: ['id', 'price', 'sku', 'stock'], // Thêm sku, stock nếu có
                         include: [
                             {
                                 model: ProductModel,
                                 as: 'product',
                                 attributes: ['id', 'name', 'slug', 'thumbnail'],
                             },
+                            {
+                                model: ProductVariantAttributeValueModel,
+                                as: 'attributeValues', // Tên alias phải khớp với connectModels.js
+                                attributes: ['value'],
+                                include: [{
+                                    model: ProductAttributeModel,
+                                    as: 'attribute', // Tên attribute như "Màu sắc", "Dung lượng"
+                                    attributes: ['name'],
+                                }]
+                            },
+                            {
+                                model: VariantImageModel,
+                                as: 'images', // Nếu bạn muốn hiển thị ảnh biến thể
+                                attributes: ['image_url'],
+                                required: false,
+                            }
                         ],
                     },
-                    { // Thêm include UserModel ở đây
+                    {
                         model: UserModel,
-                        as: 'user', // Đảm bảo 'user' là alias chính xác trong mối quan hệ của bạn
-                        attributes: ['id', 'name', 'email'], // Chọn các thuộc tính bạn muốn hiển thị
+                        as: 'user',
+                        attributes: ['id', 'name', 'email', 'phone', 'avatar', 'status'],
                     },
                 ],
             });
@@ -175,7 +196,7 @@ class WishlistController {
             const wishlists = await WishlistModel.findAndCountAll({
                 limit,
                 offset,
-                order: [['created_at', 'DESC']],
+                order: [['id', 'DESC']],
                 include: [
                     {
                         model: ProductVariantsModel,
@@ -227,7 +248,7 @@ class WishlistController {
             res.status(500).json({ error: error.message });
         }
     }
-    
+
     // Tìm kiếm sản phẩm yêu thích của người dùng cụ thể
     static async searchWishlistByUserProduct(req, res) {
         try {
@@ -245,7 +266,7 @@ class WishlistController {
                 where: { user_id: userId },
                 limit,
                 offset,
-                order: [['created_at', 'DESC']],
+                order: [['id', 'DESC']],
                 include: [
                     {
                         model: ProductVariantsModel,

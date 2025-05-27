@@ -3,108 +3,51 @@ import { useEffect, useState } from "react";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
-import Swal from 'sweetalert2';
-import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa'; // Import icon tìm kiếm
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
 
 function UserList() {
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
-    const [showDropdown, setShowDropdown] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
     const [searchError, setSearchError] = useState('');
+    const [showReasonModal, setShowReasonModal] = useState(false);
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [selectedNewStatus, setSelectedNewStatus] = useState('');
+    const [reasonOption, setReasonOption] = useState('');
+    const [customReason, setCustomReason] = useState('');
     const navigate = useNavigate();
     const limit = 10;
 
-    useEffect(() => {
-        fetchUsers(currentPage);
-    }, [currentPage]);
-
+    // Fetch danh sách người dùng
     const fetchUsers = async (page) => {
         setLoading(true);
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/list?page=${page}&limit=${limit}`);
             setUsers(res.data.data);
             setTotalPages(res.data.totalPages);
-            // Reset searchResults và searchError khi fetchUsers được gọi trực tiếp
-            if (searchTerm.trim() === '') {
-                setSearchResults([]);
-                setSearchError('');
-            }
+            setSearchResults([]);
+            setSearchError('');
         } catch (error) {
             console.error("Lỗi khi lấy danh sách người dùng:", error);
-            toast.error("Lỗi khi tải danh sách người dùng");
+            toast.error("Lỗi tải danh sách người dùng");
         } finally {
-            setLoading(false); // Kết thúc loading
+            setLoading(false);
         }
     };
 
-    const handleStatusChange = async (userId, newStatus) => {
-        const user = users.find(u => u.id === userId);
-        if (!user) return;
-
-        Swal.fire({
-            title: 'Xác nhận đổi trạng thái',
-            text: `Bạn có chắc chắn muốn đổi trạng thái của người dùng "${user.name}" thành "${getVietnameseStatus(newStatus)}" không?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'OK',
-            cancelButtonText: 'Hủy'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                try {
-                    axios.put(`${Constants.DOMAIN_API}/admin/user/${userId}/status`, { status: newStatus })
-                        .then(response => {
-                            toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
-                            fetchUsers(currentPage); 
-                        })
-                        .catch(error => {
-                            console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
-                            toast.error("Lỗi khi cập nhật trạng thái người dùng");
-                        });
-                } catch (error) {
-                    console.error("Lỗi không mong muốn:", error);
-                    toast.error("Đã có lỗi xảy ra");
-                }
-            }
-        });
-    };
-
-    const getVietnameseStatus = (englishStatus) => {
-        switch (englishStatus) {
-            case "active":
-                return "Hoạt động";
-            case "inactive":
-                return "Ngưng hoạt động";
-            case "pending":
-                return "Chờ duyệt";
-            case "locked":
-                return "Bị khóa";
-            default:
-                return englishStatus;
-        }
-    };
-
-    const handleSearchChange = (e) => {
-        setSearchTerm(e.target.value);
-        setSearchError('');
-        setSearchResults([]);
-        setShowDropdown(false);
-    };
-
-    const handleSearchSubmit = async () => {
-        if (searchTerm.trim() === '') {
-            toast.warning("Vui lòng nhập tên hoặc email người dùng cần tìm.");
+    // Fetch kết quả tìm kiếm
+    const handleSearchSubmit = async (page = 1) => {
+        if (!searchTerm.trim()) {
+            toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
             return;
         }
-        setCurrentPage(1);
+
         setLoading(true);
         try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/search?searchTerm=${searchTerm}&page=${1}&limit=${limit}`);
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/search?searchTerm=${searchTerm}&page=${page}&limit=${limit}`);
             if (res.data.data.length === 0) {
                 setSearchError("Không tìm thấy người dùng nào.");
                 setSearchResults([]);
@@ -114,58 +57,170 @@ function UserList() {
                 setTotalPages(res.data.totalPages);
                 setSearchError('');
             }
-            setShowDropdown(false);
+            setCurrentPage(page);
         } catch (error) {
-            console.error("Lỗi khi tìm kiếm người dùng:", error);
-            setSearchError("Không tìm thấy người dùng.");
-            setSearchResults([]);
-            setTotalPages(1);
+            console.error("Lỗi khi tìm kiếm:", error);
+            toast.error("Không thể tìm kiếm người dùng");
         } finally {
             setLoading(false);
         }
     };
 
+    // Reset tìm kiếm
     const handleClearSearch = () => {
         setSearchTerm('');
         setSearchResults([]);
-        setShowDropdown(false);
         setCurrentPage(1);
         fetchUsers(1);
-        setSearchError('');
     };
 
-    const handleSelectUser = (userId) => {
-        navigate(`/admin/user/detail/${userId}`);
-        setSearchTerm('');
-        setSearchResults([]);
-        setShowDropdown(false);
-        setSearchError('');
+    // Hàm xử lý chọn trạng thái mới -> mở modal chọn lý do
+    const handleStatusChange = (userId, newStatus) => {
+        setSelectedUserId(userId);
+        setSelectedNewStatus(newStatus);
+        setReasonOption('');
+        setCustomReason('');
+        setShowReasonModal(true);
     };
 
+    // Gửi lý do + cập nhật trạng thái
+    const handleSubmitReason = async () => {
+        const finalReason = reasonOption === 'Khác' ? customReason : reasonOption;
+        if (!finalReason || !finalReason.trim()) {
+            toast.warning("Vui lòng nhập lý do thay đổi trạng thái.");
+            return;
+        }
+
+        try {
+            const res = await axios.put(`${Constants.DOMAIN_API}/admin/user/${selectedUserId}/status`, {
+                status: selectedNewStatus,
+                reason: finalReason
+            });
+            toast.success(res.data.message);
+            if (searchTerm.trim()) {
+                handleSearchSubmit(currentPage);
+            } else {
+                fetchUsers(currentPage);
+            }
+        } catch (error) {
+            console.error("Lỗi khi cập nhật trạng thái:", error);
+            toast.error("Không thể cập nhật trạng thái người dùng.");
+        } finally {
+            setShowReasonModal(false);
+            setSelectedUserId(null);
+            setSelectedNewStatus('');
+        }
+    };
+
+    // Hiển thị tên trạng thái tiếng Việt
+    const getVietnameseStatus = (englishStatus) => {
+        switch (englishStatus) {
+            case "active": return "Hoạt động";
+            case "inactive": return "Ngưng hoạt động";
+            case "pending": return "Chờ duyệt";
+            case "locked": return "Bị khóa";
+            default: return englishStatus;
+        }
+    };
+
+    // Danh sách lý do theo trạng thái
+    const getReasonOptionsForStatus = (status) => {
+        switch (status) {
+            case "inactive":
+                return (
+                    <>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Không hoạt động trong thời gian dài">Không hoạt động trong thời gian dài</option>
+                        <option value="Yêu cầu tạm dừng của người dùng">Yêu cầu tạm dừng của người dùng</option>
+                        <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
+                        <option value="Khác">Khác</option>
+                    </>
+                );
+            case "locked":
+                return (
+                    <>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Vi phạm chính sách cộng đồng">Vi phạm chính sách cộng đồng</option>
+                        <option value="Hoạt động đáng ngờ">Hoạt động đáng ngờ</option>
+                        <option value="Spam hoặc lạm dụng">Spam hoặc lạm dụng</option>
+                        <option value="Khác">Khác</option>
+                    </>
+                );
+            case "active":
+                return (
+                    <>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Kích hoạt lại tài khoản">Kích hoạt lại tài khoản</option>
+                        <option value="Xác minh thành công">Xác minh thành công</option>
+                        <option value="Khác">Khác</option>
+                    </>
+                );
+            case "pending":
+                return (
+                    <>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Chờ xác minh email">Chờ xác minh email</option>
+                        <option value="Chờ duyệt tài liệu">Chờ duyệt tài liệu</option>
+                        <option value="Khác">Khác</option>
+                    </>
+                );
+            default:
+                return (
+                    <>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Lý do chung">Lý do chung</option>
+                        <option value="Khác">Khác</option>
+                    </>
+                );
+        }
+    };
+
+    // Phân trang
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
+
+    // Load dữ liệu ban đầu hoặc theo tìm kiếm
+    useEffect(() => {
+        if (searchTerm.trim()) {
+            handleSearchSubmit(currentPage);
+        } else {
+            fetchUsers(currentPage);
+        }
+    }, [currentPage]);
 
     return (
         <div className="container mx-auto p-2">
             <div className="bg-white p-4 shadow rounded-md">
                 <h2 className="text-xl font-semibold mb-4">Danh sách người dùng</h2>
+
+                {/* Form tìm kiếm */}
                 <div className="mb-4 relative flex">
                     <input
                         type="text"
-                        className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Tìm kiếm theo tên hoặc email..."
                         value={searchTerm}
-                        onChange={handleSearchChange}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                        className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
-                        type="button"
-                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
                         onClick={handleSearchSubmit}
+                        className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
                     >
                         <FaSearch className="w-5 h-5" />
                     </button>
+                    {searchTerm && (
+                        <button
+                            onClick={handleClearSearch}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 rounded ml-2"
+                        >
+                            Xóa
+                        </button>
+                    )}
                 </div>
+
+                {/* Bảng danh sách người dùng */}
                 {loading ? (
                     <div className="text-center py-4">Đang tải dữ liệu...</div>
                 ) : (
@@ -185,114 +240,98 @@ function UserList() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {searchResults.length > 0 ? (
-                                    searchResults.map((user, index) => (
-                                        <tr key={user.id} className="border-b">
-                                            <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                                            <td className="p-2 border">{user.name}</td>
-                                            <td className="p-2 border">{user.email}</td>
-                                            <td className="p-2 border">{user.phone}</td>
-                                            <td className="p-2 border">
-                                                <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
-                                            </td>
-                                            <td className="p-2 border capitalize">{user.role}</td>
-                                            <td className="p-2 border capitalize">
-                                                <select
-                                                    value={user.status}
-                                                    onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                                                    className="border rounded px-2 py-1"
-                                                >
-                                                    <option value="active">Hoạt động</option>
-                                                    <option value="inactive">Ngưng hoạt động</option>
-                                                    <option value="pending">Chờ duyệt</option>
-                                                    <option value="locked">Bị khóa</option>
-                                                </select>
-                                            </td>
-                                            <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
-                                            <td className="p-2 border text-center align-middle">
-                                                <div className="flex justify-center gap-2 items-center h-full">
-                                                    <Link
-                                                        to={`/admin/user/detail/${user.id}`}
-                                                        className="bg-blue-500 text-white py-1 px-3 rounded"
-                                                    >
-                                                        Xem
-                                                    </Link>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : searchError ? (
+                                {(searchResults.length > 0 ? searchResults : users).map((user, index) => (
+                                    <tr key={user.id} className="border-b">
+                                        <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
+                                        <td className="p-2 border">{user.name}</td>
+                                        <td className="p-2 border">{user.email}</td>
+                                        <td className="p-2 border">{user.phone}</td>
+                                        <td className="p-2 border">
+                                            <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
+                                        </td>
+                                        <td className="p-2 border capitalize">{user.role}</td>
+                                        <td className="p-2 border capitalize">
+                                            <select
+                                                value={user.status}
+                                                onChange={(e) => handleStatusChange(user.id, e.target.value)}
+                                                className="border rounded px-2 py-1"
+                                            >
+                                                <option value="active">Hoạt động</option>
+                                                <option value="inactive">Ngưng hoạt động</option>
+                                                <option value="pending">Chờ duyệt</option>
+                                                <option value="locked">Bị khóa</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
+                                        <td className="p-2 border text-center">
+                                            <Link to={`/admin/user/detail/${user.id}`} className="bg-blue-500 text-white py-1 px-3 rounded">
+                                                Xem
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(searchResults.length === 0 && users.length === 0 && !loading) && (
+                                    <tr><td colSpan="9" className="p-4 text-center text-gray-500">Không có dữ liệu.</td></tr>
+                                )}
+                                {searchError && (
                                     <tr><td colSpan="9" className="p-4 text-center text-red-500">{searchError}</td></tr>
-                                ) : (
-                                    users.map((user, index) => (
-                                        <tr key={user.id} className="border-b">
-                                            <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                                            <td className="p-2 border">{user.name}</td>
-                                            <td className="p-2 border">{user.email}</td>
-                                            <td className="p-2 border">{user.phone}</td>
-                                            <td className="p-2 border">
-                                                <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
-                                            </td>
-                                            <td className="p-2 border capitalize">{user.role}</td>
-                                            <td className="p-2 border capitalize">
-                                                <select
-                                                    value={user.status}
-                                                    onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                                                    className="border rounded px-2 py-1"
-                                                >
-                                                    <option value="active">Hoạt động</option>
-                                                    <option value="inactive">Ngưng hoạt động</option>
-                                                    <option value="pending">Chờ duyệt</option>
-                                                    <option value="locked">Bị khóa</option>
-                                                </select>
-                                            </td>
-                                            <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
-                                            <td className="p-2 border text-center align-middle">
-                                                <div className="flex justify-center gap-2 items-center h-full">
-                                                    <Link
-                                                        to={`/admin/user/detail/${user.id}`}
-                                                        className="bg-blue-500 text-white py-1 px-3 rounded"
-                                                    >
-                                                        Xem
-                                                    </Link>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
                                 )}
                             </tbody>
                         </table>
 
+                        {/* Modal chọn lý do */}
+                        {showReasonModal && (
+                            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                                <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+                                    <h3 className="text-lg font-semibold mb-4">
+                                        Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
+                                    </h3>
+                                    <label className="block mb-2">Chọn lý do mẫu:</label>
+                                    <select
+                                        value={reasonOption}
+                                        onChange={(e) => {
+                                            setReasonOption(e.target.value);
+                                            setCustomReason('');
+                                        }}
+                                        className="w-full border rounded px-3 py-2 mb-4"
+                                    >
+                                        {getReasonOptionsForStatus(selectedNewStatus)}
+                                    </select>
+                                    {reasonOption === 'Khác' && (
+                                        <>
+                                            <label className="block mb-2">Nhập lý do khác:</label>
+                                            <input
+                                                type="text"
+                                                value={customReason}
+                                                onChange={(e) => setCustomReason(e.target.value)}
+                                                className="w-full border rounded px-3 py-2"
+                                                placeholder="Nhập lý do..."
+                                            />
+                                        </>
+                                    )}
+                                    <div className="flex justify-end mt-4 space-x-2">
+                                        <button
+                                            onClick={() => setShowReasonModal(false)}
+                                            className="px-4 py-2 bg-gray-300 rounded"
+                                        >
+                                            Hủy
+                                        </button>
+                                        <button
+                                            onClick={handleSubmitReason}
+                                            className="px-4 py-2 bg-blue-500 text-white rounded"
+                                        >
+                                            Xác nhận
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Phân trang */}
                         <div className="flex justify-center mt-4 items-center">
                             <div className="flex items-center space-x-1">
-                                <button
-                                    disabled={currentPage === 1}
-                                    onClick={() => handlePageChange(1)}
-                                    className="px-2 py-1 border rounded disabled:opacity-50"
-                                >
-                                    <FaAngleDoubleLeft />
-                                </button>
-
-                                <button
-                                    disabled={currentPage === 1}
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    className="px-2 py-1 border rounded disabled:opacity-50"
-                                >
-                                    <FaChevronLeft />
-                                </button>
-
-                                {currentPage > 2 && (
-                                    <>
-                                        <button
-                                            onClick={() => handlePageChange(1)}
-                                            className="px-3 py-1 border rounded"
-                                        >
-                                            1
-                                        </button>
-                                        {currentPage > 3 && <span className="px-2">...</span>}
-                                    </>
-                                )}
-
+                                <button disabled={currentPage === 1} onClick={() => handlePageChange(1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleLeft /></button>
+                                <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronLeft /></button>
                                 {[...Array(totalPages)].map((_, i) => {
                                     const page = i + 1;
                                     if (page >= currentPage - 1 && page <= currentPage + 1) {
@@ -300,10 +339,7 @@ function UserList() {
                                             <button
                                                 key={page}
                                                 onClick={() => handlePageChange(page)}
-                                                className={`px-3 py-1 border rounded ${currentPage === page
-                                                    ? "bg-blue-500 text-white"
-                                                    : "bg-blue-100 text-black hover:bg-blue-200"
-                                                    }`}
+                                                className={`px-3 py-1 border rounded ${currentPage === page ? "bg-blue-500 text-white" : "bg-blue-100 text-black hover:bg-blue-200"}`}
                                             >
                                                 {page}
                                             </button>
@@ -311,34 +347,8 @@ function UserList() {
                                     }
                                     return null;
                                 })}
-
-                                {currentPage < totalPages - 1 && (
-                                    <>
-                                        {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-                                        <button
-                                            onClick={() => handlePageChange(totalPages)}
-                                            className="px-3 py-1 border rounded"
-                                        >
-                                            {totalPages}
-                                        </button>
-                                    </>
-                                )}
-
-                                <button
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    className="px-2 py-1 border rounded disabled:opacity-50"
-                                >
-                                    <FaChevronRight />
-                                </button>
-
-                                <button
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => handlePageChange(totalPages)}
-                                    className="px-2 py-1 border rounded disabled:opacity-50"
-                                >
-                                    <FaAngleDoubleRight />
-                                </button>
+                                <button disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronRight /></button>
+                                <button disabled={currentPage === totalPages} onClick={() => handlePageChange(totalPages)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleRight /></button>
                             </div>
                         </div>
                     </>
