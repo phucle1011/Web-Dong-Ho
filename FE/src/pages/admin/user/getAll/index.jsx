@@ -2,7 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
 
 function UserList() {
@@ -18,18 +18,26 @@ function UserList() {
     const [selectedNewStatus, setSelectedNewStatus] = useState('');
     const [reasonOption, setReasonOption] = useState('');
     const [customReason, setCustomReason] = useState('');
-    const navigate = useNavigate();
+    const [filterStatus, setFilterStatus] = useState('');
+    const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, pending: 0, locked: 0 });
     const limit = 10;
 
     // Fetch danh sách người dùng
-    const fetchUsers = async (page) => {
+    const fetchUsers = async (page, status = '') => {
         setLoading(true);
+        let url = `${Constants.DOMAIN_API}/admin/user/list?page=${page}&limit=${limit}`;
+        if (status && status !== 'all') {
+            url = `${Constants.DOMAIN_API}/admin/user/list?status=${status}&page=${page}&limit=${limit}`;
+        }
         try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/list?page=${page}&limit=${limit}`);
+            const res = await axios.get(url);
             setUsers(res.data.data);
-            setTotalPages(res.data.totalPages);
+            setTotalPages(res.data.totalPages || 1);
             setSearchResults([]);
             setSearchError('');
+            if (res.data.counts) {
+                setUserCounts(res.data.counts);
+            }
         } catch (error) {
             console.error("Lỗi khi lấy danh sách người dùng:", error);
             toast.error("Lỗi tải danh sách người dùng");
@@ -38,13 +46,12 @@ function UserList() {
         }
     };
 
-    // Fetch kết quả tìm kiếm
+    // Tìm kiếm người dùng
     const handleSearchSubmit = async (page = 1) => {
         if (!searchTerm.trim()) {
             toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
             return;
         }
-
         setLoading(true);
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/search?searchTerm=${searchTerm}&page=${page}&limit=${limit}`);
@@ -71,6 +78,7 @@ function UserList() {
         setSearchTerm('');
         setSearchResults([]);
         setCurrentPage(1);
+        setFilterStatus('');
         fetchUsers(1);
     };
 
@@ -90,7 +98,6 @@ function UserList() {
             toast.warning("Vui lòng nhập lý do thay đổi trạng thái.");
             return;
         }
-
         try {
             const res = await axios.put(`${Constants.DOMAIN_API}/admin/user/${selectedUserId}/status`, {
                 status: selectedNewStatus,
@@ -100,7 +107,7 @@ function UserList() {
             if (searchTerm.trim()) {
                 handleSearchSubmit(currentPage);
             } else {
-                fetchUsers(currentPage);
+                fetchUsers(currentPage, filterStatus);
             }
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái:", error);
@@ -180,19 +187,50 @@ function UserList() {
         setCurrentPage(page);
     };
 
-    // Load dữ liệu ban đầu hoặc theo tìm kiếm
+    const handleFilterChange = (status) => {
+        setFilterStatus(status);
+        setCurrentPage(1);
+        setIsSearching(false);
+        setSearchTerm('');
+        setSearchError('');
+    };
+
+    const [isSearching, setIsSearching] = useState(false);
+
     useEffect(() => {
-        if (searchTerm.trim()) {
+        if (isSearching && searchTerm.trim() !== '') {
             handleSearchSubmit(currentPage);
         } else {
-            fetchUsers(currentPage);
+            fetchUsers(currentPage, filterStatus);
         }
-    }, [currentPage]);
+    }, [currentPage, filterStatus, isSearching]);
 
     return (
         <div className="container mx-auto p-2">
             <div className="bg-white p-4 shadow rounded-md">
                 <h2 className="text-xl font-semibold mb-4">Danh sách người dùng</h2>
+
+                {/* Các nút lọc trạng thái */}
+                <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
+                    {[
+                        { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
+                        { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
+                        { key: "inactive", label: "Ngưng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
+                        { key: "pending", label: "Chờ duyệt", color: "bg-yellow-300", textColor: "text-yellow-800", countKey: "pending" },
+                        { key: "locked", label: "Bị khóa", color: "bg-purple-300", textColor: "text-purple-800", countKey: "locked" },
+                    ].map(({ key, label, color, textColor, countKey }) => (
+                        <button
+                            key={key}
+                            onClick={() => handleFilterChange(key)}
+                            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${filterStatus === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
+                        >
+                            <span>{label}</span>
+                            <span className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}>
+                                {userCounts[countKey] || 0}
+                            </span>
+                        </button>
+                    ))}
+                </div>
 
                 {/* Form tìm kiếm */}
                 <div className="mb-4 relative flex">
@@ -200,7 +238,12 @@ function UserList() {
                         type="text"
                         placeholder="Tìm kiếm theo tên hoặc email..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            if (!e.target.value.trim()) {
+                                handleClearSearch();
+                            }
+                        }}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                         className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -210,14 +253,6 @@ function UserList() {
                     >
                         <FaSearch className="w-5 h-5" />
                     </button>
-                    {searchTerm && (
-                        <button
-                            onClick={handleClearSearch}
-                            className="bg-red-500 hover:bg-red-600 text-white px-4 rounded ml-2"
-                        >
-                            Xóa
-                        </button>
-                    )}
                 </div>
 
                 {/* Bảng danh sách người dùng */}

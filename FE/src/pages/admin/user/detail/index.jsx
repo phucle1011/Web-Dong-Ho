@@ -8,8 +8,12 @@ import Swal from "sweetalert2";
 function UserDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [user, setUser ] = useState({});
+  const [user, setUser] = useState({});
   const [addresses, setAddresses] = useState([]);
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [selectedNewStatus, setSelectedNewStatus] = useState('');
+  const [reasonOption, setReasonOption] = useState('');
+  const [customReason, setCustomReason] = useState('');
 
   useEffect(() => {
     fetchUserDetail();
@@ -19,10 +23,10 @@ function UserDetail() {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/${id}`);
       if (res.data.data) {
-        setUser (res.data.data);
+        setUser(res.data.data);
         setAddresses(res.data.data.addresses || []);
       } else {
-        setUser ({});
+        setUser({});
         setAddresses([]);
       }
     } catch (error) {
@@ -32,32 +36,131 @@ function UserDetail() {
     }
   };
 
-  const handleStatusChange = async (newStatus) => {
-    Swal.fire({
-      title: "Xác nhận đổi trạng thái",
-      text: `Bạn có chắc chắn muốn đổi trạng thái của người dùng "${user.name}" thành "${getVietnameseStatus(newStatus)}" không?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Vâng, đổi!",
-      cancelButtonText: "Hủy",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        axios
-          .put(`${Constants.DOMAIN_API}/admin/user/${id}/status`, {
-            status: newStatus,
-          })
-          .then(() => {
-            toast.success(`Đã cập nhật trạng thái thành: ${getVietnameseStatus(newStatus)}`);
-            fetchUserDetail();
-          })
-          .catch((error) => {
-            console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
-            toast.error("Lỗi khi cập nhật trạng thái người dùng");
-          });
-      }
-    });
+  // Hàm xử lý chọn trạng thái mới -> mở modal chọn lý do
+  const handleStatusChange = (newStatus) => {
+    setSelectedNewStatus(newStatus);
+    setReasonOption('');
+    setCustomReason('');
+    setShowReasonModal(true);
+  };
+
+  // Gửi lý do + cập nhật trạng thái
+  const handleSubmitReason = async () => {
+    const finalReason = reasonOption === 'Khác' ? customReason : reasonOption;
+    if (!finalReason || !finalReason.trim()) {
+      toast.warning("Vui lòng nhập lý do thay đổi trạng thái.");
+      return;
+    }
+
+    try {
+      const res = await axios.put(`${Constants.DOMAIN_API}/admin/user/${id}/status`, {
+        status: selectedNewStatus,
+        reason: finalReason
+      });
+      toast.success(res.data.message);
+      fetchUserDetail(); // Tải lại dữ liệu người dùng
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
+      toast.error("Không thể cập nhật trạng thái người dùng.");
+    } finally {
+      setShowReasonModal(false);
+      setSelectedNewStatus('');
+    }
+  };
+
+  // Danh sách lý do theo trạng thái
+  const getReasonOptionsForStatus = (status) => {
+    switch (status) {
+      case "inactive":
+        return (
+          <>
+            <option value="">-- Chọn lý do --</option>
+            <option value="Không hoạt động trong thời gian dài">Không hoạt động trong thời gian dài</option>
+            <option value="Yêu cầu tạm dừng của người dùng">Yêu cầu tạm dừng của người dùng</option>
+            <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
+            <option value="Khác">Khác</option>
+          </>
+        );
+      case "locked":
+        return (
+          <>
+            <option value="">-- Chọn lý do --</option>
+            <option value="Vi phạm chính sách cộng đồng">Vi phạm chính sách cộng đồng</option>
+            <option value="Hoạt động đáng ngờ">Hoạt động đáng ngờ</option>
+            <option value="Spam hoặc lạm dụng">Spam hoặc lạm dụng</option>
+            <option value="Khác">Khác</option>
+          </>
+        );
+      case "active":
+        return (
+          <>
+            <option value="">-- Chọn lý do --</option>
+            <option value="Kích hoạt lại tài khoản">Kích hoạt lại tài khoản</option>
+            <option value="Xác minh thành công">Xác minh thành công</option>
+            <option value="Khác">Khác</option>
+          </>
+        );
+      case "pending":
+        return (
+          <>
+            <option value="">-- Chọn lý do --</option>
+            <option value="Chờ xác minh email">Chờ xác minh email</option>
+            <option value="Chờ duyệt tài liệu">Chờ duyệt tài liệu</option>
+            <option value="Khác">Khác</option>
+          </>
+        );
+      default:
+        return (
+          <>
+            <option value="">-- Chọn lý do --</option>
+            <option value="Lý do chung">Lý do chung</option>
+            <option value="Khác">Khác</option>
+          </>
+        );
+    }
+  };
+
+  // Hiển thị tên trạng thái tiếng Việt
+  const getVietnameseStatus = (englishStatus) => {
+    switch (englishStatus) {
+      case "active": return "Hoạt động";
+      case "inactive": return "Ngưng hoạt động";
+      case "pending": return "Chờ duyệt";
+      case "locked": return "Bị khóa";
+      default: return "Không xác định";
+    }
+  };
+
+  const fetchProvinces = async () => {
+    try {
+      const response = await axios.get("https://open.oapi.vn/location/provinces?page=0&size=30&query= ");
+      return response.data.data || [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách tỉnh:", error);
+      return [];
+    }
+  };
+
+  const fetchDistricts = async (provinceId) => {
+    if (!provinceId) return [];
+    try {
+      const response = await axios.get(`https://open.oapi.vn/location/districts/ ${provinceId}?page=0&size=30&query=`);
+      return response.data.data || [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách quận/huyện:", error);
+      return [];
+    }
+  };
+
+  const fetchWards = async (districtId) => {
+    if (!districtId) return [];
+    try {
+      const response = await axios.get(`https://open.oapi.vn/location/wards/ ${districtId}?page=0&size=30&query=`);
+      return response.data.data || [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách xã/phường:", error);
+      return [];
+    }
   };
 
   const handleAddAddress = async (addressData) => {
@@ -72,12 +175,8 @@ function UserDetail() {
         return;
       }
     }
-
     try {
-      const res = await axios.post(
-        `${Constants.DOMAIN_API}/admin/user/${id}/addresses`,
-        addressData
-      );
+      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
       Swal.fire({
         icon: "success",
         title: "Thêm địa chỉ thành công!",
@@ -108,7 +207,6 @@ function UserDetail() {
         return;
       }
     }
-
     try {
       const res = await axios.put(
         `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
@@ -164,55 +262,15 @@ function UserDetail() {
     });
   };
 
-  const fetchProvinces = async () => {
-    try {
-      const response = await axios.get(
-        "https://open.oapi.vn/location/provinces?page=0&size=30&query="
-      );
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách tỉnh:", error);
-      return [];
-    }
-  };
-
-  const fetchDistricts = async (provinceId) => {
-    if (!provinceId) return [];
-    try {
-      const response = await axios.get(
-        `https://open.oapi.vn/location/districts/${provinceId}?page=0&size=30&query=`
-      );
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách quận/huyện:", error);
-      return [];
-    }
-  };
-
-  const fetchWards = async (districtId) => {
-    if (!districtId) return [];
-    try {
-      const response = await axios.get(
-        `https://open.oapi.vn/location/wards/${districtId}?page=0&size=30&query=`
-      );
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách xã/phường:", error);
-      return [];
-    }
-  };
-
   const showAddressModal = async (addressData = null) => {
     const provinces = await fetchProvinces();
-
     let cityOptions = `<option value="">${addressData?.city || ''}</option>`;
     provinces.forEach((province) => {
       cityOptions += `<option value="${province.id}" ${addressData?.cityId === province.id ? 'selected' : ''}>${province.name}</option>`;
     });
 
     const isEdit = !!addressData;
-    console.log("addressData", addressData);
-    
+
     Swal.fire({
       title: isEdit ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới",
       html: `
@@ -222,7 +280,6 @@ function UserDetail() {
       <label for="swal-address_line" class="form-label font-semibold block mb-1">Địa chỉ:</label>
       <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${addressData?.address_line || ''}">
     </div>
-
     <div class="mb-4">
       <label for="swal-city" class="form-label font-semibold block mb-1">Tỉnh/Thành phố:</label>
       <select id="swal-city" class="form-select w-full border rounded px-3 py-2">
@@ -231,102 +288,92 @@ function UserDetail() {
     </div>
     <div class="mb-4">
       <label for="swal-district" class="form-label font-semibold block mb-1">Quận/Huyện:</label>
-      <select id="swal-district" class="form-select w-full border rounded px-3 py-2" value="92" ${isEdit && addressData ? '' : 'disabled'}>
+      <select id="swal-district" class="form-select w-full border rounded px-3 py-2" ${isEdit && addressData ? '' : 'disabled'}>
         <option value="">${addressData?.district || ''}</option>
       </select>
     </div>
-
     <div class="mb-4">
       <label for="swal-province" class="form-label font-semibold block mb-1">Xã/Phường/Thị Trấn:</label>
       <select id="swal-province" class="form-select w-full border rounded px-3 py-2" ${isEdit && addressData ? '' : 'disabled'}>
         <option value="">${addressData?.province || ''}</option>
       </select>
     </div>
-
     <div class="form-check mb-3 flex items-center">
       <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${addressData?.is_default === 1 ? "checked" : ""}>
       <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
     </div>
   </form>
 </div>
-      `,
-didOpen: async () => {
-  const citySelect = Swal.getPopup().querySelector("#swal-city");
-  const districtSelect = Swal.getPopup().querySelector("#swal-district");
-  const wardSelect = Swal.getPopup().querySelector("#swal-province");
+`,
+      didOpen: async () => {
+        const citySelect = Swal.getPopup().querySelector("#swal-city");
+        const districtSelect = Swal.getPopup().querySelector("#swal-district");
+        const wardSelect = Swal.getPopup().querySelector("#swal-province");
 
-  if (isEdit && addressData) {
-    citySelect.value = addressData.cityId || "";
-
-    if (addressData.cityId) {
-      districtSelect.disabled = false;
-      const districts = await fetchDistricts(addressData.cityId);
-      let districtOptions = '<option value="">Chọn quận/huyện</option>';
-      districts.forEach((d) => {
-        districtOptions += `<option value="${d.id}" ${parseInt(addressData.districtId) === d.id ? 'selected' : ''}>${d.name}</option>`;
-      });
-      districtSelect.innerHTML = districtOptions;
-
-      if (districtSelect.querySelector(`option[value="${addressData.districtId}"]`)) {
-        districtSelect.value = addressData.districtId;
-      }
-
-      if (addressData.districtId) {
-        wardSelect.disabled = false;
-        const wards = await fetchWards(addressData.districtId);
-        let wardOptions = '<option value="">Chọn xã/phường</option>';
-        wards.forEach((w) => {
-          wardOptions += `<option value="${w.id}" ${parseInt(addressData.wardId) === w.id ? 'selected' : ''}>${w.name}</option>`;
-        });
-        wardSelect.innerHTML = wardOptions;
-
-        if (wardSelect.querySelector(`option[value="${addressData.wardId}"]`)) {
-          wardSelect.value = addressData.wardId;
+        if (isEdit && addressData) {
+          citySelect.value = addressData.cityId || "";
+          if (addressData.cityId) {
+            districtSelect.disabled = false;
+            const districts = await fetchDistricts(addressData.cityId);
+            let districtOptions = '<option value="">Chọn quận/huyện</option>';
+            districts.forEach((d) => {
+              districtOptions += `<option value="${d.id}" ${parseInt(addressData.districtId) === d.id ? 'selected' : ''}>${d.name}</option>`;
+            });
+            districtSelect.innerHTML = districtOptions;
+            if (districtSelect.querySelector(`option[value="${addressData.districtId}"]`)) {
+              districtSelect.value = addressData.districtId;
+            }
+            if (addressData.districtId) {
+              wardSelect.disabled = false;
+              const wards = await fetchWards(addressData.districtId);
+              let wardOptions = '<option value="">Chọn xã/phường</option>';
+              wards.forEach((w) => {
+                wardOptions += `<option value="${w.id}" ${parseInt(addressData.wardId) === w.id ? 'selected' : ''}>${w.name}</option>`;
+              });
+              wardSelect.innerHTML = wardOptions;
+              if (wardSelect.querySelector(`option[value="${addressData.wardId}"]`)) {
+                wardSelect.value = addressData.wardId;
+              }
+            }
+          }
         }
-      }
-    }
-  }
 
-  citySelect.addEventListener("change", async (e) => {
-    const provinceId = e.target.value;
-    if (!provinceId) {
-      districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
-      districtSelect.disabled = true;
-      wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-      wardSelect.disabled = true;
-      return;
-    }
-    districtSelect.disabled = false;
-    const districts = await fetchDistricts(provinceId);
-    let districtOptions = '<option value="">Chọn quận/huyện</option>';
-    districts.forEach((d) => {
-      districtOptions += `<option value="${d.id}">${d.name}</option>`;
-    });
-    districtSelect.innerHTML = districtOptions;
+        citySelect.addEventListener("change", async (e) => {
+          const provinceId = e.target.value;
+          if (!provinceId) {
+            districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+            districtSelect.disabled = true;
+            wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+            wardSelect.disabled = true;
+            return;
+          }
+          districtSelect.disabled = false;
+          const districts = await fetchDistricts(provinceId);
+          let districtOptions = '<option value="">Chọn quận/huyện</option>';
+          districts.forEach((d) => {
+            districtOptions += `<option value="${d.id}">${d.name}</option>`;
+          });
+          districtSelect.innerHTML = districtOptions;
+          wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+          wardSelect.disabled = true;
+        });
 
-    wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-    wardSelect.disabled = true;
-  });
-
-  
-  districtSelect.addEventListener("change", async (e) => {
-    const districtId = e.target.value;
-    if (!districtId) {
-      wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-      wardSelect.disabled = true;
-      return;
-    }
-    wardSelect.disabled = false;
-    const wards = await fetchWards(districtId);
-    let wardOptions = '<option value="">Chọn xã/phường</option>';
-    wards.forEach((w) => {
-      wardOptions += `<option value="${w.id}">${w.name}</option>`;
-    });
-    wardSelect.innerHTML = wardOptions;
-  });
-},
-
-
+        districtSelect.addEventListener("change", async (e) => {
+          const districtId = e.target.value;
+          if (!districtId) {
+            wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+            wardSelect.disabled = true;
+            return;
+          }
+          wardSelect.disabled = false;
+          const wards = await fetchWards(districtId);
+          let wardOptions = '<option value="">Chọn xã/phường</option>';
+          wards.forEach((w) => {
+            wardOptions += `<option value="${w.id}">${w.name}</option>`;
+          });
+          wardSelect.innerHTML = wardOptions;
+        });
+      },
       showCancelButton: true,
       confirmButtonText: isEdit ? "Cập nhật" : "Thêm",
       cancelButtonText: "Hủy",
@@ -335,11 +382,9 @@ didOpen: async () => {
         const cityId = Swal.getPopup().querySelector("#swal-city").value;
         const cityName = Swal.getPopup().querySelector("#swal-city").selectedOptions[0]?.text || "";
         const districtId = Swal.getPopup().querySelector("#swal-district").value;
-        const districtName =
-          Swal.getPopup().querySelector("#swal-district").selectedOptions[0]?.text || "";
+        const districtName = Swal.getPopup().querySelector("#swal-district").selectedOptions[0]?.text || "";
         const provinceId = Swal.getPopup().querySelector("#swal-province").value;
-        const provinceName =
-          Swal.getPopup().querySelector("#swal-province").selectedOptions[0]?.text || "";
+        const provinceName = Swal.getPopup().querySelector("#swal-province").selectedOptions[0]?.text || "";
         const is_default = Swal.getPopup().querySelector("#swal-is_default").checked ? 1 : 0;
 
         if (!address_line || !cityId || !districtId || !provinceId) {
@@ -369,27 +414,13 @@ didOpen: async () => {
     });
   };
 
-  const getVietnameseStatus = (status) => {
-    switch (status) {
-      case "active":
-        return "Hoạt động";
-      case "inactive":
-        return "Ngưng hoạt động";
-      case "pending":
-        return "Chờ duyệt";
-      case "locked":
-        return "Bị khóa";
-      default:
-        return "Không xác định";
-    }
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
       <h2 className="text-3xl font-extrabold text-gray-800 mb-6 text-center">
         Chi Tiết Người Dùng
       </h2>
 
+      {/* Thông tin người dùng */}
       <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
         <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">
           Thông Tin Cơ Bản
@@ -437,11 +468,11 @@ didOpen: async () => {
             <div className="flex items-center flex-grow">
               <span
                 className={`capitalize px-3 py-1 rounded-full text-sm font-medium
-                  ${user.status === 'active' ? 'bg-green-100 text-green-800' : ''}
-                  ${user.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
-                  ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                  ${user.status === 'locked' ? 'bg-purple-100 text-purple-800' : ''}
-                `}
+                                  ${user.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                                  ${user.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
+                                  ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                  ${user.status === 'locked' ? 'bg-purple-100 text-purple-800' : ''}
+                                `}
               >
                 {getVietnameseStatus(user.status)}
               </span>
@@ -488,7 +519,56 @@ didOpen: async () => {
         </div>
       </div>
 
-      <section className="bg-white rounded-lg shadow-lg p-6">
+      {/* Modal chọn lý do */}
+      {showReasonModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
+            </h3>
+            <label className="block mb-2">Chọn lý do mẫu:</label>
+            <select
+              value={reasonOption}
+              onChange={(e) => {
+                setReasonOption(e.target.value);
+                setCustomReason('');
+              }}
+              className="w-full border rounded px-3 py-2 mb-4"
+            >
+              {getReasonOptionsForStatus(selectedNewStatus)}
+            </select>
+            {reasonOption === 'Khác' && (
+              <>
+                <label className="block mb-2">Nhập lý do khác:</label>
+                <input
+                  type="text"
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Nhập lý do..."
+                />
+              </>
+            )}
+            <div className="flex justify-end mt-4 space-x-2">
+              <button
+                onClick={() => setShowReasonModal(false)}
+                className="px-4 py-2 bg-gray-300 rounded"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSubmitReason}
+                className="px-4 py-2 bg-blue-500 text-white rounded"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phần địa chỉ */}
+      <section className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <h3 className="text-2xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
           Địa chỉ
           <button
@@ -497,43 +577,30 @@ didOpen: async () => {
           >
             <i className="fas fa-plus mr-1 text-xs"></i> Thêm địa chỉ mới
           </button>
-
         </h3>
-
         {addresses.length === 0 ? (
           <p className="text-gray-600 italic">Chưa có địa chỉ nào.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-300 rounded-md divide-y divide-gray-200">
+            <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
               <thead className="bg-gray-100">
                 <tr>
-                  {[
-                    "ID",
-                    "Địa chỉ",
-                    "Thành phố",
-                    "Quận/Huyện",
-                    "Xã/Phường",
-                    "Mặc định",
-                    "Thao tác",
-                  ].map((header) => (
-                    <th
-                      key={header}
-                      className="px-4 py-3 text-left text-sm font-medium text-gray-700"
-                    >
+                  {["ID", "Địa chỉ", "Thành phố", "Quận/Huyện", "Xã/Phường", "Mặc định", "Thao tác"].map(header => (
+                    <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                       {header}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {addresses.map((addr) => (
-                  <tr key={addr.id} className="hover:bg-gray-50 transition duration-200 ease-in-out">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{addr.id}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">{addr.address_line}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">{addr.city}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">{addr.district}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">{addr.province}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-semibold">
+                {addresses.map(addr => (
+                  <tr key={addr.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.id}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.city}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.district}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.province}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">
                       {addr.is_default === 1 ? (
                         <span className="text-green-600">Có</span>
                       ) : (
@@ -542,18 +609,16 @@ didOpen: async () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap space-x-2">
                       <button
-                        className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-200 ease-in-out"
+                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                         onClick={() => showAddressModal(addr)}
-                        title="Cập nhật địa chỉ"
                       >
-                        <i className="fas fa-edit"></i> Cập nhật
+                        Cập nhật
                       </button>
                       <button
-                        className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200 ease-in-out"
+                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
                         onClick={() => handleDeleteAddress(addr.id)}
-                        title="Xóa địa chỉ"
                       >
-                        <i className="fas fa-trash"></i> Xóa
+                        Xóa
                       </button>
                     </td>
                   </tr>
@@ -563,6 +628,8 @@ didOpen: async () => {
           </div>
         )}
       </section>
+
+      {/* Nút quay lại */}
       <div className="mt-4 text-left">
         <button
           onClick={() => navigate("/admin/user/getAll")}

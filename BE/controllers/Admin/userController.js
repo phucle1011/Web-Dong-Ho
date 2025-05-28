@@ -32,14 +32,20 @@ const sendEmail = async (to, subject, htmlContent) => {
 
 class UserController {
 
-    // Lấy danh sách người dùng phân trang
     static async get(req, res) {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
             const offset = (page - 1) * limit;
+            const { status } = req.query;
+
+            const whereClause = {};
+            if (status && status !== 'all') {
+                whereClause.status = status;
+            }
 
             const { count, rows: users } = await UserModel.findAndCountAll({
+                where: whereClause,
                 order: [['created_at', 'DESC']],
                 attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
                 include: [],
@@ -47,12 +53,29 @@ class UserController {
                 offset: offset
             });
 
+            // Đếm số lượng theo từng trạng thái
+            const allStatuses = ['active', 'inactive', 'pending', 'locked'];
+            const counts = await Promise.all(
+                allStatuses.map(s => UserModel.count({ where: { status: s } }))
+            );
+
+            const totalAll = await UserModel.count();
+
+            const countsObject = {
+                all: totalAll,
+                active: counts[0],
+                inactive: counts[1],
+                pending: counts[2],
+                locked: counts[3]
+            };
+
             res.status(200).json({
                 status: 200,
                 message: "Lấy danh sách người dùng thành công",
                 data: users,
                 totalPages: Math.ceil(count / limit),
-                currentPage: page
+                currentPage: page,
+                counts: countsObject
             });
         } catch (error) {
             console.error("Lỗi khi lấy danh sách người dùng:", error);
