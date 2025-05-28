@@ -31,6 +31,15 @@ const Blog = connection.define('Blog', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
+    meta_description: {
+    type: DataTypes.STRING(255),
+    allowNull: true,  
+  },
+  focus_keyword: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  
 }, {
   tableName: 'blogs',
   timestamps: false,
