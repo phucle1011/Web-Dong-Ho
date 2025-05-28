@@ -51,18 +51,26 @@ class BlogController {
     }
   }
 
-  static async create(req, res) {
-    try {
-      const { user_id, title, image_url, content } = req.body;
-      console.log("Data nhận được:", { user_id, title, image_url, content });
+static async create(req, res) {
+  try {
+    const { user_id, title, image_url, content, meta_description, focus_keyword } = req.body;
+    console.log("Data nhận được:", { user_id, title, image_url, content, meta_description, focus_keyword });
 
-      const newBlog = await Blog.create({ user_id, title, image_url, content });
-      res.status(201).json(newBlog);
-    } catch (error) {
-      console.error("Lỗi khi tạo blog:", error);
-      res.status(500).json({ message: 'Lỗi khi tạo bài viết', error: error.message });
-    }
+    const newBlog = await Blog.create({
+      user_id,
+      title,
+      image_url,
+      content,
+      meta_description,
+      focus_keyword
+    });
+
+    res.status(201).json(newBlog);
+  } catch (error) {
+    console.error("Lỗi khi tạo blog:", error);
+    res.status(500).json({ message: 'Lỗi khi tạo bài viết', error: error.message });
   }
+}
 
   static async update(req, res) {
     try {
