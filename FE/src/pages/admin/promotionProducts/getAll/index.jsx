@@ -18,14 +18,11 @@ const PromotionProductList = () => {
   const pageSize = 10;
 
   useEffect(() => {
-    // Lấy dữ liệu promotion products
     axios
       .get(`${Constants.DOMAIN_API}/admin/promotion?page=1&limit=1000`)
       .then((response) => {
-        console.log("Raw data from API:", response.data); // <- check data ở đây
-        const data = Array.isArray(response.data?.data)
-          ? response.data.data
-          : [];
+        console.log("Raw data from API:", response.data); // Debug API response
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
         setPromotionProducts(data);
         setFilteredProducts(data);
       })
@@ -34,7 +31,6 @@ const PromotionProductList = () => {
       });
   }, []);
 
-  // Tìm kiếm theo tên khuyến mãi
   const handleSearch = () => {
     const filtered = promotionProducts.filter((item) =>
       item?.promotion?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -49,25 +45,31 @@ const PromotionProductList = () => {
     setCurrentPage(1);
   };
 
-  // Xóa promotion product
   const handleDelete = async (id) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa?")) {
       try {
-        await axios.delete(
-          `${Constants.DOMAIN_API}/admin/promotion-products/${id}`
-        );
+        await axios.delete(`${Constants.DOMAIN_API}/admin/promotion-products/${id}`);
         alert("Xóa thành công!");
         const updated = promotionProducts.filter((item) => item.id !== id);
         setPromotionProducts(updated);
         setFilteredProducts(updated);
       } catch (err) {
-        console.error(err);
+        console.error("Error deleting promotion:", err);
         alert("Xóa thất bại!");
       }
     }
   };
 
-  // Gom nhóm theo tên khuyến mãi
+  const getPromotionStatus = (startDate, endDate) => {
+    if (!startDate || !endDate) return "Không xác định";
+    const currentDate = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (currentDate < start) return "Chưa bắt đầu";
+    if (currentDate <= end) return "Đang hoạt động";
+    return "Đã kết thúc";
+  };
+
   const groupByPromotionName = (products) => {
     const grouped = {};
     products.forEach((item) => {
@@ -75,13 +77,15 @@ const PromotionProductList = () => {
       if (!grouped[promoName]) grouped[promoName] = [];
       grouped[promoName].push(item);
     });
-    return Object.entries(grouped); // Trả về [ [tên, mảng items], ... ]
+
+    return Object.entries(grouped).map(([name, items]) => {
+      const userCount = items[0].promotion?.user_count ?? new Set(items.map((i) => i.user_id).filter(Boolean)).size;
+      return [name, items, userCount];
+    });
   };
 
   const groupedProducts = groupByPromotionName(filteredProducts);
   const totalPages = Math.ceil(groupedProducts.length / pageSize);
-
-  // Phân trang nhóm
   const paginatedGroups = groupedProducts.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
@@ -93,7 +97,6 @@ const PromotionProductList = () => {
     }
   };
 
-  // Toggle mở rộng từng nhóm
   const toggleExpand = (promoName) => {
     setExpandedPromos((prev) => ({
       ...prev,
@@ -101,13 +104,10 @@ const PromotionProductList = () => {
     }));
   };
 
-  // Kiểm tra có nhóm nào đang mở hay không
   const anyExpanded = Object.values(expandedPromos).some(Boolean);
 
-  // Render phân trang
   const renderPagination = () => {
     if (totalPages <= 1) return null;
-
     const pages = [];
     for (let i = 1; i <= totalPages; i++) {
       pages.push(
@@ -141,9 +141,7 @@ const PromotionProductList = () => {
         >
           <FaChevronLeft />
         </button>
-
         {pages}
-
         <button
           disabled={currentPage === totalPages}
           onClick={() => handlePageChange(currentPage + 1)}
@@ -179,7 +177,7 @@ const PromotionProductList = () => {
       <div className="mb-4 flex gap-2">
         <input
           type="text"
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none"
           placeholder="Nhập tên khuyến mãi cần tìm..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -194,7 +192,6 @@ const PromotionProductList = () => {
         >
           <i className="fa fa-search"></i>
         </button>
-
         {searchTerm && (
           <button
             onClick={handleClearSearch}
@@ -211,54 +208,51 @@ const PromotionProductList = () => {
           <tr>
             <th className="border p-2">#</th>
             <th className="border p-2">Tên khuyến mãi</th>
-            {/* Hiển thị các cột chi tiết khi có nhóm mở */}
             {anyExpanded ? (
               <>
                 <th className="border p-2">SKU biến thể</th>
-                <th className="border p-2">Lượt</th>
+                <th className="border p-2">Số người dùng</th>
                 <th className="border p-2">Ngày bắt đầu</th>
                 <th className="border p-2">Ngày kết thúc</th>
-
-                {/* <th className="border p-2">Ngày tạo</th>
-                <th className="border p-2">Ngày cập nhật</th> */}
+                <th className="border p-2">Trạng thái</th>
                 <th className="border p-2">Hành động</th>
               </>
             ) : (
-              <th className="border p-2 text-center">Hành động</th>
+              <th className="border p-2 text-center" colSpan={6}>
+                Hành động
+              </th>
             )}
           </tr>
         </thead>
         <tbody>
           {paginatedGroups.length > 0 ? (
-            paginatedGroups.map(([promoName, items]) => (
+            paginatedGroups.map(([promoName, items, userCount]) => (
               <React.Fragment key={promoName}>
                 <tr className="bg-gray-100">
-  <td className="border p-2 font-bold text-center">
-    {items[0].promotion?.id || "-"}
-  </td>
-  <td className="border p-2 font-bold">{promoName}</td>
-  {anyExpanded ? (
-    <td colSpan={5} className="border p-2 text-right">
-      <button
-        onClick={() => toggleExpand(promoName)}
-        className="bg-blue-500 text-white py-1 px-3 rounded"
-      >
-        {expandedPromos[promoName] ? "Thu gọn" : "Xem thêm"}
-      </button>
-    </td>
-  ) : (
-    <td className="border p-2 text-center" colSpan={5}>
-      <button
-        onClick={() => toggleExpand(promoName)}
-        className="bg-blue-500 text-white py-1 px-3 rounded"
-      >
-        {expandedPromos[promoName] ? "Thu gọn" : "Xem thêm"}
-      </button>
-    </td>
-  )}
-</tr>
-
-
+                  <td className="border p-2 font-bold text-center">
+                    {items[0].promotion?.id || "-"}
+                  </td>
+                  <td className="border p-2 font-bold">{promoName}</td>
+                  {anyExpanded ? (
+                    <td colSpan={6} className="border p-2 text-right">
+                      <button
+                        onClick={() => toggleExpand(promoName)}
+                        className="bg-blue-500 text-white py-1 px-3 rounded"
+                      >
+                        {expandedPromos[promoName] ? "Thu gọn" : "Xem thêm"}
+                      </button>
+                    </td>
+                  ) : (
+                    <td className="border p-2 text-center" colSpan={6}>
+                      <button
+                        onClick={() => toggleExpand(promoName)}
+                        className="bg-blue-500 text-white py-1 px-3 rounded"
+                      >
+                        {expandedPromos[promoName] ? "Thu gọn" : "Xem thêm"}
+                      </button>
+                    </td>
+                  )}
+                </tr>
                 {expandedPromos[promoName] &&
                   items.map((item) => (
                     <tr key={item.id}>
@@ -267,41 +261,35 @@ const PromotionProductList = () => {
                       <td className="border p-2">
                         {item.variant?.sku || item.product_variant_id || "-"}
                       </td>
-                      <td className="border p-2 text-center">
-                        {typeof item.promotion.quantity === "number" &&
-                        item.promotion.quantity > 0
-                          ? item.promotion.quantity
-                          : "Hết lượt"}
-                      </td>
+                      <td className="border p-2 text-center">{userCount}</td>
                       <td className="border p-2">
                         {item.promotion?.start_date
-                          ? new Date(
-                              item.promotion.start_date
-                            ).toLocaleDateString("vi-VN")
+                          ? new Date(item.promotion.start_date).toLocaleDateString("vi-VN")
                           : "-"}
                       </td>
                       <td className="border p-2">
                         {item.promotion?.end_date
-                          ? new Date(
-                              item.promotion.end_date
-                            ).toLocaleDateString("vi-VN")
-                          : "-"}
-                      </td>
-
-                      {/* <td className="border p-2">
-                        {item.created_at
-                          ? new Date(item.created_at).toLocaleString("vi-VN", {
-                              hour12: false,
-                            })
+                          ? new Date(item.promotion.end_date).toLocaleDateString("vi-VN")
                           : "-"}
                       </td>
                       <td className="border p-2">
-                        {item.updated_at
-                          ? new Date(item.updated_at).toLocaleString("vi-VN", {
-                              hour12: false,
-                            })
-                          : "-"}
-                      </td> */}
+                        <span
+                          className={
+                            getPromotionStatus(item.promotion?.start_date, item.promotion?.end_date) ===
+                            "Đang hoạt động"
+                              ? "text-green-600"
+                              : getPromotionStatus(item.promotion?.start_date, item.promotion?.end_date) ===
+                                "Chưa bắt đầu"
+                              ? "text-blue-600"
+                              : getPromotionStatus(item.promotion?.start_date, item.promotion?.end_date) ===
+                                "Đã kết thúc"
+                              ? "text-red-600"
+                              : "text-gray-600"
+                          }
+                        >
+                          {getPromotionStatus(item.promotion?.start_date, item.promotion?.end_date)}
+                        </span>
+                      </td>
                       <td className="border p-2 text-center space-x-2">
                         <Link
                           to={`/admin/promotion-products/edit/${item.id}`}
@@ -324,14 +312,13 @@ const PromotionProductList = () => {
             ))
           ) : (
             <tr>
-              <td colSpan={anyExpanded ? 6 : 3} className="text-center py-4">
+              <td colSpan={8} className="text-center py-4">
                 Không có dữ liệu
               </td>
             </tr>
           )}
         </tbody>
       </table>
-
       {renderPagination()}
     </div>
   );

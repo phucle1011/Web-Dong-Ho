@@ -7,10 +7,8 @@ import axios from 'axios';
 const PromotionProductEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
   const [productVariants, setProductVariants] = useState([]);
   const [promotions, setPromotions] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
 
   const {
     register,
@@ -19,32 +17,25 @@ const PromotionProductEdit = () => {
     formState: { errors },
   } = useForm();
 
-  // Load data cho dropdown
+  // Load danh sách khuyến mãi & biến thể sản phẩm
   useEffect(() => {
     axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`)
       .then(res => setPromotions(res.data.data))
       .catch(err => console.error("Lỗi load promotions:", err));
-
-    axios.get(`${Constants.DOMAIN_API}/admin/products`)
-      .then(res => setProducts(res.data.data))
-      .catch(err => console.error("Lỗi load products:", err));
 
     axios.get(`${Constants.DOMAIN_API}/admin/product-variants`)
       .then(res => setProductVariants(res.data.data))
       .catch(err => console.error("Lỗi load product variants:", err));
   }, []);
 
-  // Load dữ liệu cần sửa
+  // Load thông tin chi tiết cần sửa
   useEffect(() => {
     axios.get(`${Constants.DOMAIN_API}/admin/promotion/${id}`)
       .then(res => {
         const data = res.data;
-        const variant = data.variant;
         setValue("promotion_id", data.promotion_id);
         setValue("product_variant_id", data.product_variant_id);
-
-        // Gán selectedProductId để lọc biến thể
-        setSelectedProductId(variant?.product_id || "");
+        setValue("status", data.status || "active");
       })
       .catch(err => {
         console.error("Lỗi khi tải chi tiết:", err);
@@ -52,6 +43,7 @@ const PromotionProductEdit = () => {
       });
   }, [id, setValue]);
 
+  // Xử lý submit
   const onSubmit = async (formData) => {
     try {
       await axios.put(`${Constants.DOMAIN_API}/admin/promotion/${id}`, formData);
@@ -67,15 +59,16 @@ const PromotionProductEdit = () => {
     <div className="card p-4">
       <h4>Cập nhật Promotion Product</h4>
       <form onSubmit={handleSubmit(onSubmit)}>
+
         {/* Chọn Promotion */}
         <div className="mb-3">
           <label className="form-label">Khuyến mãi</label>
           <select
             className="form-select"
-            {...register("promotion_id", { required: "Vui lòng chọn Promotion" })}
+            {...register("promotion_id", { required: "Vui lòng chọn khuyến mãi" })}
           >
             <option value="">-- Chọn khuyến mãi --</option>
-            {promotions.map((promo) => (
+            {promotions.map(promo => (
               <option key={promo.id} value={promo.id}>
                 {promo.name}
               </option>
@@ -84,43 +77,34 @@ const PromotionProductEdit = () => {
           {errors.promotion_id && <small className="text-danger">{errors.promotion_id.message}</small>}
         </div>
 
-        {/* Chọn Product */}
-        <div className="mb-3">
-          <label className="form-label">Sản phẩm</label>
-          <select
-            className="form-select"
-            value={selectedProductId}
-            onChange={(e) => setSelectedProductId(e.target.value)}
-          >
-            <option value="">-- Chọn sản phẩm --</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Chọn Product Variant */}
+        {/* Chọn Biến thể sản phẩm */}
         <div className="mb-3">
           <label className="form-label">Biến thể sản phẩm</label>
           <select
             className="form-select"
-            {...register("product_variant_id", {
-              required: "Vui lòng chọn product variant",
-            })}
-            disabled={!selectedProductId}
+            {...register("product_variant_id", { required: "Vui lòng chọn biến thể sản phẩm" })}
           >
             <option value="">-- Chọn biến thể --</option>
-            {productVariants
-              .filter(variant => String(variant.product_id) === String(selectedProductId))
-              .map(variant => (
-                <option key={variant.id} value={variant.id}>
-                  {variant.sku}
-                </option>
-              ))}
+            {productVariants.map(variant => (
+              <option key={variant.id} value={variant.id}>
+                {variant.sku}
+              </option>
+            ))}
           </select>
           {errors.product_variant_id && <small className="text-danger">{errors.product_variant_id.message}</small>}
+        </div>
+
+        {/* Chọn Trạng thái */}
+        <div className="mb-3">
+          <label className="form-label">Trạng thái</label>
+          <select
+            className="form-select"
+            {...register("status", { required: "Vui lòng chọn trạng thái" })}
+          >
+            <option value="active">Hiển thị</option>
+            <option value="inactive">Ẩn</option>
+          </select>
+          {errors.status && <small className="text-danger">{errors.status.message}</small>}
         </div>
 
         <button type="submit" className="btn btn-primary">Cập nhật</button>

@@ -1,9 +1,10 @@
 const { Op } = require("sequelize");
+const { Sequelize } = require('sequelize');
 const ProductVariantsModel = require("../../models/productVariantsModel");
 const ProductModel = require("../../models/productsModel");
 const PromotionProductModel = require("../../models/promotionProductsModel");
 const PromotionModel = require("../../models/promotionsModel");
-
+const PromotionUserModel = require("../../models/promotionUsersModel");
 // GET ALL PromotionProducts with pagination and search by product name
 exports.getAll = async (req, res) => {
   const { searchTerm = "", page = 1, limit = 10 } = req.query;
@@ -36,8 +37,20 @@ exports.getAll = async (req, res) => {
         {
           model: PromotionModel,
           as: "promotion",
-       attributes: ["name", "quantity","start_date", "end_date"], 
-
+          attributes: {
+            include: [
+              "name", "quantity", "start_date", "end_date",
+              // Đếm số user sử dụng mỗi promotion_id
+              [
+                Sequelize.literal(`(
+                  SELECT COUNT(*)
+                  FROM promotion_users AS pu
+                  WHERE pu.promotion_id = promotion.id
+                )`),
+                "user_count"
+              ]
+            ]
+          },
         },
       ],
       limit: pageSize,
