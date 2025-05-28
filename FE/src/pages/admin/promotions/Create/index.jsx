@@ -164,15 +164,6 @@ function PromotionCreate() {
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
         </div>
-        <div>
-          <label className="block mb-1 font-medium">Mã khuyến mãi</label>
-          <input
-            type="text"
-            value={promoCode}
-            readOnly
-            className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
-          />
-        </div>
 
         <div>
           <label className="block mb-1 font-medium">Mô tả</label>
