@@ -13,6 +13,7 @@ function PromotionCreate() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [showUserList, setShowUserList] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
 
   const {
     control,
@@ -50,7 +51,26 @@ function PromotionCreate() {
     fetchUsers();
   }, []);
 
-  // Chuẩn bị options cho react-select
+  const generateCodeFromName = (name) => {
+    if (!name) return "";
+    let code = name.toUpperCase();
+    code = code.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    code = code.replace(/[^A-Z0-9]+/g, "_");
+    code = code.substring(0, 20);
+    code = code.replace(/^_+|_+$/g, "");
+
+    return code;
+  };
+
+  // Theo dõi tên và cập nhật mã
+  const nameValue = watch("name");
+  useEffect(() => {
+    const code = generateCodeFromName(nameValue);
+    setPromoCode(code);
+    setValue("code", code);
+  }, [nameValue, setValue]);
+
+
   const userOptions = users.map(user => ({
     value: user.id,
     label: user.name || user.email || `User ${user.id}`,
@@ -143,6 +163,15 @@ function PromotionCreate() {
             className="w-full border rounded px-3 py-2"
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+        </div>
+        <div>
+          <label className="block mb-1 font-medium">Mã khuyến mãi</label>
+          <input
+            type="text"
+            value={promoCode}
+            readOnly
+            className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+          />
         </div>
 
         <div>

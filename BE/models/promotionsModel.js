@@ -47,6 +47,11 @@ const PromotionModel = connection.define('Promotion', {
     type: DataTypes.ENUM('active', 'inactive', 'upcoming', 'expired'),
     allowNull: false,
     defaultValue: 'active'
+  },
+  code: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    unique: true
   }
 }, {
   tableName: 'promotions',

@@ -182,6 +182,9 @@ class PromotionController {
       } else {
         promoStatus = now < start ? 'upcoming' : (now <= end ? 'active' : 'expired');
       }
+
+     const code = await PromotionController.generateUniquePromoCode();
+
       const promotion = await PromotionModel.create({
         name,
         description,
@@ -193,6 +196,7 @@ class PromotionController {
         status: promoStatus,
         applicable_to,
         min_price_threshold: Number(min_price_threshold),
+        code,
       });
 
       if (Array.isArray(user_ids) && user_ids.length > 0) {
@@ -205,6 +209,22 @@ class PromotionController {
       res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
   }
+
+  static async generateUniquePromoCode(length = 8) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code;
+
+  let isUnique = false;
+  while (!isUnique) {
+    code = Array.from({ length }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
+    const existing = await PromotionModel.findOne({ where: { code } });
+    if (!existing) {
+      isUnique = true;
+    }
+  }
+
+  return code;
+}
 
 
 

@@ -54,6 +54,7 @@ router.post("/promotions/create", promotionController.create);
 router.get("/promotions/:id", promotionController.getById);
 router.put('/promotions/:id', promotionController.update);
 router.delete("/promotion/:id", promotionController.delete);
+router.get('/promotions/generate-code', promotionController.generateUniquePromoCode);
 
 //------------------[ PROMOTION PRODUCTS ]------------------
 router.get('/promotion', promotionProductsController.getAll);
