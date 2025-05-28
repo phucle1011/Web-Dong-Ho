@@ -144,7 +144,7 @@ const AdminProductDetail = () => {
             {saving ? "Đang lưu..." : "Lưu"}
           </button>
           <Link
-            to="/admin/products"
+            to="/admin/products/getAll"
             className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
           >
             Quay lại
