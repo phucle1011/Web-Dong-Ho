@@ -153,19 +153,223 @@ function PromotionCreate() {
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
       <h2 className="text-xl font-semibold mb-4">Thêm khuyến mãi mới</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 md:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Tên khuyến mãi</label>
+            <input
+              type="text"
+              {...register("name", { required: "Tên khuyến mãi không được bỏ trống" })}
+              className="w-full border rounded px-3 py-2"
+            />
+            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+          </div>
 
-        <div>
-          <label className="block mb-1 font-medium">Tên khuyến mãi</label>
-          <input
-            type="text"
-            {...register("name", { required: "Tên khuyến mãi không được bỏ trống" })}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+          <div>
+            <label className="block mb-1 font-medium">Loại giảm giá</label>
+            <select {...register("discount_type")} className="w-full border rounded px-3 py-2">
+              <option value="percentage">Phần trăm (%)</option>
+              <option value="fixed">Cố định (VNĐ)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">
+              Giá trị giảm ({discountType === "percentage" ? "%" : "VNĐ"})
+            </label>
+            <input
+              type="number"
+              {...register("discount_value", {
+                required: "Vui lòng nhập giá trị giảm",
+                validate: (value) =>
+                  discountType === "percentage"
+                    ? (value >= 1 && value <= 80) || "Giá trị phần trăm phải từ 1 đến 80"
+                    : value >= 0 || "Giá trị cố định phải >= 0"
+              })}
+              className="w-full border rounded px-3 py-2"
+            />
+            {errors.discount_value && (
+              <p className="text-red-500 text-sm mt-1">{errors.discount_value.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Số lượt áp dụng</label>
+            <input
+              type="number"
+              {...register("quantity", {
+                required: "Vui lòng nhập số lượng",
+                min: { value: 0, message: "Số lượng phải >= 0" }
+              })}
+              className="w-full border rounded px-3 py-2"
+            />
+            {errors.quantity && (
+              <p className="text-red-500 text-sm mt-1">{errors.quantity.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Áp dụng cho đơn hàng từ (VNĐ)</label>
+            <Controller
+              control={control}
+              name="min_price_threshold"
+              rules={{
+                required: "Vui lòng nhập ngưỡng giá",
+                validate: (value) =>
+                  parseInt(value?.toString().replace(/\D/g, "") || "0") >= 0 ||
+                  "Giá trị phải >= 0",
+              }}
+              render={({ field }) => {
+                const formatVND = (value) => {
+                  const number = parseInt(value.replace(/\D/g, "") || "0");
+                  return number.toLocaleString("vi-VN");
+                };
+                const handleChange = (e) => {
+                  const formatted = formatVND(e.target.value);
+                  e.target.value = formatted;
+                  const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
+                  field.onChange(rawNumber);
+                };
+                const displayValue =
+                  typeof field.value === "number"
+                    ? field.value.toLocaleString("vi-VN")
+                    : "0";
+                return (
+                  <input
+                    {...field}
+                    value={displayValue}
+                    onChange={handleChange}
+                    placeholder="VD: 1.000.000"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                );
+              }}
+            />
+            {errors.min_price_threshold && (
+              <p className="text-red-500 text-sm mt-1">{errors.min_price_threshold.message}</p>
+            )}
+          </div>
         </div>
 
-        <div>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block mb-1 font-medium">Ngày bắt đầu</label>
+            <Controller
+              control={control}
+              name="start_date"
+              rules={{ required: "Vui lòng chọn ngày bắt đầu" }}
+              render={({ field }) => (
+                <DatePicker
+                  placeholderText="Chọn ngày bắt đầu"
+                  onChange={(date) => field.onChange(date)}
+                  selected={field.value}
+                  dateFormat="dd/MM/yyyy"
+                  className="w-full border rounded px-3 py-2"
+                  minDate={new Date()}
+                />
+              )}
+            />
+            {errors.start_date && (
+              <p className="text-red-500 text-sm mt-1">{errors.start_date.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Ngày kết thúc</label>
+            <Controller
+              control={control}
+              name="end_date"
+              rules={{
+                required: "Vui lòng chọn ngày kết thúc",
+                validate: (endDate) => {
+                  if (!startDate) return true;
+                  return endDate >= startDate || "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu";
+                }
+              }}
+              render={({ field }) => (
+                <DatePicker
+                  placeholderText="Chọn ngày kết thúc"
+                  onChange={(date) => field.onChange(date)}
+                  selected={field.value}
+                  dateFormat="dd/MM/yyyy"
+                  className="w-full border rounded px-3 py-2"
+                  minDate={startDate || new Date()}
+                />
+              )}
+            />
+            {errors.end_date && (
+              <p className="text-red-500 text-sm mt-1">{errors.end_date.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Áp dụng cho</label>
+            <select
+              {...register("applicable_to", { required: "Vui lòng chọn trường này" })}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="order">Đơn hàng</option>
+              <option value="product">Sản phẩm</option>
+            </select>
+            {errors.applicable_to && (
+              <p className="text-red-500 text-sm mt-1">{errors.applicable_to.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Trạng thái hiển thị</label>
+            <select
+              {...register("status_visibility")}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="visible">Hiện</option>
+              <option value="hidden">Ẩn</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium flex items-center justify-between">
+              <span>Áp dụng cho khách hàng đặc biệt</span>
+              <label className="inline-flex relative items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={showUserList}
+                  onChange={() => setShowUserList(prev => !prev)}
+                />
+                <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600
+                  peer-focus:ring-4 peer-focus:ring-green-300
+                  dark:peer-focus:ring-green-800
+                  peer-checked:after:translate-x-full
+                  peer-checked:after:border-white
+                  after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+                  after:bg-white after:border-gray-300 after:border after:rounded-full
+                  after:h-5 after:w-5 after:transition-all dark:border-gray-600">
+                </div>
+              </label>
+            </label>
+            <Controller
+              name="user_ids"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  options={userOptions}
+                  isMulti
+                  closeMenuOnSelect={false}
+                  onChange={(selected) => {
+                    field.onChange(selected ? selected.map(item => item.value) : []);
+                  }}
+                  value={userOptions.filter(option => field.value.includes(option.value))}
+                  placeholder="Chọn khách hàng..."
+                  isDisabled={!showUserList}
+                />
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="col-span-2" >
           <label className="block mb-1 font-medium">Mô tả</label>
           <textarea
             {...register("description")}
@@ -174,217 +378,16 @@ function PromotionCreate() {
           />
         </div>
 
-        <div>
-          <label className="block mb-1 font-medium">Loại giảm giá</label>
-          <select {...register("discount_type")} className="w-full border rounded px-3 py-2">
-            <option value="percentage">Phần trăm (%)</option>
-            <option value="fixed">Cố định (VNĐ)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">
-            Giá trị giảm ({discountType === "percentage" ? "%" : "VNĐ"})
-          </label>
-          <input
-            type="number"
-            {...register("discount_value", {
-              required: "Vui lòng nhập giá trị giảm",
-              validate: (value) =>
-                discountType === "percentage"
-                  ? (value >= 1 && value <= 80) || "Giá trị phần trăm phải từ 1 đến 80"
-                  : (value >= 0) || "Giá trị cố định phải >= 0"
-            })}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.discount_value && (
-            <p className="text-red-500 text-sm mt-1">{errors.discount_value.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Số lượt áp dụng</label>
-          <input
-            type="number"
-            {...register("quantity", {
-              required: "Vui lòng nhập số lượng",
-              min: { value: 0, message: "Số lượng phải >= 0" }
-            })}
-            className="w-full border rounded px-3 py-2"
-          />
-          {errors.quantity && (
-            <p className="text-red-500 text-sm mt-1">{errors.quantity.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Ngày bắt đầu</label>
-          <Controller
-            control={control}
-            name="start_date"
-            rules={{ required: "Vui lòng chọn ngày bắt đầu" }}
-            render={({ field }) => (
-              <DatePicker
-                placeholderText="Chọn ngày bắt đầu"
-                onChange={(date) => field.onChange(date)}
-                selected={field.value}
-                dateFormat="dd/MM/yyyy"
-                className="w-full border rounded px-3 py-2"
-                minDate={new Date()}
-              />
-            )}
-          />
-          {errors.start_date && (
-            <p className="text-red-500 text-sm mt-1">{errors.start_date.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Ngày kết thúc</label>
-          <Controller
-            control={control}
-            name="end_date"
-            rules={{
-              required: "Vui lòng chọn ngày kết thúc",
-              validate: (endDate) => {
-                if (!startDate) return true;
-                return endDate >= startDate || "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu";
-              }
-            }}
-            render={({ field }) => (
-              <DatePicker
-                placeholderText="Chọn ngày kết thúc"
-                onChange={(date) => field.onChange(date)}
-                selected={field.value}
-                dateFormat="dd/MM/yyyy"
-                className="w-full border rounded px-3 py-2"
-                minDate={startDate || new Date()}
-              />
-            )}
-          />
-          {errors.end_date && (
-            <p className="text-red-500 text-sm mt-1">{errors.end_date.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Áp dụng cho</label>
-          <select
-            {...register("applicable_to", { required: "Vui lòng chọn trường này" })}
-            className="w-full border rounded px-3 py-2"
+        <div className="mt-6">
+          <button
+            type="submit"
+            className="bg-[#073272] text-white px-6 py-2 rounded mt-2"
           >
-            <option value="order">Đơn hàng</option>
-            <option value="product">Sản phẩm</option>
-          </select>
-          {errors.applicable_to && (
-            <p className="text-red-500 text-sm mt-1">{errors.applicable_to.message}</p>
-          )}
+            Tạo khuyến mãi
+          </button>
         </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Áp dụng cho đơn hàng từ (VNĐ)</label>
-          <Controller
-            control={control}
-            name="min_price_threshold"
-            rules={{
-              required: "Vui lòng nhập ngưỡng giá",
-              validate: (value) =>
-                parseInt(value?.toString().replace(/\D/g, "") || "0") >= 0 ||
-                "Giá trị phải >= 0",
-            }}
-            render={({ field }) => {
-              const formatVND = (value) => {
-                const number = parseInt(value.replace(/\D/g, "") || "0");
-                return number.toLocaleString("vi-VN");
-              };
-              const handleChange = (e) => {
-                const formatted = formatVND(e.target.value);
-                e.target.value = formatted;
-                const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
-                field.onChange(rawNumber);
-              };
-              const displayValue =
-                typeof field.value === "number"
-                  ? field.value.toLocaleString("vi-VN")
-                  : "0";
-              return (
-                <input
-                  {...field}
-                  value={displayValue}
-                  onChange={handleChange}
-                  placeholder="VD: 1.000.000"
-                  className="w-full border rounded px-3 py-2"
-                />
-              );
-            }}
-          />
-          {errors.min_price_threshold && (
-            <p className="text-red-500 text-sm mt-1">{errors.min_price_threshold.message}</p>
-          )}
-          {errors.min_price_threshold && (
-            <p className="text-red-500 text-sm mt-1">{errors.min_price_threshold.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Trạng thái hiển thị</label>
-          <select
-            {...register("status_visibility")}
-            className="w-full border rounded px-3 py-2"
-          >
-            <option value="visible">Hiện</option>
-            <option value="hidden">Ẩn</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium flex items-center justify-between">
-            <span>Áp dụng cho khách hàng đặc biệt</span>
-            <label className="inline-flex relative items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={showUserList}
-                onChange={() => setShowUserList(prev => !prev)}
-              />
-              <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600
-                      peer-focus:ring-4 peer-focus:ring-green-300
-                      dark:peer-focus:ring-green-800
-                      peer-checked:after:translate-x-full
-                      peer-checked:after:border-white
-                      after:content-[''] after:absolute after:top-0.5 after:left-[2px]
-                      after:bg-white after:border-gray-300 after:border after:rounded-full
-                      after:h-5 after:w-5 after:transition-all dark:border-gray-600">
-              </div>
-            </label>
-          </label>
-          <Controller
-            name="user_ids"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                options={userOptions}
-                isMulti
-                closeMenuOnSelect={false}
-                onChange={(selected) => {
-                  field.onChange(selected ? selected.map(item => item.value) : []);
-                }}
-                value={userOptions.filter(option => field.value.includes(option.value))}
-                placeholder="Chọn khách hàng..."
-                isDisabled={!showUserList}
-              />
-            )}
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="bg-[#073272] text-white px-4 py-2 rounded"
-        >
-          Tạo khuyến mãi
-        </button>
       </form>
+
     </div>
   );
 }

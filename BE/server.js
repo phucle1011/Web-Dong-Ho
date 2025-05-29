@@ -11,6 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 app.use(cors());
 
 require('./models/connectsModel');
+require('./controllers/Admin/cronJobController');
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

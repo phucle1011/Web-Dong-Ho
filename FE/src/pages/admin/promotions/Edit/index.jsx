@@ -90,7 +90,7 @@ function PromotionEdit() {
     return (
         <div className="container mx-auto p-4 bg-white shadow rounded">
             <h2 className="text-xl font-semibold mb-4">Cập nhật khuyến mãi</h2>
-            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block mb-1 font-medium">Tên khuyến mãi</label>
                     <input
@@ -103,16 +103,6 @@ function PromotionEdit() {
                 </div>
 
                 <div>
-                    <label className="block mb-1 font-medium">Mô tả</label>
-                    <textarea
-                        {...register("description")}
-                        className="w-full border rounded px-3 py-2"
-                        rows={3}
-                        disabled={isExpired || isActive}
-                    />
-                </div>
-
-                <div>
                     <label className="block mb-1 font-medium">Loại giảm giá</label>
                     <select
                         {...register("discount_type")}
@@ -122,6 +112,16 @@ function PromotionEdit() {
                         <option value="percentage">Phần trăm (%)</option>
                         <option value="fixed">Cố định (VNĐ)</option>
                     </select>
+                </div>
+
+                <div>
+                    <label className="block mb-1 font-medium">Mô tả</label>
+                    <textarea
+                        {...register("description")}
+                        className="w-full border rounded px-3 py-2"
+                        rows={3}
+                        disabled={isExpired || isActive}
+                    />
                 </div>
 
                 <div>
@@ -146,22 +146,6 @@ function PromotionEdit() {
                 </div>
 
                 <div>
-                    <label className="block mb-1 font-medium">Số lượt áp dụng</label>
-                    <input
-                        type="number"
-                        {...register("quantity", {
-                            required: "Vui lòng nhập số lượng",
-                            min: { value: 0, message: "Số lượng phải >= 0" }
-                        })}
-                        className="w-full border rounded px-3 py-2"
-                        disabled={isExpired || isActive}
-                    />
-                    {errors.quantity && (
-                        <p className="text-red-500 text-sm mt-1">{errors.quantity.message}</p>
-                    )}
-                </div>
-
-                <div>
                     <label className="block mb-1 font-medium">Ngày bắt đầu</label>
                     <Controller
                         control={control}
@@ -181,6 +165,22 @@ function PromotionEdit() {
                     />
                     {errors.start_date && (
                         <p className="text-red-500 text-sm mt-1">{errors.start_date.message}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="block mb-1 font-medium">Số lượt áp dụng</label>
+                    <input
+                        type="number"
+                        {...register("quantity", {
+                            required: "Vui lòng nhập số lượng",
+                            min: { value: 0, message: "Số lượng phải >= 0" }
+                        })}
+                        className="w-full border rounded px-3 py-2"
+                        disabled={isExpired || isActive}
+                    />
+                    {errors.quantity && (
+                        <p className="text-red-500 text-sm mt-1">{errors.quantity.message}</p>
                     )}
                 </div>
 
@@ -268,14 +268,14 @@ function PromotionEdit() {
                     <select
                         {...register("status_visibility")}
                         className="w-full border rounded px-3 py-2"
-                        disabled={isExpired ? true : false}
+                        disabled={isExpired}
                     >
                         <option value="visible">Hiển thị</option>
                         <option value="hidden">Ẩn</option>
                     </select>
                 </div>
 
-                <div className="mt-4">
+                <div className="col-span-2 mt-4">
                     <button
                         type="submit"
                         className={`px-4 py-2 rounded text-white ${isExpired ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
@@ -286,6 +286,7 @@ function PromotionEdit() {
                     </button>
                 </div>
             </form>
+
             <div className="mt-6">
                 <button
                     type="button"

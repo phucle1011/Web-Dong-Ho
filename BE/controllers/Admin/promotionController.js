@@ -89,8 +89,8 @@ class PromotionController {
         } else {
           newStatus = 'expired';
         }
-        console.log(`Promo ${promo.id} - oldStatus: ${promo.status}, newStatus: ${newStatus}`);
-        console.log('statusCounts after loop:', statusCounts);
+        // console.log(`Promo ${promo.id} - oldStatus: ${promo.status}, newStatus: ${newStatus}`);
+        // console.log('statusCounts after loop:', statusCounts);
 
         const updateData = {};
 
