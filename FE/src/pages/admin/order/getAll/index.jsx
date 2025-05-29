@@ -2,7 +2,7 @@ import axios from "axios";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import React, { useEffect, useState } from "react";
-import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight,FaEye, FaMapMarkerAlt, FaTrashAlt } from 'react-icons/fa';
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import FormDelete from "../../../../components/formDelete";
@@ -99,6 +99,25 @@ function OrderGetAll() {
       }
     } finally {
       setSelectedOrder(null);
+    }
+  };
+
+   const handleSearchByStatus = async () => {
+    try {
+      const statusParam = statusFilter || "all";
+
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/search`, { params: { status: statusParam } });
+
+      if (res.data.data.length === 0) {
+        toast.warning("Không tìm thấy đơn hàng nào.");
+      } else {
+        toast.success("Tìm kiếm đơn hàng thành công");
+      }
+      setOrders(res.data.data);
+    } catch (error) {
+      console.error("Lỗi khi tìm kiếm đơn hàng:", error);
+      toast.error("Không tìm thấy đơn hàng");
+      setOrders([]);
     }
   };
 
@@ -357,7 +376,7 @@ function OrderGetAll() {
             </button>
           </div>
         </div>
-        <div className="flex flex-nowrap items-center gap-6 border-b border-gray-200 px-6 py-4 overflow-x-auto">
+        <div className="flex flex-nowrap items-center gap-6 border-b border-gray-200 px-6 py-4 overflow-x-auto mb-4">
           {[
             { key: "", label: "Tất cả", color: "bg-gray-800", textColor: "text-white", count: statusCounts.all },
             { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800", count: statusCounts.pending },
@@ -397,24 +416,12 @@ function OrderGetAll() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
             </svg>
           </button>
-
-          {searchTerm && (
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                fetchOrders(currentPage);
-              }}
-              className="bg-blue-900 hover:bg-blue-800 text-white py-2 px-3 rounded"
-            >
-              Xem tất cả đơn hàng
-            </button>
-          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
             <thead className="bg-gray-100 text-gray-600">
               <tr>
-                <th className="w-12 px-6 py-3 border border-gray-300">#</th>
+                <th className="w-12 px-6 py-3 border border-gray-300">STT</th>
                 <th className="px-6 py-3 border border-gray-300 font-semibold cursor-pointer">Mã đơn</th>
                 <th className="px-6 py-3 border border-gray-300 font-semibold">Tên khách hàng</th>
                 <th className="px-6 py-3 border border-gray-300 font-semibold">Ngày tạo</th>
@@ -425,7 +432,7 @@ function OrderGetAll() {
               </tr>
             </thead>
             <tbody>
-              {orders.length > 0 ? orders.map((order) => (
+              {orders.length > 0 ? orders.map((order, index) => (
                 <React.Fragment key={order.id}>
                   <tr>
                     <td className="p-2 border border-gray-300">{order.id}</td>
@@ -446,15 +453,15 @@ function OrderGetAll() {
                     </td>
                     <td className="p-2 border border-gray-300">{order.payment_method}</td>
                     <td className="p-2 border border-gray-300 flex gap-2">
-                      <Link to={`/admin/orders/detail/${order.id}`} className="bg-blue-500 text-white py-1 px-3 rounded">Xem</Link>
+                      <Link to={`/admin/orders/detail/${order.id}`} className="bg-blue-500 text-white py-1 px-3 rounded"><FaEye /></Link>
                       {["pending"].includes(order.status) && (
-                        <button onClick={() => setSelectedOrder(order)} className="bg-red-500 text-white py-1 px-3 rounded">Hủy</button>
+                        <button onClick={() => setSelectedOrder(order)} className="bg-red-500 text-white py-1 px-3 rounded"><FaTrashAlt /></button>
                       )}
                       <button
                         onClick={() => handleTrackOrder(order.order_code)}
                         className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded whitespace-nowrap"
                       >
-                        Vị trí
+                        <FaMapMarkerAlt />
                       </button>
                     </td>
                   </tr>
@@ -497,18 +504,7 @@ function OrderGetAll() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      {selectedOrder && (
-        <FormDelete
-          isOpen={true}
-          onClose={() => setSelectedOrder(null)}
-          onConfirm={deleteOrder}
-          message={`Bạn có chắc chắn muốn hủy đơn hàng có mã đơn "${selectedOrder.order_code}" không?`}
-        />
-      )}
-
-      <div className="flex justify-center mt-4 items-center">
+        <div className="flex justify-center mt-4 items-center">
         <div className="flex items-center space-x-1">
           <button disabled={currentPage === 1} onClick={() => handlePageChange(1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleLeft /></button>
           <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronLeft /></button>
@@ -543,6 +539,16 @@ function OrderGetAll() {
           <button disabled={currentPage === totalPages} onClick={() => handlePageChange(totalPages)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleRight /></button>
         </div>
       </div>
+      </div>
+
+      {selectedOrder && (
+        <FormDelete
+          isOpen={true}
+          onClose={() => setSelectedOrder(null)}
+          onConfirm={deleteOrder}
+          message={`Bạn có chắc chắn muốn hủy đơn hàng có mã đơn "${selectedOrder.order_code}" không?`}
+        />
+      )}
     </div>
   );
 }

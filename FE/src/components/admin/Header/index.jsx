@@ -42,48 +42,16 @@ function Header() {
         </ul>
         <div className="navbar-collapse justify-content-end px-0" id="navbarNav">
           <ul className="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-            {user && (
-              <li className="nav-item dropdown relative">
-                <div
-                  className="nav-link flex items-center gap-2 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded transition-all"
-                  id="drop2"
-                  onClick={toggleDropdown}
-                >
-                  <img
-                    src="/assets/images/profile/user-1.jpg"
-                    alt="Ảnh đại diện"
-                    width="35"
-                    height="35"
-                    className="rounded-full border"
-                  />
-                  <span className="font-semibold text-sm text-gray-800">{user.fullName}</span>
-                  <i className="fa fa-chevron-down ml-1 text-xs text-gray-500"></i>
-                </div>
-
-                <div
-                  className={`dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 transition-all duration-300 ${isDropdownOpen ? "block" : "hidden"
-                    }`}
-                  aria-labelledby="drop2"
-                >
-                  <div className="py-2 px-4 border-b">
-                    <p className="text-sm text-gray-600">Xin chào,</p>
-                    <p className="text-base font-semibold text-gray-800">{user.fullName}</p>
-                  </div>
-                  <div className="p-2">
-                    <button
-                      onClick={logout}
-                      className="block w-full text-left text-sm text-red-600 hover:bg-red-50 hover:text-red-800 px-4 py-2 rounded transition"
-                    >
-                      <i className="fa fa-sign-out-alt mr-2"></i>
-                      Đăng xuất
-                    </button>
-                  </div>
-                </div>
-              </li>
-            )}
-
+            <Link to="/admin/login" className="text-nowrap logo-img">
+            <img
+              src="/assets/images/profile/login.png"
+              alt="Ảnh đại diện"
+              width="35"
+              height="35"
+              className="rounded-full border"
+            />
+            </Link>
           </ul>
-
         </div>
       </nav>
     </header>

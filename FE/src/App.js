@@ -49,7 +49,7 @@ import BlogAdd from "./pages/admin/blog/add";
 import EditBlog from "./pages/admin/blog/edit";
 import WishlistDetail from "./pages/admin/wishlist/detail";
 import PromotionList from "./pages/admin/promotionUsers/getAll";
-
+import LoginAdmin from "./pages/admin/login";
 
 const AppRoutes = () => {
   return (
@@ -88,7 +88,9 @@ const AppRoutes = () => {
       <Route path="register" element={<Register />} />
       {/* <Route path="resetForm" element={<ResetForm />} />
       <Route path="resetPassword/:token" element={<ResetPassword />} /> */}
+
       {/*--------------------ADMIN-------------------- */}
+      <Route path="/admin/login" element={<LoginAdmin />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="orders">
@@ -143,7 +145,7 @@ const AppRoutes = () => {
 
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />
-          <Route path="detail/:id" element={<WishlistDetail />}/>
+          <Route path="detail/:id" element={<WishlistDetail />} />
         </Route>
 
         <Route path="brand">

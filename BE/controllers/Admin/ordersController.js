@@ -211,69 +211,63 @@ class OrderController {
     }
 
     static async searchOrders(req, res) {
-        try {
-            const { searchTerm } = req.query;
+  try {
+    const { status } = req.query;
 
-            if (!searchTerm || searchTerm.trim() === '') {
-                return res.status(400).json({ message: "Vui lòng nhập mã đơn hàng để tìm kiếm." });
-            }
+    let whereCondition = {};
 
-            const orders = await OrderModel.findAll({
-                where: {
-                    [Op.or]: [
-                        {
-                            '$user.name$': {
-                                [Op.like]: `%${searchTerm}%`,
-                            },
-                        },
-                    ],
-                },
-                order: [['created_at', 'DESC']],
-                include: [
-                    {
-                        model: OrderDetailsModel,
-                        as: 'orderDetails',
-                        attributes: ['quantity', 'price'],
-                        include: [
-                            {
-                                model: ProductVariantsModel,
-                                as: 'variant',
-                                attributes: ['price'],
-                                include: [
-                                    {
-                                        model: ProductModel,
-                                        as: 'product',
-                                        attributes: ['name'],
-                                    },
-                                ],
-                            },
-                        ],
-                    },
-                    {
-                        model: UserModel,
-                        as: 'user',
-                        attributes: ['id', 'name', 'email', 'phone'],
-                    },
-                ],
-            });
-
-            if (orders.length === 0) {
-                return res.status(404).json({
-                    status: 200,
-                    message: "Không tìm thấy đơn hàng nào.",
-                    data: order
-                });
-            }
-
-            res.status(200).json({
-                status: 200,
-                message: 'Tìm kiếm thành công',
-                data: orders,
-            });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
+    if (status && status !== "all") {
+      whereCondition.status = status;
     }
+
+    const orders = await OrderModel.findAll({
+      where: whereCondition,
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: OrderDetailsModel,
+          as: 'orderDetails',
+          attributes: ['quantity', 'price'],
+          include: [
+            {
+              model: ProductVariantsModel,
+              as: 'variant',
+              attributes: ['price'],
+              include: [
+                {
+                  model: ProductModel,
+                  as: 'product',
+                  attributes: ['name'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: UserModel,
+          as: 'user',
+          attributes: ['id', 'name', 'email', 'phone'],
+        },
+      ],
+    });
+
+    if (orders.length === 0) {
+      return res.status(404).json({
+        status: 200,
+        message: "Không tìm thấy đơn hàng nào.",
+        data: [],
+      });
+    }
+
+    res.status(200).json({
+      status: 200,
+      message: 'Tìm kiếm thành công',
+      data: orders,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
     static async trackOrder(req, res) {
         try {
