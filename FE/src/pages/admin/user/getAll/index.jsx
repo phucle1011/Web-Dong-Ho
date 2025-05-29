@@ -19,7 +19,7 @@ function UserList() {
     const [reasonOption, setReasonOption] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, pending: 0, locked: 0 });
+    const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, locked: 0 });
     const limit = 10;
 
     // Fetch danh sách người dùng
@@ -124,7 +124,7 @@ function UserList() {
         switch (englishStatus) {
             case "active": return "Hoạt động";
             case "inactive": return "Ngưng hoạt động";
-            case "pending": return "Chờ duyệt";
+            // case "pending": return "Chờ duyệt";
             case "locked": return "Bị khóa";
             default: return englishStatus;
         }
@@ -162,23 +162,23 @@ function UserList() {
                         <option value="Khác">Khác</option>
                     </>
                 );
-            case "pending":
-                return (
-                    <>
-                        <option value="">-- Chọn lý do --</option>
-                        <option value="Chờ xác minh email">Chờ xác minh email</option>
-                        <option value="Chờ duyệt tài liệu">Chờ duyệt tài liệu</option>
-                        <option value="Khác">Khác</option>
-                    </>
-                );
-            default:
-                return (
-                    <>
-                        <option value="">-- Chọn lý do --</option>
-                        <option value="Lý do chung">Lý do chung</option>
-                        <option value="Khác">Khác</option>
-                    </>
-                );
+            // case "pending":
+            //     return (
+            //         <>
+            //             <option value="">-- Chọn lý do --</option>
+            //             <option value="Chờ xác minh email">Chờ xác minh email</option>
+            //             <option value="Chờ duyệt tài liệu">Chờ duyệt tài liệu</option>
+            //             <option value="Khác">Khác</option>
+            //         </>
+            //     );
+            // default:
+            //     return (
+            //         <>
+            //             <option value="">-- Chọn lý do --</option>
+            //             <option value="Lý do chung">Lý do chung</option>
+            //             <option value="Khác">Khác</option>
+            //         </>
+            //     );
         }
     };
 
@@ -216,7 +216,7 @@ function UserList() {
                         { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
                         { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
                         { key: "inactive", label: "Ngưng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
-                        { key: "pending", label: "Chờ duyệt", color: "bg-yellow-300", textColor: "text-yellow-800", countKey: "pending" },
+                        // { key: "pending", label: "Chờ duyệt", color: "bg-yellow-300", textColor: "text-yellow-800", countKey: "pending" },
                         { key: "locked", label: "Bị khóa", color: "bg-purple-300", textColor: "text-purple-800", countKey: "locked" },
                     ].map(({ key, label, color, textColor, countKey }) => (
                         <button
@@ -293,14 +293,14 @@ function UserList() {
                                             >
                                                 <option value="active">Hoạt động</option>
                                                 <option value="inactive">Ngưng hoạt động</option>
-                                                <option value="pending">Chờ duyệt</option>
+                                                {/* <option value="pending">Chờ duyệt</option> */}
                                                 <option value="locked">Bị khóa</option>
                                             </select>
                                         </td>
                                         <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
                                         <td className="p-2 border text-center">
                                             <Link to={`/admin/user/detail/${user.id}`} className="bg-blue-500 text-white py-1 px-3 rounded">
-                                                Xem
+                                                <i className="fa fa-eye"></i>
                                             </Link>
                                         </td>
                                     </tr>

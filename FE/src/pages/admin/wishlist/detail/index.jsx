@@ -4,7 +4,7 @@ import Constants from "../../../../Constants";
 import { toast } from "react-toastify";
 import axios from "axios";
 import Swal from "sweetalert2";
-import { FaTrashAlt } from "react-icons/fa";
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
 
 function WishlistDetail() {
     const { id: userId } = useParams();
@@ -69,31 +69,6 @@ function WishlistDetail() {
         }
     };
 
-    const handleRemoveFromWishlist = async (productVariantId) => {
-        Swal.fire({
-            title: "Xác nhận xóa",
-            text: "Bạn có chắc chắn muốn xóa sản phẩm này khỏi danh sách yêu thích?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#d33",
-            cancelButtonColor: "#3085d6",
-            confirmButtonText: "Xóa",
-            cancelButtonText: "Hủy",
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await axios.delete(
-                        `${Constants.DOMAIN_API}/admin/users/${userId}/wishlist/${productVariantId}`
-                    );
-                    toast.success("Đã xóa sản phẩm khỏi danh sách yêu thích");
-                    fetchWishlist(currentPage);
-                } catch (error) {
-                    console.error("Lỗi khi xóa sản phẩm khỏi wishlist:", error);
-                    toast.error("Không thể xóa sản phẩm khỏi danh sách yêu thích");
-                }
-            }
-        });
-    };
 
     const getVietnameseStatus = (status) => {
         switch (status) {
@@ -136,82 +111,85 @@ function WishlistDetail() {
     }, [currentPage]);
 
     return (
-        <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
-            <h2 className="text-3xl font-extrabold text-gray-800 mb-6 text-center">
-                Danh Sách Yêu Thích Của Người Dùng
-            </h2>
+        <div className="max-w-6xl mx-auto p-6 bg-white-50 min-h-screen">
 
             {/* Thông tin người dùng */}
             {user && (
-                <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
-                    <h3 className="text-2xl font-bold text-gray-700 mb-4 border-b pb-3">
+                <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200 mb-6">
+                    <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">
                         Thông Tin Người Dùng
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-                        {/* Tên */}
-                        <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Tên:</strong>
-                            <input
-                                type="text"
-                                value={user.name}
-                                readOnly
-                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                            />
-                        </div>
 
-                        {/* Email */}
-                        <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Email:</strong>
-                            <input
-                                type="text"
-                                value={user.email}
-                                readOnly
-                                className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer hover:underline focus:outline-none"
-                            />
-                        </div>
-
-                        {/* Số điện thoại */}
-                        <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">SĐT:</strong>
-                            <input
-                                type="text"
-                                value={user.phone || "Chưa cập nhật"}
-                                readOnly
-                                className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                            />
-                        </div>
-
-                        {/* Trạng thái */}
-                        <div className="flex items-center">
-                            <strong className="text-gray-600 w-24">Trạng thái:</strong>
-                            <span
-                                className={`inline-block px-3 py-1 rounded-full text-white text-sm ${user.status === 'active'
-                                    ? 'bg-green-500'
-                                    : user.status === 'inactive'
-                                        ? 'bg-red-500'
-                                        : user.status === 'pending'
-                                            ? 'bg-yellow-500'
-                                            : 'bg-gray-500'
-                                    }`}
-                            >
-                                {getVietnameseStatus(user.status)}
-                            </span>
-                        </div>
-
-                        {user.avatar && (
-                            <div className="col-span-1 md:col-span-2 flex items-start mt-4">
-                                <strong className="text-gray-600 mr-4">Ảnh đại diện:</strong>
+                    {/* Layout: Avatar bên trái - Thông tin bên phải */}
+                    <div className="flex flex-col md:flex-row gap-6">
+                        {/* Avatar bên trái */}
+                        <div className="md:w-1/3 flex justify-center md:justify-center">
+                            {user.avatar && (
                                 <img
                                     src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`}
                                     alt={user.name}
-                                    className="w-16 h-16 object-cover rounded-full border-2 border-gray-300 shadow-md"
+                                    className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
                                 />
+                            )}
+                        </div>
+
+                        {/* Thông tin bên phải */}
+                        <div className="md:w-2/3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
+                                {/* Họ tên */}
+                                <div className="flex items-center">
+                                    <strong className="text-gray-600 w-24">Họ tên:</strong>
+                                    <input
+                                        type="text"
+                                        value={user.name || ''}
+                                        readOnly
+                                        className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                    />
+                                </div>
+
+                                {/* Email */}
+                                <div className="flex items-center">
+                                    <strong className="text-gray-600 w-24">Email:</strong>
+                                    <input
+                                        type="text"
+                                        value={user.email || ''}
+                                        readOnly
+                                        className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer hover:underline focus:outline-none"
+                                    />
+                                </div>
+
+                                {/* Số điện thoại */}
+                                <div className="flex items-center">
+                                    <strong className="text-gray-600 w-24">SĐT:</strong>
+                                    <input
+                                        type="text"
+                                        value={user.phone || 'Chưa cập nhật'}
+                                        readOnly
+                                        className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                                    />
+                                </div>
+
+                                {/* Trạng thái */}
+                                <div className="flex items-center">
+                                    <strong className="text-gray-600 w-24">Trạng thái:</strong>
+                                    <span
+                                        className={`capitalize px-3 py-1 rounded-full text-sm font-medium ${user.status === 'active'
+                                            ? 'bg-green-100 text-green-800'
+                                            : user.status === 'inactive'
+                                                ? 'bg-red-100 text-red-800'
+                                                : user.status === 'pending'
+                                                    ? 'bg-yellow-100 text-yellow-800'
+                                                    : 'bg-gray-100 text-gray-800'
+                                            }`}
+                                    >
+                                        {getVietnameseStatus(user.status)}
+                                    </span>
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             )}
-
             <div className="mb-4 relative flex">
                 <input
                     type="text"
@@ -225,7 +203,7 @@ function WishlistDetail() {
                     className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
                     onClick={handleSearchSubmit}
                 >
-                    Tìm
+                    <FaSearch className="w-5 h-5" />
                 </button>
             </div>
 
@@ -233,36 +211,42 @@ function WishlistDetail() {
                 <div className="text-center py-4">Đang tải dữ liệu...</div>
             ) : (
                 <>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full border border-gray-300 rounded-md divide-y divide-gray-200">
+                    {/* Bảng danh sách yêu thích */}
+                    <div className="overflow-x-auto mt-6">
+                        <table className="min-w-full shadow-lg rounded-xl p-6 mb-8 border border-gray-200 mb-6">
                             <thead className="bg-gray-100">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">STT</th>
                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Ảnh</th>
                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Tên sản phẩm</th>
                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Giá</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">SKU</th>
                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Tồn kho</th>
                                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Thông số</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {wishlistItems.length === 0 ? (
+                                {loading ? (
                                     <tr>
-                                        <td colSpan="8" className="p-4 text-center text-gray-500 italic">
+                                        <td colSpan="6" className="p-4 text-center text-gray-500">
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : wishlistItems.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="p-4 text-center text-gray-500 italic">
                                             Người dùng này chưa có sản phẩm yêu thích nào.
                                         </td>
                                     </tr>
                                 ) : (
                                     wishlistItems.map((item, index) => {
+                                          console.log("Item:", item); // <-- Xem variant.attributeValues và variant.stock có không?
                                         const variant = item.variant;
                                         const product = variant.product;
 
                                         // Nhóm thuộc tính theo tên
                                         const attributes = {};
                                         if (variant.attributeValues && variant.attributeValues.length > 0) {
-                                            variant.attributeValues.forEach(attrVal => {
+                                            variant.attributeValues.forEach((attrVal) => {
                                                 if (attrVal.attribute?.name) {
                                                     attributes[attrVal.attribute.name] = attrVal.value;
                                                 }
@@ -281,26 +265,21 @@ function WishlistDetail() {
                                                             alt="Biến thể"
                                                             className="w-12 h-12 object-cover rounded"
                                                         />
+                                                    ) : product.thumbnail ? (
+                                                        <img
+                                                            src={`${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
+                                                            alt="Thumbnail"
+                                                            className="w-12 h-12 object-cover rounded"
+                                                        />
                                                     ) : (
-                                                        product.thumbnail ? (
-                                                            <img
-                                                                src={`${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
-                                                                alt="Thumbnail"
-                                                                className="w-12 h-12 object-cover rounded"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-gray-400">Không có ảnh</span>
-                                                        )
+                                                        <span className="text-gray-400">Không có ảnh</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
-                                                    <span className="font-medium">{product?.name}</span>
-                                                </td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                                    {formatCurrency(variant.price)}
+                                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800">
+                                                    {product?.name}
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
-                                                    {variant.sku || "N/A"}
+                                                    {formatCurrency(variant.price)}
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                                                     {variant.stock || "N/A"}
@@ -318,78 +297,101 @@ function WishlistDetail() {
                                                         <span className="text-gray-400">Không có thông số</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-center">
-                                                    <button
-                                                        onClick={() => handleRemoveFromWishlist(variant.id)}
-                                                        className="text-red-600 hover:text-red-800"
-                                                        title="Xóa khỏi danh sách yêu thích"
-                                                    >
-                                                        <FaTrashAlt />
-                                                    </button>
-                                                </td>
                                             </tr>
                                         );
                                     })
                                 )}
                             </tbody>
+
+                            {/* Phân trang nằm trong bảng */}
+                            <tfoot>
+                                <tr>
+                                    <td colSpan="6" className="p-0 bg-white ">
+                                        <div className="flex justify-center mt-4 mb-2 items-center">
+                                            <div className="flex items-center space-x-1">
+                                                <button
+                                                    disabled={currentPage === 1}
+                                                    onClick={() => handlePageChange(1)}
+                                                    className="px-2 py-1 border rounded disabled:opacity-50"
+                                                    title="Đầu trang"
+                                                >
+                                                    <FaAngleDoubleLeft />
+                                                </button>
+                                                <button
+                                                    disabled={currentPage === 1}
+                                                    onClick={() => handlePageChange(currentPage - 1)}
+                                                    className="px-2 py-1 border rounded disabled:opacity-50"
+                                                    title="Trang trước"
+                                                >
+                                                    <FaChevronLeft />
+                                                </button>
+
+                                                {/* Hiển thị các số trang gần nhất */}
+                                                {currentPage > 2 && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handlePageChange(1)}
+                                                            className="px-3 py-1 border rounded hover:bg-blue-100"
+                                                        >
+                                                            1
+                                                        </button>
+                                                        {currentPage > 3 && <span className="px-2">...</span>}
+                                                    </>
+                                                )}
+
+                                                {[...Array(totalPages)].map((_, i) => {
+                                                    const page = i + 1;
+                                                    if (page >= currentPage - 1 && page <= currentPage + 1 && page <= totalPages) {
+                                                        return (
+                                                            <button
+                                                                key={page}
+                                                                onClick={() => handlePageChange(page)}
+                                                                className={`px-3 py-1 border rounded ${currentPage === page
+                                                                    ? "bg-blue-500 text-white"
+                                                                    : "bg-blue-100 hover:bg-blue-200"
+                                                                    }`}
+                                                            >
+                                                                {page}
+                                                            </button>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })}
+
+                                                {currentPage < totalPages - 1 && (
+                                                    <>
+                                                        {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+                                                        <button
+                                                            onClick={() => handlePageChange(totalPages)}
+                                                            className="px-3 py-1 border rounded hover:bg-blue-100"
+                                                        >
+                                                            {totalPages}
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                <button
+                                                    disabled={currentPage === totalPages}
+                                                    onClick={() => handlePageChange(currentPage + 1)}
+                                                    className="px-2 py-1 border rounded disabled:opacity-50"
+                                                    title="Trang sau"
+                                                >
+                                                    <FaChevronRight />
+                                                </button>
+                                                <button
+                                                    disabled={currentPage === totalPages}
+                                                    onClick={() => handlePageChange(totalPages)}
+                                                    className="px-2 py-1 border rounded disabled:opacity-50"
+                                                    title="Cuối trang"
+                                                >
+                                                    <FaAngleDoubleRight />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tfoot>
                         </table>
-                    </div>
-
-                    <div className="flex justify-center mt-4 items-center">
-                        <div className="flex items-center space-x-1">
-                            <button
-                                disabled={currentPage === 1}
-                                onClick={() => handlePageChange(1)}
-                                className="px-2 py-1 border rounded disabled:opacity-50"
-                            >
-                                &laquo;
-                            </button>
-                            <button
-                                disabled={currentPage === 1}
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className="px-2 py-1 border rounded disabled:opacity-50"
-                            >
-
-                            </button>
-
-                            {[...Array(totalPages)].map((_, i) => {
-                                const page = i + 1;
-                                if (
-                                    page >= currentPage - 1 &&
-                                    page <= currentPage + 1 &&
-                                    page <= totalPages
-                                ) {
-                                    return (
-                                        <button
-                                            key={page}
-                                            onClick={() => handlePageChange(page)}
-                                            className={`px-3 py-1 border rounded ${currentPage === page
-                                                ? "bg-blue-500 text-white"
-                                                : "bg-blue-100 hover:bg-blue-200"
-                                                }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    );
-                                }
-                                return null;
-                            })}
-
-                            <button
-                                disabled={currentPage === totalPages}
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className="px-2 py-1 border rounded disabled:opacity-50"
-                            >
-
-                            </button>
-                            <button
-                                disabled={currentPage === totalPages}
-                                onClick={() => handlePageChange(totalPages)}
-                                className="px-2 py-1 border rounded disabled:opacity-50"
-                            >
-                                &raquo;
-                            </button>
-                        </div>
                     </div>
                 </>
             )}

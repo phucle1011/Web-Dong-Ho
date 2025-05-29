@@ -100,7 +100,7 @@ function UserDetail() {
             <option value="Khác">Khác</option>
           </>
         );
-      case "pending":
+        // case "pending":
         return (
           <>
             <option value="">-- Chọn lý do --</option>
@@ -125,7 +125,7 @@ function UserDetail() {
     switch (englishStatus) {
       case "active": return "Hoạt động";
       case "inactive": return "Ngưng hoạt động";
-      case "pending": return "Chờ duyệt";
+      // case "pending": return "Chờ duyệt";
       case "locked": return "Bị khóa";
       default: return "Không xác định";
     }
@@ -415,107 +415,99 @@ function UserDetail() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <h2 className="text-3xl font-extrabold text-gray-800 mb-6 text-center">
-        Chi Tiết Người Dùng
-      </h2>
-
+    <div className="max-w-6xl mx-auto p-6 bg-white-50 min-h-screen">
       {/* Thông tin người dùng */}
       <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
         <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">
-          Thông Tin Cơ Bản
+          Thông Tin người dùng
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">ID:</strong>
-            <input
-              type="text"
-              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-              value={user.id || ''}
-              readOnly
-            />
-          </div>
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">Họ tên:</strong>
-            <input
-              type="text"
-              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-              value={user.name || ''}
-              readOnly
-            />
-          </div>
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">Email:</strong>
-            <input
-              type="text"
-              className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer hover:underline focus:outline-none"
-              value={user.email || ''}
-              readOnly
-              onClick={() => user.email && window.open(`mailto:${user.email}`)}
-            />
-          </div>
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">Vai trò:</strong>
-            <input
-              type="text"
-              className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
-              value={user.role || ''}
-              readOnly
-            />
-          </div>
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">Trạng thái:</strong>
-            <div className="flex items-center flex-grow">
-              <span
-                className={`capitalize px-3 py-1 rounded-full text-sm font-medium
-                                  ${user.status === 'active' ? 'bg-green-100 text-green-800' : ''}
-                                  ${user.status === 'inactive' ? 'bg-red-100 text-red-800' : ''}
-                                  ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                  ${user.status === 'locked' ? 'bg-purple-100 text-purple-800' : ''}
-                                `}
-              >
-                {getVietnameseStatus(user.status)}
-              </span>
-              <select
-                value={user.status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="ml-3 border border-gray-300 rounded-md px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex-grow"
-              >
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Ngưng hoạt động</option>
-                <option value="pending">Chờ duyệt</option>
-                <option value="locked">Bị khóa</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">Ngày tạo:</strong>
-            <input
-              type="text"
-              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-              value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
-              readOnly
-            />
-          </div>
-          <div className="flex items-center">
-            <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
-            <input
-              type="text"
-              className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-              value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ''}
-              readOnly
-            />
-          </div>
-          {user.avatar && (
-            <div className="col-span-1 md:col-span-2 flex flex-col items-start mt-4">
-              <strong className="text-gray-600 mb-2">Ảnh đại diện:</strong>
+
+        {/* Layout: Avatar bên trái - Thông tin bên phải */}
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Avatar bên trái */}
+          <div className="md:w-1/3 flex justify-center md:justify-center">
+            {user.avatar && (
               <img
                 src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`}
                 alt={user.name}
                 className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
               />
+            )}
+          </div>
+
+          {/* Thông tin bên phải */}
+          <div className="md:w-2/3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-6 -ml-6 w-full">
+              <div className="flex items-center">
+                <strong className="text-gray-600 w-24">Họ tên:</strong>
+                <input
+                  type="text"
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                  value={user.name || ''}
+                  readOnly
+                />
+              </div>
+
+              {/* Email */}
+              <div className="flex items-center">
+                <strong className="text-gray-600 w-24">Email:</strong>
+                <input
+                  type="text"
+                  className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer hover:underline focus:outline-none"
+                  value={user.email || ''}
+                  readOnly
+                  onClick={() => user.email && window.open(`mailto:${user.email}`)}
+                />
+              </div>
+
+              {/* Vai trò */}
+              <div className="flex items-center">
+                <strong className="text-gray-600 w-24">Vai trò:</strong>
+                <input
+                  type="text"
+                  className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
+                  value={user.role || ''}
+                  readOnly
+                />
+              </div>
+
+              {/* Trạng thái */}
+              <div className="flex items-center">
+                <strong className="text-gray-600 w-24">Trạng thái:</strong>
+                <select
+                  value={user.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                >
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Ngưng hoạt động</option>
+                  <option value="locked">Bị khóa</option>
+                </select>
+              </div>
+
+              {/* Ngày tạo */}
+              <div className="flex items-center">
+                <strong className="text-gray-600 w-24">Ngày tạo:</strong>
+                <input
+                  type="text"
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                  value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
+                  readOnly
+                />
+              </div>
+
+              {/* Ngày cập nhật */}
+              <div className="flex items-center">
+                <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
+                <input
+                  type="text"
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                  value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ''}
+                  readOnly
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 

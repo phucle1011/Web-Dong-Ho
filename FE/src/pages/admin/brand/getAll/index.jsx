@@ -118,18 +118,34 @@ function BrandList() {
             setSearchError('');
             return;
         }
+
         setIsSearching(true);
         setCurrentPage(page);
         setLoading(true);
+
         try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/search?searchTerm=${searchTerm}&page=${page}&limit=${limit}`);
+            // Truyền thêm status vào query string nếu có
+            const params = new URLSearchParams({
+                searchTerm,
+                page,
+                limit
+            });
+
+            if (filterStatus) {
+                params.append('status', filterStatus); // Gửi status nếu đang lọc
+            }
+
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/search?${params.toString()}`);
+
             setBrands(res.data.data);
             setTotalPages(res.data.totalPages);
+
             if (res.data.data.length === 0) {
                 setSearchError("Không tìm thấy thương hiệu nào phù hợp.");
             } else {
                 setSearchError('');
             }
+
             if (res.data.counts) {
                 setBrandCounts(res.data.counts);
             }
@@ -308,7 +324,15 @@ function BrandList() {
                                                 <td className="p-2 border border-gray-300">{brand.name}</td>
                                                 <td className="p-2 border border-gray-300">{brand.country}</td>
                                                 <td className="p-2 border border-gray-300">
-                                                    <img src={`${Constants.DOMAIN_API}/Uploads/${brand.logo}`} alt={brand.name} className="w-16 h-16 object-cover rounded-full" />
+                                                    {brand.logo ? (
+                                                        <img
+                                                            src={brand.logo}
+                                                            alt={brand.name}
+                                                            className="w-16 h-16 object-cover rounded-full"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-gray-500">Không có logo</span>
+                                                    )}
                                                 </td>
                                                 <td className="p-2 border border-gray-300">
                                                     {brand.description && brand.description.length > 50 ? (
@@ -341,9 +365,10 @@ function BrandList() {
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Link
                                                             to={`/admin/brand/detail/${brand.id}`}
-                                                            className="bg-blue-500 text-white py-1 px-3 rounded"
+                                                            className="bg-blue-500 text-white py-1 px-3 rounded flex items-center justify-center"
+                                                            title="Chi tiết"
                                                         >
-                                                            Xem
+                                                            <i className="fa fa-eye"></i>
                                                         </Link>
                                                         <button
                                                             onClick={() => handleDeleteBrand(brand.id)}

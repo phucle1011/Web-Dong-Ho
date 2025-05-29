@@ -54,7 +54,7 @@ class UserController {
             });
 
             // Đếm số lượng theo từng trạng thái
-            const allStatuses = ['active', 'inactive', 'pending', 'locked'];
+            const allStatuses = ['active', 'inactive', 'locked'];
             const counts = await Promise.all(
                 allStatuses.map(s => UserModel.count({ where: { status: s } }))
             );
@@ -65,7 +65,7 @@ class UserController {
                 all: totalAll,
                 active: counts[0],
                 inactive: counts[1],
-                pending: counts[2],
+                // pending: counts[2],
                 locked: counts[3]
             };
 
@@ -116,7 +116,7 @@ class UserController {
             const { id } = req.params;
             const { status, reason } = req.body;
 
-            if (!['active', 'inactive', 'pending', 'locked'].includes(status)) {
+            if (!['active', 'inactive', 'locked'].includes(status)) {
                 return res.status(400).json({ message: "Trạng thái không hợp lệ." });
             }
 

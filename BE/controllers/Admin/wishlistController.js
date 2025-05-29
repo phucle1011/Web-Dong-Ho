@@ -194,6 +194,9 @@ class WishlistController {
             }
 
             const wishlists = await WishlistModel.findAndCountAll({
+                where: {
+                    user_id: userId
+                },
                 limit,
                 offset,
                 order: [['id', 'DESC']],
@@ -201,50 +204,56 @@ class WishlistController {
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
-                        attributes: ['id', 'price'],
+                        attributes: ['id', 'price', 'stock', 'sku'], // thêm stock, sku nếu cần
                         include: [
                             {
                                 model: ProductModel,
                                 as: 'product',
                                 attributes: ['id', 'name', 'slug', 'thumbnail'],
                                 where: {
-                                    name: {
-                                        [Op.like]: `%${searchTerm}%`,
-                                    },
+                                    name: { [Op.like]: `%${searchTerm}%` }
                                 },
-                                required: false // Cho phép không match product
+                                required: true
                             },
-                        ],
+                            {
+                                model: ProductVariantAttributeValueModel,
+                                as: 'attributeValues',
+                                attributes: ['value'],
+                                include: [
+                                    {
+                                        model: ProductAttributeModel,
+                                        as: 'attribute',
+                                        attributes: ['name']
+                                    }
+                                ]
+                            },
+                            {
+                                model: VariantImageModel,
+                                as: 'images',
+                                attributes: ['image_url']
+                            }
+                        ]
                     },
                     {
                         model: UserModel,
                         as: 'user',
-                        attributes: ['id', 'name', 'email'],
-                        where: {
-                            name: {
-                                [Op.like]: `%${searchTerm}%`, // Tìm theo tên người dùng
-                            },
-                        },
-                        required: false // Cho phép không match user
-                    },
+                        attributes: ['id', 'name', 'email']
+                    }
                 ],
                 where: {
-                    [Op.or]: [
-                        { '$variant.product.name$': { [Op.like]: `%${searchTerm}%` } },
-                        { '$user.name$': { [Op.like]: `%${searchTerm}%` } },
-                    ],
-                },
+                    user_id: userId
+                }
             });
 
             res.status(200).json({
                 status: 200,
-                message: "Tìm kiếm danh sách yêu thích thành công",
+                message: "Lấy danh sách yêu thích của người dùng thành công",
                 data: wishlists.rows,
                 totalPages: Math.ceil(wishlists.count / limit),
                 currentPage: page,
             });
         } catch (error) {
-            console.error("Lỗi khi tìm kiếm wishlist:", error);
+            console.error("Lỗi khi lấy danh sách yêu thích của người dùng:", error);
             res.status(500).json({ error: error.message });
         }
     }

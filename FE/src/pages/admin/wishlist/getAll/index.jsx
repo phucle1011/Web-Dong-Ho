@@ -130,7 +130,7 @@ function WishlistList() {
             className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
             onClick={handleSearchSubmit}
           >
-            Tìm
+            <FaSearch className="w-5 h-5" />
           </button>
         </div>
         {loading ? (
@@ -142,7 +142,6 @@ function WishlistList() {
                 <tr>
                   <th className="p-2 border text-left">STT</th>
                   <th className="p-2 border text-left">Tên Người dùng</th>
-                  <th className="p-2 border text-left">Email</th>
                   <th className="p-2 border text-left">Sản phẩm yêu thích</th>
                   <th className="p-2 border text-center">Hành động</th>
                 </tr>
@@ -159,7 +158,7 @@ function WishlistList() {
                         {(currentPage - 1) * limit + userIndex + 1}
                       </td>
                       <td className="p-2 border font-medium">{userGroup.user.name}</td>
-                      <td className="p-2 border text-blue-600">{userGroup.user.email}</td>
+                      {/* <td className="p-2 border text-blue-600">{userGroup.user.email}</td> */}
                       <td className="p-2 border">
                         {userGroup.wishlistItems.length > 0 ? (
                           <div className="space-y-2">
@@ -192,9 +191,9 @@ function WishlistList() {
                       <td className="p-2 border text-center">
                         <Link
                           to={`/admin/wishlist/detail/${userGroup.user.id}`}
-                          className="bg-green-500 text-white py-1 px-3 rounded hover:bg-green-600 whitespace-nowrap"
+                          className="bg-blue-500 text-white py-1 px-3 rounded whitespace-nowrap"
                         >
-                          Xem chi tiết
+                          <i className="fa fa-eye"></i>
                         </Link>
                       </td>
                     </tr>

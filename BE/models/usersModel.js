@@ -42,7 +42,7 @@ const UserModel = connection.define('users', {
         allowNull: false 
     },
     status: {
-        type: DataTypes.ENUM('active','inactive','pending','locked'),
+        type: DataTypes.ENUM('active','inactive','locked'),
         allowNull: false,
         defaultValue: 'active'
     },
