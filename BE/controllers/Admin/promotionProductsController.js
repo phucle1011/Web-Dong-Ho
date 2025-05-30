@@ -39,7 +39,7 @@ exports.getAll = async (req, res) => {
           as: "promotion",
           attributes: {
             include: [
-              "name", "quantity", "start_date", "end_date",
+              "name", "start_date", "end_date",
               // Đếm số user sử dụng mỗi promotion_id
               [
                 Sequelize.literal(`(
@@ -48,8 +48,18 @@ exports.getAll = async (req, res) => {
                   WHERE pu.promotion_id = promotion.id
                 )`),
                 "user_count"
+              ],
+              // Đếm số lượng biến thể (variant) gán vào promotion
+              [
+                Sequelize.literal(`(
+                  SELECT COUNT(*)
+                  FROM promotion_products AS pp
+                  WHERE pp.promotion_id = promotion.id
+                )`),
+                "variant_count"
               ]
-            ]
+            ],
+            exclude: ["quantity"], // Bỏ trường quantity
           },
         },
       ],
@@ -72,6 +82,7 @@ exports.getAll = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 // GET BY ID
 exports.getById = async (req, res) => {
   try {
@@ -116,14 +127,8 @@ exports.create = async (req, res) => {
   try {
     const { product_variant_id, promotion_id } = req.body;
 
-    // Đảm bảo cả hai đều là mảng
-    const variantIds = Array.isArray(product_variant_id)
-      ? product_variant_id
-      : [product_variant_id];
-
-    const promotionIds = Array.isArray(promotion_id)
-      ? promotion_id
-      : [promotion_id];
+    const variantIds = Array.isArray(product_variant_id) ? product_variant_id : [product_variant_id];
+    const promotionIds = Array.isArray(promotion_id) ? promotion_id : [promotion_id];
 
     if (variantIds.length === 0 || promotionIds.length === 0) {
       return res.status(400).json({
@@ -131,7 +136,7 @@ exports.create = async (req, res) => {
       });
     }
 
-    // Kết hợp nhiều khuyến mãi và biến thể => tạo dữ liệu
+    // Tạo tất cả cặp promotion-variant
     const payloads = [];
     for (const promoId of promotionIds) {
       for (const variantId of variantIds) {
@@ -142,13 +147,32 @@ exports.create = async (req, res) => {
       }
     }
 
-    // Lưu vào DB
-    const data = await PromotionProductModel.bulkCreate(payloads, {
-      ignoreDuplicates: true, // tránh trùng nếu cần
+    // Lấy các bản ghi đã tồn tại
+    const existingRecords = await PromotionProductModel.findAll({
+      where: {
+        promotion_id: promotionIds.length === 1 ? promotionIds[0] : promotionIds,
+        product_variant_id: variantIds.length === 1 ? variantIds[0] : variantIds,
+      },
     });
 
+    const existingPairs = new Set(
+      existingRecords.map((item) => `${item.promotion_id}-${item.product_variant_id}`)
+    );
+
+    // Lọc payloads chưa tồn tại
+    const filteredPayloads = payloads.filter(
+      (p) => !existingPairs.has(`${p.promotion_id}-${p.product_variant_id}`)
+    );
+
+    if (filteredPayloads.length === 0) {
+      return res.status(409).json({ error: "Tất cả các cặp promotion-product đã tồn tại." });
+    }
+
+    // Thêm mới những cặp chưa tồn tại
+    const data = await PromotionProductModel.bulkCreate(filteredPayloads);
+
     return res.status(201).json({
-      message: "Thêm nhiều promotion_product thành công",
+      message: "Thêm promotion-product thành công",
       data,
     });
   } catch (err) {
@@ -157,26 +181,56 @@ exports.create = async (req, res) => {
   }
 };
 
+
 // UPDATE
 exports.update = async (req, res) => {
   try {
-    const { product_variant_id, promotion_id } = req.body;
-    const data = await PromotionProductModel.findByPk(req.params.id);
+    const { promotion_id, product_variant_ids, status } = req.body;
 
-    if (!data) return res.status(404).json({ message: "Not found" });
+    // Kiểm tra dữ liệu đầu vào
+    if (!promotion_id || !Array.isArray(product_variant_ids)) {
+      return res.status(400).json({ message: "promotion_id và product_variant_ids là bắt buộc, product_variant_ids phải là mảng" });
+    }
 
-    const payload = {
-      product_variant_id,
+    // Kiểm tra khuyến mãi tồn tại
+    const promotion = await PromotionModel.findByPk(promotion_id);
+    if (!promotion) {
+      return res.status(404).json({ message: "Không tìm thấy khuyến mãi" });
+    }
+
+    // Xóa tất cả bản ghi hiện tại trong promotion_products cho promotion_id
+    await PromotionProductModel.destroy({
+      where: { promotion_id }
+    });
+
+    // Tạo bản ghi mới trong promotion_products
+    const newRecords = product_variant_ids.map(variant_id => ({
       promotion_id,
-    };
+      product_variant_id: variant_id
+    }));
+    await PromotionProductModel.bulkCreate(newRecords);
 
-    await data.update(payload);
-    res.json(data);
+    // Cập nhật status và variant_count trong bảng promotions
+    await promotion.update({
+      status: status || promotion.status,
+      variant_count: product_variant_ids.length
+    });
+
+    // Lấy dữ liệu cập nhật để trả về
+    const updatedRecords = await PromotionProductModel.findAll({
+      where: { promotion_id },
+      include: [{ model: PromotionModel, as: 'promotion' }]
+    });
+
+    res.json({
+      message: "Cập nhật khuyến mãi thành công",
+      data: updatedRecords
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Lỗi khi cập nhật khuyến mãi:", err);
+    res.status(500).json({ error: err.message || "Lỗi server" });
   }
 };
-
 // DELETE
 exports.remove = async (req, res) => {
   try {
@@ -199,7 +253,9 @@ exports.getAllPromotion = async (req, res) => {
     // Lấy các promotion đang active từ bảng PromotionProduct
     const promotionProducts = await PromotionModel.findAll({
       where: {
-        status: "active",
+       status: {
+          [Op.in]: ["active", "upcoming"],
+        },
         applicable_to: "product",
       },
     });
