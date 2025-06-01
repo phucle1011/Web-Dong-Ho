@@ -3,16 +3,29 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AdminLayout from "./layouts/AdminLayouts";
 import ClientLayout from "./layouts/ClientLayouts";
 import Dashboard from "./pages/admin/dashboard";
-import Home from "./pages/client/Home";
-import Bus from "./pages/client/Bus";
-import AboutUs from "./pages/client/About-us";
-import Blog from "./pages/client/Blog";
+import HomeThree from "./pages/client/Home";
+import About from "./pages/client/About";
+import AllProductPage from "./pages/client/AllProductPage";
+import Login from "./pages/client/Auth/Login/index";
+import Profile from "./pages/client/Auth/Profile";
+import Signup from "./pages/client/Auth/Signup";
+import BecomeSaller from "./pages/client/BecomeSaller";
+import Blogs from "./pages/client/Blogs";
+import Blog from "./pages/client/Blogs/Blog.jsx";
+import CardPage from "./pages/client/CartPage";
+import CheakoutPage from "./pages/client/CheakoutPage";
 import Contact from "./pages/client/Contact";
-import BookingHistory from "./pages/client/BookingHistory";
-import Profile from "./pages/client/Profile";
-import Login from "./pages/authenticator/Login";
-import Register from "./pages/authenticator/Register";
-import BookingTickets from "./pages/client/BookingTickets";
+import Faq from "./pages/client/Faq";
+import FlashSale from "./pages/client/FlashSale";
+import FourZeroFour from "./pages/client/FourZeroFour";
+import PrivacyPolicy from "./pages/client/PrivacyPolicy";
+import ProductsCompaire from "./pages/client/ProductsCompaire/index";
+import SallerPage from "./pages/client/SallerPage";
+import Sallers from "./pages/client/Sellers";
+import SingleProductPage from "./pages/client/SingleProductPage";
+import TermsCondition from "./pages/client/TermsCondition/index";
+import TrackingOrder from "./pages/client/TrackingOrder";
+import Wishlist from "./pages/client/Wishlist";
 
 //------------ADMIN-------------
 import OrderGetAll from "./pages/admin/order/getAll";
@@ -57,37 +70,30 @@ const AppRoutes = () => {
 
       {/*--------------------CLIENT-------------------- */}
       <Route path="/" element={<ClientLayout />}>
-        <Route index element={<Home />} />
-        <Route path="bus" element={<Bus />} />
-        <Route path="about" element={<AboutUs />} />
-        <Route path="blog" element={<Blog />} />
-        <Route path="contact" element={<Contact />} />
-
-        {/* Các route cần bảo vệ được bọc riêng lẻ bằng <PrivateRoute> */}
-        <Route
-          path="bookingHistory"
-          element={
-            <BookingHistory />
-          }
-        />
-        <Route
-          path="profile"
-          element={
-            <Profile />
-          }
-        />
-        <Route
-          path="bookingTickets/:tripId"
-          element={
-            <BookingTickets />
-          }
-        />
+        <Route index element={<HomeThree />} />
+        <Route path="about" element={<About />} />
+        <Route path="all-products" element={<AllProductPage />} />
+        <Route path="login" element={<Login />} />
+        <Route path="signup" element={<Signup />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="become-saller" element={<BecomeSaller />} />
+        <Route path="blogs" element={<Blogs />} />
+        <Route path="/blogs/blog" element={<Blog />} />
+        <Route path="/cart" element={<CardPage />} />
+        <Route path="/checkout" element={<CheakoutPage />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/faq" element={<Faq />} />
+        <Route path="/flash-sale" element={<FlashSale />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/products-compaire" element={<ProductsCompaire />} />
+        <Route path="/saller-page" element={<SallerPage />} />
+        <Route path="/sallers" element={<Sallers />} />
+        <Route path="/single-product" element={<SingleProductPage />} />
+        <Route path="/terms-condition" element={<TermsCondition />} />
+        <Route path="/tracking-order" element={<TrackingOrder />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/*" element={<FourZeroFour />} />
       </Route>
-
-      <Route path="login" element={<Login />} />
-      <Route path="register" element={<Register />} />
-      {/* <Route path="resetForm" element={<ResetForm />} />
-      <Route path="resetPassword/:token" element={<ResetPassword />} /> */}
 
       {/*--------------------ADMIN-------------------- */}
       <Route path="/admin/login" element={<LoginAdmin />} />
