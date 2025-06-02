@@ -3,11 +3,12 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function AddVariantForm() {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const [uploading, setUploading] = useState(false);
 
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
@@ -17,7 +18,7 @@ function AddVariantForm() {
   ]);
   const [images, setImages] = useState([]);
   const [allAttributes, setAllAttributes] = useState([]);
-  const [errors, setErrors] = useState({}); // <-- lưu lỗi
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     axios
@@ -62,7 +63,9 @@ function AddVariantForm() {
     }
 
     try {
-      const data = { sku, price, stock, attributes, images };
+      const imageUrls = images.map(img => img.url);
+
+const data = { sku, price, stock, attributes, images: imageUrls };
       await axios.post(
         `http://localhost:5000/admin/products/${productId}/variants`,
         data
@@ -79,9 +82,27 @@ function AddVariantForm() {
     updated.splice(index, 1);
     setAttributes(updated);
   };
+  const deleteCloudImage = async (public_id) => {
+  try {
+    await axios.post("http://localhost:5000/admin/products/imagesClauding", { public_id });
+  } catch (err) {
+    console.error("Lỗi xóa ảnh Cloudinary:", err);
+  }
+};
+const handleCancel = async () => {
+  // Xóa từng ảnh đã upload lên Cloudinary
+  for (const img of images) {
+    console.log("imgid",img.public_id);
+    
+    await deleteCloudImage(img.public_id);
+  }
+
+  navigate("/admin/products/getAll");
+};
+
 
   return (
-    <div className="max-w-screen-xl mx-auto bg-white p-8 rounded shadow mt-8">
+    <div className="max-w-screen-xl mx-auto bg-white p-10 md:p-16 rounded shadow mt-2 mb-2">
       <h2 className="text-2xl font-semibold mb-6">Thêm biến thể sản phẩm</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -92,7 +113,7 @@ function AddVariantForm() {
             type="text"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            className="w-full border px-4 py-3 rounded"
+            className="w-full border px-3 py-2 rounded"
           />
           {errors.sku && (
             <p className="text-red-600 text-sm mt-1">{errors.sku}</p>
@@ -106,7 +127,7 @@ function AddVariantForm() {
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-full border px-4 py-3 rounded"
+            className="w-full border px-3 py-2 rounded"
           />
           {errors.price && (
             <p className="text-red-600 text-sm mt-1">{errors.price}</p>
@@ -120,7 +141,7 @@ function AddVariantForm() {
             type="number"
             value={stock}
             onChange={(e) => setStock(e.target.value)}
-            className="w-full border px-4 py-3 rounded"
+            className="w-full border px-3 py-2 rounded"
           />
           {errors.stock && (
             <p className="text-red-600 text-sm mt-1">{errors.stock}</p>
@@ -147,7 +168,7 @@ function AddVariantForm() {
                       type="text"
                       value={selectedAttr.name}
                       disabled
-                      className="w-full border px-4 py-3 rounded bg-gray-100 text-gray-600"
+                      className="w-full border px-3 py-2 rounded bg-gray-100 text-gray-600"
                     />
                   ) : (
                     <select
@@ -159,7 +180,7 @@ function AddVariantForm() {
                           e.target.value
                         )
                       }
-                      className="w-full border px-4 py-3 rounded"
+                      className="w-full border px-3 py-2 rounded"
                     >
                       <option value="">-- Chọn thuộc tính --</option>
                       {allAttributes
@@ -210,9 +231,23 @@ function AddVariantForm() {
                   <button
                     type="button"
                     onClick={() => removeAttributeRow(index)}
-                    className="text-red-600 hover:underline text-sm"
+                    className="text-red-600 hover:text-red-800 p-1 rounded"
+                    aria-label="Xóa thuộc tính"
                   >
-                    X
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4"
+                      />
+                    </svg>
                   </button>
                 )}
               </div>
@@ -237,20 +272,23 @@ function AddVariantForm() {
             accept="image/*"
             onChange={async (e) => {
               const files = Array.from(e.target.files);
-              const uploadedUrls = [];
+              setUploading(true);
+              const uploadedImages = [];
 
               for (const file of files) {
                 try {
-                  const url = await uploadToCloudinary(file);
-                  uploadedUrls.push(url);
+                  const { url, public_id } = await uploadToCloudinary(file);
+                  uploadedImages.push({ url, public_id });
                 } catch (error) {
                   console.error("Lỗi upload ảnh:", error);
                 }
               }
 
-              setImages((prev) => [...prev, ...uploadedUrls]);
+              setImages((prev) => [...prev, ...uploadedImages]);
+
+              setUploading(false);
             }}
-            className="w-full border px-4 py-3 rounded"
+            className="w-full border px-3 py-2 rounded"
           />
 
           {/* Hiển thị ảnh */}
@@ -279,12 +317,26 @@ function AddVariantForm() {
         </div>
 
         {/* Submit */}
-        <button
-          type="submit"
-          className="bg-[#073272] text-white px-6 py-3 rounded hover:bg-[#052354] transition"
-        >
-          Tạo biến thể
-        </button>
+        <div className="flex justify-start gap-2 mt-8">
+          <button
+            type="submit"
+            disabled={uploading}
+            className={`bg-[#073272] text-white px-6 py-3 rounded transition ${
+              uploading ? "opacity-50 cursor-not-allowed" : "hover:bg-[#052354]"
+            }`}
+          >
+            Tạo biến thể
+          </button>
+
+          <button
+  type="button"
+  onClick={handleCancel}
+  className="bg-gray-200 text-gray-800 px-6 py-3 rounded hover:bg-gray-300 transition flex items-center justify-center"
+>
+  Quay lại
+</button>
+
+        </div>
       </form>
     </div>
   );

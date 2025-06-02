@@ -13,7 +13,11 @@ export const uploadToCloudinary = async (file) => {
     });
 
     const data = await res.json();
-    return data.secure_url; // trả về URL ảnh
+     return {
+    url: data.secure_url,
+    public_id: data.public_id,
+  };
+      
   } catch (err) {
     console.error("Lỗi khi upload ảnh lên Cloudinary:", err);
     throw err;

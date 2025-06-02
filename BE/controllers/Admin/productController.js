@@ -5,6 +5,7 @@ const ProductAttribute = require("../../models/productAttributesModel");
 const VariantImage = require("../../models/variantImagesModel");
 const BrandModel = require("../../models/brandsModel");
 const CategoryModel = require("../../models/categoriesModel");
+const cloudinary = require("../../config/cloudinaryConfig");
 
 const { Op } = require("sequelize");
 
@@ -29,79 +30,19 @@ static async getAllAttributes(req, res) {
 
   // Lấy tất cả sản phẩm có biến thể
   static async get(req, res) {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const offset = (page - 1) * limit;
-
-      // Đếm tổng số sản phẩm
-      const totalProducts = await Product.count();
-
-      // Lấy danh sách sản phẩm phân trang
-      const products = await Product.findAll({
-        order: [["created_at", "DESC"]],
-        limit: limit,
-        offset: offset,
-        include: [
-          {
-            model: ProductVariant,
-            as: "variants",
-            include: [
-              {
-                model: ProductVariantAttributeValue,
-                as: "attributeValues",
-                include: [
-                  {
-                    model: ProductAttribute,
-                    as: "attribute",
-                  },
-                ],
-              },
-              {
-                model: VariantImage,
-                as: "images",
-              },
-            ],
-          },
-          {
-            model: CategoryModel,
-            as: "category",
-            attributes: ["id", "name"],
-          },
-          {
-            model: BrandModel,
-            as: "brand",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
-
-      // Tính tổng biến thể trong tất cả sản phẩm đang hiển thị (nếu cần theo page)
-      const totalVariants = products.reduce((sum, product) => {
-        return sum + (product.variants?.length || 0);
-      }, 0);
-
-      res.status(200).json({
-        status: 200,
-        message: "Lấy danh sách sản phẩm thành công",
-        data: products,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalProducts / limit),
-          totalProducts,
-        },
-        totalVariants,
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  }
-
-  // Lấy chi tiết theo ID
-  static async getById(req, res) {
   try {
-    const { id } = req.params;
-    const product = await Product.findByPk(id, {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Đếm tổng số sản phẩm
+    const totalProducts = await Product.count();
+
+    // Lấy danh sách sản phẩm phân trang
+    const products = await Product.findAll({
+      order: [["created_at", "DESC"]],
+      limit: limit,
+      offset: offset,
       include: [
         {
           model: ProductVariant,
@@ -125,12 +66,65 @@ static async getAllAttributes(req, res) {
         },
         {
           model: CategoryModel,
-          as: "category", // cần đúng alias trong quan hệ
+          as: "category",
           attributes: ["id", "name"],
         },
         {
           model: BrandModel,
-          as: "brand", // cần đúng alias trong quan hệ
+          as: "brand",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    // Thêm variantCount vào từng sản phẩm
+    const productsWithVariantCount = products.map((product) => {
+      const productJson = product.toJSON();
+      productJson.variantCount = product.variants?.length || 0;
+      return productJson;
+    });
+
+    // Tổng số biến thể hiển thị
+    const totalVariants = products.reduce((sum, product) => {
+      return sum + (product.variants?.length || 0);
+    }, 0);
+
+    res.status(200).json({
+      status: 200,
+      message: "Lấy danh sách sản phẩm thành công",
+      data: productsWithVariantCount,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+      },
+      totalVariants,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
+  // Lấy chi tiết theo ID
+  static async getById(req, res) {
+  try {
+    const { id } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Lấy thông tin cơ bản của sản phẩm
+    const product = await Product.findByPk(id, {
+      include: [
+        {
+          model: CategoryModel,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BrandModel,
+          as: "brand",
           attributes: ["id", "name"],
         },
       ],
@@ -140,14 +134,49 @@ static async getAllAttributes(req, res) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
 
+    // Lấy biến thể có phân trang
+    const { count, rows: variants } = await ProductVariant.findAndCountAll({
+      where: { product_id: id },
+      limit,
+      offset,
+        distinct: true,  // thêm dòng nà
+      include: [
+        {
+          model: ProductVariantAttributeValue,
+          as: "attributeValues",
+          include: [
+            {
+              model: ProductAttribute,
+              as: "attribute",
+            },
+          ],
+        },
+        {
+          model: VariantImage,
+          as: "images",
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
     res.status(200).json({
       status: 200,
-      data: product,
+      data: {
+        ...product.toJSON(),
+        variants,
+        pagination: {
+          total: count,
+          page,
+          limit,
+          totalPages: Math.ceil(count / limit),
+        },
+      },
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 }
+
 
 
   // Tạo mới sản phẩm + biến thể
@@ -391,78 +420,101 @@ static async getAllAttributes(req, res) {
       res.status(500).json({ error: error.message });
     }
   }
-  static async searchProducts(req, res) {
-    try {
-      const { searchTerm } = req.query;
+static async searchProducts(req, res) {
+  try {
+    const { searchTerm, categoryId, brandId, page = 1, limit = 10 } = req.query;
 
-      if (!searchTerm || searchTerm.trim() === "") {
-        return res
-          .status(400)
-          .json({ message: "Vui lòng nhập từ khóa để tìm kiếm sản phẩm." });
-      }
+    const whereConditions = [];
 
-      const products = await Product.findAll({
-        where: {
-          [Op.or]: [
+    if (searchTerm && searchTerm.trim() !== "") {
+      whereConditions.push({
+        name: {
+          [Op.like]: `%${searchTerm}%`,
+        },
+      });
+    }
+
+    if (categoryId) {
+      whereConditions.push({
+        category_id: categoryId,
+      });
+    }
+
+    if (brandId) {
+      whereConditions.push({
+        brand_id: brandId,
+      });
+    }
+
+    const where = {
+      [Op.and]: whereConditions,
+    };
+
+    console.log("Query received:", req.query);
+    console.log("Where condition:", where);
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const products = await Product.findAll({
+      where,
+      offset,
+      limit: parseInt(limit),
+      order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: ProductVariant,
+          as: "variants",
+          include: [
             {
-              name: {
-                [Op.like]: `%${searchTerm}%`,
-              },
+              model: ProductVariantAttributeValue,
+              as: "attributeValues",
+              include: [
+                {
+                  model: ProductAttribute,
+                  as: "attribute",
+                },
+              ],
+            },
+            {
+              model: VariantImage,
+              as: "images",
             },
           ],
         },
-        order: [["created_at", "DESC"]],
-        include: [
-          {
-            model: ProductVariant,
-            as: "variants",
-            include: [
-              {
-                model: ProductVariantAttributeValue,
-                as: "attributeValues",
-                include: [
-                  {
-                    model: ProductAttribute,
-                    as: "attribute",
-                  },
-                ],
-              },
-              {
-                model: VariantImage,
-                as: "images",
-              },
-            ],
-          },
-          {
-            model: CategoryModel,
-            as: "category",
-            attributes: ["id", "name"],
-          },
-          {
-            model: BrandModel,
-            as: "brand",
-            attributes: ["id", "name"],
-          },
-        ],
-      });
+        {
+          model: CategoryModel,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BrandModel,
+          as: "brand",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
 
-      if (products.length === 0) {
-        return res.status(404).json({
-          status: 200,
-          message: "Không tìm thấy sản phẩm nào.",
-          data: [],
-        });
-      }
-
-      res.status(200).json({
+    if (products.length === 0) {
+      return res.status(404).json({
         status: 200,
-        message: "Tìm kiếm sản phẩm thành công",
-        data: products,
+        message: "Không tìm thấy sản phẩm nào.",
+        data: [],
       });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
     }
+
+    res.status(200).json({
+      status: 200,
+      message: "Tìm kiếm sản phẩm thành công",
+      data: products,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
+}
+
+
+
+
 
   // Xoá sản phẩm và các biến thể
   static async delete(req, res) {
@@ -643,6 +695,24 @@ static async getAllVariants(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+
+static async deleteImagesClauding(req, res) {
+  const { public_id } = req.body;
+  console.log('Cloudinary:', req.body);
+
+  try {
+    await cloudinary.uploader.destroy(public_id);
+    res.json({ message: "Xóa ảnh thành công" });
+  } catch (error) {
+    console.error("Lỗi xóa ảnh:", error);
+    res.status(500).json({ error: "Lỗi xóa ảnh trên Cloudinary" });
+  }
+}
+
+
+
+
 
 }
 
