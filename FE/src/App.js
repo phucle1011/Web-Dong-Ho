@@ -62,6 +62,8 @@ import BlogAdd from "./pages/admin/blog/add";
 import EditBlog from "./pages/admin/blog/edit";
 import WishlistDetail from "./pages/admin/wishlist/detail";
 import PromotionList from "./pages/admin/promotionUsers/getAll";
+import NotificationList from "./pages/admin/notification/getAll";
+import NotificationSendAll from "./pages/admin/notification/Create";
 import LoginAdmin from "./pages/admin/login";
 
 const AppRoutes = () => {
@@ -69,8 +71,8 @@ const AppRoutes = () => {
     <Routes>
       {/*--------------------CLIENT-------------------- */}
       <Route path="/" element={<ClientLayout />}>
-        <Route path="/" element={<HomeThree />} />
-        <Route path="/about" element={<About />} />
+        <Route index element={<HomeThree />} />
+        <Route path="about" element={<About />} />
         <Route path="/all-products" element={<AllProductPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -133,7 +135,6 @@ const AppRoutes = () => {
           <Route path="create" element={<PromotionCreate />} />
           <Route path="edit/:id" element={<PromotionEdit />} />
         </Route>
-
         <Route path="promotion-products">
           <Route path="getAll" element={<PromotionProductList />} />
           <Route path="create" element={<PromotionProductForm />} />
@@ -146,18 +147,19 @@ const AppRoutes = () => {
           <Route path="detail/:id" element={<ProductDetail />} />
           <Route path="editVariant/:id" element={<EditVariant />} />
         </Route>
-
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />
           <Route path="detail/:id" element={<WishlistDetail />} />
         </Route>
-
         <Route path="brand">
           <Route path="getAll" element={<BrandList />} />
           <Route path="detail/:id" element={<BrandDetail />} />
           <Route path="create" element={<BrandCreate />} />
         </Route>
-
+        <Route path="notification">
+          <Route path="getAll" element={<NotificationList />} />
+          <Route path="create" element={<NotificationSendAll />} />
+        </Route>
         <Route path="promotionusers">
           <Route path="getAll" element={<PromotionList />} />
         </Route>
