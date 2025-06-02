@@ -25,12 +25,18 @@ const NotificationModel = connection.define('notifications', {
     },
     read_at: {
         type: DataTypes.DATE,
-        allowNull: false 
+        allowNull: true  // ✅ để lưu thông báo chưa đọc
     }
 }, {
     tableName: 'notifications',
     timestamps: true,
-    createdAt: 'created_at'
-});
+    createdAt: 'created_at',
+    updatedAt: false,
+    indexes: [
+      { fields: ['user_id'] },
+      { fields: ['type'] },
+      { fields: ['created_at'] }
+    ]
+  });
 
 module.exports = NotificationModel;

@@ -15,6 +15,7 @@ const PromotionUserController = require('../controllers/Admin/promotionUserContr
 const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
+const NotificationController = require('../controllers/Admin/notificationController');
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------
@@ -62,7 +63,7 @@ router.get('/promotions/ss/all', promotionProductsController.getAllPromotion);
 router.get('/promotion/:id', promotionProductsController.getById);
 router.post('/promotion-products', promotionProductsController.create);
 router.put('/promotion/:id', promotionProductsController.update);
-router.delete('/promotion/:id', promotionProductsController.remove);
+router.delete('/promotions/:id', promotionProductsController.remove);
 
 //------------------[ PRODUCT ]------------------\
 router.get('/products', ProductController.get);
@@ -126,4 +127,18 @@ router.get('/dashboard/counts', DashboardController.getCounts);
 router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMonth);
 router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
 router.get('/dashboard/revenue', DashboardController.getRevenueByCustomRange);
+
+//------------------[ Notification ]------------------\
+// router.get('/notification', NotificationController.getNotifications);
+// router.get('/notification/:id', NotificationController.getNotificationById);
+// router.post('/notification', NotificationController.createNotification);
+// router.delete('/notification/:id', NotificationController.deleteNotification);
+
+router.get('/notification', NotificationController.getNotifications);
+router.get('/notification/:id', NotificationController.getNotificationById);
+router.post('/notification', NotificationController.createNotification);
+router.delete('/notification/:id', NotificationController.deleteNotification);
+router.patch('/notification/:id/read', NotificationController.markAsRead);
+router.patch('/notification/mark-all-read', NotificationController.markAllAsRead);
+
 module.exports = router;

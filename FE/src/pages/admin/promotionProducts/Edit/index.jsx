@@ -44,9 +44,10 @@ const PromotionProductEdit = () => {
           throw new Error("ID khuyến mãi không hợp lệ!");
         }
 
+        // Lấy danh sách khuyến mãi
         const promoRes = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`);
-        const promoData = promoRes.data.data || [];
-        if (!Array.isArray(promoData)) {
+        const promoData = Array.isArray(promoRes.data.data) ? promoRes.data.data : [];
+        if (!promoData.length) {
           throw new Error("Dữ liệu khuyến mãi không hợp lệ");
         }
         const filteredPromotions = promoData.filter((promo) => {
@@ -55,24 +56,29 @@ const PromotionProductEdit = () => {
         });
         setPromotions(filteredPromotions);
 
+        // Lấy danh sách biến thể sản phẩm
         const variantRes = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
-        const variantData = variantRes.data.data || [];
-        if (!Array.isArray(variantData)) {
+        const variantData = Array.isArray(variantRes.data.data) ? variantRes.data.data : [];
+        if (!variantData.length) {
           throw new Error("Dữ liệu biến thể sản phẩm không hợp lệ");
         }
         console.log("All product variants:", variantData);
         setProductVariants(variantData);
 
+        // Lấy danh sách sản phẩm khuyến mãi
         const promotionProductsRes = await axios.get(`${Constants.DOMAIN_API}/admin/promotion`);
-        const promotionProducts = promotionProductsRes.data.data || [];
+        const promotionProducts = Array.isArray(promotionProductsRes.data.data)
+          ? promotionProductsRes.data.data
+          : [];
         console.log("All promotion products:", promotionProducts);
-        const otherProducts = promotionProducts.filter((item) => item.promotion_id !== parseInt(id));
+
+        // Lọc tất cả các biến thể đã được sử dụng trong bất kỳ khuyến mãi nào
         const usedIds = [...new Set(
-          otherProducts
+          promotionProducts
             .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
             .map((item) => item.product_variant_id)
         )];
-        console.log("Used variant IDs (excluding current promotion):", usedIds);
+        console.log("Used variant IDs:", usedIds);
         setUsedVariantIds(usedIds);
 
         // Tạo trạng thái cho các biến thể
@@ -110,30 +116,32 @@ const PromotionProductEdit = () => {
       setIsLoading(true);
       try {
         const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotion?promotion_id=${id}`);
-        const data = res.data.data || [];
-        if (!Array.isArray(data)) {
-          throw new Error("Dữ liệu khuyến mãi không hợp lệ");
+        const data = Array.isArray(res.data.data) ? res.data.data : [];
+        if (!data.length) {
+          throw new Error("Không tìm thấy dữ liệu khuyến mãi!");
         }
 
         console.log(`API response for promotion_id ${id}:`, data);
         const expectedVariantCount = data[0]?.promotion?.variant_count || 0;
         const productVariantIds = [...new Set(
           data
-            .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
+            .filter((item) => item.promotion_id === parseInt(id) && item.product_variant_id && !isNaN(item.product_variant_id))
             .map((item) => item.product_variant_id.toString())
         )];
 
         console.log("Extracted product_variant_ids:", productVariantIds);
 
         if (productVariantIds.length !== expectedVariantCount) {
-          console.warn(`Cảnh báo: Số lượng biến thể (${productVariantIds.length}) không khớp với variant_count (${expectedVariantCount}) cho promotion_id ${id}`);
-          productVariantIds.length = Math.min(productVariantIds.length, expectedVariantCount);
+          console.warn(
+            `Cảnh báo: Số lượng biến thể (${productVariantIds.length}) không khớp với variant_count (${expectedVariantCount}) cho promotion_id ${id}`
+          );
         }
 
         if (productVariantIds.length === 0) {
           console.warn(`Không tìm thấy biến thể hợp lệ cho promotion_id ${id}`);
         }
 
+        // Đặt giá trị cho form
         setValue("promotion_id", id.toString());
         setValue("product_variant_id", productVariantIds);
         setCustomFormState((prev) => ({ ...prev, product_variant_id: productVariantIds }));
@@ -156,31 +164,38 @@ const PromotionProductEdit = () => {
     };
 
     fetchDetail();
-  }, [productVariants, setValue, id]);
+  }, [productVariants, setValue, id, trigger]);
 
   const onSubmit = async (formData) => {
     const selectedVariants = formData.product_variant_id || [];
+
     // Kiểm tra biến thể đã được sử dụng trong khuyến mãi khác
-    const usedVariantsInOther = selectedVariants.filter((variantId) =>
-      usedVariantIds.includes(parseInt(variantId)) &&
-      !customFormState.product_variant_id?.includes(variantId)
+    const usedVariantsInOther = selectedVariants.filter(
+      (variantId) =>
+        usedVariantIds.includes(parseInt(variantId)) &&
+        !customFormState.product_variant_id?.includes(variantId)
     );
 
     if (usedVariantsInOther.length > 0) {
-      console.warn("Các biến thể đã được sử dụng trong khuyến mãi khác:", usedVariantsInOther);
-      const confirmAdd = window.confirm(
-        `Các biến thể sau đã được sử dụng trong khuyến mãi khác: ${usedVariantsInOther
-          .map(id => productVariants.find(v => v.id === parseInt(id))?.sku || id)
-          .join(', ')}. Bạn có muốn xóa chúng khỏi các khuyến mãi khác và thêm vào khuyến mãi này không?`
+      const variantDetails = usedVariantsInOther
+        .map((id) => {
+          const variant = productVariants.find((v) => v.id === parseInt(id));
+          return variant
+            ? `${variant.sku} (${variant.product?.name || "Tên không xác định"})`
+            : id;
+        })
+        .join(", ");
+      toast.error(
+        `Không thể chọn các biến thể sau vì chúng đã được sử dụng trong khuyến mãi khác: ${variantDetails}. Mỗi biến thể chỉ được áp dụng cho một khuyến mãi.`
       );
-      if (!confirmAdd) return;
+      return;
     }
 
     setIsLoading(true);
     try {
       const payload = {
         promotion_id: parseInt(formData.promotion_id),
-        product_variant_ids: selectedVariants.map(id => parseInt(id)),
+        product_variant_ids: selectedVariants.map((id) => parseInt(id)),
         status: "Active",
       };
       console.log("Submitting payload:", payload);
@@ -206,10 +221,11 @@ const PromotionProductEdit = () => {
     }
   };
 
-  // Hiển thị tất cả biến thể trong Select, chỉ giữ SKU và tên sản phẩm
+  // Hiển thị biến thể trong Select, bao gồm trạng thái
   const availableVariants = productVariants.map((variant) => ({
     value: variant.id.toString(),
-    label: `${variant.sku} (${variant.product?.name || 'Tên sản phẩm không xác định'})`
+    label: `${variant.sku} (${variant.product?.name || 'Tên sản phẩm không xác định'}) - ${variantStatus[variant.id] || 'Chưa được sử dụng'}`,
+    isDisabled: usedVariantIds.includes(variant.id) && !customFormState.product_variant_id?.includes(variant.id.toString())
   }));
 
   return (
@@ -248,8 +264,8 @@ const PromotionProductEdit = () => {
             )}
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">Chọn các biến thể sản phẩm</label>
+          <div className="mb-4">
+            <label className="form-label mb-2">Chọn các biến thể sản phẩm</label>
             <Select
               isMulti
               options={availableVariants}
@@ -269,6 +285,7 @@ const PromotionProductEdit = () => {
               value={availableVariants.filter((option) =>
                 customFormState.product_variant_id?.includes(option.value)
               )}
+              placeholder="Chọn hoặc thêm biến thể sản phẩm..."
             />
             <input
               type="hidden"
@@ -280,10 +297,11 @@ const PromotionProductEdit = () => {
               })}
             />
             {errors.product_variant_id && (
-              <small className="text-danger">
-                {errors.product_variant_id.message}
-              </small>
+              <small className="text-danger">{errors.product_variant_id.message}</small>
             )}
+            <p className="text-sm text-gray-600 mt-2">
+              Chỉ có thể chọn các biến thể chưa được sử dụng hoặc đang thuộc khuyến mãi này. Mỗi biến thể chỉ được áp dụng cho một khuyến mãi.
+            </p>
           </div>
 
           <button
