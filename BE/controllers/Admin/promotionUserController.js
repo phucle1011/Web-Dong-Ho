@@ -48,6 +48,7 @@ class PromotionUserController {
               'discount_type',
               'discount_value',
               'special_promotion',
+              'end_date',
             ],
           },
         ],
@@ -89,6 +90,9 @@ class PromotionUserController {
           isSpecialPromotion: Boolean(pu.Promotion?.special_promotion),
           promotionReceivedDate: pu.created_at,
           emailSent: pu.email_sent || false,
+           isExpired: pu.Promotion?.end_date
+            ? new Date(pu.Promotion.end_date) < new Date()
+            : false,
         })),
       }));
 
@@ -104,6 +108,29 @@ class PromotionUserController {
       });
     } catch (error) {
       console.error('Lỗi khi lấy danh sách promotion-user:', error);
+      res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+  }
+
+   static async checkPromotionExpiry(req, res) {
+    try {
+      const { promotionId } = req.body;
+      if (!promotionId) {
+        return res.status(400).json({ message: 'Thiếu promotionId' });
+      }
+
+      const promotion = await PromotionModel.findByPk(promotionId);
+      if (!promotion) {
+        return res.status(404).json({ message: 'Không tìm thấy mã giảm giá' });
+      }
+
+      const isExpired = promotion.end_date && new Date(promotion.end_date) < new Date();
+      res.status(200).json({
+        isExpired,
+        message: isExpired ? 'Mã giảm giá đã hết hạn' : 'Mã giảm giá còn hiệu lực',
+      });
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra trạng thái mã giảm:', error);
       res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
   }

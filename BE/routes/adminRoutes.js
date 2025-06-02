@@ -119,7 +119,8 @@ router.put('/brand/update/:id', BrandController.update);
 router.delete('/brand/delete/:id', BrandController.delete);
 
 //------------------[ PROMOTION-USER ]------------------\
-router.get('/promotionusers/list',PromotionUserController.get);
+router.get('/promotionusers/list', PromotionUserController.get);
+router.post('/promotionusers/check-emails', PromotionUserController.checkPromotionExpiry);
 router.post('/send-promotion-emails', EmailController.sendPromotionEmails);
 
 //------------------[ DASHBOARD ]------------------\
