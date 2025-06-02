@@ -1,8 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const http = require('http');  // thêm dòng này
-const { Server } = require('socket.io');  // thêm dòng này
+const http = require('http');  
+const { Server } = require('socket.io'); 
 
 const session = require("express-session");
 const clientRoutes = require('./routes/clientRoutes');
@@ -29,43 +29,30 @@ app.use(cors({
     credentials: true
 }));
 
-// Routes
 app.use(clientRoutes);
 app.use('/admin', adminRoutes);
 app.use(apiRoutes);
 
 const port = 5000;
 
-// Tạo HTTP server từ Express app
 const server = http.createServer(app);
 
-// Khởi tạo socket.io và cho phép CORS nếu cần
 const io = new Server(server, {
   cors: {
-    origin: "*", // hoặc domain frontend của bạn
+    origin: "*", 
     methods: ["GET", "POST"],
   },
 });
 
-// Xử lý sự kiện kết nối socket.io
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  // Ví dụ: lắng nghe event join room
   socket.on('join', (userId) => {
-    console.log('User joined:', userId);
     socket.join(userId);
   });
 
-  // Ví dụ: gửi thông báo đến user cụ thể
-  // io.to(userId).emit('newNotification', { ... });
-
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
   });
 });
 
-// Lắng nghe server qua HTTP server thay vì app.listen
 server.listen(port, () => {
   console.log(`Server chạy tại http://localhost:${port}`);
 });
