@@ -9,93 +9,116 @@ const ExcelJS = require('exceljs');
 
 class OrderController {
 
-    static async get(req, res) {
-        try {
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 10;
-            const offset = (page - 1) * limit;
-            const { status, searchTerm } = req.query;
+   static async get(req, res) {
+    const {
+        searchTerm = '',
+        page = 1,
+        limit = 10,
+        order_code,
+        status,
+        startDate,
+        endDate
+    } = req.query;
 
-            const where = {};
+    const currentPage = parseInt(page, 10);
+    const perPage = parseInt(limit, 10);
+    const offset = (currentPage - 1) * perPage;
 
-            if (status) {
-                where.status = status;
-            }
+    try {
+        const whereClause = {};
 
+        // Tìm kiếm theo tên khách hàng hoặc mã đơn hàng
+        if (searchTerm || order_code) {
+            whereClause[Op.or] = [];
             if (searchTerm) {
-                where[Op.or] = [
-                    { '$user.name$': { [Op.like]: `%${searchTerm}%` } }
-                ];
+                whereClause[Op.or].push({
+                    '$user.name$': { [Op.like]: `%${searchTerm}%` }
+                });
             }
-
-            const orders = await OrderModel.findAndCountAll({
-                where,
-                order: [['created_at', 'DESC']],
-                limit,
-                offset,
-                include: [
-                    {
-                        model: OrderDetailsModel,
-                        as: 'orderDetails',
-                        attributes: ['quantity', 'price'],
-                        include: [
-                            {
-                                model: ProductVariantsModel,
-                                as: 'variant',
-                                attributes: ['price'],
-                                include: [
-                                    {
-                                        model: ProductModel,
-                                        as: 'product',
-                                        attributes: ['name']
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        model: UserModel,
-                        as: 'user',
-                        attributes: ['id', 'name', 'email', 'phone']
-                    }
-                ]
-            });
-
-            const result = orders.rows.map(order => {
-                const orderData = order.toJSON();
-                delete orderData.user_id;
-                return orderData;
-            });
-
-            const allStatuses = ['pending', 'confirmed', 'shipping', 'completed', 'delivered', 'cancelled'];
-            const countPromises = allStatuses.map(status =>
-                OrderModel.count({ where: { status: status } })
-            );
-            const countsByStatus = await Promise.all(countPromises);
-
-            const counts = {
-                all: await OrderModel.count(),
-                pending: countsByStatus[0],
-                confirmed: countsByStatus[1],
-                shipping: countsByStatus[2],
-                completed: countsByStatus[3],
-                delivered: countsByStatus[4],
-                cancelled: countsByStatus[5],
-            };
-
-            res.status(200).json({
-                status: 200,
-                message: "Lấy danh sách thành công",
-                data: result,
-                totalPages: Math.ceil(orders.count / limit),
-                currentPage: page,
-                counts
-            });
-
-        } catch (error) {
-            res.status(500).json({ error: error.message });
+            if (order_code) {
+                whereClause[Op.or].push({
+                    order_code: { [Op.like]: `%${order_code}%` }
+                });
+            }
         }
+
+        // Lọc theo ngày bắt đầu/kết thúc
+        if (startDate) {
+            whereClause.created_at = {
+                ...(whereClause.created_at || {}),
+                [Op.gte]: new Date(startDate)
+            };
+        }
+        if (endDate) {
+            whereClause.created_at = {
+                ...(whereClause.created_at || {}),
+                [Op.lte]: new Date(endDate)
+            };
+        }
+
+        // Lọc theo trạng thái
+        if (status && status !== 'all') {
+            whereClause.status = status;
+        }
+
+        // Lấy danh sách đơn hàng từ DB
+        const updatedOrders = await OrderModel.findAll({
+            where: whereClause,
+            include: [{ model: UserModel, as: 'user' }],
+            order: [['created_at', 'DESC']]
+        });
+
+        // Khởi tạo statusCounts
+        const statusCounts = {
+            all: 0,
+            pending: 0,
+            confirmed: 0,
+            shipping: 0,
+            completed: 0,
+            delivered: 0,
+            cancelled: 0
+        };
+
+        // Đếm số lượng đơn theo từng trạng thái
+        updatedOrders.forEach(order => {
+            if (statusCounts.hasOwnProperty(order.status)) {
+                statusCounts[order.status]++;
+            }
+            statusCounts.all++;
+        });
+
+        // Lọc theo trạng thái nếu có danh sách nhiều trạng thái
+        let filteredOrders = updatedOrders;
+        if (status && status !== 'all') {
+            const statusArray = typeof status === 'string' ? status.split(',') : [status];
+            filteredOrders = updatedOrders.filter(order => statusArray.includes(order.status));
+        }
+
+        const totalFilteredItems = filteredOrders.length;
+
+        // Phân trang
+        const paginatedOrders = filteredOrders.slice(offset, offset + perPage);
+
+        res.status(200).json({
+            status: 200,
+            message: "Lấy danh sách thành công",
+            data: paginatedOrders,
+            pagination: {
+                totalItems: totalFilteredItems,
+                currentPage,
+                totalPages: Math.ceil(totalFilteredItems / perPage),
+            },
+            statusCounts
+        });
+
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách đơn hàng:", error.message, error.stack);
+        res.status(500).json({
+            success: false,
+            message: "Lỗi máy chủ."
+        });
     }
+}
 
     static async getById(req, res) {
         try {
@@ -211,63 +234,60 @@ class OrderController {
     }
 
     static async searchOrders(req, res) {
-  try {
-    const { status } = req.query;
+        try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
 
-    let whereCondition = {};
+            const { status, searchTerm } = req.query;
+            const where = {};
 
-    if (status && status !== "all") {
-      whereCondition.status = status;
+            if (status && status !== "all") {
+                where.status = status;
+            }
+
+            const orders = await OrderModel.findAndCountAll({
+                where,
+                include: [
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email', 'phone']
+                    },
+                    {
+                        model: OrderDetailsModel,
+                        as: 'orderDetails',
+                        attributes: ['quantity', 'price'],
+                        include: [{
+                            model: ProductVariantsModel,
+                            as: 'variant',
+                            attributes: ['price'],
+                            include: [{ model: ProductModel, as: 'product', attributes: ['name'] }]
+                        }]
+                    }
+                ],
+                order: [['created_at', 'DESC']],
+                limit,
+                offset
+            });
+
+            if (searchTerm) {
+                where[Op.or] = [
+                    { '$user.name$': { [Op.like]: `%${searchTerm}%` } }
+                ];
+            }
+
+            res.status(200).json({
+                status: 200,
+                message: 'Tìm kiếm thành công',
+                data: orders.rows,
+                totalPages: Math.ceil(orders.count / limit),
+                currentPage: page
+            });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
     }
-
-    const orders = await OrderModel.findAll({
-      where: whereCondition,
-      order: [['created_at', 'DESC']],
-      include: [
-        {
-          model: OrderDetailsModel,
-          as: 'orderDetails',
-          attributes: ['quantity', 'price'],
-          include: [
-            {
-              model: ProductVariantsModel,
-              as: 'variant',
-              attributes: ['price'],
-              include: [
-                {
-                  model: ProductModel,
-                  as: 'product',
-                  attributes: ['name'],
-                },
-              ],
-            },
-          ],
-        },
-        {
-          model: UserModel,
-          as: 'user',
-          attributes: ['id', 'name', 'email', 'phone'],
-        },
-      ],
-    });
-
-    if (orders.length === 0) {
-      return res.status(404).json({
-        status: 200,
-        message: "Không tìm thấy đơn hàng nào.",
-        data: [],
-      });
-    }
-
-    res.status(200).json({
-      status: 200,
-      message: 'Tìm kiếm thành công',
-      data: orders,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
 
     static async trackOrder(req, res) {
         try {
@@ -432,75 +452,75 @@ class OrderController {
         }
     }
 
-   static async filterByDate(req, res) {
-    try {
-        const { startDate, endDate } = req.query;
+    static async filterByDate(req, res) {
+        try {
+            const { startDate, endDate } = req.query;
 
-        if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Thiếu ngày bắt đầu hoặc kết thúc.' });
-        }
-
-        const start = new Date(`${startDate}T00:00:00+07:00`);
-        const end = new Date(`${endDate}T23:59:59+07:00`);
-
-        if (isNaN(start) || isNaN(end)) {
-            return res.status(400).json({ message: 'Ngày không hợp lệ.' });
-        }
-
-        const where = {
-            created_at: {
-                [Op.between]: [start, end]
+            if (!startDate || !endDate) {
+                return res.status(400).json({ message: 'Thiếu ngày bắt đầu hoặc kết thúc.' });
             }
-        };
 
-        const orders = await OrderModel.findAll({
-            where,
-            order: [['created_at', 'DESC']],
-            include: [
-                {
-                    model: OrderDetailsModel,
-                    as: 'orderDetails',
-                    attributes: ['quantity', 'price'],
-                    include: [
-                        {
-                            model: ProductVariantsModel,
-                            as: 'variant',
-                            attributes: ['price'],
-                            include: [
-                                {
-                                    model: ProductModel,
-                                    as: 'product',
-                                    attributes: ['name']
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    model: UserModel,
-                    as: 'user',
-                    attributes: ['id', 'name', 'email', 'phone']
+            const start = new Date(`${startDate}T00:00:00+07:00`);
+            const end = new Date(`${endDate}T23:59:59+07:00`);
+
+            if (isNaN(start) || isNaN(end)) {
+                return res.status(400).json({ message: 'Ngày không hợp lệ.' });
+            }
+
+            const where = {
+                created_at: {
+                    [Op.between]: [start, end]
                 }
-            ]
-        });
+            };
 
-        const result = orders.map(order => {
-            const orderData = order.toJSON();
-            delete orderData.user_id;
-            return orderData;
-        });
+            const orders = await OrderModel.findAll({
+                where,
+                order: [['created_at', 'DESC']],
+                include: [
+                    {
+                        model: OrderDetailsModel,
+                        as: 'orderDetails',
+                        attributes: ['quantity', 'price'],
+                        include: [
+                            {
+                                model: ProductVariantsModel,
+                                as: 'variant',
+                                attributes: ['price'],
+                                include: [
+                                    {
+                                        model: ProductModel,
+                                        as: 'product',
+                                        attributes: ['name']
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name', 'email', 'phone']
+                    }
+                ]
+            });
 
-        res.status(200).json({
-            status: 200,
-            message: 'Lọc đơn hàng theo ngày thành công',
-            data: result
-        });
+            const result = orders.map(order => {
+                const orderData = order.toJSON();
+                delete orderData.user_id;
+                return orderData;
+            });
 
-    } catch (error) {
-        console.error('Lỗi lọc đơn hàng theo ngày:', error);
-        res.status(500).json({ message: 'Lỗi server', error: error.message });
+            res.status(200).json({
+                status: 200,
+                message: 'Lọc đơn hàng theo ngày thành công',
+                data: result
+            });
+
+        } catch (error) {
+            console.error('Lỗi lọc đơn hàng theo ngày:', error);
+            res.status(500).json({ message: 'Lỗi server', error: error.message });
+        }
     }
-}
 
 }
 

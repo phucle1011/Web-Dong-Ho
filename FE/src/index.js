@@ -7,6 +7,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { CookiesProvider } from 'react-cookie';
 import { ToastContainer } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css';
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -29,5 +31,5 @@ root.render(
     </CookiesProvider>
   </React.StrictMode>
 );
-
+AOS.init();
 reportWebVitals();

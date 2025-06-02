@@ -18,7 +18,7 @@ const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
 //------------------[ ADMIN ROUTES ]------------------
 
-//------------------[ ORDERS ]------------------
+//------------------[ ORDERS ]------------------\
 router.get('/orders/search', OrderController.searchOrders);
 router.get('/orders/track/:orderCode', OrderController.trackOrder);
 router.get('/orders/export-excel', OrderController.exportExcel);
@@ -34,7 +34,7 @@ router.get('/user/search', UserController.searchUser);
 router.get('/user/:id', UserController.getById);
 router.put('/user/:id/status', UserController.updateUserStatus);
 
-//------------------[ WISHLIST ]------------------
+//------------------[ WISHLIST ]------------------\
 router.get('/wishlist', WishlistController.getAllWishlists);
 router.get('/users/:userId/wishlist', WishlistController.getWishlistByUser);
 router.post('/wishlist', WishlistController.addToWishlist);
@@ -42,14 +42,14 @@ router.delete('/users/:userId/wishlist/:productVariantId', WishlistController.re
 router.get('/users/wishlist/search', WishlistController.searchWishlist);
 router.get('/users/:userId/wishlist/search', WishlistController.searchWishlistByUserProduct);
 
-//------------------[ CATEGORY ]------------------
+//------------------[ CATEGORY ]------------------\
 router.get("/category/list", categoryController.getAll);
 router.post('/category/create', categoryController.create);
 router.get("/category/:id", categoryController.getById);
 router.put('/category/:id', categoryController.update);
 router.delete('/category/:id', categoryController.delete);
 
-//------------------[ PROMOTIONS ]------------------
+//------------------[ PROMOTIONS ]------------------\
 router.get('/promotions/list', promotionController.getAll);
 router.post("/promotions/create", promotionController.create);
 router.get("/promotions/:id", promotionController.getById);
@@ -57,7 +57,7 @@ router.put('/promotions/:id', promotionController.update);
 router.delete("/promotion/:id", promotionController.delete);
 router.get('/promotions/generate-code', promotionController.generateUniquePromoCode);
 
-//------------------[ PROMOTION PRODUCTS ]------------------
+//------------------[ PROMOTION PRODUCTS ]------------------\
 router.get('/promotion', promotionProductsController.getAll);
 router.get('/promotions/ss/all', promotionProductsController.getAllPromotion);
 router.get('/promotion/:id', promotionProductsController.getById);
@@ -128,11 +128,6 @@ router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMont
 router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
 router.get('/dashboard/revenue', DashboardController.getRevenueByCustomRange);
 
-//------------------[ Notification ]------------------\
-// router.get('/notification', NotificationController.getNotifications);
-// router.get('/notification/:id', NotificationController.getNotificationById);
-// router.post('/notification', NotificationController.createNotification);
-// router.delete('/notification/:id', NotificationController.deleteNotification);
 
 router.get('/notification', NotificationController.getNotifications);
 router.get('/notification/:id', NotificationController.getNotificationById);

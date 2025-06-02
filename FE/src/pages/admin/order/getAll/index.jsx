@@ -2,7 +2,15 @@ import axios from "axios";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import React, { useEffect, useState } from "react";
-import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight,FaEye, FaMapMarkerAlt, FaTrashAlt } from 'react-icons/fa';
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaEye,
+  FaMapMarkerAlt,
+  FaTrashAlt,
+} from "react-icons/fa";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import FormDelete from "../../../../components/formDelete";
@@ -18,7 +26,7 @@ function OrderGetAll() {
   const recordsPerPage = 10;
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [statusCounts, setStatusCounts] = useState({
     all: 0,
     pending: 0,
@@ -48,49 +56,65 @@ function OrderGetAll() {
     }
   };
 
-  useEffect(() => {
-    fetchOrders(currentPage, statusFilter, searchTerm);
-  }, [currentPage, statusFilter, searchTerm]);
-
-  const fetchOrders = async (page, status = "", search = "") => {
+  // Hàm lấy danh sách đơn hàng có phân trang và filter
+  const fetchOrders = async (page = 1) => {
     try {
-      const params = { page, limit: recordsPerPage };
-      if (status) params.status = status;
-      if (search) params.searchTerm = search;
+      const params = {
+        page,
+        limit: recordsPerPage,
+      };
 
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/list`, { params });
+      if (statusFilter && statusFilter !== "all") {
+        params.status = statusFilter;
+      }
 
-      setOrders(res.data.data);
-      setTotalPages(res.data.totalPages);
+      if (searchTerm.trim()) {
+        params.searchTerm = searchTerm;
+      }
 
-      if (res.data.counts) {
-        setStatusCounts({
-          all: res.data.counts.all || 0,
-          pending: res.data.counts.pending || 0,
-          confirmed: res.data.counts.confirmed || 0,
-          shipping: res.data.counts.shipping || 0,
-          completed: res.data.counts.completed || 0,
-          delivered: res.data.counts.delivered || 0,
-          cancelled: res.data.counts.cancelled || 0,
-        });
+      if (startDate) {
+        params.startDate = startDate.toISOString().split("T")[0];
+      }
+
+      if (endDate) {
+        params.endDate = endDate.toISOString().split("T")[0];
+      }
+
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/list`, {
+        params,
+      });
+
+      setOrders(res.data.data || []);
+      setTotalPages(res.data.pagination?.totalPages || 1);
+      setStatusCounts(res.data.statusCounts || statusCounts);
+
+      if (!res.data.data.length) {
+        toast.info("Không tìm thấy đơn hàng nào.");
       }
     } catch (error) {
-      console.error("Lỗi khi lấy đơn hàng:", error);
+      console.error("Lỗi khi tải đơn hàng:", error);
+      toast.error("Lỗi tải dữ liệu từ máy chủ.");
     }
   };
+
+  useEffect(() => {
+    fetchOrders(currentPage);
+  }, [currentPage, statusFilter, startDate, endDate]);
 
   const deleteOrder = async () => {
     if (!selectedOrder) return;
     try {
-      await axios.delete(`${Constants.DOMAIN_API}/admin/orders/delete/${selectedOrder.id}`);
+      await axios.delete(
+        `${Constants.DOMAIN_API}/admin/orders/delete/${selectedOrder.id}`
+      );
       toast.success("Hủy đơn hàng thành công");
       setSelectedOrder(null);
       fetchOrders(currentPage);
     } catch (error) {
-      console.error("Lỗi khi hủy đơn hàng:", error);
       const message = error.response?.data?.message || "";
-
-      if (message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'") {
+      if (
+        message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
+      ) {
         toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
       } else if (message === "Id không tồn tại") {
         toast.error("Đơn hàng không tồn tại");
@@ -99,25 +123,6 @@ function OrderGetAll() {
       }
     } finally {
       setSelectedOrder(null);
-    }
-  };
-
-   const handleSearchByStatus = async () => {
-    try {
-      const statusParam = statusFilter || "all";
-
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/search`, { params: { status: statusParam } });
-
-      if (res.data.data.length === 0) {
-        toast.warning("Không tìm thấy đơn hàng nào.");
-      } else {
-        toast.success("Tìm kiếm đơn hàng thành công");
-      }
-      setOrders(res.data.data);
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm đơn hàng:", error);
-      toast.error("Không tìm thấy đơn hàng");
-      setOrders([]);
     }
   };
 
@@ -142,9 +147,10 @@ function OrderGetAll() {
 
   const handleChangeStatus = async (orderId, newStatus) => {
     try {
-      await axios.put(`${Constants.DOMAIN_API}/admin/orders/edit/${orderId}`, {
-        status: newStatus,
-      });
+      await axios.put(
+        `${Constants.DOMAIN_API}/admin/orders/edit/${orderId}`,
+        { status: newStatus }
+      );
       toast.success("Cập nhật trạng thái thành công");
       fetchOrders(currentPage);
     } catch (error) {
@@ -155,32 +161,20 @@ function OrderGetAll() {
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1);
   };
 
   const handleFilterClick = (status) => {
     setStatusFilter(status);
-    setCurrentPage(1);
   };
 
   const handleSearchSubmit = async () => {
     if (searchTerm.trim() === '') {
-      toast.warning("Vui lòng nhập mã đơn hàng hoặc tên người dùng cần tìm.");
+      toast.warning("Vui lòng nhập tên khách hàng hoặc mã đơn hàng.");
       return;
     }
+    setStatusFilter("all"); // Reset bộ lọc trạng thái khi tìm kiếm
     setCurrentPage(1);
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/search?searchTerm=${searchTerm}`);
-      if (res.data.data.length === 0) {
-        toast.warning("Không tìm thấy đơn hàng nào.");
-      }
-      setOrders(res.data.data);
-      toast.success("Tìm kiếm đơn hàng thành công");
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm đơn hàng:", error);
-      toast.error("Không tìm thấy đơn hàng");
-      setOrders([]);
-    }
+    fetchOrders(1);
   };
 
   const handleExcelExport = async () => {
@@ -193,19 +187,17 @@ function OrderGetAll() {
       const offset = date.getTimezoneOffset() * 60000;
       return new Date(date.getTime() - offset).toISOString().split("T")[0];
     };
-
     const start = formatDateVN(startDate);
     const end = formatDateVN(endDate);
 
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/export-excel`, {
-        params: {
-          start_date: start,
-          end_date: end,
-        },
-        responseType: "blob",
-      });
-
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/orders/export-excel`,
+        {
+          params: { start_date: start, end_date: end },
+          responseType: "blob",
+        }
+      );
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -245,19 +237,20 @@ function OrderGetAll() {
     }
 
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/track/${orderCode}`);
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/orders/track/${orderCode}`
+      );
       const data = res.data.data;
-
-      if (!data.locations || data.locations.length === 0) {
-        toast.info("Đơn hàng chưa có thông tin theo dõi vận chuyển.");
-      }
 
       setTrackingInfoMap((prev) => ({
         ...prev,
         [orderCode]: {
           orderCode,
           status: data.status,
-          location: data.locations && data.locations.length > 0 ? data.locations[0].location : "Không có thông tin vị trí",
+          location:
+            data.locations && data.locations.length > 0
+              ? data.locations[0].location
+              : "Không có thông tin vị trí",
           locations: data.locations || [],
         },
       }));
@@ -276,46 +269,15 @@ function OrderGetAll() {
     setCurrentPage(page);
   };
 
-  const handleFilterByDate = async () => {
-    if (!startDate || !endDate) {
-      toast.warning("Vui lòng chọn cả ngày bắt đầu và ngày kết thúc");
-      return;
-    }
-
-    const formatDateVN = (date) => {
-      const offset = date.getTimezoneOffset() * 60000;
-      return new Date(date.getTime() - offset).toISOString().split("T")[0];
-    };
-    const start = formatDateVN(startDate);
-    const end = formatDateVN(endDate);
-
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/filter-by-date`, {
-        params: {
-          startDate: start,
-          endDate: end,
-        },
-      });
-
-      if (res.data.data.length === 0) {
-        toast.warning("Không có đơn hàng trong khoảng thời gian này.");
-      }
-
-      setOrders(res.data.data);
-      setTotalPages(1);
-    } catch (error) {
-      console.error("Lỗi khi lọc đơn hàng:", error);
-      toast.error("Không thể lọc đơn hàng theo ngày");
-    }
-  };
-
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
           <div className="mb-4">
-            <h3 className="font-semibold mb-2">Chọn khoảng thời gian để xuất Excel:</h3>
+            <h3 className="font-semibold mb-2">
+              Chọn khoảng thời gian để xuất Excel:
+            </h3>
             <div className="flex items-center gap-4 mb-2">
               <div>
                 <label>Từ ngày:</label>
@@ -346,6 +308,8 @@ function OrderGetAll() {
             </div>
           </div>
         </div>
+
+        {/* Bộ lọc theo ngày */}
         <div className="mb-6 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
@@ -370,53 +334,62 @@ function OrderGetAll() {
             </div>
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded self-end"
-              onClick={handleFilterByDate}
+              onClick={() => fetchOrders(1)}
             >
               Lọc theo ngày
             </button>
           </div>
         </div>
+
+        {/* Tab trạng thái */}
         <div className="flex flex-nowrap items-center gap-6 border-b border-gray-200 px-6 py-4 overflow-x-auto mb-4">
           {[
-            { key: "", label: "Tất cả", color: "bg-gray-800", textColor: "text-white", count: statusCounts.all },
-            { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800", count: statusCounts.pending },
-            { key: "confirmed", label: "Đã xác nhận", color: "bg-yellow-300", textColor: "text-yellow-900", count: statusCounts.confirmed },
-            { key: "shipping", label: "Đang giao", color: "bg-blue-300", textColor: "text-blue-900", count: statusCounts.shipping },
-            { key: "completed", label: "Hoàn thành", color: "bg-emerald-300", textColor: "text-emerald-800", count: statusCounts.completed },
-            { key: "delivered", label: "Đã giao", color: "bg-green-300", textColor: "text-green-800", count: statusCounts.delivered },
-            { key: "cancelled", label: "Đã hủy", color: "bg-rose-300", textColor: "text-rose-800", count: statusCounts.cancelled },
-          ].map(({ key, label, color, textColor, count }) => (
+            { key: "all", label: "Tất cả", color: "bg-gray-800", textColor: "text-white" },
+            { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800" },
+            { key: "confirmed", label: "Đã xác nhận", color: "bg-yellow-300", textColor: "text-yellow-900" },
+            { key: "shipping", label: "Đang giao", color: "bg-blue-300", textColor: "text-blue-900" },
+            { key: "completed", label: "Hoàn thành", color: "bg-emerald-300", textColor: "text-emerald-800" },
+            { key: "delivered", label: "Đã giao", color: "bg-green-300", textColor: "text-green-800" },
+            { key: "cancelled", label: "Đã hủy", color: "bg-rose-300", textColor: "text-rose-800" },
+          ].map(({ key, label, color, textColor }) => (
             <button
               key={key}
               onClick={() => handleFilterClick(key)}
-              className={`btn rounded-pill px-3 py-1.5 text-nowrap ${statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
+              className={`btn rounded-pill px-3 py-1.5 text-nowrap ${
+                statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"
+              }`}
             >
               <span>{label}</span>
-              <span className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}>
-                {count}
+              <span
+                className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}
+              >
+                {statusCounts[key]}
               </span>
             </button>
           ))}
         </div>
 
+        {/* Ô tìm kiếm */}
         <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
             className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
-            placeholder="Vui lòng nhập tên khách hàng cần tìm..."
+            placeholder="Nhập tên khách hàng hoặc mã đơn hàng..."
             value={searchTerm}
             onChange={handleSearchChange}
           />
           <button
             type="button"
-            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded flex items-center justify-center"
-            onClick={handleSearchSubmit}
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded"
+            onClick={() => fetchOrders(1)}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
             </svg>
           </button>
         </div>
+
+        {/* Bảng đơn hàng */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
             <thead className="bg-gray-100 text-gray-600">
@@ -432,121 +405,203 @@ function OrderGetAll() {
               </tr>
             </thead>
             <tbody>
-              {orders.length > 0 ? orders.map((order, index) => (
-                <React.Fragment key={order.id}>
-                  <tr>
-                    <td className="p-2 border border-gray-300">{order.id}</td>
-                    <td className="p-2 border border-gray-300">{order.order_code}</td>
-                    <td className="p-2 border border-gray-300">{order.user.name}</td>
-                    <td className="p-2 border border-gray-300">{new Date(order.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
-                    <td className="p-2 border border-gray-300">{Number(order.total_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}</td>
-                    <td className="p-2 border border-gray-300">
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleChangeStatus(order.id, e.target.value)}
-                        className="capitalize border rounded px-2 py-1"
-                      >
-                        {getStatusesForOrder(order.status).map(status => (
-                          <option key={status} value={status}>{translateStatus(status)}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2 border border-gray-300">{order.payment_method}</td>
-                    <td className="p-2 border border-gray-300 flex gap-2">
-                      <Link to={`/admin/orders/detail/${order.id}`} className="bg-blue-500 text-white py-1 px-3 rounded"><FaEye /></Link>
-                      {["pending"].includes(order.status) && (
-                        <button onClick={() => setSelectedOrder(order)} className="bg-red-500 text-white py-1 px-3 rounded"><FaTrashAlt /></button>
-                      )}
-                      <button
-                        onClick={() => handleTrackOrder(order.order_code)}
-                        className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded whitespace-nowrap"
-                      >
-                        <FaMapMarkerAlt />
-                      </button>
-                    </td>
-                  </tr>
-                  {trackingInfoMap[order.order_code] && (
+              {orders.length > 0 ? (
+                orders.map((order, index) => (
+                  <React.Fragment key={order.id}>
                     <tr>
-                      <td colSpan={9} className="p-4">
-                        <div className="bg-yellow-100 p-4 rounded-lg w-full">
-                          <h2 className="text-lg font-semibold mb-2">Thông tin theo dõi đơn hàng</h2>
-                          <p className="mb-1"><span className="font-semibold">Mã đơn hàng:</span> <span className="text-blue-600 font-medium">{order.order_code}</span></p>
-                          <p className="mb-4"><span className="font-semibold">Trạng thái hiện tại:</span> <span className="text-green-600 font-medium">{translateStatus(order.status)}</span></p>
-
-                          <div className="relative ml-4 border-l-4 border-blue-500">
-                            {trackingInfoMap[order.order_code].locations.map((value, index) => (
-                              <div key={index} className="relative pl-6 mb-6">
-                                <div className="absolute -left-2 top-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white z-10"></div>
-                                <div className="bg-white rounded-md shadow-sm border border-gray-200 p-3">
-                                  <p className="text-sm mb-1"><span className="font-semibold">Thời gian:</span> {new Date(value.time).toLocaleString("vi-VN", { hour12: false })}</p>
-                                  <p className="text-sm mb-1"><span className="font-semibold">Vị trí:</span> {value.location}</p>
-                                  <p className="text-sm mb-1"><span className="font-semibold">Trạng thái:</span> {value.status}</p>
-                                  {value.note && <p className="text-sm"><span className="font-semibold">Ghi chú:</span> {value.note}</p>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <button onClick={() => {
-                            const updated = { ...trackingInfoMap };
-                            delete updated[order.order_code];
-                            setTrackingInfoMap(updated);
-                          }} className="mt-2 bg-red-500 text-white py-1 px-3 rounded">Đóng</button>
-                        </div>
+                      <td className="p-2 border border-gray-300">{index + 1}</td>
+                      <td className="p-2 border border-gray-300">{order.order_code}</td>
+                      <td className="p-2 border border-gray-300">{order.user?.name || "N/A"}</td>
+                      <td className="p-2 border border-gray-300">
+                        {new Date(order.created_at).toLocaleString("vi-VN", { hour12: false })}
+                      </td>
+                      <td className="p-2 border border-gray-300">
+                        {Number(order.total_price).toLocaleString("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        })}
+                      </td>
+                      <td className="p-2 border border-gray-300">
+                        <select
+                          value={order.status}
+                          onChange={(e) =>
+                            handleChangeStatus(order.id, e.target.value)
+                          }
+                          className="capitalize border rounded px-2 py-1"
+                        >
+                          {getStatusesForOrder(order.status).map((status) => (
+                            <option key={status} value={status}>
+                              {translateStatus(status)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2 border border-gray-300">{order.payment_method}</td>
+                      <td className="p-2 border border-gray-300 flex gap-2">
+                        <Link
+                          to={`/admin/orders/detail/${order.id}`}
+                          className="bg-blue-500 text-white py-1 px-3 rounded"
+                        >
+                          <FaEye />
+                        </Link>
+                        {["pending"].includes(order.status) && (
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="bg-red-500 text-white py-1 px-3 rounded"
+                          >
+                            <FaTrashAlt />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleTrackOrder(order.order_code)}
+                          className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded whitespace-nowrap"
+                        >
+                          <FaMapMarkerAlt />
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              )) : (
+
+                    {/* Hiển thị thông tin theo dõi đơn hàng nếu có */}
+                    {trackingInfoMap[order.order_code] && (
+                      <tr>
+                        <td colSpan={8} className="p-4">
+                          <div className="bg-yellow-100 p-4 rounded-lg w-full">
+                            <h2 className="text-lg font-semibold mb-2">Thông tin theo dõi đơn hàng</h2>
+                            <p className="mb-1">
+                              <span className="font-semibold">Mã đơn hàng:</span>{" "}
+                              <span className="text-blue-600 font-medium">
+                                {order.order_code}
+                              </span>
+                            </p>
+                            <p className="mb-4">
+                              <span className="font-semibold">Trạng thái hiện tại:</span>{" "}
+                              <span className="text-green-600 font-medium">
+                                {translateStatus(order.status)}
+                              </span>
+                            </p>
+                            <div className="relative ml-4 border-l-4 border-blue-500">
+                              {trackingInfoMap[order.order_code].locations.map(
+                                (value, i) => (
+                                  <div key={i} className="relative pl-6 mb-6">
+                                    <div className="absolute -left-2 top-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white z-10"></div>
+                                    <div className="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                                      <p className="text-sm mb-1">
+                                        <span className="font-semibold">Thời gian:</span>{" "}
+                                        {new Date(value.time).toLocaleString("vi-VN", {
+                                          hour12: false,
+                                        })}
+                                      </p>
+                                      <p className="text-sm mb-1">
+                                        <span className="font-semibold">Vị trí:</span>{" "}
+                                        {value.location}
+                                      </p>
+                                      <p className="text-sm mb-1">
+                                        <span className="font-semibold">Trạng thái:</span>{" "}
+                                        {value.status}
+                                      </p>
+                                      {value.note && (
+                                        <p className="text-sm">
+                                          <span className="font-semibold">Ghi chú:</span>{" "}
+                                          {value.note}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                const updated = { ...trackingInfoMap };
+                                delete updated[order.order_code];
+                                setTrackingInfoMap(updated);
+                              }}
+                              className="mt-2 bg-red-500 text-white py-1 px-3 rounded"
+                            >
+                              Đóng
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan={9} className="text-center py-4 text-gray-500">Không có đơn hàng nào.</td>
+                  <td colSpan={8} className="text-center py-4 text-gray-500">
+                    Không có đơn hàng nào.
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Phân trang */}
         <div className="flex justify-center mt-4 items-center">
-        <div className="flex items-center space-x-1">
-          <button disabled={currentPage === 1} onClick={() => handlePageChange(1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleLeft /></button>
-          <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronLeft /></button>
-
-          {currentPage > 2 && (
-            <>
-              <button onClick={() => handlePageChange(1)} className="px-3 py-1 border rounded">1</button>
-              {currentPage > 3 && <span className="px-2">...</span>}
-            </>
-          )}
-
-          {[...Array(totalPages)].map((_, i) => {
-            const page = i + 1;
-            if (page >= currentPage - 1 && page <= currentPage + 1) {
-              return (
-                <button key={page} onClick={() => handlePageChange(page)} className={`px-3 py-1 border rounded ${currentPage === page ? "bg-blue-500 text-white" : "bg-blue-100 text-black hover:bg-blue-200"}`}>
-                  {page}
-                </button>
-              );
-            }
-            return null;
-          })}
-
-          {currentPage < totalPages - 1 && (
-            <>
-              {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-              <button onClick={() => handlePageChange(totalPages)} className="px-3 py-1 border rounded">{totalPages}</button>
-            </>
-          )}
-
-          <button disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronRight /></button>
-          <button disabled={currentPage === totalPages} onClick={() => handlePageChange(totalPages)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleRight /></button>
+          <div className="flex items-center space-x-1">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(1)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaAngleDoubleLeft />
+            </button>
+            <button
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaChevronLeft />
+            </button>
+            {[...Array(totalPages)].map((_, i) => {
+              const page = i + 1;
+              if (
+                page >= currentPage - 1 &&
+                page <= currentPage + 1 &&
+                page <= totalPages
+              ) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-1 border rounded ${
+                      currentPage === page
+                        ? "bg-blue-500 text-white"
+                        : "bg-blue-100 text-black hover:bg-blue-200"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              }
+              return null;
+            })}
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaChevronRight />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(totalPages)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaAngleDoubleRight />
+            </button>
+          </div>
         </div>
       </div>
-      </div>
 
+      {/* Modal xóa đơn hàng */}
       {selectedOrder && (
         <FormDelete
           isOpen={true}
           onClose={() => setSelectedOrder(null)}
           onConfirm={deleteOrder}
-          message={`Bạn có chắc chắn muốn hủy đơn hàng có mã đơn "${selectedOrder.order_code}" không?`}
+          message={`Bạn có chắc chắn muốn hủy đơn hàng "${selectedOrder.order_code}"?`}
         />
       )}
     </div>
