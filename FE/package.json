@@ -59,6 +59,7 @@
     "react-toastify": "^11.0.5",
     "simplebar": "^6.3.1",
     "simplebar-react": "^3.3.0",
+    "slick-carousel": "^1.8.1",
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.21.0",
     "swiper": "^11.2.6",
