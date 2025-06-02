@@ -254,6 +254,26 @@ function BrandList() {
                     </Link>
                 </div>
 
+                {/* Các nút lọc trạng thái */}
+                <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
+                    {[
+                        { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
+                        { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
+                        { key: "inactive", label: "Ngừng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
+                    ].map(({ key, label, color, textColor, countKey }) => (
+                        <button
+                            key={key}
+                            onClick={() => handleFilterChange(key)}
+                            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${filterStatus === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
+                        >
+                            <span>{label}</span>
+                            <span className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}>
+                                {brandCounts[countKey] || 0}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
                 {/* Thanh tìm kiếm */}
                 <div className="mb-4 relative flex">
                     <input
@@ -278,25 +298,7 @@ function BrandList() {
                     </button>
                 </div>
 
-                {/* Các nút lọc trạng thái */}
-                <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
-                    {[
-                        { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
-                        { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
-                        { key: "inactive", label: "Ngừng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
-                    ].map(({ key, label, color, textColor, countKey }) => (
-                        <button
-                            key={key}
-                            onClick={() => handleFilterChange(key)}
-                            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${filterStatus === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
-                        >
-                            <span>{label}</span>
-                            <span className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}>
-                                {brandCounts[countKey] || 0}
-                            </span>
-                        </button>
-                    ))}
-                </div>
+
 
                 {loading ? (
                     <div className="text-center py-4">Đang tải dữ liệu...</div>
@@ -372,7 +374,7 @@ function BrandList() {
                                                         </Link>
                                                         <button
                                                             onClick={() => handleDeleteBrand(brand.id)}
-                                                            className="bg-red-500 text-white py-1 px-3 rounded"
+                                                            className="bg-red-500 text-white py-1 px-3 rounded flex items-center justify-center"
                                                             disabled={deletingBrandId === brand.id}
                                                         >
                                                             <i className="fa-solid fa-trash"></i>

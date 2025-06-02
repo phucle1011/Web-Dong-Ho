@@ -426,15 +426,18 @@ function UserDetail() {
         <div className="flex flex-col md:flex-row gap-6">
           {/* Avatar bên trái */}
           <div className="md:w-1/3 flex justify-center md:justify-center">
-            {user.avatar && (
+            {user.avatar ? (
               <img
-                src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`}
+                src={user.avatar.startsWith('http') ? user.avatar : `${Constants.DOMAIN_API}/uploads/${user.avatar}`}
                 alt={user.name}
                 className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
               />
+            ) : (
+              <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-full border-2 border-dashed border-gray-300">
+                <span className="text-gray-400 text-sm text-center px-2">Không có avatar</span>
+              </div>
             )}
           </div>
-
           {/* Thông tin bên phải */}
           <div className="md:w-2/3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-6 -ml-6 w-full">

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
@@ -7,12 +7,13 @@ import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, F
 
 function UserList() {
     const [users, setUsers] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
+    const [searchTerm, setSearchTerm] = useState(''); // State cho giá trị trong input
+    const [appliedSearchTerm, setAppliedSearchTerm] = useState(''); // State cho giá trị tìm kiếm đã được áp dụng
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
     const [searchError, setSearchError] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [selectedNewStatus, setSelectedNewStatus] = useState('');
@@ -22,67 +23,87 @@ function UserList() {
     const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, locked: 0 });
     const limit = 10;
 
-    // Fetch danh sách người dùng
-    const fetchUsers = async (page, status = '') => {
+    // Hàm fetch dữ liệu chung
+    const fetchData = useCallback(async (page, currentFilterStatus, currentAppliedSearchTerm) => { // Thay đổi tham số
         setLoading(true);
-        let url = `${Constants.DOMAIN_API}/admin/user/list?page=${page}&limit=${limit}`;
-        if (status && status !== 'all') {
-            url = `${Constants.DOMAIN_API}/admin/user/list?status=${status}&page=${page}&limit=${limit}`;
-        }
         try {
-            const res = await axios.get(url);
-            setUsers(res.data.data);
-            setTotalPages(res.data.totalPages || 1);
-            setSearchResults([]);
-            setSearchError('');
-            if (res.data.counts) {
-                setUserCounts(res.data.counts);
-            }
-        } catch (error) {
-            console.error("Lỗi khi lấy danh sách người dùng:", error);
-            toast.error("Lỗi tải danh sách người dùng");
-        } finally {
-            setLoading(false);
-        }
-    };
+            let url;
+            let params = { page, limit };
 
-    // Tìm kiếm người dùng
-    const handleSearchSubmit = async (page = 1) => {
-        if (!searchTerm.trim()) {
-            toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
-            return;
-        }
-        setLoading(true);
-        try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/search?searchTerm=${searchTerm}&page=${page}&limit=${limit}`);
-            if (res.data.data.length === 0) {
-                setSearchError("Không tìm thấy người dùng nào.");
-                setSearchResults([]);
-                setTotalPages(1);
+            if (currentAppliedSearchTerm.trim()) { // Sử dụng currentAppliedSearchTerm
+                url = `${Constants.DOMAIN_API}/admin/user/search`;
+                params.searchTerm = currentAppliedSearchTerm.trim(); // Sử dụng currentAppliedSearchTerm
+                if (currentFilterStatus) params.status = currentFilterStatus;
             } else {
-                setSearchResults(res.data.data);
-                setTotalPages(res.data.totalPages);
-                setSearchError('');
+                url = `${Constants.DOMAIN_API}/admin/user/list`;
+                if (currentFilterStatus) params.status = currentFilterStatus;
             }
-            setCurrentPage(page);
+
+            const res = await axios.get(url, { params });
+
+            if (res.data.status === 200) {
+                setUsers(res.data.data);
+                setTotalPages(res.data.totalPages || 1);
+                setSearchError('');
+                if (res.data.counts) setUserCounts(res.data.counts);
+            } else {
+                setUsers([]);
+                setTotalPages(1);
+                setSearchError("Không tìm thấy người dùng nào.");
+            }
         } catch (error) {
-            console.error("Lỗi khi tìm kiếm:", error);
-            toast.error("Không thể tìm kiếm người dùng");
+            console.error("Lỗi khi lấy danh sách người dùng hoặc tìm kiếm:", error);
+            toast.error("Lỗi tải danh sách hoặc tìm kiếm người dùng");
+            setUsers([]);
+            setTotalPages(1);
+            setSearchError("Có lỗi xảy ra khi tải dữ liệu.");
         } finally {
             setLoading(false);
         }
+    }, []); // fetchData không còn phụ thuộc vào searchTerm nữa
+
+    useEffect(() => {
+        fetchData(currentPage, filterStatus, appliedSearchTerm);
+    }, [fetchData, currentPage, filterStatus, appliedSearchTerm]);
+
+    // Gọi API khi nhấn nút tìm kiếm hoặc Enter
+    const handleSearchSubmit = () => {
+        // if (!searchTerm.trim()) { // Tùy chọn: có thể bỏ check này nếu muốn tìm kiếm rỗng trả về tất cả
+        //     toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
+        //     return;
+        // }
+        setCurrentPage(1); // Reset về trang 1 khi tìm kiếm mới
+        setAppliedSearchTerm(searchTerm); // Cập nhật appliedSearchTerm để kích hoạt useEffect
+        setIsSearching(true); // Đánh dấu là đang tìm kiếm
+        // fetchData(1, filterStatus, searchTerm); // Không cần gọi ở đây nữa, useEffect sẽ gọi
     };
 
-    // Reset tìm kiếm
+    // Xử lý khi xóa input tìm kiếm
     const handleClearSearch = () => {
-        setSearchTerm('');
-        setSearchResults([]);
-        setCurrentPage(1);
-        setFilterStatus('');
-        fetchUsers(1);
+        setSearchTerm(''); // Xóa nội dung input
+        setAppliedSearchTerm(''); // Reset từ khóa tìm kiếm
+        setSearchError('');
+        setCurrentPage(1); // Reset về trang 1
+        setIsSearching(false);
+
+        // Gọi hàm fetchData với trạng thái lọc hiện tại
+        fetchData(1, filterStatus, '');
     };
 
-    // Hàm xử lý chọn trạng thái mới -> mở modal chọn lý do
+    // Khi thay đổi trạng thái lọc
+    const handleFilterChange = (status) => {
+        setFilterStatus(status);
+        setCurrentPage(1); // Reset về trang 1 khi thay đổi bộ lọc
+        // fetchData(1, status, appliedSearchTerm); // Không cần gọi ở đây nữa, useEffect sẽ gọi
+    };
+
+    // Khi thay đổi trang
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+        // fetchData(page, filterStatus, appliedSearchTerm); // Không cần gọi ở đây nữa, useEffect sẽ gọi
+    };
+
+    // Khi chọn trạng thái người dùng mới -> mở modal
     const handleStatusChange = (userId, newStatus) => {
         setSelectedUserId(userId);
         setSelectedNewStatus(newStatus);
@@ -91,7 +112,7 @@ function UserList() {
         setShowReasonModal(true);
     };
 
-    // Gửi lý do + cập nhật trạng thái
+    // Gửi lý do thay đổi trạng thái
     const handleSubmitReason = async () => {
         const finalReason = reasonOption === 'Khác' ? customReason : reasonOption;
         if (!finalReason || !finalReason.trim()) {
@@ -104,11 +125,7 @@ function UserList() {
                 reason: finalReason
             });
             toast.success(res.data.message);
-            if (searchTerm.trim()) {
-                handleSearchSubmit(currentPage);
-            } else {
-                fetchUsers(currentPage, filterStatus);
-            }
+            fetchData(currentPage, filterStatus, searchTerm);
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái:", error);
             toast.error("Không thể cập nhật trạng thái người dùng.");
@@ -119,18 +136,17 @@ function UserList() {
         }
     };
 
-    // Hiển thị tên trạng thái tiếng Việt
+    // Helper: Hiển thị tên trạng thái tiếng Việt
     const getVietnameseStatus = (englishStatus) => {
         switch (englishStatus) {
             case "active": return "Hoạt động";
             case "inactive": return "Ngưng hoạt động";
-            // case "pending": return "Chờ duyệt";
             case "locked": return "Bị khóa";
             default: return englishStatus;
         }
     };
 
-    // Danh sách lý do theo trạng thái
+    // Helper: Danh sách lý do theo trạng thái
     const getReasonOptionsForStatus = (status) => {
         switch (status) {
             case "inactive":
@@ -162,48 +178,16 @@ function UserList() {
                         <option value="Khác">Khác</option>
                     </>
                 );
-            // case "pending":
-            //     return (
-            //         <>
-            //             <option value="">-- Chọn lý do --</option>
-            //             <option value="Chờ xác minh email">Chờ xác minh email</option>
-            //             <option value="Chờ duyệt tài liệu">Chờ duyệt tài liệu</option>
-            //             <option value="Khác">Khác</option>
-            //         </>
-            //     );
-            // default:
-            //     return (
-            //         <>
-            //             <option value="">-- Chọn lý do --</option>
-            //             <option value="Lý do chung">Lý do chung</option>
-            //             <option value="Khác">Khác</option>
-            //         </>
-            //     );
+            default:
+                return (
+                    <>
+                        <option value="">-- Chọn lý do --</option>
+                        <option value="Lý do chung">Lý do chung</option>
+                        <option value="Khác">Khác</option>
+                    </>
+                );
         }
     };
-
-    // Phân trang
-    const handlePageChange = (page) => {
-        setCurrentPage(page);
-    };
-
-    const handleFilterChange = (status) => {
-        setFilterStatus(status);
-        setCurrentPage(1);
-        setIsSearching(false);
-        setSearchTerm('');
-        setSearchError('');
-    };
-
-    const [isSearching, setIsSearching] = useState(false);
-
-    useEffect(() => {
-        if (isSearching && searchTerm.trim() !== '') {
-            handleSearchSubmit(currentPage);
-        } else {
-            fetchUsers(currentPage, filterStatus);
-        }
-    }, [currentPage, filterStatus, isSearching]);
 
     return (
         <div className="container mx-auto p-2">
@@ -216,7 +200,6 @@ function UserList() {
                         { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
                         { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
                         { key: "inactive", label: "Ngưng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
-                        // { key: "pending", label: "Chờ duyệt", color: "bg-yellow-300", textColor: "text-yellow-800", countKey: "pending" },
                         { key: "locked", label: "Bị khóa", color: "bg-purple-300", textColor: "text-purple-800", countKey: "locked" },
                     ].map(({ key, label, color, textColor, countKey }) => (
                         <button
@@ -237,19 +220,15 @@ function UserList() {
                     <input
                         type="text"
                         placeholder="Tìm kiếm theo tên hoặc email..."
-                        value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            if (!e.target.value.trim()) {
-                                handleClearSearch();
-                            }
-                        }}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                        value={searchTerm} // Input vẫn bind với searchTerm
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()} // Gọi handleSearchSubmit khi nhấn Enter
                         className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
-                        onClick={handleSearchSubmit}
+                        onClick={handleSearchSubmit} // Gọi handleSearchSubmit khi nhấn nút
                         className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
+                        title="Tìm kiếm"
                     >
                         <FaSearch className="w-5 h-5" />
                     </button>
@@ -275,92 +254,53 @@ function UserList() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {(searchResults.length > 0 ? searchResults : users).map((user, index) => (
-                                    <tr key={user.id} className="border-b">
-                                        <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
-                                        <td className="p-2 border">{user.name}</td>
-                                        <td className="p-2 border">{user.email}</td>
-                                        <td className="p-2 border">{user.phone}</td>
-                                        <td className="p-2 border">
-                                            <img src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`} alt={user.name} className="w-16 h-16 object-cover rounded-full" />
-                                        </td>
-                                        <td className="p-2 border capitalize">{user.role}</td>
-                                        <td className="p-2 border capitalize">
-                                            <select
-                                                value={user.status}
-                                                onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                                                className="border rounded px-2 py-1"
-                                            >
-                                                <option value="active">Hoạt động</option>
-                                                <option value="inactive">Ngưng hoạt động</option>
-                                                {/* <option value="pending">Chờ duyệt</option> */}
-                                                <option value="locked">Bị khóa</option>
-                                            </select>
-                                        </td>
-                                        <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
-                                        <td className="p-2 border text-center">
-                                            <Link to={`/admin/user/detail/${user.id}`} className="bg-blue-500 text-white py-1 px-3 rounded">
-                                                <i className="fa fa-eye"></i>
-                                            </Link>
+                                {users.length > 0 ? (
+                                    users.map((user, index) => (
+                                        <tr key={user.id} className="border-b">
+                                            <td className="p-2 border">{(currentPage - 1) * limit + index + 1}</td>
+                                            <td className="p-2 border">{user.name}</td>
+                                            <td className="p-2 border">{user.email}</td>
+                                            <td className="p-2 border">{user.phone}</td>
+                                            <td className="p-2 border">
+                                                {user.avatar ? (
+                                                    <img
+                                                        src={user.avatar.startsWith('http') ? user.avatar : `${Constants.DOMAIN_API}/uploads/${user.avatar}`}
+                                                        alt={user.name}
+                                                        className="w-16 h-16 object-cover rounded-full"
+                                                    />
+                                                ) : (
+                                                    <span className="text-gray-400">Không có avatar</span>
+                                                )}
+                                            </td>
+                                            <td className="p-2 border capitalize">{user.role}</td>
+                                            <td className="p-2 border capitalize">
+                                                <select
+                                                    value={user.status}
+                                                    onChange={(e) => handleStatusChange(user.id, e.target.value)}
+                                                    className="border rounded px-2 py-1"
+                                                >
+                                                    <option value="active">Hoạt động</option>
+                                                    <option value="inactive">Ngưng hoạt động</option>
+                                                    <option value="locked">Bị khóa</option>
+                                                </select>
+                                            </td>
+                                            <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
+                                            <td className="p-2 border text-center">
+                                                <Link to={`/admin/user/detail/${user.id}`} className="bg-blue-500 text-white py-1 px-3 rounded">
+                                                    <i className="fa fa-eye"></i>
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="9" className="p-4 text-center text-red-500 font-medium">
+                                            {appliedSearchTerm ? "Không tìm thấy người dùng nào phù hợp." : "Không có dữ liệu."}
                                         </td>
                                     </tr>
-                                ))}
-                                {(searchResults.length === 0 && users.length === 0 && !loading) && (
-                                    <tr><td colSpan="9" className="p-4 text-center text-gray-500">Không có dữ liệu.</td></tr>
-                                )}
-                                {searchError && (
-                                    <tr><td colSpan="9" className="p-4 text-center text-red-500">{searchError}</td></tr>
                                 )}
                             </tbody>
                         </table>
-
-                        {/* Modal chọn lý do */}
-                        {showReasonModal && (
-                            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                                <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-                                    <h3 className="text-lg font-semibold mb-4">
-                                        Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
-                                    </h3>
-                                    <label className="block mb-2">Chọn lý do mẫu:</label>
-                                    <select
-                                        value={reasonOption}
-                                        onChange={(e) => {
-                                            setReasonOption(e.target.value);
-                                            setCustomReason('');
-                                        }}
-                                        className="w-full border rounded px-3 py-2 mb-4"
-                                    >
-                                        {getReasonOptionsForStatus(selectedNewStatus)}
-                                    </select>
-                                    {reasonOption === 'Khác' && (
-                                        <>
-                                            <label className="block mb-2">Nhập lý do khác:</label>
-                                            <input
-                                                type="text"
-                                                value={customReason}
-                                                onChange={(e) => setCustomReason(e.target.value)}
-                                                className="w-full border rounded px-3 py-2"
-                                                placeholder="Nhập lý do..."
-                                            />
-                                        </>
-                                    )}
-                                    <div className="flex justify-end mt-4 space-x-2">
-                                        <button
-                                            onClick={() => setShowReasonModal(false)}
-                                            className="px-4 py-2 bg-gray-300 rounded"
-                                        >
-                                            Hủy
-                                        </button>
-                                        <button
-                                            onClick={handleSubmitReason}
-                                            className="px-4 py-2 bg-blue-500 text-white rounded"
-                                        >
-                                            Xác nhận
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {/* Phân trang */}
                         <div className="flex justify-center mt-4 items-center">
@@ -369,7 +309,15 @@ function UserList() {
                                 <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronLeft /></button>
                                 {[...Array(totalPages)].map((_, i) => {
                                     const page = i + 1;
-                                    if (page >= currentPage - 1 && page <= currentPage + 1) {
+                                    // Hiển thị 3 nút trang quanh trang hiện tại
+                                    if (page >= currentPage - 1 && page <= currentPage + 1 || page === 1 || page === totalPages) {
+                                        // Thêm dấu ... nếu cần
+                                        if (page === 1 && currentPage > 2) {
+                                            return <span key="dots-start" className="px-2 py-1">...</span>;
+                                        }
+                                        if (page === totalPages && currentPage < totalPages - 1) {
+                                            return <span key="dots-end" className="px-2 py-1">...</span>;
+                                        }
                                         return (
                                             <button
                                                 key={page}
@@ -387,6 +335,54 @@ function UserList() {
                             </div>
                         </div>
                     </>
+                )}
+
+                {/* Modal chọn lý do */}
+                {showReasonModal && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                        <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+                            <h3 className="text-lg font-semibold mb-4">
+                                Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
+                            </h3>
+                            <label className="block mb-2">Chọn lý do mẫu:</label>
+                            <select
+                                value={reasonOption}
+                                onChange={(e) => {
+                                    setReasonOption(e.target.value);
+                                    setCustomReason('');
+                                }}
+                                className="w-full border rounded px-3 py-2 mb-4"
+                            >
+                                {getReasonOptionsForStatus(selectedNewStatus)}
+                            </select>
+                            {reasonOption === 'Khác' && (
+                                <>
+                                    <label className="block mb-2">Nhập lý do khác:</label>
+                                    <input
+                                        type="text"
+                                        value={customReason}
+                                        onChange={(e) => setCustomReason(e.target.value)}
+                                        className="w-full border rounded px-3 py-2"
+                                        placeholder="Nhập lý do..."
+                                    />
+                                </>
+                            )}
+                            <div className="flex justify-end mt-4 space-x-2">
+                                <button
+                                    onClick={() => setShowReasonModal(false)}
+                                    className="px-4 py-2 bg-gray-300 rounded"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleSubmitReason}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                                >
+                                    Xác nhận
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

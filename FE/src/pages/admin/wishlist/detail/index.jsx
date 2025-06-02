@@ -124,12 +124,18 @@ function WishlistDetail() {
                     <div className="flex flex-col md:flex-row gap-6">
                         {/* Avatar bên trái */}
                         <div className="md:w-1/3 flex justify-center md:justify-center">
-                            {user.avatar && (
+                            {user.avatar ? (
                                 <img
-                                    src={`${Constants.DOMAIN_API}/uploads/${user.avatar}`}
+                                    src={user.avatar.startsWith('http')
+                                        ? user.avatar
+                                        : `${Constants.DOMAIN_API}/uploads/${user.avatar}`}
                                     alt={user.name}
                                     className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
                                 />
+                            ) : (
+                                <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-full border-2 border-dashed border-gray-300">
+                                    <span className="text-gray-400 text-sm text-center px-2">Không có avatar</span>
+                                </div>
                             )}
                         </div>
 
@@ -239,7 +245,7 @@ function WishlistDetail() {
                                     </tr>
                                 ) : (
                                     wishlistItems.map((item, index) => {
-                                          console.log("Item:", item); // <-- Xem variant.attributeValues và variant.stock có không?
+                                        console.log("Item:", item); // <-- Xem variant.attributeValues và variant.stock có không?
                                         const variant = item.variant;
                                         const product = variant.product;
 
@@ -261,13 +267,17 @@ function WishlistDetail() {
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     {variant.images && variant.images.length > 0 ? (
                                                         <img
-                                                            src={`${Constants.DOMAIN_API}/uploads/${variant.images[0].image_url}`}
+                                                            src={variant.images[0].image_url.startsWith('http')
+                                                                ? variant.images[0].image_url
+                                                                : `${Constants.DOMAIN_API}/uploads/${variant.images[0].image_url}`}
                                                             alt="Biến thể"
                                                             className="w-12 h-12 object-cover rounded"
                                                         />
                                                     ) : product.thumbnail ? (
                                                         <img
-                                                            src={`${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
+                                                            src={product.thumbnail.startsWith('http')
+                                                                ? product.thumbnail
+                                                                : `${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
                                                             alt="Thumbnail"
                                                             className="w-12 h-12 object-cover rounded"
                                                         />

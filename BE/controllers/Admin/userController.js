@@ -129,8 +129,9 @@ class UserController {
                 return res.status(404).json({ message: "Người dùng không tồn tại." });
             }
 
-            // Cập nhật trạng thái
+            // Cập nhật trạng thái và lưu lý do bất kể trạng thái nào
             user.status = status;
+            user.lockout_reason = reason; // Luôn lưu lý do
             await user.save();
 
             // Gửi email thông báo lý do
@@ -147,11 +148,10 @@ class UserController {
             res.status(500).json({ error: error.message });
         }
     }
-
     // Tìm kiếm người dùng
     static async searchUser(req, res) {
         try {
-            const { searchTerm, page = 1, limit = 10 } = req.query;
+            const { searchTerm, page = 1, limit = 10, status } = req.query;
             const currentPage = parseInt(page);
             const currentLimit = parseInt(limit);
             const offset = (currentPage - 1) * currentLimit;
@@ -160,41 +160,62 @@ class UserController {
                 return res.status(400).json({ message: 'Vui lòng cung cấp từ khóa tìm kiếm.' });
             }
 
+            const whereClause = {
+                [Op.or]: [
+                    { name: { [Op.like]: `%${searchTerm}%` } },
+                    { email: { [Op.like]: `%${searchTerm}%` } },
+                    { phone: { [Op.like]: `%${searchTerm}%` } }
+                ]
+            };
+
+            // Nếu có status, thêm vào điều kiện tìm kiếm
+            if (status && ['active', 'inactive', 'locked'].includes(status)) {
+                whereClause.status = status;
+            }
+
             const { count, rows: users } = await UserModel.findAndCountAll({
-                where: {
-                    [Op.or]: [
-                        { name: { [Op.like]: `%${searchTerm}%` } },
-                        { email: { [Op.like]: `%${searchTerm}%` } },
-                        { phone: { [Op.like]: `%${searchTerm}%` } }
-                    ]
-                },
-                attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
+                where: whereClause,
+                attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at'],
+                order: [['created_at', 'DESC']],
                 limit: currentLimit,
-                offset: offset,
-                order: [['created_at', 'DESC']]
+                offset: offset
             });
 
             if (count === 0) {
-                return res.status(404).json({
+                return res.status(200).json({
                     status: 200,
-                    message: 'Không tìm thấy người dùng nào phù hợp.',
+                    message: 'Không tìm thấy người dùng nào.',
                     data: [],
-                    totalPages: 0,
+                    totalPages: 1,
                     currentPage: currentPage
                 });
             }
 
-            return res.status(200).json({
+            // Đếm số lượng theo từng trạng thái
+            const allCounts = await Promise.all([
+                UserModel.count(),                          // tổng tất cả
+                UserModel.count({ where: { status: 'active' } }),
+                UserModel.count({ where: { status: 'inactive' } }),
+                UserModel.count({ where: { status: 'locked' } })
+            ]);
+
+            res.status(200).json({
                 status: 200,
                 message: 'Tìm kiếm người dùng thành công',
                 data: users,
                 totalPages: Math.ceil(count / currentLimit),
-                currentPage: currentPage
+                currentPage: currentPage,
+                counts: {
+                    all: allCounts[0],
+                    active: status === 'active' ? count : allCounts[1],
+                    inactive: status === 'inactive' ? count : allCounts[2],
+                    locked: status === 'locked' ? count : allCounts[3]
+                }
             });
 
         } catch (error) {
             console.error('Lỗi khi tìm kiếm người dùng:', error);
-            return res.status(500).json({ message: 'Lỗi server' });
+            res.status(500).json({ message: 'Lỗi server' });
         }
     }
 }

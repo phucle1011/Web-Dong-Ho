@@ -139,7 +139,7 @@ function WishlistList() {
           <>
             <table className="w-full border-collapse border border-gray-300 mt-3">
               <thead>
-                <tr>
+                <tr className="bg-gray-200">
                   <th className="p-2 border text-left">STT</th>
                   <th className="p-2 border text-left">Tên Người dùng</th>
                   <th className="p-2 border text-left">Sản phẩm yêu thích</th>
@@ -168,7 +168,7 @@ function WishlistList() {
                                 <div key={item.id} className="flex items-center space-x-3 p-2 border rounded-md">
                                   {product?.thumbnail && (
                                     <img
-                                      src={`${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
+                                      src={product.thumbnail.startsWith('http') ? product.thumbnail : `${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
                                       alt={product.name}
                                       className="w-16 h-16 object-cover rounded"
                                     />
