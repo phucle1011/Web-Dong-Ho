@@ -9,7 +9,7 @@ export default function ClientLayout({ childrenClasses, type }) {
       <DrawerThree open={drawer} action={() => setDrawer(!drawer)} />
       <div className="w-full overflow-x-hidden">
         <div type={3} drawerAction={() => setDrawer(!drawer)} />
-        <div className={`w-full  ${childrenClasses || "pt-[30px] pb-[60px]"}`}>
+        <div className={`w-full  ${childrenClasses || " pb-[60px]"}`}>
           <Outlet />
         </div>
        
