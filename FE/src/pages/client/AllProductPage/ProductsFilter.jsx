@@ -3,9 +3,9 @@ import Checkbox from "../Helpers/Checkbox";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Constants from "../../../Constants";
+
 export default function ProductsFilter({
-  filters,
-  checkboxHandler,
+  initialFilters = {},
   volume,
   volumeHandler,
   storage,
@@ -14,20 +14,27 @@ export default function ProductsFilter({
   filterToggle,
   filterToggleHandler,
 }) {
-
+  const [filters, setFilters] = useState(initialFilters);
   const [categoryList, setCategoryList] = useState([]);
+
+  const checkboxHandler = (e) => {
+    const { name, checked } = e.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: checked,
+    }));
+  };
+
   useEffect(() => {
     async function fetchCategories() {
       try {
         const res = await axios.get(`${Constants.DOMAIN_API}/category/list`);
-        console.log("API response data:", res.data);
         if (Array.isArray(res.data.data)) {
           setCategoryList(res.data.data);
         } else {
           setCategoryList([]);
         }
-      } catch (error) {
-        console.error("Lỗi khi lấy danh mục:", error);
+      } catch {
         setCategoryList([]);
       }
     }
