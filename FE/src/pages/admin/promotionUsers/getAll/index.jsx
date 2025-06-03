@@ -115,8 +115,16 @@ function PromotionList() {
     }
   };
 
-  const handleSendEmails = async () => {
-    if (!emailSubject.trim() || !emailContent.trim()) {
+  const handleSendEmails = async (useDefault = false) => {
+    let subject = emailSubject;
+    let content = emailContent;
+    if (useDefault) {
+      if (!selectedPromotion) return;
+      subject = `Khuyến mãi: ${selectedPromotion.name || "Mã không tên"}`;
+      content = `<p>Bạn nhận được khuyến mãi: <strong>${selectedPromotion.name}</strong></p>`;
+    }
+
+    if (!subject.trim() || !content.trim()) {
       toast.warning("Vui lòng nhập tiêu đề và nội dung email.");
       return;
     }
@@ -135,8 +143,8 @@ function PromotionList() {
     try {
       await axios.post(`${Constants.DOMAIN_API}/admin/send-promotion-emails`, {
         customerIds: selectedCustomerIds,
-        subject: emailSubject,
-        content: emailContent,
+        subject,
+        content,
         promotionId: selectedPromotionId,
       });
 
@@ -260,9 +268,7 @@ function PromotionList() {
                 <li
                   key={promo.id}
                   onClick={() => setSelectedPromotionId(promo.id)}
-                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id
-                    ? "bg-blue-100 shadow"
-                    : "hover:bg-blue-50"
+                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? "bg-blue-100 shadow" : "hover:bg-blue-50"
                     } ${isExpired ? "opacity-60" : ""}`}
                 >
                   <div className="flex items-center justify-between">
@@ -310,16 +316,28 @@ function PromotionList() {
           <h3 className="text-xl font-semibold text-gray-800">
             Danh sách khách hàng {promotionTitle}
           </h3>
-          <button
-            className={`bg-green-600 text-white px-5 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 || isSelectedPromotionExpired
-              ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-green-700"
-              }`}
-            onClick={() => setIsEmailModalOpen(true)}
-            disabled={selectedCustomerIds.length === 0 || isSelectedPromotionExpired}
-          >
-            Soạn Email ({selectedCustomerIds.length})
-          </button>
+          <div className="flex gap-2">
+            <button
+              className={`bg-blue-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 || isSelectedPromotionExpired
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-blue-700"
+                }`}
+              onClick={() => handleSendEmails(true)}
+              disabled={selectedCustomerIds.length === 0 || isSelectedPromotionExpired}
+            >
+              Gửi Email ({selectedCustomerIds.length})
+            </button>
+            <button
+              className={`bg-green-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 || isSelectedPromotionExpired
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-green-700"
+                }`}
+              onClick={() => setIsEmailModalOpen(true)}
+              disabled={selectedCustomerIds.length === 0 || isSelectedPromotionExpired}
+            >
+              Soạn Email ({selectedCustomerIds.length})
+            </button>
+          </div>
         </div>
 
         <div className="flex mb-3 gap-2">
@@ -500,7 +518,7 @@ function PromotionList() {
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
                     }`}
-                  onClick={handleSendEmails}
+                  onClick={() => handleSendEmails(false)}
                   disabled={isSelectedPromotionExpired || sendingEmail}
                 >
                   {sendingEmail ? "Đang gửi..." : "Gửi email"}
