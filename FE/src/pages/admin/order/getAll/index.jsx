@@ -56,7 +56,13 @@ function OrderGetAll() {
     }
   };
 
-  // Hàm lấy danh sách đơn hàng có phân trang và filter
+  function formatDateLocal(date) {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   const fetchOrders = async (page = 1) => {
     try {
       const params = {
@@ -73,11 +79,10 @@ function OrderGetAll() {
       }
 
       if (startDate) {
-        params.startDate = startDate.toISOString().split("T")[0];
+        params.startDate = formatDateLocal(startDate);
       }
-
       if (endDate) {
-        params.endDate = endDate.toISOString().split("T")[0];
+        params.endDate = formatDateLocal(endDate);
       }
 
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/list`, {
@@ -99,7 +104,7 @@ function OrderGetAll() {
 
   useEffect(() => {
     fetchOrders(currentPage);
-  }, [currentPage, statusFilter, startDate, endDate]);
+  }, [currentPage, statusFilter]);
 
   const deleteOrder = async () => {
     if (!selectedOrder) return;
@@ -126,12 +131,18 @@ function OrderGetAll() {
     }
   };
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      fetchOrders(1);
+    }
+  }, [searchTerm]);
+
   const getStatusesForOrder = (currentStatus) => {
     switch (currentStatus) {
       case "pending":
         return ["pending", "confirmed", "shipping", "completed", "delivered", "cancelled"];
       case "confirmed":
-        return ["confirmed", "shipping", "completed", "delivered", "cancelled"];
+        return ["confirmed", "shipping", "completed", "delivered"];
       case "shipping":
         return ["shipping", "completed", "delivered"];
       case "completed":
@@ -172,7 +183,7 @@ function OrderGetAll() {
       toast.warning("Vui lòng nhập tên khách hàng hoặc mã đơn hàng.");
       return;
     }
-    setStatusFilter("all"); // Reset bộ lọc trạng thái khi tìm kiếm
+    setStatusFilter("all");
     setCurrentPage(1);
     fetchOrders(1);
   };
@@ -274,102 +285,66 @@ function OrderGetAll() {
       <div className="bg-white p-4 shadow rounded-md">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
-          <div className="mb-4">
-            <h3 className="font-semibold mb-2">
-              Chọn khoảng thời gian để xuất Excel:
-            </h3>
-            <div className="flex items-center gap-4 mb-2">
-              <div>
-                <label>Từ ngày:</label>
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  dateFormat="yyyy-MM-dd"
-                  className="border px-2 py-1 rounded"
-                  placeholderText="Chọn ngày bắt đầu"
-                />
-              </div>
-              <div>
-                <label>Đến ngày:</label>
-                <DatePicker
-                  selected={endDate}
-                  onChange={(date) => setEndDate(date)}
-                  dateFormat="yyyy-MM-dd"
-                  className="border px-2 py-1 rounded"
-                  placeholderText="Chọn ngày kết thúc"
-                />
-              </div>
-              <button
-                onClick={handleExcelExport}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              >
-                Xuất Excel
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Bộ lọc theo ngày */}
-        <div className="mb-6 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label className="whitespace-nowrap">Từ ngày:</label>
-              <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)}
-                dateFormat="yyyy-MM-dd"
-                className="border px-3 py-2 rounded w-40"
-                placeholderText="Chọn ngày bắt đầu"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="whitespace-nowrap">Đến ngày:</label>
-              <DatePicker
-                selected={endDate}
-                onChange={(date) => setEndDate(date)}
-                dateFormat="yyyy-MM-dd"
-                className="border px-3 py-2 rounded w-40"
-                placeholderText="Chọn ngày kết thúc"
-              />
-            </div>
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded self-end"
-              onClick={() => fetchOrders(1)}
-            >
-              Lọc theo ngày
-            </button>
+        <div className="mb-6 flex flex-wrap items-center gap-4 justify-center">
+          <div className="flex items-center gap-2">
+            <label className="whitespace-nowrap">Từ ngày:</label>
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              dateFormat="yyyy-MM-dd"
+              className="border px-3 py-2 rounded w-40"
+              placeholderText="Chọn ngày bắt đầu"
+            />
           </div>
+          <div className="flex items-center gap-2">
+            <label className="whitespace-nowrap">Đến ngày:</label>
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              dateFormat="yyyy-MM-dd"
+              className="border px-3 py-2 rounded w-40"
+              placeholderText="Chọn ngày kết thúc"
+            />
+          </div>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            onClick={() => fetchOrders(1)}
+          >
+            Lọc theo ngày
+          </button>
+          <button
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            onClick={handleExcelExport}
+          >
+            Xuất Excel
+          </button>
         </div>
 
-        {/* Tab trạng thái */}
         <div className="flex flex-nowrap items-center gap-6 border-b border-gray-200 px-6 py-4 overflow-x-auto mb-4">
           {[
-            { key: "all", label: "Tất cả", color: "bg-gray-800", textColor: "text-white" },
-            { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800" },
-            { key: "confirmed", label: "Đã xác nhận", color: "bg-yellow-300", textColor: "text-yellow-900" },
-            { key: "shipping", label: "Đang giao", color: "bg-blue-300", textColor: "text-blue-900" },
-            { key: "completed", label: "Hoàn thành", color: "bg-emerald-300", textColor: "text-emerald-800" },
-            { key: "delivered", label: "Đã giao", color: "bg-green-300", textColor: "text-green-800" },
-            { key: "cancelled", label: "Đã hủy", color: "bg-rose-300", textColor: "text-rose-800" },
-          ].map(({ key, label, color, textColor }) => (
+            { key: "", label: "Tất cả", color: "bg-gray-800", textColor: "text-white", count: statusCounts.all },
+            { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800", count: statusCounts.pending },
+            { key: "confirmed", label: "Đã xác nhận", color: "bg-yellow-300", textColor: "text-yellow-900", count: statusCounts.confirmed },
+            { key: "shipping", label: "Đang giao", color: "bg-blue-300", textColor: "text-blue-900", count: statusCounts.shipping },
+            { key: "completed", label: "Hoàn thành", color: "bg-emerald-300", textColor: "text-emerald-800", count: statusCounts.completed },
+            { key: "delivered", label: "Đã giao", color: "bg-green-300", textColor: "text-green-800", count: statusCounts.delivered },
+            { key: "cancelled", label: "Đã hủy", color: "bg-rose-300", textColor: "text-rose-800", count: statusCounts.cancelled },
+          ].map(({ key, label, color, textColor, count }) => (
             <button
               key={key}
               onClick={() => handleFilterClick(key)}
-              className={`btn rounded-pill px-3 py-1.5 text-nowrap ${
-                statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"
-              }`}
+              className="btn rounded-pill px-3 py-1.5 text-nowrap bg-white text-gray-700"
             >
               <span>{label}</span>
-              <span
-                className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}
-              >
-                {statusCounts[key]}
+              <span className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}>
+                {count}
               </span>
             </button>
           ))}
         </div>
 
-        {/* Ô tìm kiếm */}
         <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
@@ -380,7 +355,7 @@ function OrderGetAll() {
           />
           <button
             type="button"
-            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded"
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
             onClick={() => fetchOrders(1)}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -389,7 +364,6 @@ function OrderGetAll() {
           </button>
         </div>
 
-        {/* Bảng đơn hàng */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
             <thead className="bg-gray-100 text-gray-600">
@@ -461,7 +435,6 @@ function OrderGetAll() {
                       </td>
                     </tr>
 
-                    {/* Hiển thị thông tin theo dõi đơn hàng nếu có */}
                     {trackingInfoMap[order.order_code] && (
                       <tr>
                         <td colSpan={8} className="p-4">
@@ -537,39 +510,34 @@ function OrderGetAll() {
           </table>
         </div>
 
-        {/* Phân trang */}
-        <div className="flex justify-center mt-4 items-center">
+        <div className="flex justify-center mt-6">
           <div className="flex items-center space-x-1">
+
             <button
               disabled={currentPage === 1}
-              onClick={() => handlePageChange(1)}
+              onClick={() => setCurrentPage(1)}
               className="px-2 py-1 border rounded disabled:opacity-50"
             >
               <FaAngleDoubleLeft />
             </button>
+
             <button
               disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
               className="px-2 py-1 border rounded disabled:opacity-50"
             >
               <FaChevronLeft />
             </button>
+
             {[...Array(totalPages)].map((_, i) => {
               const page = i + 1;
-              if (
-                page >= currentPage - 1 &&
-                page <= currentPage + 1 &&
-                page <= totalPages
-              ) {
+              if (page >= currentPage - 1 && page <= currentPage + 1) {
                 return (
                   <button
                     key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 border rounded ${
-                      currentPage === page
-                        ? "bg-blue-500 text-white"
-                        : "bg-blue-100 text-black hover:bg-blue-200"
-                    }`}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
+                      }`}
                   >
                     {page}
                   </button>
@@ -577,16 +545,17 @@ function OrderGetAll() {
               }
               return null;
             })}
+
             <button
               disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
               className="px-2 py-1 border rounded disabled:opacity-50"
             >
               <FaChevronRight />
             </button>
             <button
               disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(totalPages)}
+              onClick={() => setCurrentPage(totalPages)}
               className="px-2 py-1 border rounded disabled:opacity-50"
             >
               <FaAngleDoubleRight />
@@ -595,7 +564,6 @@ function OrderGetAll() {
         </div>
       </div>
 
-      {/* Modal xóa đơn hàng */}
       {selectedOrder && (
         <FormDelete
           isOpen={true}

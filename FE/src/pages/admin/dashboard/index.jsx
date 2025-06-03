@@ -43,7 +43,7 @@ function Dashboard() {
     ? (counts.revenueCurrentYear > 0 ? 100 : 0)
     : ((counts.revenueCurrentYear - counts.revenueLastYear) / counts.revenueLastYear) * 100;
 
-    const [hoveredSection, setHoveredSection] = useState(null);
+  const [hoveredSection, setHoveredSection] = useState(null);
 
   const [revenueData, setRevenueData] = useState({
     labels: [],
@@ -56,7 +56,7 @@ function Dashboard() {
     }]
   });
 
-    const totalRevenueSelectedMonth = revenueData.datasets[0]?.data.reduce((sum, val) => sum + val, 0) || 0;
+  const totalRevenueSelectedMonth = revenueData.datasets[0]?.data.reduce((sum, val) => sum + val, 0) || 0;
 
   const formatVND = (number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(number);
@@ -174,17 +174,17 @@ function Dashboard() {
   };
 
   const barOptionsWithCurrency = {
-  responsive: true,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      enabled: true,
-      callbacks: {
-        label: ctx => ` Giá tiền: ${formatVND(ctx.parsed.y)}`,  
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: true,
+        callbacks: {
+          label: ctx => ` Giá tiền: ${formatVND(ctx.parsed.y)}`,
+        },
       },
-    },
-  }
-};
+    }
+  };
 
   const statsCards = [
     { key: 'total_user', icon: <FaUsers size={24} />, label: 'Người dùng', bg: 'bg-info' },
@@ -194,19 +194,6 @@ function Dashboard() {
     { key: 'total_order', icon: <FaShoppingCart size={24} />, label: 'Đơn hàng', bg: 'bg-secondary' },
     { key: 'total_promotion', icon: <FaTag size={24} />, label: 'Khuyến mãi', bg: 'bg-dark' },
   ];
-
-  const handleMonthChange = (e) => {
-    const monthYear = e.target.value;
-    if (!monthYear) return;
-
-    const from = `${monthYear}-01`;
-
-    const [year, month] = monthYear.split('-');
-    const lastDay = new Date(year, month, 0).getDate();
-    const to = `${monthYear}-${lastDay}`;
-
-    setCustomRange({ from, to });
-  };
 
   return (
     <div className="page-wrapper">
@@ -257,36 +244,45 @@ function Dashboard() {
         </div>
 
         <div className="row">
-         <div className="col-lg-8 d-flex align-items-stretch">
-  <div className="card w-100">
-    <div className="card-body">
-      <div className="d-sm-flex d-block align-items-center justify-content-between mb-9">
-        <div className="mb-3 mb-sm-0">
-          {customRange.from ? (
-            <h5 className="card-title fw-semibold">
-              Tổng Quan Doanh Thu: {formatVND(totalRevenueSelectedMonth)}
-            </h5>
-          ) : (
-            <h5 className="card-title fw-semibold text-danger">
-              Vui lòng chọn tháng năm bạn muốn xem doanh thu
-            </h5>
-          )}
-        </div>
-        <div>
-          <input
-            type="month"
-            className="form-select"
-            onChange={handleMonthChange}
-            value={customRange.from ? customRange.from.slice(0, 7) : ''}
-          />
-        </div>
-      </div>
-      {customRange.from && (
-        <Bar data={revenueData} options={barOptionsWithCurrency} />
-      )}
-    </div>
-  </div>
-</div>
+          <div className="col-lg-8 d-flex align-items-stretch">
+            <div className="card w-100">
+              <div className="card-body">
+                <div className="d-sm-flex d-block align-items-center justify-content-between mb-9">
+                  <div className="mb-3 mb-sm-0">
+                    {customRange.from ? (
+                      <h5 className="card-title fw-semibold">
+                        Tổng Quan Doanh Thu: {formatVND(totalRevenueSelectedMonth)}
+                      </h5>
+                    ) : (
+                      <h5 className="card-title fw-semibold text-danger">
+                        Vui lòng chọn tháng năm bạn muốn xem doanh thu
+                      </h5>
+                    )}
+                  </div>
+                  <div>
+                    <div className="d-flex gap-2 align-items-center">
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={customRange.from}
+                        onChange={(e) => setCustomRange({ ...customRange, from: e.target.value })}
+                      />
+                      <span>đến</span>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={customRange.to}
+                        onChange={(e) => setCustomRange({ ...customRange, to: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {customRange.from && (
+                  <Bar data={revenueData} options={barOptionsWithCurrency} />
+                )}
+              </div>
+            </div>
+          </div>
 
           <div className="col-lg-4">
             <div className="row">

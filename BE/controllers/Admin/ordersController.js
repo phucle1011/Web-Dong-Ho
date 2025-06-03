@@ -9,116 +9,105 @@ const ExcelJS = require('exceljs');
 
 class OrderController {
 
-   static async get(req, res) {
-    const {
-        searchTerm = '',
-        page = 1,
-        limit = 10,
-        order_code,
-        status,
-        startDate,
-        endDate
-    } = req.query;
+    static async get(req, res) {
+        const {
+            searchTerm = '',
+            page = 1,
+            limit = 10,
+            order_code,
+            status,
+            startDate,
+            endDate
+        } = req.query;
 
-    const currentPage = parseInt(page, 10);
-    const perPage = parseInt(limit, 10);
-    const offset = (currentPage - 1) * perPage;
+        const currentPage = parseInt(page, 10);
+        const perPage = parseInt(limit, 10);
+        const offset = (currentPage - 1) * perPage;
 
-    try {
-        const whereClause = {};
+        try {
+            const whereClause = {};
 
-        // Tìm kiếm theo tên khách hàng hoặc mã đơn hàng
-        if (searchTerm || order_code) {
-            whereClause[Op.or] = [];
             if (searchTerm) {
-                whereClause[Op.or].push({
-                    '$user.name$': { [Op.like]: `%${searchTerm}%` }
-                });
+                whereClause[Op.or] = [];
+                if (searchTerm) {
+                    whereClause[Op.or].push({
+                        '$user.name$': { [Op.like]: `%${searchTerm}%` }
+                    });
+                }
             }
-            if (order_code) {
-                whereClause[Op.or].push({
-                    order_code: { [Op.like]: `%${order_code}%` }
-                });
-            }
-        }
 
-        // Lọc theo ngày bắt đầu/kết thúc
-        if (startDate) {
-            whereClause.created_at = {
-                ...(whereClause.created_at || {}),
-                [Op.gte]: new Date(startDate)
+            if (startDate || endDate) {
+                whereClause.created_at = {};
+
+                if (startDate) {
+                    whereClause.created_at[Op.gte] = new Date(startDate);
+                }
+
+                if (endDate) {
+                    const endOfDay = new Date(endDate);
+                    endOfDay.setHours(23, 59, 59, 999); // Đặt thành cuối ngày
+                    whereClause.created_at[Op.lte] = endOfDay;
+                }
+            }
+
+            if (status && status !== 'all') {
+                whereClause.status = status;
+            }
+
+            const updatedOrders = await OrderModel.findAll({
+                where: whereClause,
+                include: [{ model: UserModel, as: 'user' }],
+                order: [['created_at', 'DESC']]
+            });
+
+            const allOrders = await OrderModel.findAll();
+
+            const statusCounts = {
+                all: allOrders.length,
+                pending: 0,
+                confirmed: 0,
+                shipping: 0,
+                completed: 0,
+                delivered: 0,
+                cancelled: 0
             };
-        }
-        if (endDate) {
-            whereClause.created_at = {
-                ...(whereClause.created_at || {}),
-                [Op.lte]: new Date(endDate)
-            };
-        }
 
-        // Lọc theo trạng thái
-        if (status && status !== 'all') {
-            whereClause.status = status;
-        }
+            allOrders.forEach(order => {
+                if (statusCounts.hasOwnProperty(order.status)) {
+                    statusCounts[order.status]++;
+                }
+            });
 
-        // Lấy danh sách đơn hàng từ DB
-        const updatedOrders = await OrderModel.findAll({
-            where: whereClause,
-            include: [{ model: UserModel, as: 'user' }],
-            order: [['created_at', 'DESC']]
-        });
-
-        // Khởi tạo statusCounts
-        const statusCounts = {
-            all: 0,
-            pending: 0,
-            confirmed: 0,
-            shipping: 0,
-            completed: 0,
-            delivered: 0,
-            cancelled: 0
-        };
-
-        // Đếm số lượng đơn theo từng trạng thái
-        updatedOrders.forEach(order => {
-            if (statusCounts.hasOwnProperty(order.status)) {
-                statusCounts[order.status]++;
+            let filteredOrders = updatedOrders;
+            if (status && status !== 'all') {
+                const statusArray = typeof status === 'string' ? status.split(',') : [status];
+                filteredOrders = updatedOrders.filter(order => statusArray.includes(order.status));
             }
-            statusCounts.all++;
-        });
 
-        // Lọc theo trạng thái nếu có danh sách nhiều trạng thái
-        let filteredOrders = updatedOrders;
-        if (status && status !== 'all') {
-            const statusArray = typeof status === 'string' ? status.split(',') : [status];
-            filteredOrders = updatedOrders.filter(order => statusArray.includes(order.status));
+            const totalFilteredItems = filteredOrders.length;
+
+            const paginatedOrders = filteredOrders.slice(offset, offset + perPage);
+
+            res.status(200).json({
+                status: 200,
+                message: "Lấy danh sách thành công",
+                data: paginatedOrders,
+                pagination: {
+                    totalItems: totalFilteredItems,
+                    currentPage,
+                    totalPages: Math.ceil(totalFilteredItems / perPage),
+                },
+                statusCounts
+            });
+
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách đơn hàng:", error.message, error.stack);
+            res.status(500).json({
+                success: false,
+                message: "Lỗi máy chủ."
+            });
         }
-
-        const totalFilteredItems = filteredOrders.length;
-
-        // Phân trang
-        const paginatedOrders = filteredOrders.slice(offset, offset + perPage);
-
-        res.status(200).json({
-            status: 200,
-            message: "Lấy danh sách thành công",
-            data: paginatedOrders,
-            pagination: {
-                totalItems: totalFilteredItems,
-                currentPage,
-                totalPages: Math.ceil(totalFilteredItems / perPage),
-            },
-            statusCounts
-        });
-
-    } catch (error) {
-        console.error("Lỗi khi lấy danh sách đơn hàng:", error.message, error.stack);
-        res.status(500).json({
-            success: false,
-            message: "Lỗi máy chủ."
-        });
     }
-}
 
     static async getById(req, res) {
         try {
