@@ -1,8 +1,42 @@
 import InputCom from "../Helpers/InputCom";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
-
+import { useState } from "react";
+import axios from "axios";
+import Swal from "sweetalert2";
 export default function Contact() {
+  const [formData, setFormData] = useState({
+    first_name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/contact", formData);
+      Swal.fire("Success!", "Your message has been sent.", "success");
+
+      // Clear form
+      setFormData({
+        first_name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error) {
+      Swal.fire("Error", "Something went wrong!", "error");
+    }
+  };
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="page-title mb-10">
@@ -135,15 +169,14 @@ export default function Contact() {
                       Address
                     </h1>
                     <p className="text-[15px] text-qblack leading-[30px]">
-                      4517 Washington Ave. Manchester, Road 2342, <br />
-                      Kentucky 39495
+                      Toà nhà FPT Polytechnic, Đ. Số 22, Thường Thạnh, Cái Răng, Cần Thơ, Việt Nam
                     </p>
                   </div>
                 </div>
                 <div className="w-full h-[206px] mt-5">
                   <iframe
-                    title="newWork"
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.94539481518!2d-74.26675559025064!3d40.69739290398433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2sbd!4v1656755618576!5m2!1sen!2sbd"
+                    title="Cần Thơ"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3555.9208327139404!2d105.75565247450827!3d9.982086773343747!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31a08906415c355f%3A0x416815a99ebd841e!2zVHLGsOG7nW5nIENhbyDEkeG6s25nIEZQVCBQb2x5dGVjaG5pYw!5e1!3m2!1svi!2s!4v1748879380427!5m2!1svi!2s"
                     style={{ border: "0", width: "100%", height: "100%" }}
                     allowFullScreen=""
                     loading="lazy"
@@ -152,69 +185,82 @@ export default function Contact() {
               </div>
             </div>
             <div className="flex-1 bg-white sm:p-10 p-3">
-              <div className="title flex flex-col items-center">
-                <h1 className="text-[34px] font-bold text-qblack">
-                  Get In Touch
-                </h1>
-                <span className="-mt-5 block">
-                  <svg
-                    width="354"
-                    height="30"
-                    viewBox="0 0 354 30"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M1 28.8027C17.6508 20.3626 63.9476 8.17089 113.509 17.8802C166.729 28.3062 341.329 42.704 353 1"
-                      stroke="#FFBB38"
-                      strokeWidth="2"
-                      strokeLinecap="round"
+              <form onSubmit={handleSubmit}>
+                <div className="title flex flex-col items-center">
+                  <h1 className="text-[34px] font-bold text-qblack">Get In Touch</h1>
+                  <span className="-mt-5 block">
+                    <svg
+                      width="354"
+                      height="30"
+                      viewBox="0 0 354 30"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M1 28.8027C17.6508 20.3626 63.9476 8.17089 113.509 17.8802C166.729 28.3062 341.329 42.704 353 1"
+                        stroke="#FFBB38"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                </div>
+                <div className="inputs mt-5">
+                  <div className="mb-4">
+                    <InputCom
+                      label="First Name*"
+                      placeholder="Demo Name"
+                      name="first_name"
+                      inputClasses="h-[50px]"
+                      value={formData.first_name}
+                      inputHandler={handleChange}
+                      type="text"
                     />
-                  </svg>
-                </span>
-              </div>
-              <div className="inputs mt-5">
-                <div className="mb-4">
-                  <InputCom
-                    label="Frist Name*"
-                    placeholder="Demo Name"
-                    name="first_name"
-                    inputClasses="h-[50px]"
-                  />
-                </div>
-                <div className="mb-4">
-                  <InputCom
-                    label="Email Address*"
-                    placeholder="info@quomodosoft.com"
-                    name="email"
-                    inputClasses="h-[50px]"
-                  />
-                </div>
-                <div className="mb-4">
-                  <InputCom
-                    label="Subject*"
-                    placeholder="Your Subject here"
-                    name="subject"
-                    inputClasses="h-[50px]"
-                  />
-                </div>
-                <div className="mb-5">
-                  <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 ">
-                    Message*
-                  </h6>
-                  <textarea
-                    placeholder="Type your message here"
-                    className="w-full h-[105px] focus:ring-0 focus:outline-none p-3 border border-qgray-border placeholder:text-sm"
-                  ></textarea>
-                </div>
-                <div>
-                  <a href="#">
-                    <div className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center">
+                  </div>
+                  <div className="mb-4">
+                    <InputCom
+                      label="Email Address*"
+                      placeholder="info@example.com"
+                      name="email"
+                      inputClasses="h-[50px]"
+                      value={formData.email}
+                      inputHandler={handleChange}
+                      type="email"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <InputCom
+                      label="Subject*"
+                      placeholder="Your subject here"
+                      name="subject"
+                      inputClasses="h-[50px]"
+                      value={formData.subject}
+                      inputHandler={handleChange}
+                      type="text"
+                    />
+                  </div>
+                  <div className="mb-5">
+                    <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 ">
+                      Message*
+                    </h6>
+                    <textarea
+                      placeholder="Type your message here"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      className="w-full h-[105px] focus:ring-0 focus:outline-none p-3 border border-qgray-border placeholder:text-sm"
+                    ></textarea>
+                  </div>
+                  <div>
+                    <button
+                      type="submit"
+                      className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center"
+                    >
                       <span>Send Now</span>
-                    </div>
-                  </a>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         </div>
