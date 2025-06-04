@@ -9,11 +9,12 @@ const UserModel = connection.define('users', {
     },
     name: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: false
     },
     email: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
+        unique: true
     },
     password: {
         type: DataTypes.STRING,
@@ -35,11 +36,11 @@ const UserModel = connection.define('users', {
     },
     email_verified_at: {
         type: DataTypes.DATE,
-        allowNull: false 
+        allowNull: true 
     },
     remember_token: {
         type: DataTypes.STRING,
-        allowNull: false 
+        allowNull: true 
     },
     status: {
         type: DataTypes.ENUM('active','inactive','locked'),
@@ -48,7 +49,7 @@ const UserModel = connection.define('users', {
     },
     lockout_reason: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     }    
 }, {
     tableName: 'users',

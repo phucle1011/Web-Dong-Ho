@@ -8,6 +8,7 @@ const PromotionController = require('../controllers/Client/promotionController')
 const AddressController = require('../controllers/Client/addressController');
 const CartController = require('../controllers/Client/cartsController');
 const ProductController = require('../controllers/Client/productController');
+const AuthController = require('../controllers/Client/authController');
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -47,5 +48,10 @@ router.post("/add-to-carts", CartController.addToCart);
 router.put("/update-to-carts/:userId/:productVariantId", CartController.updateCartItem);
 router.delete("/delete-to-carts/:userId/:productVariantId", CartController.removeCartItem);
 router.delete("/clear-cart/:userId", CartController.clearCartByUser);
+
+//------------------[ AUTH ]------------------\
+router.post('/auth/register', AuthController.register);
+router.get('/auth/verify-email', AuthController.verifyEmail);
+router.post('/auth/login', AuthController.login);
 
 module.exports = router;
