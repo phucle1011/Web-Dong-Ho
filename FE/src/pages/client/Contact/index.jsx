@@ -24,7 +24,7 @@ export default function Contact() {
     e.preventDefault();
     try {
       await axios.post("http://localhost:5000/contact", formData);
-      Swal.fire("Success!", "Your message has been sent.", "success");
+      Swal.fire("Success!", "Phản Hồi Của Bạn Đã Được Gửi ", "success");
 
       // Clear form
       setFormData({
@@ -34,14 +34,14 @@ export default function Contact() {
         message: "",
       });
     } catch (error) {
-      Swal.fire("Error", "Something went wrong!", "error");
+      Swal.fire("Error", "Phản Hồi Của Bạn Không Gửi Được!", "error");
     }
   };
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="page-title mb-10">
         <PageTitle
-          title="Contact"
+          title="Liên Hệ"
           breadcrumb={[
             { name: "home", path: "/" },
             { name: "contact", path: "/contact" },
@@ -53,11 +53,11 @@ export default function Contact() {
           <div className="main-wrapper w-full lg:flex lg:space-x-[30px]">
             <div className="lg:w-1/2 w-full">
               <h1 className="text-[22px] font-semibold text-qblack leading-[30px] mb-1">
-                Contact Information
+                Thông Tin Liên Hệ
               </h1>
               <p className="text-[15px] text-qgraytwo leading-[30px] mb-5">
-                Fill the form below or write us .We will help you as soon as
-                possible.
+                Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi
+                qua biểu mẫu bên dưới hoặc gửi email cho chúng tôi tại
               </p>
 
               <div className="xl:flex xl:space-x-[30px] mb-[30px]">
@@ -139,10 +139,10 @@ export default function Contact() {
                     Email
                   </p>
                   <p className="text-[15px] text-black leading-[30px] text-center">
-                    Demoemail@gmail.com
+                    timemasters@gmail.com
                   </p>
                   <p className="text-[15px] text-black leading-[30px] text-center">
-                    rafiqulislamsuvobd@gmail.com
+                    timemasters@yaho.vn.com
                   </p>
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function Contact() {
             <div className="flex-1 bg-white sm:p-10 p-3">
               <form onSubmit={handleSubmit}>
                 <div className="title flex flex-col items-center">
-                  <h1 className="text-[34px] font-bold text-qblack">Get In Touch</h1>
+                  <h1 className="text-[34px] font-bold text-qblack">Gửi Phản Hồ Cho Chúng Tôi</h1>
                   <span className="-mt-5 block">
                     <svg
                       width="354"
@@ -208,8 +208,8 @@ export default function Contact() {
                 <div className="inputs mt-5">
                   <div className="mb-4">
                     <InputCom
-                      label="First Name*"
-                      placeholder="Demo Name"
+                      label="Tên Khách Hàng*"
+                      placeholder="Vui Lòng Nhập Tên Của Bạn"
                       name="first_name"
                       inputClasses="h-[50px]"
                       value={formData.first_name}
@@ -219,8 +219,8 @@ export default function Contact() {
                   </div>
                   <div className="mb-4">
                     <InputCom
-                      label="Email Address*"
-                      placeholder="info@example.com"
+                      label="Địa Chỉ Email*"
+                      placeholder="Vui Lòng Nhập Địa Chỉ Email Của Bạn"
                       name="email"
                       inputClasses="h-[50px]"
                       value={formData.email}
@@ -230,8 +230,8 @@ export default function Contact() {
                   </div>
                   <div className="mb-4">
                     <InputCom
-                      label="Subject*"
-                      placeholder="Your subject here"
+                      label="Phản Hồi*"
+                      placeholder="Vui Lòng Nhập Phản Hồi Của Bạn"
                       name="subject"
                       inputClasses="h-[50px]"
                       value={formData.subject}
@@ -241,10 +241,10 @@ export default function Contact() {
                   </div>
                   <div className="mb-5">
                     <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 ">
-                      Message*
+                      Nội Dung Phản Hồi
                     </h6>
                     <textarea
-                      placeholder="Type your message here"
+                      placeholder="Vui Lòng Nhập Nội Dung Phản Hồi Của Bạn"
                       name="message"
                       value={formData.message}
                       onChange={handleChange}
@@ -256,7 +256,7 @@ export default function Contact() {
                       type="submit"
                       className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center"
                     >
-                      <span>Send Now</span>
+                      <span>Gửi Phản Hồi</span>
                     </button>
                   </div>
                 </div>

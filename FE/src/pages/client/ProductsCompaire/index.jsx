@@ -1,757 +1,321 @@
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import Star from "../Helpers/icons/Star";
 import InputCom from "../Helpers/InputCom";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 
-export default function ProductsCompaire() {
+const MAX_COMPARE = 4;
+const MIN_COMPARE = 2;
+
+export default function ProductsCompare() {
+  const [variants, setVariants] = useState([]);
+  const [searchInputs, setSearchInputs] = useState(Array(MAX_COMPARE).fill(""));
+  const [selectedVariants, setSelectedVariants] = useState(Array(MAX_COMPARE).fill(null));
+  const [filteredLists, setFilteredLists] = useState(Array(MAX_COMPARE).fill([]));
+  const [allAttributes, setAllAttributes] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/products/compare")
+      .then((res) => res.json())
+      .then((data) => {
+        const variantList = [];
+
+        data.data.forEach((product) => {
+          product.variants.forEach((variant) => {
+            variantList.push({
+              productId: product.id,
+              productName: product.name,
+              productDescription: product.description,
+              productThumbnail: product.thumbnail,
+              brand: product.brand?.name || "-",
+              average_rating: product.average_rating,
+              variantId: variant.id,
+              price: variant.price,
+              stock: variant.stock,
+              sku: variant.sku,
+              images: variant.images,
+              attributeValues: variant.attributeValues,
+            });
+          });
+        });
+
+        setVariants(variantList);
+        setFilteredLists(Array(MAX_COMPARE).fill(variantList));
+
+        // Tập hợp tất cả tên thuộc tính (dynamic)
+        const attrSet = new Set();
+        variantList.forEach((v) => {
+          v.attributeValues?.forEach((av) => {
+            attrSet.add(av.attribute.name);
+          });
+        });
+        setAllAttributes(Array.from(attrSet));
+      })
+      .catch(console.error);
+  }, []);
+
+  const handleSearchInputChange = (index, value) => {
+    const newSearchInputs = [...searchInputs];
+    newSearchInputs[index] = value;
+    setSearchInputs(newSearchInputs);
+
+    const filtered = variants.filter(
+      (v) =>
+        v.productName.toLowerCase().includes(value.toLowerCase()) ||
+        v.sku?.toLowerCase().includes(value.toLowerCase()) ||
+        v.productDescription?.toLowerCase().includes(value.toLowerCase())
+    );
+
+    const newFilteredLists = [...filteredLists];
+    newFilteredLists[index] = filtered;
+    setFilteredLists(newFilteredLists);
+  };
+
+  const handleSelectVariant = (index, variant) => {
+    // Kiểm tra trùng variant ở cột khác
+    if (selectedVariants.some((v, idx) => v?.variantId === variant.variantId && idx !== index)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Duplicate Variant",
+        text: "This variant is already selected in another column!",
+      });
+      return;
+    }
+
+    const newSelected = [...selectedVariants];
+    newSelected[index] = variant;
+    setSelectedVariants(newSelected);
+
+    const newSearchInputs = [...searchInputs];
+    newSearchInputs[index] = variant.productName;
+    setSearchInputs(newSearchInputs);
+  };
+
+  const handleClearVariant = (index) => {
+    const newSelected = [...selectedVariants];
+    newSelected[index] = null;
+    setSelectedVariants(newSelected);
+
+    const newSearchInputs = [...searchInputs];
+    newSearchInputs[index] = "";
+    setSearchInputs(newSearchInputs);
+
+    const newFilteredLists = [...filteredLists];
+    newFilteredLists[index] = variants;
+    setFilteredLists(newFilteredLists);
+  };
+
+  const canCompare = selectedVariants.filter(Boolean).length >= MIN_COMPARE;
+
+  const renderStars = (rating) => {
+    if (!rating) return null;
+    const stars = [];
+    const r = Math.floor(rating);
+    for (let i = 0; i < 5; i++) {
+      stars.push(<Star key={i} fill={i < r} />);
+    }
+    return stars;
+  };
+
+  const getAttributeValue = (variant, attributeName) => {
+    const av = variant.attributeValues?.find((a) => a.attribute.name === attributeName);
+    return av ? av.value : "-";
+  };
+
+  const getImageUrl = (variant) => {
+    return variant.images?.[0]?.image_url || null;
+  };
+
+  // Hàm xử lý khi nhấn nút Compare
+  const handleCompareClick = () => {
+    if (!canCompare) {
+      Swal.fire({
+        icon: "error",
+        title: "Not enough variants",
+        text: `Please select at least ${MIN_COMPARE} variants to compare.`,
+      });
+      return;
+    }
+    // Ở đây bạn thêm logic so sánh hoặc điều hướng nếu cần
+    Swal.fire({
+      icon: "success",
+      title: "Ready to compare!",
+      text: `You have selected ${selectedVariants.filter(Boolean).length} variants.`,
+    });
+  };
+
   return (
     <Layout childrenClasses="pt-0 pb-0">
-      <div className="products-compaire-wrapper w-full bg-white pb-[40px]">
+      <div className="products-compare-wrapper w-full bg-white pb-[40px]">
         <div className="w-full mb-5">
           <PageTitle
             breadcrumb={[
               { name: "home", path: "/" },
-              { name: "compaire", path: "/products-compaire" },
+              { name: "compare", path: "/products-compare" },
             ]}
             title="Product Comparison"
           />
         </div>
 
-        <div className="container-x mx-auto">
+        <div className="container-x mx-auto overflow-x-auto">
           <div className="w-full border border-qgray-border">
-            <table className="table-wrapper">
+            <table className="table-wrapper min-w-[900px] border-collapse border border-gray-300">
               <tbody>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[18px] font-medium text-qblack mb-4">
-                        Product Comparison
-                      </h1>
-                      <p className="text-[13px] text-qgraytwo">
-                        Select products to see the differences and similarities
-                        between them
-                      </p>
-                    </div>
+                <tr>
+                  <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA] font-semibold">
+                    Product Comparison
+                    <p className="text-[13px] text-qgraytwo mt-2">
+                      Search and select variants to compare
+                    </p>
                   </td>
-                  <td className="product w-[235px] bg-white p-6 border-b border-r border-qgray-border">
-                    <div className="w-full mb-[30px]">
-                      <div className="w-full h-[44px]">
+                  {Array(MAX_COMPARE)
+                    .fill(0)
+                    .map((_, i) => (
+                      <td key={i} className="w-[235px] bg-white p-4 border border-gray-300">
                         <InputCom
-                          type="text"
-                          placeholder="Search Product..."
-                          inputClasses="w-full h-full px-2"
-                        >
-                          <div
-                            className="absolute right-2 z-10 bg-white"
-                            style={{ top: "calc(100% - 28px)" }}
-                          >
-                            <svg
-                              width="17"
-                              height="17"
-                              viewBox="0 0 17 17"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                clipRule="evenodd"
-                                d="M11.0821 12.2955C10.0273 13.0961 8.71195 13.5712 7.2856 13.5712C3.81416 13.5712 1 10.757 1 7.2856C1 3.81416 3.81416 1 7.2856 1C10.757 1 13.5712 3.81416 13.5712 7.2856C13.5712 8.97024 12.9085 10.5001 11.8295 11.6286L11.6368 11.436L10.9297 12.1431L11.0821 12.2955ZM11.795 13.0084C10.5546 13.9871 8.98829 14.5712 7.2856 14.5712C3.26187 14.5712 0 11.3093 0 7.2856C0 3.26187 3.26187 0 7.2856 0C11.3093 0 14.5712 3.26187 14.5712 7.2856C14.5712 9.24638 13.7966 11.0263 12.5367 12.3359L16.4939 16.293L15.7868 17.0001L11.795 13.0084Z"
-                                fill="#181B31"
-                              />
-                            </svg>
-                          </div>
-                        </InputCom>
-                      </div>
-                    </div>
-                    <div className="product-img flex justify-center mb-3 ">
-                      <div className="w-[161px] h-[161px]">
-                        <img
-                          src={`${
-                            process.env.REACT_APP_PUBLIC_URL
-                          }/assets/images/product-img-15.jpg`}
-                          alt=""
-                          className="w-full h-full object-contain"
+                          placeholder="Search Product or Variant..."
+                          value={searchInputs[i]}
+                          inputHandler={(e) => handleSearchInputChange(i, e.target.value)}
                         />
-                      </div>
-                    </div>
-                    <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-2">
-                      Apple MacBook Air 13.3-Inch Display
-                    </p>
-                    <p className="text-center text-[15px] font-medium text-qred leading-[24px]">
-                      $6.99
-                    </p>
-                  </td>
-                  <td className="product w-[235px] bg-white p-6 border-b border-r border-qgray-border">
-                    <div className="w-full mb-[30px]">
-                      <div className="w-full h-[44px]">
-                        <InputCom
-                          type="text"
-                          placeholder="Search Product..."
-                          inputClasses="w-full h-full px-2"
-                        >
-                          <div
-                            className="absolute right-2 z-10 bg-white"
-                            style={{ top: "calc(100% - 28px)" }}
-                          >
-                            <svg
-                              width="17"
-                              height="17"
-                              viewBox="0 0 17 17"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                clipRule="evenodd"
-                                d="M11.0821 12.2955C10.0273 13.0961 8.71195 13.5712 7.2856 13.5712C3.81416 13.5712 1 10.757 1 7.2856C1 3.81416 3.81416 1 7.2856 1C10.757 1 13.5712 3.81416 13.5712 7.2856C13.5712 8.97024 12.9085 10.5001 11.8295 11.6286L11.6368 11.436L10.9297 12.1431L11.0821 12.2955ZM11.795 13.0084C10.5546 13.9871 8.98829 14.5712 7.2856 14.5712C3.26187 14.5712 0 11.3093 0 7.2856C0 3.26187 3.26187 0 7.2856 0C11.3093 0 14.5712 3.26187 14.5712 7.2856C14.5712 9.24638 13.7966 11.0263 12.5367 12.3359L16.4939 16.293L15.7868 17.0001L11.795 13.0084Z"
-                                fill="#181B31"
+                        {!selectedVariants[i] && searchInputs[i] && (
+                          <ul className="bg-white border border-qgray-border max-h-40 overflow-y-auto mt-1 rounded shadow-md">
+                            {filteredLists[i].slice(0, 5).map((v) => (
+                              <li
+                                key={v.variantId}
+                                className="p-2 cursor-pointer hover:bg-gray-200"
+                                onClick={() => handleSelectVariant(i, v)}
+                              >
+                                {v.productName} - {v.sku}
+                              </li>
+                            ))}
+                            {filteredLists[i].length === 0 && (
+                              <li className="p-2 text-center text-gray-500">No results</li>
+                            )}
+                          </ul>
+                        )}
+
+                        {selectedVariants[i] && (
+                          <div className="mt-4">
+                            <div className="flex justify-center mb-3">
+                              <img
+                                src={selectedVariants[i].productThumbnail}
+                                alt={selectedVariants[i].productName}
+                                className="w-[161px] h-[161px] object-contain"
                               />
-                            </svg>
-                          </div>
-                        </InputCom>
-                      </div>
-                    </div>
-                    <div className="product-img flex justify-center mb-3 ">
-                      <div className="w-[161px] h-[161px]">
-                        <img
-                          src={`${
-                            process.env.REACT_APP_PUBLIC_URL
-                          }/assets/images/product-img-16.jpg`}
-                          alt=""
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-2">
-                      Apple MacBook Air 13.3-Inch Display
-                    </p>
-                    <p className="text-center text-[15px] font-medium text-qred leading-[24px]">
-                      $6.99
-                    </p>
-                  </td>
-                  <td className="product w-[235px] bg-white p-6 border-b border-r border-qgray-border">
-                    <div className="w-full mb-[30px]">
-                      <div className="w-full h-[44px]">
-                        <InputCom
-                          type="text"
-                          placeholder="Search Product..."
-                          inputClasses="w-full h-full px-2"
-                        >
-                          <div
-                            className="absolute right-2 z-10 bg-white"
-                            style={{ top: "calc(100% - 28px)" }}
-                          >
-                            <svg
-                              width="17"
-                              height="17"
-                              viewBox="0 0 17 17"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
+                            </div>
+                            <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-1">
+                              {selectedVariants[i].productName}
+                            </p>
+                            <p className="text-center text-[15px] font-medium text-qred leading-[24px] mb-1">
+                              {Number(selectedVariants[i].price).toLocaleString("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                              })}
+                            </p>
+                            <button
+                              className="block mx-auto text-xs text-blue-500 underline"
+                              onClick={() => handleClearVariant(i)}
                             >
-                              <path
-                                fillRule="evenodd"
-                                clipRule="evenodd"
-                                d="M11.0821 12.2955C10.0273 13.0961 8.71195 13.5712 7.2856 13.5712C3.81416 13.5712 1 10.757 1 7.2856C1 3.81416 3.81416 1 7.2856 1C10.757 1 13.5712 3.81416 13.5712 7.2856C13.5712 8.97024 12.9085 10.5001 11.8295 11.6286L11.6368 11.436L10.9297 12.1431L11.0821 12.2955ZM11.795 13.0084C10.5546 13.9871 8.98829 14.5712 7.2856 14.5712C3.26187 14.5712 0 11.3093 0 7.2856C0 3.26187 3.26187 0 7.2856 0C11.3093 0 14.5712 3.26187 14.5712 7.2856C14.5712 9.24638 13.7966 11.0263 12.5367 12.3359L16.4939 16.293L15.7868 17.0001L11.795 13.0084Z"
-                                fill="#181B31"
-                              />
-                            </svg>
+                              Clear
+                            </button>
                           </div>
-                        </InputCom>
-                      </div>
-                    </div>
-                    <div className="product-img flex justify-center mb-3 ">
-                      <div className="w-[161px] h-[161px]">
-                        <img
-                          src={`${
-                            process.env.REACT_APP_PUBLIC_URL
-                          }/assets/images/product-img-12.jpg`}
-                          alt=""
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-2">
-                      Apple MacBook Air 13.3-Inch Display
-                    </p>
-                    <p className="text-center text-[15px] font-medium text-qred leading-[24px]">
-                      $6.99
-                    </p>
-                  </td>
-                  <td className="product w-[235px] bg-white p-6 border-b border-r border-qgray-border">
-                    <div className="w-full mb-[30px]">
-                      <div className="w-full h-[44px]">
-                        <InputCom
-                          type="text"
-                          placeholder="Search Product..."
-                          inputClasses="w-full h-full px-2"
-                        >
-                          <div
-                            className="absolute right-2 z-10 bg-white"
-                            style={{ top: "calc(100% - 28px)" }}
-                          >
-                            <svg
-                              width="17"
-                              height="17"
-                              viewBox="0 0 17 17"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                clipRule="evenodd"
-                                d="M11.0821 12.2955C10.0273 13.0961 8.71195 13.5712 7.2856 13.5712C3.81416 13.5712 1 10.757 1 7.2856C1 3.81416 3.81416 1 7.2856 1C10.757 1 13.5712 3.81416 13.5712 7.2856C13.5712 8.97024 12.9085 10.5001 11.8295 11.6286L11.6368 11.436L10.9297 12.1431L11.0821 12.2955ZM11.795 13.0084C10.5546 13.9871 8.98829 14.5712 7.2856 14.5712C3.26187 14.5712 0 11.3093 0 7.2856C0 3.26187 3.26187 0 7.2856 0C11.3093 0 14.5712 3.26187 14.5712 7.2856C14.5712 9.24638 13.7966 11.0263 12.5367 12.3359L16.4939 16.293L15.7868 17.0001L11.795 13.0084Z"
-                                fill="#181B31"
-                              />
-                            </svg>
-                          </div>
-                        </InputCom>
-                      </div>
-                    </div>
-                    <div className="product-img flex justify-center mb-3 ">
-                      <div className="w-[161px] h-[161px]">
-                        <img
-                          src={`${
-                            process.env.REACT_APP_PUBLIC_URL
-                          }/assets/images/product-img-11.jpg`}
-                          alt=""
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-2">
-                      Apple MacBook Air 13.3-Inch Display
-                    </p>
-                    <p className="text-center text-[15px] font-medium text-qred leading-[24px]">
-                      $6.99
-                    </p>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px]  px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Star Rating
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="text-[15px] font-medium text-qblack">
-                        4.8
-                      </span>
-                      <div className="flex items-center">
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                      </div>
-                      <span className="text-[13px] font-normal text-qgraytwo">
-                        (10)
-                      </span>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="text-[15px] font-medium text-qblack">
-                        4.8
-                      </span>
-                      <div className="flex items-center">
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                      </div>
-                      <span className="text-[13px] font-normal text-qgraytwo">
-                        (10)
-                      </span>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="text-[15px] font-medium text-qblack">
-                        4.8
-                      </span>
-                      <div className="flex items-center">
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                      </div>
-                      <span className="text-[13px] font-normal text-qgraytwo">
-                        (10)
-                      </span>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="text-[15px] font-medium text-qblack">
-                        4.8
-                      </span>
-                      <div className="flex items-center">
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                        <Star />
-                      </div>
-                      <span className="text-[13px] font-normal text-qgraytwo">
-                        (10)
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Model
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple MacBook Air 13"
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple MacBook Air 13"
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple MacBook Air 13"
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple MacBook Air 13"
-                    </span>
-                  </td>
+                        )}
+                      </td>
+                    ))}
                 </tr>
 
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Brand
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Asus
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Lenovo
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Microsoft
-                    </span>
-                  </td>
-                </tr>
+                {[
+                  { label: "Name", value: (v) => v?.productName || "-" },
+                  {
+                    label: "Image",
+                    value: (v) => {
+                      const url = getImageUrl(v);
+                      return url ? (
+                        <img src={url} className="w-20 h-20 mx-auto object-contain" alt="" />
+                      ) : (
+                        "-"
+                      );
+                    },
+                  },
+                  { label: "Description", value: (v) => v?.productDescription || "-" },
+                  { label: "Brand", value: (v) => v?.brand || "-" },
+                  {
+                    label: "Price",
+                    value: (v) =>
+                      Number(v?.price).toLocaleString("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }),
+                  },
+                  { label: "SKU", value: (v) => v?.sku || "-" },
+                  { label: "Stock", value: (v) => v?.stock ?? "-" },
+                  {
+                    label: "Rating",
+                    value: (v) => (
+                      <div className="flex flex-col items-center">
+                        <div className="flex">{renderStars(v.average_rating)}</div>
+                        <span className="text-xs">{v.average_rating || "-"}</span>
+                      </div>
+                    ),
+                  },
+                ].map(({ label, value }) => (
+                  <tr key={label} className="border-t border-gray-300">
+                    <td className="text-sm bg-[#FAFAFA] font-semibold px-[26px] py-[20px]">{label}</td>
+                    {selectedVariants.map((v, i) => (
+                      <td key={i} className="text-center text-sm px-[26px] py-[20px]">
+                        {v ? value(v) : "-"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {allAttributes.map((attr) => (
+                  <tr key={attr} className="border-t border-gray-300">
+                    <td className="text-sm bg-[#FAFAFA] font-semibold px-[26px] py-[20px]">{attr}</td>
+                    {selectedVariants.map((v, i) => {
+                      const value = v ? getAttributeValue(v, attr) : "-";
 
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Availability
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-semibold text-green-500">
-                      In Stock
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-semibold  text-qred">
-                      Out of Stock
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-semibold  text-green-500">
-                      In Stock
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-semibold  text-qred">
-                      Out of Stock
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Colors
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="w-4 h-4 rounded-full bg-[#649EFF]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#BAFE90]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#FF7173]"></span>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="w-4 h-4 rounded-full bg-[#649EFF]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#BAFE90]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#FF7173]"></span>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="w-4 h-4 rounded-full bg-[#649EFF]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#BAFE90]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#FF7173]"></span>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <div className="flex space-x-2 items-center">
-                      <span className="w-4 h-4 rounded-full bg-[#649EFF]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#BAFE90]"></span>
-                      <span className="w-4 h-4 rounded-full bg-[#FF7173]"></span>
-                    </div>
-                  </td>
-                </tr>
+                      return (
+                        <td key={i} className="text-center text-sm px-[26px] py-[20px]">
+                          {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
+                            value !== "-" ? (
+                              <div
+                                className="w-6 h-6 rounded-full mx-auto border"
+                                style={{ backgroundColor: value }}
+                                title={value}
+                              />
+                            ) : (
+                              "-"
+                            )
+                          ) : (
+                            value
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
 
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        import.metaor
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple M1 chip with 8-core CPU and 7-core GPU
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple M1 chip with 8-core CPU and 7-core GPU
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple M1 chip with 8-core CPU and 7-core GPU
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Apple M1 chip with 8-core CPU and 7-core GPU
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Display
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      13.3-inch
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      13.3-inch
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      13.3-inch
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      13.3-inch
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Memory
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      8GB RAM
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      8GB RAM
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      8GB RAM
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      8GB RAM
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Storage
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      1TB 5400rpm SATA HDD
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      1TB 5400rpm SATA HDD
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      1TB 5400rpm SATA HDD
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      1TB 5400rpm SATA HDD
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Graphics
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Intel UHD Graphics 600
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Intel UHD Graphics 600
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Intel UHD Graphics 600
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Intel UHD Graphics 600
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Operating System
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      macOS
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      macOS
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      macOS
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      macOS
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Battery
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Built-in 49.9‑watt‑hour
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Built-in 49.9‑watt‑hour
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Built-in 49.9‑watt‑hour
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Built-in 49.9‑watt‑hour
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Wi-Fi
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      802.11ac Wi-Fi wireless
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      802.11ac Wi-Fi wireless
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      802.11ac Wi-Fi wireless
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      802.11ac Wi-Fi wireless
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Bluetooth
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      5.0 wireless technology
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      5.0 wireless technology
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      5.0 wireless technology
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      5.0 wireless technology
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        WebCam
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      720p FaceTime HD camera
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      720p FaceTime HD camera
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      720p FaceTime HD camera
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      720p FaceTime HD camera
-                    </span>
-                  </td>
-                </tr>
-                <tr className="table-row-wrapper">
-                  <td className="w-[233px] px-[26px] align-top bg-[#FAFAFA]">
-                    <div className="">
-                      <h1 className="text-[15px] font-medium text-qblack ">
-                        Audio
-                      </h1>
-                    </div>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Stereo speakers
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Stereo speakers
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Stereo speakers
-                    </span>
-                  </td>
-                  <td className="product w-[235px] bg-white px-6 border-r border-qgray-border pb-[20px] align-top">
-                    <span className="text-[13px] font-normal text-qgraytwo">
-                      Stereo speakers
-                    </span>
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
+
+          <div className="text-center mt-6">
+            <button
+              onClick={handleCompareClick}
+              className={`px-6 py-2 rounded text-white ${canCompare ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
+                }`}
+              disabled={!canCompare}
+            >
+              Compare
+            </button>
+          </div>
+
+          {!canCompare && (
+            <p className="text-center mt-6 text-red-600 font-semibold">
+              Vui Lòng Chọn  {MIN_COMPARE} Sản Phẩm Để So Sánh
+            </p>
+          )}
         </div>
       </div>
     </Layout>

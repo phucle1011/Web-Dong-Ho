@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/Client/categoryController');
+const ProductCompaireController = require('../controllers/Client/ProductsCompaireController');
 const BlogController = require('../controllers/Client/blogsController');
 const ContactController = require('../controllers/Client/contactController');
+const AddressController = require('../controllers/Client/addressController');
 const CartController = require('../controllers/Client/cartsController');
 const ProductController = require('../controllers/Client/productController');
 
@@ -21,6 +23,18 @@ router.get('/blogs/:id', BlogController.getBlogById);
 
 //------------------[ Contact ]------------------
 router.post("/contact", ContactController.sendContactEmail);
+
+//------------------[ Products Compaire ]------------------
+router.get("/products/compare", ProductCompaireController.getAllForComparison);
+
+//------------------[ ADDRESS ]------------------\
+router.get('/address/list', AddressController.getAllAddress);
+router.get('/address/user/:id', AddressController.getAddressesByUser);
+router.delete('/user/:userId/addresses/:id', AddressController.deleteAddress);
+router.put('/user/:userId/addresses/:id', AddressController.updateAddress);
+router.post('/user/:userId/addresses', AddressController.addAddress);
+
+
 
 //------------------[ Cart ]------------------
 router.get("/carts", CartController.getCartByUser);
