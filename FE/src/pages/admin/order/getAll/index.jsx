@@ -425,7 +425,7 @@ function OrderGetAll() {
                         {["pending"].includes(order.status) && (
                           <button
                             onClick={() => setSelectedOrder(order)}
-                            className="bg-red-500 text-white py-1 px-3 rounded"
+                           className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                           >
                             <FaTrashAlt />
                           </button>

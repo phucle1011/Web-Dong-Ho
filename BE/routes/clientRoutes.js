@@ -38,6 +38,9 @@ router.post('/user/:userId/addresses', AddressController.addAddress);
 
 //------------------[ Cart ]------------------
 router.get("/carts", CartController.getCartByUser);
-
+router.post("/add-to-carts", CartController.addToCart);
+router.put("/update-to-carts/:userId/:productVariantId", CartController.updateCartItem);
+router.delete("/delete-to-carts/:userId/:productVariantId", CartController.removeCartItem);
+router.delete("/clear-cart/:userId", CartController.clearCartByUser);
 
 module.exports = router;

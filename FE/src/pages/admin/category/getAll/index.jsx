@@ -9,6 +9,7 @@ import {
   FaChevronRight,
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
+  FaTrashAlt
 } from "react-icons/fa";
 
 function CategoryGetAll() {
@@ -212,9 +213,9 @@ function CategoryGetAll() {
                 </Link>
                 <button
                   onClick={() => setSelectedCategory(cat)}
-                  className="bg-red-500 text-white py-1 px-3 rounded"
+                  className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                 >
-                  <i className="fa-solid fa-trash"></i>
+                  <FaTrashAlt/>
                 </button>
               </td>
             </tr>

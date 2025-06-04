@@ -9,6 +9,7 @@ import {
   FaChevronRight,
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
+  FaTrashAlt
 } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -302,9 +303,9 @@ function PromotionGetAll() {
                                     </Link>
                                     <button
                                         onClick={() => setSelectedPromotion(promo)}
-                                        className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
+                                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                     >
-                                        <i className="fa-solid fa-trash" />
+                                        <FaTrashAlt/>
                                     </button>
                                 </td>
                             </tr>

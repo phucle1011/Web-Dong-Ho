@@ -62,34 +62,57 @@ class CartController {
         try {
             const { userId, productVariantId, quantity } = req.body;
 
-            const existingItem = await CartModel.findOne({
+            let cartItem = await CartModel.findOne({
                 where: {
                     user_id: userId,
                     product_variant_id: productVariantId
                 }
             });
 
-            if (existingItem) {
-                existingItem.quantity += quantity;
-                await existingItem.save();
-
-                return res.status(200).json({
-                    status: 200,
-                    message: 'Cập nhật số lượng sản phẩm trong giỏ hàng thành công',
-                    data: existingItem
+            if (cartItem) {
+                cartItem.quantity += quantity;
+                await cartItem.save();
+            } else {
+                cartItem = await CartModel.create({
+                    user_id: userId,
+                    product_variant_id: productVariantId,
+                    quantity
                 });
             }
 
-            const newCartItem = await CartModel.create({
-                user_id: userId,
-                product_variant_id: productVariantId,
-                quantity
+            const fullCartItem = await CartModel.findOne({
+                where: { id: cartItem.id },
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'price', 'stock', 'sku'],
+                        include: [
+                            {
+                                model: VariantImageModel,
+                                as: 'images',
+                                attributes: ['image_url'],
+                                required: false
+                            },
+                            {
+                                model: ProductVariantAttributeValuesModel,
+                                as: "attributeValues",
+                                include: [
+                                    {
+                                        model: ProductAttribute,
+                                        as: "attribute",
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                ]
             });
 
-            res.status(201).json({
-                status: 201,
-                message: 'Thêm sản phẩm vào giỏ hàng thành công',
-                data: newCartItem
+            return res.status(200).json({
+                status: 200,
+                message: 'Thêm vào giỏ hàng thành công',
+                data: fullCartItem
             });
         } catch (error) {
             console.error("Lỗi khi thêm vào giỏ hàng:", error);
@@ -123,10 +146,39 @@ class CartController {
             item.quantity = quantity;
             await item.save();
 
+            const fullItem = await CartModel.findOne({
+                where: { id: item.id },
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'price', 'stock', 'sku'],
+                        include: [
+                            {
+                                model: VariantImageModel,
+                                as: 'images',
+                                attributes: ['image_url'],
+                                required: false
+                            },
+                            {
+                                model: ProductVariantAttributeValuesModel,
+                                as: "attributeValues",
+                                include: [
+                                    {
+                                        model: ProductAttribute,
+                                        as: "attribute",
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                ]
+            });
+
             res.status(200).json({
                 status: 200,
                 message: 'Cập nhật số lượng thành công',
-                data: item
+                data: fullItem
             });
         } catch (error) {
             console.error("Lỗi khi cập nhật giỏ hàng:", error);
@@ -156,9 +208,40 @@ class CartController {
                 });
             }
 
+            const remainingItems = await CartModel.findAll({
+                where: { user_id: userId },
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'price', 'stock', 'sku'],
+                        include: [
+                            {
+                                model: VariantImageModel,
+                                as: 'images',
+                                attributes: ['image_url'],
+                                required: false
+                            },
+                            {
+                                model: ProductVariantAttributeValuesModel,
+                                as: "attributeValues",
+                                include: [
+                                    {
+                                        model: ProductAttribute,
+                                        as: "attribute",
+                                    },
+                                ],
+                            }
+                        ]
+                    }
+                ],
+                order: [['id', 'DESC']]
+            });
+
             res.status(200).json({
                 status: 200,
-                message: 'Xóa sản phẩm khỏi giỏ hàng thành công'
+                message: 'Xóa sản phẩm khỏi giỏ hàng thành công',
+                data: remainingItems
             });
         } catch (error) {
             console.error("Lỗi khi xóa sản phẩm:", error);
@@ -194,6 +277,7 @@ class CartController {
             });
         }
     }
+
 }
 
 module.exports = CartController;

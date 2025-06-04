@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import BreadcrumbCom from "../BreadcrumbCom";
 import EmptyCardError from "../EmptyCardError";
@@ -7,6 +8,8 @@ import Layout from "../Partials/LayoutHomeThree";
 import ProductsTable from "./ProductsTable";
 
 export default function CardPage({ cart = true }) {
+  const [totalPrice, setTotalPrice] = useState(0);
+
   return (
     <Layout childrenClasses={cart ? "pt-0 pb-0" : ""}>
       {cart === false ? (
@@ -34,7 +37,7 @@ export default function CardPage({ cart = true }) {
           </div>
           <div className="w-full mt-[23px]">
             <div className="container-x mx-auto">
-              <ProductsTable className="mb-[30px]" />
+              <ProductsTable className="mb-[30px]" onTotalChange={setTotalPrice} />
               <div className="w-full sm:flex justify-between">
                 <div className="discount-code sm:w-[270px] w-full mb-5 sm:mb-0 h-[50px] flex">
                   <div className="flex-1 h-full">
@@ -47,14 +50,7 @@ export default function CardPage({ cart = true }) {
                 <div className="flex space-x-2.5 items-center">
                   <a href="#">
                     <div className="w-[220px] h-[50px] bg-[#F6F6F6] flex justify-center items-center">
-                      <span className="text-sm font-semibold">
-                        Tiếp tục mua sắm
-                      </span>
-                    </div>
-                  </a>
-                  <a href="#">
-                    <div className="w-[140px] h-[50px] bg-[#F6F6F6] flex justify-center items-center">
-                      <span className="text-sm font-semibold">Cập nhật giỏ hàng</span>
+                      <span className="text-sm font-semibold">Tiếp tục mua sắm</span>
                     </div>
                   </a>
                 </div>
@@ -63,10 +59,10 @@ export default function CardPage({ cart = true }) {
                 <div className="sm:w-[370px] w-full border border-[#EDEDED] px-[30px] py-[26px]">
                   <div className="sub-total mb-6">
                     <div className=" flex justify-between mb-6">
-                      <p className="text-[15px] font-medium text-qblack">
-                        Tổng tiền
+                      <p className="text-[15px] font-medium text-qblack">Tổng tiền</p>
+                      <p className="text-[15px] font-medium text-qred">
+                        {totalPrice.toLocaleString()}₫
                       </p>
-                      <p className="text-[15px] font-medium text-qred">$365</p>
                     </div>
                     <div className="w-full h-[1px] bg-[#EDEDED]"></div>
                   </div>
@@ -85,13 +81,9 @@ export default function CardPage({ cart = true }) {
                                 className="accent-pink-500"
                               />
                             </div>
-                            <span className="text-[13px] text-normal text-qgraytwo">
-                              Miễn phí vận chuyển
-                            </span>
+                            <span className="text-[13px] text-qgraytwo">Miễn phí vận chuyển</span>
                           </div>
-                          <span className="text-[13px] text-normal text-qgraytwo">
-                            +$00.00
-                          </span>
+                          <span className="text-[13px] text-qgraytwo">+0₫</span>
                         </div>
                       </li>
                       <li>
@@ -104,13 +96,9 @@ export default function CardPage({ cart = true }) {
                                 className="accent-pink-500"
                               />
                             </div>
-                            <span className="text-[13px] text-normal text-qgraytwo">
-                              Tỷ lệ cố định
-                            </span>
+                            <span className="text-[13px] text-qgraytwo">Tỷ lệ cố định</span>
                           </div>
-                          <span className="text-[13px] text-normal text-qgraytwo">
-                            +$00.00
-                          </span>
+                          <span className="text-[13px] text-qgraytwo">+0₫</span>
                         </div>
                       </li>
                       <li>
@@ -123,48 +111,27 @@ export default function CardPage({ cart = true }) {
                                 className="accent-pink-500"
                               />
                             </div>
-                            <span className="text-[13px] text-normal text-qgraytwo">
-                              Giao hàng tận nơi
-                            </span>
+                            <span className="text-[13px] text-qgraytwo">Giao hàng tận nơi</span>
                           </div>
-                          <span className="text-[13px] text-normal text-qgraytwo">
-                            +$00.00
-                          </span>
+                          <span className="text-[13px] text-qgraytwo">+0₫</span>
                         </div>
                       </li>
                     </ul>
                   </div>
                   <div className="shipping-calculation w-full mb-3">
                     <div className="title mb-[17px]">
-                      <h1 className="text-[15px] font-medium">
-                        Tính toán vận chuyển
-                      </h1>
+                      <h1 className="text-[15px] font-medium">Tính toán vận chuyển</h1>
                     </div>
                     <div className="w-full h-[50px] border border-[#EDEDED] px-5 flex justify-between items-center mb-2">
-                      <span className="text-[13px] text-qgraytwo">
-                       Chọn quốc gia
-                      </span>
+                      <span className="text-[13px] text-qgraytwo">Chọn quốc gia</span>
                       <span>
-                        <svg
-                          width="11"
-                          height="7"
-                          viewBox="0 0 11 7"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M5.4 6.8L0 1.4L1.4 0L5.4 4L9.4 0L10.8 1.4L5.4 6.8Z"
-                            fill="#222222"
-                          />
+                        <svg width="11" height="7" viewBox="0 0 11 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5.4 6.8L0 1.4L1.4 0L5.4 4L9.4 0L10.8 1.4L5.4 6.8Z" fill="#222222" />
                         </svg>
                       </span>
                     </div>
                     <div className="w-full h-[50px]">
-                      <InputCom
-                        inputClasses="w-full h-full"
-                        type="text"
-                        placeholder="Mã bưu chính / ZIP"
-                      />
+                      <InputCom inputClasses="w-full h-full" type="text" placeholder="Mã bưu chính / ZIP" />
                     </div>
                   </div>
                   <button type="button" className="w-full mb-10">
@@ -174,17 +141,15 @@ export default function CardPage({ cart = true }) {
                   </button>
                   <div className="total mb-6">
                     <div className=" flex justify-between">
-                      <p className="text-[18px] font-medium text-qblack">
-                        Tổng cộng
+                      <p className="text-[18px] font-medium text-qblack">Tổng cộng</p>
+                      <p className="text-[18px] font-medium text-qred">
+                        {totalPrice.toLocaleString()}₫
                       </p>
-                      <p className="text-[18px] font-medium text-qred">$365</p>
                     </div>
                   </div>
                   <Link to="/checkout">
                     <div className="w-full h-[50px] black-btn flex justify-center items-center">
-                      <span className="text-sm font-semibold">
-                        Tiến hành thanh toán
-                      </span>
+                      <span className="text-sm font-semibold">Tiến hành thanh toán</span>
                     </div>
                   </Link>
                 </div>

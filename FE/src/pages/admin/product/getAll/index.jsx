@@ -10,15 +10,15 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaEye,
-  FaPlus,
+  FaTrashAlt,
   FaTrash,
 } from "react-icons/fa";
 
 const AdminProductList = () => {
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
-const [brands, setBrands] = useState([]);
-const [selectedBrand, setSelectedBrand] = useState("");
+  const [brands, setBrands] = useState([]);
+  const [selectedBrand, setSelectedBrand] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -30,16 +30,16 @@ const [selectedBrand, setSelectedBrand] = useState("");
 
 
   useEffect(() => {
-  const fetchBrands = async () => {
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/list`);
-      setBrands(res.data.data || []);
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách thương hiệu:", error);
-    }
-  };
-  fetchBrands();
-}, []);
+    const fetchBrands = async () => {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/list`);
+        setBrands(res.data.data || []);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách thương hiệu:", error);
+      }
+    };
+    fetchBrands();
+  }, []);
 
   // Gọi API lấy danh mục
   useEffect(() => {
@@ -57,37 +57,37 @@ const [selectedBrand, setSelectedBrand] = useState("");
   }, []);
 
   useEffect(() => {
-  if (!searchTerm && !selectedCategory && !selectedBrand) {
-    fetchProducts(currentPage);
-  } else {
-    searchProducts(currentPage, searchTerm, selectedCategory, selectedBrand);
-  }
-}, [currentPage, searchTerm, selectedCategory, selectedBrand]);
+    if (!searchTerm && !selectedCategory && !selectedBrand) {
+      fetchProducts(currentPage);
+    } else {
+      searchProducts(currentPage, searchTerm, selectedCategory, selectedBrand);
+    }
+  }, [currentPage, searchTerm, selectedCategory, selectedBrand]);
 
 
   // Tách hàm search riêng
   const searchProducts = async (page, search, categoryId = "", brandId = "") => {
-  try {
-    const res = await axios.get(
-      `${Constants.DOMAIN_API}/admin/products/productList/search`,
-      {
-        params: {
-          searchTerm: search,
-          categoryId: categoryId || undefined,
-          brandId: brandId || undefined,
-          page,
-          limit: recordsPerPage,
-        },
-      }
-    );
-    setProducts(res.data.data);
-    setTotalPages(res.data.totalPages || 1);
-  } catch (error) {
-    console.error("Lỗi khi tìm kiếm sản phẩm:", error);
-    setProducts([]);
-    setTotalPages(1);
-  }
-};
+    try {
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/products/productList/search`,
+        {
+          params: {
+            searchTerm: search,
+            categoryId: categoryId || undefined,
+            brandId: brandId || undefined,
+            page,
+            limit: recordsPerPage,
+          },
+        }
+      );
+      setProducts(res.data.data);
+      setTotalPages(res.data.totalPages || 1);
+    } catch (error) {
+      console.error("Lỗi khi tìm kiếm sản phẩm:", error);
+      setProducts([]);
+      setTotalPages(1);
+    }
+  };
 
 
   const deleteProduct = async () => {
@@ -161,17 +161,17 @@ const [selectedBrand, setSelectedBrand] = useState("");
 
     try {
       const res = await axios.get(
-  `${Constants.DOMAIN_API}/admin/products/productList/search`,
-  {
-    params: {
-      searchTerm: trimmedSearch,
-      categoryId: selectedCategory || undefined,
-      brandId: selectedBrand || undefined,
-      page: 1,
-      limit: recordsPerPage,
-    },
-  }
-);
+        `${Constants.DOMAIN_API}/admin/products/productList/search`,
+        {
+          params: {
+            searchTerm: trimmedSearch,
+            categoryId: selectedCategory || undefined,
+            brandId: selectedBrand || undefined,
+            page: 1,
+            limit: recordsPerPage,
+          },
+        }
+      );
 
       setProducts(res.data.data);
       setTotalPages(res.data.totalPages || 1);
@@ -228,18 +228,17 @@ const [selectedBrand, setSelectedBrand] = useState("");
             ))}
           </select>
           <select
-  className="border p-2 rounded"
-  value={selectedBrand}
-  onChange={(e) => setSelectedBrand(e.target.value)}
->
-  <option value="">Tất cả thương hiệu</option>
-  {brands.map((brand) => (
-    <option key={brand.id} value={brand.id}>
-      {brand.name}
-    </option>
-  ))}
-</select>
-
+            className="border p-2 rounded"
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+          >
+            <option value="">Tất cả thương hiệu</option>
+            {brands.map((brand) => (
+              <option key={brand.id} value={brand.id}>
+                {brand.name}
+              </option>
+            ))}
+          </select>
 
           <button
             onClick={handleSearchSubmit}
@@ -252,91 +251,90 @@ const [selectedBrand, setSelectedBrand] = useState("");
         {/* Bảng danh sách sản phẩm */}
         <table className="w-full border-collapse border border-gray-500 mt-3">
           <thead className="bg-gray-200">
-  <tr>
-    <th className="p-2 border">#</th>
-    <th className="p-2 border">Tên</th>
-    <th className="p-2 border">Ảnh</th>
-    <th className="p-2 border">Trạng thái</th>
-    <th className="p-2 border">Danh mục</th>
-    <th className="p-2 border">Thương hiệu</th>
-    <th className="p-2 border">Biến thể</th>
-    <th className="p-2 border"> Kho </th> 
-    <th className="p-2 border"> Hành động</th>
-  </tr>
-</thead>
-<tbody>
-  {products.length === 0 ? (
-    <tr>
-      <td colSpan="8" className="p-4 text-center">
-        Không có sản phẩm nào.
-      </td>
-    </tr>
-  ) : (
-    products.map((product, index) => (
-      <tr key={product.id} className="border-b">
-        <td className="p-2 border">
-          {(currentPage - 1) * recordsPerPage + index + 1}
-        </td>
-        <td className="p-2 border">{product.name}</td>
-        <td className="p-2 border">
-          <img
-            src={product.thumbnail || "https://via.placeholder.com/60"}
-            alt={product.name}
-            className="w-16 h-16 object-cover rounded"
-          />
-        </td>
-        <td className="p-2 border text-center">
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              product.status === 1
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {product.status === 1 ? "Hiển thị" : "Ẩn"}
-          </span>
-        </td>
-        <td className="p-2 border">{product.category?.name || "Không có"}</td>
-        <td className="p-2 border">{product.brand?.name || "Không có"}</td>
+            <tr>
+              <th className="p-2 border">#</th>
+              <th className="p-2 border">Tên</th>
+              <th className="p-2 border">Ảnh</th>
+              <th className="p-2 border">Trạng thái</th>
+              <th className="p-2 border">Danh mục</th>
+              <th className="p-2 border">Thương hiệu</th>
+              <th className="p-2 border">Biến thể</th>
+              <th className="p-2 border"> Kho </th>
+              <th className="p-2 border"> Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="p-4 text-center">
+                  Không có sản phẩm nào.
+                </td>
+              </tr>
+            ) : (
+              products.map((product, index) => (
+                <tr key={product.id} className="border-b">
+                  <td className="p-2 border">
+                    {(currentPage - 1) * recordsPerPage + index + 1}
+                  </td>
+                  <td className="p-2 border">{product.name}</td>
+                  <td className="p-2 border">
+                    <img
+                      src={product.thumbnail || "https://via.placeholder.com/60"}
+                      alt={product.name}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                  </td>
+                  <td className="p-2 border text-center">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${product.status === 1
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                        }`}
+                    >
+                      {product.status === 1 ? "Hiển thị" : "Ẩn"}
+                    </span>
+                  </td>
+                  <td className="p-2 border">{product.category?.name || "Không có"}</td>
+                  <td className="p-2 border">{product.brand?.name || "Không có"}</td>
 
-        <td className="p-2 border text-center">
-          {product.variantCount ?? product.variants?.length ?? 0}
-        </td>
-        <td className="p-2 border text-center">
-          {product.variants
-            ? product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
-            : 0}
-        </td>
+                  <td className="p-2 border text-center">
+                    {product.variantCount ?? product.variants?.length ?? 0}
+                  </td>
+                  <td className="p-2 border text-center">
+                    {product.variants
+                      ? product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
+                      : 0}
+                  </td>
 
                   <td className="p-2 border">
                     <div className="flex gap-2 justify-center">
-  {/* Nút xem chi tiết */}
-  <Link
-    to={`/admin/products/detail/${product.id}`}
-    className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition flex items-center justify-center"
-    title="Xem chi tiết"
-  >
-    <FaEye size={16} />
-  </Link>
+                      {/* Nút xem chi tiết */}
+                      <Link
+                        to={`/admin/products/detail/${product.id}`}
+                        className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition flex items-center justify-center"
+                        title="Xem chi tiết"
+                      >
+                        <FaEye size={16} />
+                      </Link>
 
-  {/* Nút thêm biến thể */}
-  <Link
-    to={`/admin/products/addVariant/${product.id}`}
-    className="bg-yellow-500 text-white py-1 px-3 rounded"
-    title="Thêm biến thể"
-  >
-    <i class="fa-solid fa-pen-to-square"></i>
-  </Link>
+                      {/* Nút thêm biến thể */}
+                      <Link
+                        to={`/admin/products/addVariant/${product.id}`}
+                        className="bg-yellow-500 text-white py-1 px-3 rounded"
+                        title="Thêm biến thể"
+                      >
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </Link>
 
-  {/* Nút xoá */}
-  <button
-    onClick={() => setSelectedProduct(product)}
-    className="bg-red-500 text-white py-1 px-3 rounded"
-    title="Xoá sản phẩm"
-  >
-    <FaTrash size={16} />
-  </button>
-</div>
+                      {/* Nút xoá */}
+                      <button
+                        onClick={() => setSelectedProduct(product)}
+                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                        title="Xoá sản phẩm"
+                      >
+                        <FaTrashAlt size={16} />
+                      </button>
+                    </div>
 
 
                   </td>
@@ -383,11 +381,10 @@ const [selectedBrand, setSelectedBrand] = useState("");
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 border rounded ${
-                      currentPage === page
+                    className={`px-3 py-1 border rounded ${currentPage === page
                         ? "bg-blue-500 text-white"
                         : "bg-blue-100 text-black hover:bg-blue-200"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>

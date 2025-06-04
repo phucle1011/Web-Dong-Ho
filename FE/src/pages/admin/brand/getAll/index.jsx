@@ -4,7 +4,7 @@ import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
 import Swal from 'sweetalert2';
-import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaTrashAlt } from 'react-icons/fa';
 
 function BrandList() {
     const [brands, setBrands] = useState([]);
@@ -297,9 +297,6 @@ function BrandList() {
                         <FaSearch className="w-5 h-5" />
                     </button>
                 </div>
-
-
-
                 {loading ? (
                     <div className="text-center py-4">Đang tải dữ liệu...</div>
                 ) : (
@@ -374,10 +371,10 @@ function BrandList() {
                                                         </Link>
                                                         <button
                                                             onClick={() => handleDeleteBrand(brand.id)}
-                                                            className="bg-red-500 text-white py-1 px-3 rounded flex items-center justify-center"
+                                                            className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                                             disabled={deletingBrandId === brand.id}
                                                         >
-                                                            <i className="fa-solid fa-trash"></i>
+                                                            <FaTrashAlt />
                                                         </button>
                                                     </div>
                                                 </td>
