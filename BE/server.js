@@ -31,7 +31,7 @@ app.use(cors({
 
 app.use(clientRoutes);
 app.use('/admin', adminRoutes);
-app.use('/client', adminRoutes);
+app.use('/', clientRoutes);
 app.use(apiRoutes);
 
 const port = 5000;

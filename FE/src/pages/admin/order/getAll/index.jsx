@@ -27,6 +27,7 @@ function OrderGetAll() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [activeStatus, setActiveStatus] = useState('');
   const [statusCounts, setStatusCounts] = useState({
     all: 0,
     pending: 0,
@@ -176,6 +177,7 @@ function OrderGetAll() {
 
   const handleFilterClick = (status) => {
     setStatusFilter(status);
+    setActiveStatus(status);
   };
 
   const handleSearchSubmit = async () => {
@@ -287,9 +289,8 @@ function OrderGetAll() {
           <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
         </div>
 
-        <div className="mb-6 flex flex-wrap items-center gap-4 justify-center">
+        <div className="mb-6 flex flex-wrap items-center gap-4 justify-start">
           <div className="flex items-center gap-2">
-            <label className="whitespace-nowrap">Từ ngày:</label>
             <DatePicker
               selected={startDate}
               onChange={(date) => setStartDate(date)}
@@ -299,7 +300,6 @@ function OrderGetAll() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="whitespace-nowrap">Đến ngày:</label>
             <DatePicker
               selected={endDate}
               onChange={(date) => setEndDate(date)}
@@ -331,18 +331,22 @@ function OrderGetAll() {
             { key: "completed", label: "Hoàn thành", color: "bg-emerald-300", textColor: "text-emerald-800", count: statusCounts.completed },
             { key: "delivered", label: "Đã giao", color: "bg-green-300", textColor: "text-green-800", count: statusCounts.delivered },
             { key: "cancelled", label: "Đã hủy", color: "bg-rose-300", textColor: "text-rose-800", count: statusCounts.cancelled },
-          ].map(({ key, label, color, textColor, count }) => (
-            <button
-              key={key}
-              onClick={() => handleFilterClick(key)}
-              className="btn rounded-pill px-3 py-1.5 text-nowrap bg-white text-gray-700"
-            >
-              <span>{label}</span>
-              <span className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}>
-                {count}
-              </span>
-            </button>
-          ))}
+          ].map(({ key, label, color, textColor, count }) => {
+            const isActive = activeStatus === key;
+            return (
+              <button
+                key={key}
+                onClick={() => handleFilterClick(key)}
+                className={`border px-3 py-1.5  text-nowrap ${isActive ? 'bg-[#073272] text-white' : 'bg-white text-gray-700'
+                  }`}
+              >
+                <span>{label}</span>
+                <span className={`${color} ${textColor} rounded-pill px-2 py-0.5 text-nowrap ms-2`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="mb-6 flex items-center gap-2">

@@ -14,8 +14,8 @@ export default function CardPage({ cart = true }) {
           <div className="container-x mx-auto">
             <BreadcrumbCom
               paths={[
-                { name: "home", path: "/" },
-                { name: "cart", path: "/cart" },
+                { name: "Trang chủ", path: "/" },
+                { name: "Giỏ hàng", path: "/cart" },
               ]}
             />
             <EmptyCardError />
@@ -25,10 +25,10 @@ export default function CardPage({ cart = true }) {
         <div className="cart-page-wrapper w-full bg-white pb-[60px]">
           <div className="w-full">
             <PageTitle
-              title="Your Cart"
+              title="Giỏ hàng của bạn"
               breadcrumb={[
-                { name: "home", path: "/" },
-                { name: "cart", path: "/cart" },
+                { name: "Trang chủ", path: "/" },
+                { name: "Giỏ hàng", path: "/cart" },
               ]}
             />
           </div>
@@ -38,23 +38,23 @@ export default function CardPage({ cart = true }) {
               <div className="w-full sm:flex justify-between">
                 <div className="discount-code sm:w-[270px] w-full mb-5 sm:mb-0 h-[50px] flex">
                   <div className="flex-1 h-full">
-                    <InputCom type="text" placeholder="Discount Code" />
+                    <InputCom type="text" placeholder="Mã giảm giá" />
                   </div>
                   <button type="button" className="w-[90px] h-[50px] black-btn">
-                    <span className="text-sm font-semibold">Apply</span>
+                    <span className="text-sm font-semibold">Áp dụng</span>
                   </button>
                 </div>
                 <div className="flex space-x-2.5 items-center">
                   <a href="#">
                     <div className="w-[220px] h-[50px] bg-[#F6F6F6] flex justify-center items-center">
                       <span className="text-sm font-semibold">
-                        Continue Shopping
+                        Tiếp tục mua sắm
                       </span>
                     </div>
                   </a>
                   <a href="#">
                     <div className="w-[140px] h-[50px] bg-[#F6F6F6] flex justify-center items-center">
-                      <span className="text-sm font-semibold">Update Cart</span>
+                      <span className="text-sm font-semibold">Cập nhật giỏ hàng</span>
                     </div>
                   </a>
                 </div>
@@ -64,7 +64,7 @@ export default function CardPage({ cart = true }) {
                   <div className="sub-total mb-6">
                     <div className=" flex justify-between mb-6">
                       <p className="text-[15px] font-medium text-qblack">
-                        Subtotal
+                        Tổng tiền
                       </p>
                       <p className="text-[15px] font-medium text-qred">$365</p>
                     </div>
@@ -72,7 +72,7 @@ export default function CardPage({ cart = true }) {
                   </div>
                   <div className="shipping mb-6">
                     <span className="text-[15px] font-medium text-qblack mb-[18px] block">
-                      Shipping
+                      Vận chuyển
                     </span>
                     <ul className="flex flex-col space-y-1">
                       <li>
@@ -86,7 +86,7 @@ export default function CardPage({ cart = true }) {
                               />
                             </div>
                             <span className="text-[13px] text-normal text-qgraytwo">
-                              Free Shipping
+                              Miễn phí vận chuyển
                             </span>
                           </div>
                           <span className="text-[13px] text-normal text-qgraytwo">
@@ -105,7 +105,7 @@ export default function CardPage({ cart = true }) {
                               />
                             </div>
                             <span className="text-[13px] text-normal text-qgraytwo">
-                              Flat Rate
+                              Tỷ lệ cố định
                             </span>
                           </div>
                           <span className="text-[13px] text-normal text-qgraytwo">
@@ -124,7 +124,7 @@ export default function CardPage({ cart = true }) {
                               />
                             </div>
                             <span className="text-[13px] text-normal text-qgraytwo">
-                              Local Delivery
+                              Giao hàng tận nơi
                             </span>
                           </div>
                           <span className="text-[13px] text-normal text-qgraytwo">
@@ -137,12 +137,12 @@ export default function CardPage({ cart = true }) {
                   <div className="shipping-calculation w-full mb-3">
                     <div className="title mb-[17px]">
                       <h1 className="text-[15px] font-medium">
-                        Calculate Shipping
+                        Tính toán vận chuyển
                       </h1>
                     </div>
                     <div className="w-full h-[50px] border border-[#EDEDED] px-5 flex justify-between items-center mb-2">
                       <span className="text-[13px] text-qgraytwo">
-                        Select Country
+                       Chọn quốc gia
                       </span>
                       <span>
                         <svg
@@ -163,19 +163,19 @@ export default function CardPage({ cart = true }) {
                       <InputCom
                         inputClasses="w-full h-full"
                         type="text"
-                        placeholder="Postcode / ZIP"
+                        placeholder="Mã bưu chính / ZIP"
                       />
                     </div>
                   </div>
                   <button type="button" className="w-full mb-10">
                     <div className="w-full h-[50px] bg-[#F6F6F6] flex justify-center items-center">
-                      <span className="text-sm font-semibold">Update Cart</span>
+                      <span className="text-sm font-semibold">Cập nhật giỏ hàng</span>
                     </div>
                   </button>
                   <div className="total mb-6">
                     <div className=" flex justify-between">
                       <p className="text-[18px] font-medium text-qblack">
-                        Total
+                        Tổng cộng
                       </p>
                       <p className="text-[18px] font-medium text-qred">$365</p>
                     </div>
@@ -183,7 +183,7 @@ export default function CardPage({ cart = true }) {
                   <Link to="/checkout">
                     <div className="w-full h-[50px] black-btn flex justify-center items-center">
                       <span className="text-sm font-semibold">
-                        Proceed to Checkout
+                        Tiến hành thanh toán
                       </span>
                     </div>
                   </Link>
