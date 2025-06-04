@@ -62,15 +62,15 @@ function Aside() {
             </li>
             <li className={`sidebar-item ${location.pathname === "/admin/promotion-products/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link d-flex align-items-center" to="/admin/promotion-products/getAll" title="Quản lý sản phẩm khuyến mãi">
-                <FaTag className="me-2" />
-                <span className="hide-menu text-truncate" style={{ maxWidth: '150px' }}>
+                <FaTag />
+                <span className="hide-menu text-truncate"style={{ maxWidth: '150px'}}>
                 Quản lý sản phẩm khuyến mãi
                 </span>
               </Link>
             </li> <li className={`sidebar-item ${location.pathname === "/admin/promotionusers/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link" to="/admin/promotionusers/getAll">
                 <FaTags />
-                <span className="hide-menu">Quản lý khách hàng ĐB</span>
+                <span className="hide-menu text-truncate" style={{ maxWidth: '150px'}}>Quản lý khách hàng đặc biệt</span>
               </Link>
             </li>
 

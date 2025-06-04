@@ -304,13 +304,22 @@ const PromotionProductEdit = () => {
             </p>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isLoading}
-          >
-            {isLoading ? "Đang cập nhật..." : "Cập nhật"}
-          </button>
+          <div className="d-flex gap-2">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? "Đang cập nhật..." : "Cập nhật"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => navigate("/admin/promotion-products/getAll")}
+            >
+              Quay về
+            </button>
+          </div>
         </form>
       )}
       <ToastContainer position="top-right" autoClose={3000} />
