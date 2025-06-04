@@ -4,8 +4,10 @@ const categoryController = require('../controllers/Client/categoryController');
 
 const BlogController = require('../controllers/Client/blogsController');
 const ContactController = require('../controllers/Client/contactController');
+const ProductController = require('../controllers/Client/productController');
 
 //------------------[ CLIENT ROUTES ]------------------
+router.get('/products/:id/variants', ProductController.getVariantsWithPromotion);
 
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getCategories);

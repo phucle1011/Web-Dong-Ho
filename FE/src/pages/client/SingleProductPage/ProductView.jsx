@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useState,useEffect  } from "react";
 import Star from "../Helpers/icons/Star";
 import Selectbox from "../Helpers/Selectbox";
+import axios from 'axios';
 
 export default function ProductView({ className, reportHandler }) {
+  // State lưu dữ liệu sản phẩm lấy từ API
+  const [productData, setProductData] = useState(null);
+  const [productVariant, setProductVariant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+   const [colors, setColors] = useState([]);
+      const [images, setImages] = useState([]);
+
   const productsImg = [
     {
       id: 1,
@@ -36,6 +45,55 @@ export default function ProductView({ className, reportHandler }) {
     setSrc(current);
   };
   const [quantity, setQuantity] = useState(1);
+
+   useEffect(() => {
+  async function fetchProduct() {
+    try {
+      setLoading(true);    // Bắt đầu loading
+      setError(null);      // Reset lỗi trước khi fetch
+
+      const productId = 1;
+      const res = await axios.get(`http://localhost:5000/products/${productId}/variants`);
+      
+      // Gán dữ liệu product (nếu API trả về dữ liệu product gốc)
+      setProductData(res.data.product);
+
+      const variants = res.data.product.variants;
+      const images = res.data.product.variantImages
+      setProductVariant(variants);
+      setImages(images);
+      console.log(res.data.product.variantImages);
+      
+      const colorsFromVariants = variants.map((variant) => {
+        const colorAttr = variant.attributeValues.find(attr => attr.attribute.name === "Color");
+        return {
+          id: variant.id,
+          color: colorAttr ? colorAttr.value : null,
+          image: variant.images[0]?.image_url || ""
+        };
+      }).filter(item => item.color !== null);
+
+      setColors(colorsFromVariants);
+
+      if (colorsFromVariants.length > 0) {
+        setSrc(colorsFromVariants[0].image);
+      }
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);   // Kết thúc loading dù thành công hay lỗi
+    }
+  }
+
+  fetchProduct();
+}, []);
+
+
+
+  if (loading) return <div>Loading product...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!productData) return null;
+  
   const increment = () => {
     setQuantity((prev) => prev + 1);
   };
@@ -44,6 +102,7 @@ export default function ProductView({ className, reportHandler }) {
       setQuantity((prev) => prev - 1);
     }
   };
+  
 
   return (
     <div
@@ -55,30 +114,33 @@ export default function ProductView({ className, reportHandler }) {
         <div className="w-full">
           <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
             <img
-              src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/${src}`}
+              src={`${src}`}
               alt=""
               className="object-contain"
             />
+            
+              
+            
             <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
               <span>-50%</span>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {productsImg &&
-              productsImg.length > 0 &&
-              productsImg.map((img) => (
+            {images &&
+              images.length > 0 &&
+              images.map((img) => (
                 <div
-                  onClick={() => changeImgHandler(img.src)}
+                  onClick={() => changeImgHandler(img.image_url)}
                   key={img.id}
                   className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer"
                 >
                   <img
-                    src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/${
-                      img.src
+                    src={`${
+                      img.image_url
                     }`}
                     alt=""
                     className={`w-full h-full object-contain ${
-                      src !== img.src ? "opacity-50" : ""
+                      src !== img.image_url ? "opacity-50" : ""
                     } `}
                   />
                 </div>
@@ -98,7 +160,7 @@ export default function ProductView({ className, reportHandler }) {
             data-aos="fade-up"
             className="text-xl font-medium text-qblack mb-4"
           >
-            Samsung Galaxy Z Fold3 5G 3 colors in 512GB
+            {productData.name}
           </p>
 
           <div
@@ -128,8 +190,8 @@ export default function ProductView({ className, reportHandler }) {
             data-aos="fade-up"
             className="text-qgray text-sm text-normal mb-[30px] leading-7"
           >
-            It is a long established fact that a reader will be distracted by
-            the readable there content of a page when looking at its layout.
+                        {productData.description}
+
           </p>
 
           <div data-aos="fade-up" className="colors mb-[30px]">
@@ -137,27 +199,25 @@ export default function ProductView({ className, reportHandler }) {
               COLOR
             </span>
 
-            <div className="flex space-x-4 items-center">
-              {productsImg &&
-                productsImg.length > 0 &&
-                productsImg.map((img) => (
-                  <div key={img.id}>
-                    {img.color && img.color !== "" && (
-                      <button
-                        onClick={() => changeImgHandler(img.src)}
-                        type="button"
-                        style={{ "--tw-ring-color": `${img.color}` }}
-                        className="w-[20px] h-[20px]  rounded-full focus:ring-2  ring-offset-2 flex justify-center items-center"
-                      >
-                        <span
-                          style={{ background: `${img.color}` }}
-                          className="w-[20px] h-[20px] block rounded-full border"
-                        ></span>
-                      </button>
-                    )}
-                  </div>
-                ))}
-            </div>
+            <div>
+      
+      <div className="flex space-x-4 items-center">
+        {colors.map(({ id, color, image }) => (
+          <button
+            key={id}
+            onClick={() => changeImgHandler(image)}
+            type="button"
+            style={{ "--tw-ring-color": color }}
+            className="w-[20px] h-[20px] rounded-full focus:ring-2 ring-offset-2 flex justify-center items-center"
+          >
+            <span
+              style={{ background: color }}
+              className="w-[20px] h-[20px] block rounded-full border"
+            ></span>
+          </button>
+        ))}
+      </div>
+    </div>
           </div>
 
           <div data-aos="fade-up" className="product-size mb-[30px]">

@@ -210,7 +210,7 @@ static async getAllAttributes(req, res) {
         description,
         brand_id,
         category_id,
-        thumbnail,
+        thumbnail: thumbnail.url,
         status,
       });
 
@@ -328,15 +328,19 @@ static async getAllAttributes(req, res) {
       });
 
       if (Array.isArray(images)) {
-        for (const imageUrl of images) {
-          await VariantImage.create(
-            {
-              variant_id,
-              image_url: imageUrl,
-            },
-            { transaction: t }
-          );
-        }
+        for (const image of images) {
+  const url = typeof image === "string" ? image : image?.url || "";
+  if (url) {
+    await VariantImage.create(
+      {
+        variant_id,
+        image_url: url,
+      },
+      { transaction: t }
+    );
+  }
+}
+
       }
 
       await t.commit();
