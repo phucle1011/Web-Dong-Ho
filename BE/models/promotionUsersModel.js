@@ -18,7 +18,12 @@ const PromotionUserModel = connection.define('promotion_user', {
   email_sent: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false,
+    defaultValue: true,
+  },
+  used: {
+    type: DataTypes.BOOLEAN,  // Hoặc DataTypes.TINYINT(1)
+    allowNull: false,
+    defaultValue: false,      // Mặc định chưa sử dụng
   },
 }, {
   tableName: 'promotion_users',

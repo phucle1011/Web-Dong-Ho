@@ -4,6 +4,7 @@ const categoryController = require('../controllers/Client/categoryController');
 const ProductCompaireController = require('../controllers/Client/ProductsCompaireController');
 const BlogController = require('../controllers/Client/blogsController');
 const ContactController = require('../controllers/Client/contactController');
+const PromotionController = require('../controllers/Client/promotionController');
 const AddressController = require('../controllers/Client/addressController');
 const CartController = require('../controllers/Client/cartsController');
 const ProductController = require('../controllers/Client/productController');
@@ -23,6 +24,10 @@ router.get('/blogs/:id', BlogController.getBlogById);
 
 //------------------[ Contact ]------------------
 router.post("/contact", ContactController.sendContactEmail);
+
+//------------------[ Promotions ]------------------
+router.post('/promotions/apply', PromotionController.applyDiscount);
+
 
 //------------------[ Products Compaire ]------------------
 router.get("/products/compare", ProductCompaireController.getAllForComparison);
