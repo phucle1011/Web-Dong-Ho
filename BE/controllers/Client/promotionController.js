@@ -7,7 +7,7 @@ class PromotionController {
     static async applyDiscount(req, res) {
         try {
             let { code, orderTotal } = req.body;
-            const userId = 20; // ⚠️ Cần lấy từ auth thực tế nếu có
+            const userId = req.user?.id;
 
             console.log('[applyDiscount] Yêu cầu:', { code, orderTotal, userId });
 
@@ -60,7 +60,6 @@ class PromotionController {
                     if (!userId) {
                         throw { status: 401, message: 'Bạn cần đăng nhập để sử dụng mã này' };
                     }
-
                     promoUser = await PromotionUserModel.findOne({
                         where: {
                             promotion_id: promotion.id,
@@ -86,21 +85,6 @@ class PromotionController {
                     }
                 }
 
-                // Giảm số lượng
-                await promotion.update(
-                    { quantity: promotion.quantity - 1 },
-                    { transaction: t }
-                );
-
-                // Đánh dấu là đã dùng nếu là mã đặc biệt
-                if (promotion.special_promotion === true && promoUser) {
-                    await promoUser.update(
-                        { used: true },
-                        { transaction: t }
-                    );
-                }
-
-                // Tính toán giảm giá
                 let discountAmount = 0;
                 if (promotion.discount_type === 'percentage') {
                     discountAmount = (orderTotal * promotion.discount_value) / 100;
@@ -108,7 +92,6 @@ class PromotionController {
                     discountAmount = promotion.discount_value;
                 }
 
-                // Không cho vượt quá tổng tiền
                 if (discountAmount > orderTotal) {
                     discountAmount = orderTotal;
                 }

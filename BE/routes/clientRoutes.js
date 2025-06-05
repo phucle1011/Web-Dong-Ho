@@ -9,6 +9,7 @@ const AddressController = require('../controllers/Client/addressController');
 const CartController = require('../controllers/Client/cartsController');
 const ProductController = require('../controllers/Client/productController');
 const AuthController = require('../controllers/Client/authController');
+const { checkJWT } = require('../services/authCheck');
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -27,7 +28,7 @@ router.get('/blogs/:id', BlogController.getBlogById);
 router.post("/contact", ContactController.sendContactEmail);
 
 //------------------[ Promotions ]------------------
-router.post('/promotions/apply', PromotionController.applyDiscount);
+router.post('/promotions/apply',checkJWT, PromotionController.applyDiscount);
 
 
 //------------------[ Products Compaire ]------------------
