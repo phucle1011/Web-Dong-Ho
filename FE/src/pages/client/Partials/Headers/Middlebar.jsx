@@ -5,8 +5,35 @@ import ThinLove from "../../Helpers/icons/ThinLove";
 import ThinPeople from "../../Helpers/icons/ThinPeople";
 import SearchBox from "../../Helpers/SearchBox";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import Constants from "../../../../Constants";
 
 export default function Middlebar({ className, type }) {
+
+  const [count, setCount] = useState(0);
+  const userId = 1;
+
+  useEffect(() => {
+  if (!userId) return;
+
+  const fetchCount = async () => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
+        params: { userId },
+      });
+
+      const count = res.data?.count ?? 0;
+
+      setCount(count);
+    } catch (err) {
+      console.error("Không lấy được số lượng giỏ hàng", err);
+    }
+  };
+
+  fetchCount();
+}, [userId]);
+
   return (
     <div className={`w-full h-[86px] bg-white ${className}`}>
       <div className="container-x mx-auto h-full">
@@ -53,9 +80,8 @@ export default function Middlebar({ className, type }) {
                   </span>
                 </Link>
                 <span
-                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
-                    type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                  }`}
+                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                    }`}
                 >
                   2
                 </span>
@@ -67,9 +93,8 @@ export default function Middlebar({ className, type }) {
                   </span>
                 </Link>
                 <span
-                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
-                    type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                  }`}
+                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                    }`}
                 >
                   1
                 </span>
@@ -82,15 +107,12 @@ export default function Middlebar({ className, type }) {
                     </span>
                   </Link>
                   <span
-                    className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
-                      type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                    }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                      }`}
                   >
-                    15
+                    {count}
                   </span>
                 </div>
-                {/* <div className="fixed left-0 top-0 w-full h-full z-40"></div> */}
-                {/* hidden group-hover:block" */}
                 <Cart
                   type={type}
                   className="absolute -right-[45px] top-11 z-50 hidden group-hover:block"

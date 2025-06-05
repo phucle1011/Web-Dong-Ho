@@ -12,6 +12,8 @@ class CartController {
             const userId = 1;
             // const userId = req.user.id;
 
+            const count = await CartModel.sum('quantity', { where: { user_id: userId } });
+
             const cartItems = await CartModel.findAll({
                 where: { user_id: userId },
                 include: [
@@ -45,7 +47,8 @@ class CartController {
             res.status(200).json({
                 status: 200,
                 message: `Lấy giỏ hàng của người dùng ${userId} thành công`,
-                data: cartItems
+                data: cartItems,
+                count
             });
         } catch (error) {
             console.error("Lỗi khi lấy giỏ hàng:", error);

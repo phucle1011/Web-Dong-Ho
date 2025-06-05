@@ -9,6 +9,7 @@ const AddressController = require('../controllers/Client/addressController');
 const CartController = require('../controllers/Client/cartsController');
 const ProductController = require('../controllers/Client/productController');
 const AuthController = require('../controllers/Client/authController');
+const OrderController = require('../controllers/Client/ordersController');
 const { checkJWT } = require('../services/authCheck');
 
 //------------------[ CLIENT ROUTES ]------------------
@@ -43,12 +44,15 @@ router.post('/user/:userId/addresses', AddressController.addAddress);
 
 
 
-//------------------[ Cart ]------------------
+//------------------[ CARTS ]------------------
 router.get("/carts", CartController.getCartByUser);
 router.post("/add-to-carts", CartController.addToCart);
 router.put("/update-to-carts/:userId/:productVariantId", CartController.updateCartItem);
 router.delete("/delete-to-carts/:userId/:productVariantId", CartController.removeCartItem);
 router.delete("/clear-cart/:userId", CartController.clearCartByUser);
+
+//------------------[ ORDERS ]------------------
+router.get("/orders", OrderController.get);
 
 //------------------[ AUTH ]------------------\
 router.post('/auth/register', AuthController.register);

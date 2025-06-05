@@ -255,7 +255,7 @@ function Dashboard() {
                       </h5>
                     ) : (
                       <h5 className="card-title fw-semibold text-danger">
-                        Vui lòng chọn tháng năm bạn muốn xem doanh thu
+                        Vui lòng chọn ngày bạn muốn xem doanh thu
                       </h5>
                     )}
                   </div>

@@ -13,7 +13,6 @@ const ProductsTable = ({ className, onTotalChange }) => {
   const [deleteMessage, setDeleteMessage] = useState("");
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
-  // Cập nhật tổng tiền khi cartItems thay đổi
   useEffect(() => {
     const total = calculateTotal();
     if (onTotalChange) {
