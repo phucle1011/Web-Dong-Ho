@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 
 export default function Login() {
-  const [checked, setValue] = useState(false);
+  const [checked, setValue] = useState(!!localStorage.getItem("token"));
   const rememberMe = () => {
     setValue(!checked);
   };
@@ -58,7 +58,10 @@ export default function Login() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          rememberMe: checked
+        })
       });
 
       const result = await response.json();
@@ -68,15 +71,17 @@ export default function Login() {
       }
       if (result.success) {
         const { token } = result.data;
-        sessionStorage.setItem("token", token);
+
+        localStorage.setItem("token", token);
+
         toast.success("Đăng nhập thành công!");
         navigate("/");
       } else {
-        alert(result.message || "Đăng nhập thất bại!");
+        toast.success(result.message || "Đăng nhập thất bại!");
       }
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau!");
+      toast.error("Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau!");
     } finally {
       setLoading(false);
     }

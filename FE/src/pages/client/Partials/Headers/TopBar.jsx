@@ -8,7 +8,7 @@ import ConfirmLogoutModal from "../../../../components/client/Confirm/ConfirmLog
 
 export default function TopBar({ className }) {
   const navigate = useNavigate();
-  const token = sessionStorage.getItem("token");
+  const token = localStorage.getItem("token");
   const decoded = token ? decodeToken(token) : null;
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -18,7 +18,7 @@ export default function TopBar({ className }) {
   };
 
   const confirmLogout = () => {
-    sessionStorage.removeItem("token");
+    localStorage.removeItem("token"); 
     setShowLogoutModal(false);
     navigate("/");
   };

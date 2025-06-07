@@ -11,77 +11,77 @@ const UserModel = require('../../models/usersModel');
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
 
 class AuthController {
-   static async register(req, res) {
-    try {
-        const { name, email, password, phone, avatar } = req.body;
+    static async register(req, res) {
+        try {
+            const { name, email, password, phone, avatar } = req.body;
 
-        // Validate name
-        if (!name || typeof name !== 'string') {
-            return errorResponse(res, "Họ tên không được để trống!", 400);
+            // Validate name
+            if (!name || typeof name !== 'string') {
+                return errorResponse(res, "Họ tên không được để trống!", 400);
+            }
+
+            const trimmedName = name.trim();
+
+            if (trimmedName.length < 2 || trimmedName.length > 50) {
+                return errorResponse(res, "Họ tên phải từ 2 đến 50 ký tự!", 400);
+            }
+
+            const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
+            if (!nameRegex.test(trimmedName)) {
+                return errorResponse(res, "Họ tên chỉ chứa chữ cái và dấu cách!", 400);
+            }
+
+            // Validate email
+            if (!email || !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+                return errorResponse(res, "Email không hợp lệ!", 400);
+            }
+
+            // Validate password
+            if (!password || password.length < 6) {
+                return errorResponse(res, "Mật khẩu phải ít nhất 6 ký tự!", 400);
+            }
+
+            // Kiểm tra email tồn tại chưa
+            const existingUser = await UserModel.findOne({ where: { email } });
+            if (existingUser) {
+                return errorResponse(res, "Email này đã được đăng ký!", 400);
+            }
+
+            // Mã hóa mật khẩu
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Tạo token xác thực email
+            const verifyToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
+
+            // Tạo người dùng mới
+            const user = await UserModel.create({
+                name,
+                email,
+                password: hashedPassword,
+                phone: phone || null,
+                avatar: avatar || "default-avatar.png",
+                role: "user",
+                email_verified_at: null,
+                status: "active"
+            });
+
+            // Gửi email xác thực
+            await sendVerificationEmail(email, verifyToken);
+
+            // Trả về kết quả thành công
+            return successResponse(res, "Đăng ký thành công! Vui lòng kiểm tra email để xác thực.", {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                avatar: user.avatar
+            }, 201);
+
+        } catch (error) {
+            console.error("Lỗi server:", error);
+            return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
-
-        const trimmedName = name.trim();
-
-        if (trimmedName.length < 2 || trimmedName.length > 50) {
-            return errorResponse(res, "Họ tên phải từ 2 đến 50 ký tự!", 400);
-        }
-
-        const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
-        if (!nameRegex.test(trimmedName)) {
-            return errorResponse(res, "Họ tên chỉ chứa chữ cái và dấu cách!", 400);
-        }
-
-        // Validate email
-        if (!email || !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-            return errorResponse(res, "Email không hợp lệ!", 400);
-        }
-
-        // Validate password
-        if (!password || password.length < 6) {
-            return errorResponse(res, "Mật khẩu phải ít nhất 6 ký tự!", 400);
-        }
-
-        // Kiểm tra email tồn tại chưa
-        const existingUser = await UserModel.findOne({ where: { email } });
-        if (existingUser) {
-            return errorResponse(res, "Email này đã được đăng ký!", 400);
-        }
-
-        // Mã hóa mật khẩu
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Tạo token xác thực email
-        const verifyToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
-
-        // Tạo người dùng mới
-        const user = await UserModel.create({
-            name,
-            email,
-            password: hashedPassword,
-            phone: phone || null,
-            avatar: avatar || "default-avatar.png",
-            role: "user",
-            email_verified_at: null,
-            status: "active"
-        });
-
-        // Gửi email xác thực
-        await sendVerificationEmail(email, verifyToken);
-
-        // Trả về kết quả thành công
-        return successResponse(res, "Đăng ký thành công! Vui lòng kiểm tra email để xác thực.", {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            avatar: user.avatar
-        }, 201);
-
-    } catch (error) {
-        console.error("Lỗi server:", error);
-        return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
     }
-}
 
     // Thêm route xác thực email
     static async verifyEmail(req, res) {
@@ -118,46 +118,48 @@ class AuthController {
         }
     }
     //------------------[ LOGIN ]------------------
-    static async login(req, res) {
-        try {
-            const { email, password } = req.body;
+   static async login(req, res) {
+    try {
+        const { email, password, rememberMe } = req.body;
 
-            const user = await UserModel.findOne({ where: { email } });
-            if (!user) {
-                return errorResponse(res, "Email không tồn tại!", 400);
-            }
-
-            if (user.status === 'locked') {
-                return errorResponse(res, "Tài khoản bị khóa!", 403);
-            }
-
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return errorResponse(res, "Mật khẩu không chính xác!", 400);
-            }
-
-            const token = jwt.sign(
-                { id: user.id, name: user.name, email: user.email, role: user.role },
-                JWT_SECRET,
-                { expiresIn: "2h" }
-            );
-
-            return successResponse(res, "Đăng nhập thành công!", {
-                token,
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    status: user.status
-                }
-            }, 200);
-
-        } catch (error) {
-            console.error("Lỗi server:", error);
-            return errorResponse(res, "Đăng nhập thất bại!", 500);
+        const user = await UserModel.findOne({ where: { email } });
+        if (!user) {
+            return errorResponse(res, "Email không tồn tại!", 400);
         }
+
+        if (user.status === 'locked') {
+            return errorResponse(res, "Tài khoản bị khóa!", 403);
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return errorResponse(res, "Mật khẩu không chính xác!", 400);
+        }
+
+        const expiresIn = rememberMe ? "30d" : "2h";
+
+        const token = jwt.sign(
+            { id: user.id, name: user.name, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn }
+        );
+
+        return successResponse(res, "Đăng nhập thành công!", {
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                status: user.status
+            }
+        }, 200);
+
+    } catch (error) {
+        console.error("Lỗi server:", error);
+        return errorResponse(res, "Đăng nhập thất bại!", 500);
     }
+}
 
     //-------------------[ RESET PASSWORD ]--------------------------
     static async resetPasswod(req, res) {

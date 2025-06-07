@@ -126,7 +126,7 @@ export default function Signup() {
       const result = await response.json();
 
       if (result.success) {
-        alert("Đăng ký thành công! Vui lòng kiểm tra email để xác thực.");
+        toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực.");
         navigate("/login");
       } else {
         alert(result.message || "Đăng ký thất bại!");

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { checkJWT, isAdmin } = require('../services/authCheck');
+
 const OrderController = require('../controllers/Admin/ordersController');
 const categoryController = require('../controllers/Admin/categoryController');
 const UserController = require('../controllers/Admin/userController');
@@ -27,6 +29,9 @@ router.get('/orders/list', OrderController.get);
 router.get('/orders/:id', OrderController.getById);
 router.put('/orders/edit/:id', OrderController.update);
 router.delete("/orders/delete/:id", OrderController.delete);
+
+
+router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
 
 //------------------[ USERS ]------------------\
 router.get('/user/list', UserController.get);
