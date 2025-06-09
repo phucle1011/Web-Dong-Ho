@@ -155,6 +155,7 @@ class PromotionController {
         status,
         applicable_to = 'all_products',
         min_price_threshold = 0,
+        max_price = null,
         user_ids = [],
       } = req.body;
 
@@ -183,7 +184,9 @@ class PromotionController {
         promoStatus = now < start ? 'upcoming' : (now <= end ? 'active' : 'expired');
       }
 
-     const code = await PromotionController.generateUniquePromoCode();
+      const code = await PromotionController.generateUniquePromoCode();
+      const isSpecial = Array.isArray(user_ids) && user_ids.length > 0;
+
 
       const promotion = await PromotionModel.create({
         name,
@@ -196,10 +199,16 @@ class PromotionController {
         status: promoStatus,
         applicable_to,
         min_price_threshold: Number(min_price_threshold),
+        max_price: max_price !== null ? Number(max_price) : null,
         code,
+        special_promotion: isSpecial,
       });
 
       if (Array.isArray(user_ids) && user_ids.length > 0) {
+        await promotion.setUsers(user_ids);
+      }
+
+      if (isSpecial) {
         await promotion.setUsers(user_ids);
       }
 
@@ -211,20 +220,20 @@ class PromotionController {
   }
 
   static async generateUniquePromoCode(length = 8) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code;
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code;
 
-  let isUnique = false;
-  while (!isUnique) {
-    code = Array.from({ length }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
-    const existing = await PromotionModel.findOne({ where: { code } });
-    if (!existing) {
-      isUnique = true;
+    let isUnique = false;
+    while (!isUnique) {
+      code = Array.from({ length }, () => characters[Math.floor(Math.random() * characters.length)]).join('');
+      const existing = await PromotionModel.findOne({ where: { code } });
+      if (!existing) {
+        isUnique = true;
+      }
     }
-  }
 
-  return code;
-}
+    return code;
+  }
 
 
 
@@ -259,7 +268,8 @@ class PromotionController {
         end_date,
         status,
         applicable_to,
-        min_price_threshold
+        min_price_threshold,
+        max_price = null,
       } = req.body;
 
       const promotion = await PromotionModel.findByPk(id);
@@ -297,7 +307,8 @@ class PromotionController {
         end_date: end_date || promotion.end_date,
         status: promoStatus,
         applicable_to,
-        min_price_threshold: min_price_threshold !== undefined ? Number(min_price_threshold) : promotion.min_price_threshold
+        min_price_threshold: min_price_threshold !== undefined ? Number(min_price_threshold) : promotion.min_price_threshold,
+        max_price: max_price !== undefined ? Number(max_price) : promotion.max_price
       });
       res.status(200).json({ success: true, data: promotion });
     } catch (error) {

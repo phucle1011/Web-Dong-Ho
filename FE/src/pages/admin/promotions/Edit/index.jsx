@@ -17,6 +17,7 @@ function PromotionEdit() {
         handleSubmit,
         watch,
         reset,
+        getValues,
         formState: { errors }
     } = useForm();
 
@@ -41,6 +42,7 @@ function PromotionEdit() {
                     end_date: promo.end_date ? new Date(promo.end_date) : null,
                     status_visibility: promo.status === "inactive" ? "hidden" : "visible",
                     min_price_threshold: promo.min_price_threshold !== undefined ? Number(promo.min_price_threshold) : 0,
+                    max_price: promo.max_price !== undefined ? Number(promo.max_price) : 0,
                 };
                 reset(parsedData);
             } catch (error) {
@@ -112,16 +114,6 @@ function PromotionEdit() {
                         <option value="percentage">Phần trăm (%)</option>
                         <option value="fixed">Cố định (VNĐ)</option>
                     </select>
-                </div>
-
-                <div>
-                    <label className="block mb-1 font-medium">Mô tả</label>
-                    <textarea
-                        {...register("description")}
-                        className="w-full border rounded px-3 py-2"
-                        rows={3}
-                        disabled={isExpired || isActive}
-                    />
                 </div>
 
                 <div>
@@ -214,6 +206,67 @@ function PromotionEdit() {
                 </div>
 
                 <div>
+                    <label className="block mb-1 font-medium">Số tiền giảm giá tối đa (VNĐ)</label>
+                    <Controller
+                        control={control}
+                        name="max_price"
+                        rules={{
+                            required: "Vui lòng nhập số tiền giảm tối đa",
+                            validate: (value) => {
+                                const num = parseInt(value?.toString().replace(/\D/g, "") || "0");
+                                if (isNaN(num)) return "Phải là số hợp lệ";
+                                if (num < 0) return "Phải lớn hơn hoặc bằng 0";
+
+                                const discountType = getValues("discount_type");
+                                const discountValue = Number(getValues("discount_value"));
+                                const minPrice = parseInt(getValues("min_price_threshold")?.toString().replace(/\D/g, "") || "0");
+
+                                let minDiscountAmount = 0;
+                                if (discountType === "percentage") {
+                                    minDiscountAmount = Math.floor((discountValue / 100) * minPrice);
+                                } else if (discountType === "fixed") {
+                                    minDiscountAmount = discountValue;
+                                }
+
+                                if (num < minDiscountAmount) {
+                                    return `Số tiền giảm tối đa phải lớn hơn hoặc bằng ${minDiscountAmount.toLocaleString("vi-VN")} (theo giá trị giảm và ngưỡng đơn hàng)`;
+                                }
+
+                                return true;
+                            },
+                        }}
+                        render={({ field }) => {
+                            const formatVND = (value) => {
+                                const number = parseInt(value.replace(/\D/g, "") || "0");
+                                return number.toLocaleString("vi-VN");
+                            };
+                            const handleChange = (e) => {
+                                const formatted = formatVND(e.target.value);
+                                e.target.value = formatted;
+                                const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
+                                field.onChange(rawNumber);
+                            };
+                            const displayValue =
+                                typeof field.value === "number"
+                                    ? field.value.toLocaleString("vi-VN")
+                                    : field.value || "";
+                            return (
+                                <input
+                                    {...field}
+                                    value={displayValue}
+                                    onChange={handleChange}
+                                    placeholder="VD: 50.000"
+                                    className="w-full border rounded px-3 py-2"
+                                />
+                            );
+                        }}
+                    />
+                    {errors.max_price && (
+                        <p className="text-red-500 text-sm mt-1">{errors.max_price.message}</p>
+                    )}
+                </div>
+
+                <div>
                     <label className="block mb-1 font-medium">Áp dụng cho</label>
                     <select
                         {...register("applicable_to", { required: "Vui lòng chọn trường này" })}
@@ -273,6 +326,16 @@ function PromotionEdit() {
                         <option value="visible">Hiển thị</option>
                         <option value="hidden">Ẩn</option>
                     </select>
+                </div>
+
+                <div className="col-span-2 mt-4">
+                    <label className="block mb-1 font-medium">Mô tả</label>
+                    <textarea
+                        {...register("description")}
+                        className="w-full border rounded px-3 py-2"
+                        rows={3}
+                        disabled={isExpired || isActive}
+                    />
                 </div>
 
                 <div className="col-span-2 mt-4">

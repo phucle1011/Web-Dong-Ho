@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import BreadcrumbCom from "../BreadcrumbCom";
 import EmptyCardError from "../EmptyCardError";
@@ -7,17 +7,105 @@ import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 import ProductsTable from "./ProductsTable";
 import Constants from "../../../Constants";
+import axios from "axios";
 
 export default function CardPage({ cart = true }) {
   const [totalPrice, setTotalPrice] = useState(0);
-  const [promoCode, setPromoCode] = useState("");
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [discountInfo, setDiscountInfo] = useState(null);
+  const [promoCode, setPromoCode] = useState("");
   const [error, setError] = useState("");
+  const [activePromotions, setActivePromotions] = useState([]);
+
+  // Lấy danh sách voucher active dựa trên tổng tiền đơn hàng
+  useEffect(() => {
+    const fetchActivePromotions = async () => {
+      try {
+        const token = sessionStorage.getItem("token");
+        if (!token) {
+          setError("Vui lòng đăng nhập để xem mã giảm giá.");
+          setActivePromotions([]);
+          return;
+        }
+        const response = await axios.get(`${Constants.DOMAIN_API}/promotions/active`, {
+          params: { orderTotal: totalPrice },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setActivePromotions(response.data.data || []);
+        setError("");
+      } catch (err) {
+        console.error('Error fetching active promotions:', err);
+        setActivePromotions([]);
+        if (err.response && err.response.status === 401) {
+          setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        } else {
+          setError("Không thể tải danh sách mã giảm giá.");
+        }
+      }
+    };
+    fetchActivePromotions();
+  }, [totalPrice]);
+
+  // Tính toán giảm giá dựa trên voucher đã chọn và tổng tiền
+  useEffect(() => {
+    if (selectedVoucher) {
+      if (selectedVoucher.discount_type === "shipping") {
+        setDiscountInfo({ discountAmount: 0, max_price: 0 });
+      } else if (selectedVoucher.discount_type === "percentage") {
+        const discount = Math.min(
+          (totalPrice * selectedVoucher.discount_value) / 100,
+          selectedVoucher.max_price || Infinity
+        );
+        setDiscountInfo({ discountAmount: discount, max_price: selectedVoucher.max_price });
+      } else if (selectedVoucher.discount_type === "fixed") {
+        const discount = Math.min(selectedVoucher.discount_value, totalPrice);
+        setDiscountInfo({ discountAmount: discount, max_price: selectedVoucher.max_price });
+      }
+      setError("");
+      setPromoCode("");
+    } else {
+      setDiscountInfo(null);
+    }
+  }, [selectedVoucher, totalPrice]);
+
+  // Khi nhập mã giảm giá, bỏ chọn voucher và reset lỗi
+  useEffect(() => {
+    if (promoCode) {
+      setSelectedVoucher(null);
+      setDiscountInfo(null);
+      setError("");
+    }
+  }, [promoCode]);
+
+  const handleVoucherSelect = (voucher) => {
+    if (selectedVoucher && selectedVoucher.id === voucher.id) {
+      setSelectedVoucher(null);
+      setError("");
+      return;
+    }
+    if (totalPrice >= voucher.min_price_threshold) {
+      setSelectedVoucher(voucher);
+      setError("");
+    } else {
+      setSelectedVoucher(null);
+      setError(`Đơn hàng phải tối thiểu ${voucher.min_price_threshold.toLocaleString()}₫ để sử dụng voucher này.`);
+    }
+  };
 
   const handleApplyDiscount = async () => {
     setError("");
+    if (!promoCode.trim()) {
+      setError("Vui lòng nhập mã giảm giá.");
+      return;
+    }
     try {
       const token = sessionStorage.getItem("token");
+      if (!token) {
+        setError("Vui lòng đăng nhập để áp dụng mã giảm giá.");
+        return;
+      }
       const res = await fetch(`${Constants.DOMAIN_API}/promotions/apply`, {
         method: "POST",
         headers: {
@@ -25,9 +113,9 @@ export default function CardPage({ cart = true }) {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          code: promoCode,
+          code: promoCode.trim(),
           orderTotal: totalPrice,
-        },),
+        }),
       });
 
       const data = await res.json();
@@ -37,15 +125,15 @@ export default function CardPage({ cart = true }) {
       }
 
       setDiscountInfo(data.data);
+      setSelectedVoucher(null);
+      setError("");
     } catch (err) {
       setDiscountInfo(null);
       setError(err.message);
     }
   };
 
-  const finalTotal = discountInfo
-    ? totalPrice - discountInfo.discountAmount
-    : totalPrice;
+  const finalTotal = discountInfo ? totalPrice - discountInfo.discountAmount : totalPrice;
 
   return (
     <Layout childrenClasses={cart ? "pt-0 pb-0" : ""}>
@@ -75,8 +163,9 @@ export default function CardPage({ cart = true }) {
           <div className="w-full mt-[23px]">
             <div className="container-x mx-auto">
               <ProductsTable className="mb-[30px]" onTotalChange={setTotalPrice} />
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                <div className="flex-3 w-[150px] h-[50px]">
+                <div className="w-[150px] h-[50px]">
                   <InputCom
                     type="text"
                     placeholder="Mã giảm giá"
@@ -97,6 +186,57 @@ export default function CardPage({ cart = true }) {
                 <p className="text-red-500 text-sm mb-4">{error}</p>
               )}
 
+              <div className="voucher-section mb-6 max-w-md">
+                <h3 className="text-[16px] font-semibold text-gray-800 mb-3">Chọn Voucher</h3>
+                {activePromotions.map((voucher) => {
+                  const disabled = totalPrice < voucher.min_price_threshold;
+                  const isSelected = selectedVoucher && selectedVoucher.id === voucher.id;
+                  return (
+                    <div
+                      key={voucher.id}
+                      className={`flex items-center justify-between p-3 border rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200
+                      ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 hover:bg-gray-50"} 
+                      ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                      onClick={() => !disabled && handleVoucherSelect(voucher)}
+                      style={{ maxWidth: '400px' }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if ((e.key === "Enter" || e.key === " ") && !disabled) {
+                          handleVoucherSelect(voucher);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center flex-1 min-w-0">
+                        {voucher.discount_type === "shipping" && (
+                          <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
+                        )}
+                        {voucher.discount_type !== "shipping" && (
+                          <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
+                        )}
+                        <span className="text-sm flex-1 text-gray-700 flex-wrap">
+                          {voucher.name}{" "}
+                          {voucher.discount_type === 'percentage' && (
+                            <span className="text-gray-500">
+                              (Giảm {voucher.discount_type === 'percentage' && voucher.discount_value}%{voucher.max_price ? `, Tối đa ${voucher.max_price.toLocaleString()}₫` : ''})
+                            </span>
+                          )}
+                          {voucher.discount_type === 'fixed' && (
+                            <span className="text-gray-500">
+                              (Giảm {voucher.discount_value.toLocaleString()}₫)
+                            </span>
+                          )}
+                          <span className="text-gray-500"> (Đơn tối thiểu {voucher.min_price_threshold.toLocaleString()}₫)</span>
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <span className="text-green-500 font-bold text-xl ml-3 flex-shrink-0">✓</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className="w-full mt-[30px] flex sm:justify-end">
                 <div className="sm:w-[370px] w-full border border-[#EDEDED] px-[30px] py-[26px]">
                   <div className="sub-total mb-6">
@@ -106,7 +246,6 @@ export default function CardPage({ cart = true }) {
                         {totalPrice.toLocaleString()}₫
                       </p>
                     </div>
-
                     {discountInfo && (
                       <>
                         <div className="flex justify-between mb-3">
@@ -115,6 +254,16 @@ export default function CardPage({ cart = true }) {
                             -{discountInfo.discountAmount.toLocaleString()}₫
                           </p>
                         </div>
+
+                        {discountInfo.max_price && (
+                          <div className="flex justify-between mb-3">
+                            <p className="text-[13px] text-qgraytwo italic">Giảm tối đa</p>
+                            <p className="text-[13px] text-qgraytwo italic">
+                              {discountInfo.max_price.toLocaleString()}₫
+                            </p>
+                          </div>
+                        )}
+
                         <div className="flex justify-between mb-3">
                           <p className="text-[15px] font-medium text-qblack">Tổng sau giảm</p>
                           <p className="text-[15px] font-medium text-qred">
@@ -123,6 +272,7 @@ export default function CardPage({ cart = true }) {
                         </div>
                       </>
                     )}
+
                     <div className="w-full h-[1px] bg-[#EDEDED]"></div>
                   </div>
 

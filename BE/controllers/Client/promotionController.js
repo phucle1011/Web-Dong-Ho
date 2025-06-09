@@ -1,15 +1,60 @@
 const PromotionModel = require('../../models/promotionsModel');
-const PromotionUserModel = require('../../models/promotionUsersModel');
+const PromotionUserModel = require('../../models/promotionUsersModel')
 const { Op } = require('sequelize');
 const sequelize = require('../../config/database');
 
 class PromotionController {
+    static async getActivePromotions(req, res) {
+    try {
+        const userId = req.userId || req.user?.id; // cách lấy userId từ token/session tùy app bạn
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để lấy mã giảm giá' });
+        }
+
+        const { orderTotal } = req.query;
+        const now = new Date();
+
+        const total = parseFloat(orderTotal);
+
+        if (isNaN(total) || total <= 0) {
+            return res.status(400).json({ success: false, message: 'Tổng đơn hàng không hợp lệ' });
+        }
+
+        const promotions = await PromotionModel.findAll({
+            where: {
+                status: 'active',
+                start_date: { [Op.lte]: now },
+                end_date: { [Op.gte]: now },
+                quantity: { [Op.gt]: 0 },
+                min_price_threshold: { [Op.lte]: total },
+            },
+            attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold']
+        });
+
+        return res.json({
+            success: true,
+            data: promotions
+        });
+    } catch (error) {
+        console.error('[getActivePromotions] Lỗi:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi máy chủ khi lấy danh sách mã giảm giá'
+        });
+    }
+}
+
+
     static async applyDiscount(req, res) {
         try {
             let { code, orderTotal } = req.body;
             const userId = req.user?.id;
 
             console.log('[applyDiscount] Yêu cầu:', { code, orderTotal, userId });
+
+            if (!userId) {
+                return res.status(401).json({ success: false, message: 'Bạn cần đăng nhập để sử dụng mã giảm giá' });
+            }
 
             if (!code || typeof code !== 'string' || code.trim() === '') {
                 return res.status(400).json({ success: false, message: 'Mã giảm giá là bắt buộc' });
@@ -54,42 +99,44 @@ class PromotionController {
                     };
                 }
 
-                // Nếu là mã đặc biệt, kiểm tra người dùng đã được cấp chưa
-                let promoUser = null;
-                if (promotion.special_promotion === true) {
-                    if (!userId) {
-                        throw { status: 401, message: 'Bạn cần đăng nhập để sử dụng mã này' };
-                    }
-                    promoUser = await PromotionUserModel.findOne({
-                        where: {
-                            promotion_id: promotion.id,
-                            user_id: userId,
-                            email_sent: true,
-                        },
-                        transaction: t,
-                        lock: t.LOCK.UPDATE,
-                    });
-
-                    if (!promoUser) {
-                        throw {
-                            status: 403,
-                            message: 'Bạn không được cấp mã này hoặc chưa nhận được qua email',
-                        };
-                    }
-
-                    if (promoUser.used === true) {
-                        throw {
-                            status: 400,
-                            message: 'Bạn đã sử dụng mã giảm giá này rồi',
-                        };
-                    }
+                if (!promotion.special_promotion) {
+                    throw {
+                        status: 403,
+                        message: 'Mã giảm giá không hợp lệ hoặc không được phép sử dụng',
+                    };
                 }
 
+                const promoUser = await PromotionUserModel.findOne({
+                    where: {
+                        promotion_id: promotion.id,
+                        user_id: userId,
+                        email_sent: true,
+                        used: { [Op.not]: true },
+                    },
+                    transaction: t,
+                    lock: t.LOCK.UPDATE,
+                });
+
+                if (!promoUser) {
+                    throw {
+                        status: 403,
+                        message: 'Bạn không được cấp mã này hoặc đã sử dụng rồi',
+                    };
+                }
+
+                const discountValue = Number(promotion.discount_value);
+                const maxPrice = promotion.max_price !== null ? Number(promotion.max_price) : null;
+
                 let discountAmount = 0;
+
                 if (promotion.discount_type === 'percentage') {
-                    discountAmount = (orderTotal * promotion.discount_value) / 100;
+                    discountAmount = (orderTotal * discountValue) / 100;
                 } else if (promotion.discount_type === 'fixed') {
-                    discountAmount = promotion.discount_value;
+                    discountAmount = discountValue;
+                }
+
+                if (!isNaN(maxPrice) && discountAmount > maxPrice) {
+                    discountAmount = maxPrice;
                 }
 
                 if (discountAmount > orderTotal) {
@@ -98,7 +145,7 @@ class PromotionController {
 
                 return {
                     discountType: promotion.discount_type,
-                    discountValue: promotion.discount_value,
+                    discountValue,
                     discountAmount: Number(discountAmount.toFixed(2)),
                     totalAfterDiscount: Number((orderTotal - discountAmount).toFixed(2)),
                     applicableTo: promotion.applicable_to || null,

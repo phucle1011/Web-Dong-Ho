@@ -30,6 +30,7 @@ router.post("/contact", ContactController.sendContactEmail);
 
 //------------------[ Promotions ]------------------
 router.post('/promotions/apply',checkJWT, PromotionController.applyDiscount);
+router.get('/promotions/active',checkJWT, PromotionController.getActivePromotions);
 
 
 //------------------[ Products Compaire ]------------------

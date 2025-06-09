@@ -48,10 +48,19 @@ const PromotionModel = connection.define('Promotion', {
     allowNull: false,
     defaultValue: 'active'
   },
+  special_promotion: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
   code: {
     type: DataTypes.STRING(50),
     allowNull: true,
     unique: true
+  },
+  max_price: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
   }
 }, {
   tableName: 'promotions',
