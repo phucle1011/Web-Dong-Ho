@@ -9,6 +9,8 @@ const AddressController = require('../controllers/Client/addressController');
 const CartController = require('../controllers/Client/cartsController');
 const ProductController = require('../controllers/Client/productController');
 const AuthController = require('../controllers/Client/authController');
+const ProductClientController = require('../controllers/Client/productClientController');
+const ProductVariantController = require('../controllers/Client/productVariantController');
 const OrderController = require('../controllers/Client/ordersController');
 const { checkJWT } = require('../services/authCheck');
 
@@ -60,4 +62,8 @@ router.post('/auth/register', AuthController.register);
 router.get('/auth/verify-email', AuthController.verifyEmail);
 router.post('/auth/login', AuthController.login);
 
+//------------------[ PRODUCTS ]------------------//
+router.get('/products', ProductClientController.getAll);
+
+router.get('/:id', ProductVariantController.getProductVariantDetail);
 module.exports = router;
