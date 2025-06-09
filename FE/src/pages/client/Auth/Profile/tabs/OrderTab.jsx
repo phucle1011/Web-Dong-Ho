@@ -18,16 +18,13 @@ import { Link } from "react-router-dom";
 
 export default function OrderTab() {
   const [orders, setOrders] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [trackingInfoMap, setTrackingInfoMap] = useState({});
   const recordsPerPage = 10;
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeStatus, setActiveStatus] = useState('');
   const [statusCounts, setStatusCounts] = useState({
     all: 0,
     pending: 0,
@@ -66,6 +63,13 @@ export default function OrderTab() {
 
   const fetchOrders = async (page = 1) => {
     try {
+      const user = localStorage.getItem("user");
+      const userId = user ? JSON.parse(user).id : null;
+
+      if (!userId) {
+        toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+        return;
+      }
       const params = {
         page,
         limit: recordsPerPage,
@@ -73,10 +77,6 @@ export default function OrderTab() {
 
       if (statusFilter && statusFilter !== "all") {
         params.status = statusFilter;
-      }
-
-      if (searchTerm.trim()) {
-        params.searchTerm = searchTerm;
       }
 
       if (startDate) {
@@ -87,7 +87,7 @@ export default function OrderTab() {
       }
 
       const res = await axios.get(`${Constants.DOMAIN_API}/orders`, {
-        params,
+        params: { userId },
       });
 
       setOrders(res.data.data || []);
@@ -95,7 +95,9 @@ export default function OrderTab() {
       setStatusCounts(res.data.statusCounts || statusCounts);
 
       if (!res.data.data.length) {
-        toast.info("Không tìm thấy đơn hàng nào.");
+        if (!toast.isActive("no-orders")) {
+          toast.info("Không tìm thấy đơn hàng nào.", { toastId: "no-orders" });
+        }
       }
     } catch (error) {
       console.error("Lỗi khi tải đơn hàng:", error);
@@ -115,7 +117,6 @@ export default function OrderTab() {
       );
       toast.success("Hủy đơn hàng thành công");
       setSelectedOrder(null);
-      fetchOrders(currentPage);
     } catch (error) {
       const message = error.response?.data?.message || "";
       if (
@@ -131,12 +132,6 @@ export default function OrderTab() {
       setSelectedOrder(null);
     }
   };
-
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      fetchOrders(1);
-    }
-  }, [searchTerm]);
 
   return (
     <div className="container mx-auto p-2">
@@ -200,10 +195,10 @@ export default function OrderTab() {
                       {translateStatus(order.status)}
                     </td>
                     <td className="text-center py-4 px-2 whitespace-nowrap">
-                       {Number(order.total_price).toLocaleString("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        })}
+                      {Number(order.total_price).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
                     </td>
                     <td className="text-center py-4 px-2 whitespace-nowrap">{order.payment_method}</td>
                     <td className="text-center py-4">

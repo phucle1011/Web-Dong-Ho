@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const checkJWT = require('../services/authCheck')
 const categoryController = require('../controllers/Client/categoryController');
 const ProductCompaireController = require('../controllers/Client/ProductsCompaireController');
 const BlogController = require('../controllers/Client/blogsController');

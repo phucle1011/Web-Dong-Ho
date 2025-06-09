@@ -6,7 +6,6 @@ import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
 
 const ProductsTable = ({ className, onTotalChange }) => {
-  const userId = 1;
   const [cartItems, setCartItems] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
@@ -15,7 +14,12 @@ const ProductsTable = ({ className, onTotalChange }) => {
   const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
-    fetchCart();
+    const user = localStorage.getItem("user");
+    const userId = user ? JSON.parse(user).id : null;
+
+    if (userId) {
+      fetchCart(userId);
+    }
   }, []);
 
   useEffect(() => {
@@ -24,8 +28,9 @@ const ProductsTable = ({ className, onTotalChange }) => {
       onTotalChange(total);
     }
   }, [cartItems, onTotalChange]);
+  
 
-  const fetchCart = async () => {
+  const fetchCart = async (userId) => {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
         params: { userId },
@@ -69,8 +74,20 @@ const ProductsTable = ({ className, onTotalChange }) => {
   };
 
   const handleDelete = async ({ id }) => {
+    const user = localStorage.getItem("user");
+    const userId = user ? JSON.parse(user).id : null;
+
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+      return;
+    }
     try {
       await axios.delete(`${Constants.DOMAIN_API}/delete-to-carts/${userId}/${id}`);
+      setCartItems((prevItems) =>
+        prevItems.filter((item) => item.product_variant_id !== id)
+      );
+
+      fetchCart(userId);
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
       fetchCart();
     } catch (error) {
@@ -88,10 +105,20 @@ const ProductsTable = ({ className, onTotalChange }) => {
   };
 
   const handleClearCart = async () => {
+    const user = localStorage.getItem("user");
+    const userId = user ? JSON.parse(user).id : null;
+
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+      return;
+    }
     try {
       await axios.delete(`${Constants.DOMAIN_API}/clear-cart/${userId}`);
+      setCartItems([]);
+
+      await fetchCart(userId);
       toast.success("Đã xóa toàn bộ giỏ hàng");
-      fetchCart();
+
     } catch (error) {
       toast.error("Không thể xóa toàn bộ giỏ hàng");
     } finally {
@@ -100,14 +127,23 @@ const ProductsTable = ({ className, onTotalChange }) => {
   };
 
   const handleQuantityChange = async (productVariantId, newQuantity) => {
+    const user = localStorage.getItem("user");
+    const userId = user ? JSON.parse(user).id : null;
+
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+      return;
+    }
     if (newQuantity < 1) return;
 
     try {
       await axios.put(`${Constants.DOMAIN_API}/update-to-carts/${userId}/${productVariantId}`, {
         quantity: newQuantity,
       });
+      setCartItems([]);
+
       toast.success("Cập nhật số lượng thành công");
-      fetchCart();
+      await fetchCart(userId);
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");
     }
@@ -185,112 +221,112 @@ const ProductsTable = ({ className, onTotalChange }) => {
           </thead>
         </table>
 
-          <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <tbody>
-              {cartItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-6 text-gray-500">
-                    Giỏ hàng trống.
-                  </td>
-                </tr>
-              ) : (
-                cartItems.map((item) => {
-                  const variant = item.variant;
-                  const image = variant?.images?.[0]?.image_url || "";
-                  const attributes = variant?.attributeValues || [];
-                  const price = parseFloat(variant.price);
-                  const quantity = item.quantity;
-                  const stock = variant.stock;
-                  const total = price * quantity;
+        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <tbody>
+            {cartItems.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="text-center py-6 text-gray-500">
+                  Giỏ hàng trống.
+                </td>
+              </tr>
+            ) : (
+              cartItems.map((item) => {
+                const variant = item.variant;
+                const image = variant?.images?.[0]?.image_url || "";
+                const attributes = variant?.attributeValues || [];
+                const price = parseFloat(variant.price);
+                const quantity = item.quantity;
+                const stock = variant.stock;
+                const total = price * quantity;
 
-                  return (
-                    <tr
-                      key={item.id}
-                      className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""}`}
-                    >
-                      <td className="text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(item.product_variant_id)}
-                          onChange={() => handleSelect(item.product_variant_id)}
-                        />
-                      </td>
-                      <td className="pl-10 py-4">
-                        <div className="flex space-x-6 items-center">
-                          <div className="w-[80px] h-[80px] overflow-hidden border border-[#EDEDED] flex justify-center items-center">
-                            <img
-                              src={image}
-                              alt="product"
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-[15px] text-qblack">{variant.sku}</p>
-                          </div>
+                return (
+                  <tr
+                    key={item.id}
+                    className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""}`}
+                  >
+                    <td className="text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item.product_variant_id)}
+                        onChange={() => handleSelect(item.product_variant_id)}
+                      />
+                    </td>
+                    <td className="pl-10 py-4">
+                      <div className="flex space-x-6 items-center">
+                        <div className="w-[80px] h-[80px] overflow-hidden border border-[#EDEDED] flex justify-center items-center">
+                          <img
+                            src={image}
+                            alt="product"
+                            className="w-full h-full object-contain"
+                          />
                         </div>
-                      </td>
-                      <td className="text-center py-4">
-                        {attributes.map((attr) => {
-                          const attrName = attr.attribute?.name || "";
-                          const attrValue = attr.value;
-                          const isColor = attrName.toLowerCase() === "color";
+                        <div className="flex-1">
+                          <p className="font-medium text-[15px] text-qblack">{variant.sku}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-center py-4">
+                      {attributes.map((attr) => {
+                        const attrName = attr.attribute?.name || "";
+                        const attrValue = attr.value;
+                        const isColor = attrName.toLowerCase() === "color";
 
-                          return (
-                            <div key={attr.id} className="flex items-center justify-center gap-2">
-                              <span>{attrName}:</span>
-                              {isColor ? (
-                                <span
-                                  className="inline-block w-4 h-4 rounded-full border border-gray-300"
-                                  style={{ backgroundColor: attrValue }}
-                                ></span>
-                              ) : (
-                                <span>{attrValue}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </td>
-                      <td className="text-center py-4">
-                        {Number(price).toLocaleString("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        })}
-                      </td>
-                      <td className="py-4 flex flex-col items-center justify-center mt-5">
-                        {stock === 0 ? (
-                          <span className="text-sm text-red-500">Hết hàng</span>
-                        ) : (
-                          <>
-                            <QuantityInput
-                              quantity={quantity}
-                              onChange={(newQuantity) =>
-                                handleQuantityChange(item.product_variant_id, newQuantity)
-                              }
-                            />
-                            <span className="mt-2 text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                              Còn lại: {stock}
-                            </span>
-                          </>
-                        )}
-                      </td>
-                      <td className="text-center py-4">
-                        {total.toLocaleString("vi-VN")}₫
-                      </td>
-                      <td className="text-right py-4">
-                        <button
-                          onClick={() => handleConfirmDelete(item.product_variant_id)}
-                          className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                          title="Xóa sản phẩm"
-                        >
-                          <FaTrashAlt size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        return (
+                          <div key={attr.id} className="flex items-center justify-center gap-2">
+                            <span>{attrName}:</span>
+                            {isColor ? (
+                              <span
+                                className="inline-block w-4 h-4 rounded-full border border-gray-300"
+                                style={{ backgroundColor: attrValue }}
+                              ></span>
+                            ) : (
+                              <span>{attrValue}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </td>
+                    <td className="text-center py-4">
+                      {Number(price).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </td>
+                    <td className="py-4 flex flex-col items-center justify-center mt-5">
+                      {stock === 0 ? (
+                        <span className="text-sm text-red-500">Hết hàng</span>
+                      ) : (
+                        <>
+                          <QuantityInput
+                            quantity={quantity}
+                            onChange={(newQuantity) =>
+                              handleQuantityChange(item.product_variant_id, newQuantity)
+                            }
+                          />
+                          <span className="mt-2 text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                            Còn lại: {stock}
+                          </span>
+                        </>
+                      )}
+                    </td>
+                    <td className="text-center py-4">
+                      {total.toLocaleString("vi-VN")}₫
+                    </td>
+                    <td className="text-right py-4">
+                      <button
+                        onClick={() => handleConfirmDelete(item.product_variant_id)}
+                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                        title="Xóa sản phẩm"
+                      >
+                        <FaTrashAlt size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       <FormDelete

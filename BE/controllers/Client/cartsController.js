@@ -9,8 +9,7 @@ const { Op } = require('sequelize');
 class CartController {
     static async getCartByUser(req, res) {
         try {
-            const userId = 1;
-            // const userId = req.user.id;
+            const userId = req.query.userId;
 
             const count = await CartModel.sum('quantity', { where: { user_id: userId } });
 

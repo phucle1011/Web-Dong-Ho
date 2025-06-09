@@ -4,7 +4,13 @@ import Constants from "../../../Constants";
 import { toast } from "react-toastify";
 
 export default function Cart({ className, type }) {
-  const userId = 1; 
+  const user = localStorage.getItem("user");
+  const userId = user ? JSON.parse(user).id : null;
+
+  if (!userId) {
+    toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+    return;
+  }
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -38,17 +44,16 @@ export default function Cart({ className, type }) {
   return (
     <div
       style={{ boxShadow: "0px 15px 50px 0px rgba(0, 0, 0, 0.14)" }}
-      className={`w-[300px] bg-white border-t-[3px] ${
-        type === 3 ? "border-qh3-blue" : "cart-wrapper"
-      } ${className || ""}`}
+      className={`w-[300px] bg-white border-t-[3px] ${type === 3 ? "border-qh3-blue" : "cart-wrapper"
+        } ${className || ""}`}
     >
       <div className="w-full h-full">
         <div className="product-items h-[310px] overflow-y-scroll">
           <ul>
             {loading ? (
-              <li className="text-center">Loading...</li>
+              <li className="text-center">Đang tải...</li>
             ) : newestItems.length === 0 ? (
-              <li className="text-center">Cart is empty.</li>
+              <li className="text-center">Giỏ hàng trống.</li>
             ) : (
               newestItems.map((item) => {
                 const variant = item.variant;
@@ -103,7 +108,7 @@ export default function Cart({ className, type }) {
         </div>
         <div className="product-actions px-4 mb-[30px]">
           <div className="total-equation flex justify-between items-center mb-[28px]">
-            <span className="text-[15px] font-500 text-qblack">Subtotal</span>
+            <span className="text-[15px] font-500 text-qblack">Tổng cộng</span>
             <span className="text-[15px] font-500 text-qred ">
               {subtotal.toLocaleString("vi-VN", {
                 style: "currency",
@@ -112,16 +117,9 @@ export default function Cart({ className, type }) {
             </span>
           </div>
           <div className="product-action-btn">
-            <a href="#">
+            <a href="/cart">
               <div className="gray-btn w-full h-[50px] mb-[10px] ">
-                <span>View Cart</span>
-              </div>
-            </a>
-            <a href="#">
-              <div className="w-full h-[50px]">
-                <div className={type === 3 ? "blue-btn" : "yellow-btn"}>
-                  <span className="text-sm">Checkout Now</span>
-                </div>
+                <span>Xem giỏ hàng</span>
               </div>
             </a>
           </div>
@@ -131,7 +129,7 @@ export default function Cart({ className, type }) {
         </div>
         <div className="flex justify-center py-[15px]">
           <p className="text-[13px] font-500 text-qgray">
-            Get Return within <span className="text-qblack">30 days</span>
+            Nhận trả lại trong vòng <span className="text-qblack">30 ngày</span>
           </p>
         </div>
       </div>

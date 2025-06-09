@@ -5,7 +5,7 @@ const { Op } = require('sequelize');
 class OrderController {
 
     static async get(req, res) {
-        const userId = 1;
+        const userId = req.query.userId;
 
         if (!userId) {
             return res.status(401).json({ success: false, message: "Chưa đăng nhập" });
