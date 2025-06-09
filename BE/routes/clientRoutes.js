@@ -39,7 +39,6 @@ router.get('/promotions/active',checkJWT, PromotionController.getActivePromotion
 router.get("/products/compare", ProductCompaireController.getAllForComparison);
 
 //------------------[ ADDRESS ]------------------\
-router.get('/address/list', AddressController.getAllAddress);
 router.get('/address/user/:id', AddressController.getAddressesByUser);
 router.delete('/user/:userId/addresses/:id', AddressController.deleteAddress);
 router.put('/user/:userId/addresses/:id', AddressController.updateAddress);

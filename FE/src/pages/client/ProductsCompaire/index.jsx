@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import Star from "../Helpers/icons/Star";
-import InputCom from "../Helpers/InputCom";
+import InputForm from "../Helpers/InputForm";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 
@@ -77,8 +77,8 @@ export default function ProductsCompare() {
     if (selectedVariants.some((v, idx) => v?.variantId === variant.variantId && idx !== index)) {
       Swal.fire({
         icon: "warning",
-        title: "Duplicate Variant",
-        text: "This variant is already selected in another column!",
+        title: "Trùng biến thể",
+        text: "Biến thể này đã được chọn ở cột khác!",
       });
       return;
     }
@@ -127,21 +127,21 @@ export default function ProductsCompare() {
     return variant.images?.[0]?.image_url || null;
   };
 
-  // Hàm xử lý khi nhấn nút Compare
+  // Hàm xử lý khi nhấn nút So sánh
   const handleCompareClick = () => {
     if (!canCompare) {
       Swal.fire({
         icon: "error",
-        title: "Not enough variants",
-        text: `Please select at least ${MIN_COMPARE} variants to compare.`,
+        title: "Chưa đủ biến thể",
+        text: `Vui lòng chọn ít nhất ${MIN_COMPARE} biến thể để so sánh.`,
       });
       return;
     }
-    // Ở đây bạn thêm logic so sánh hoặc điều hướng nếu cần
+    // Ở đây bạn có thể thêm logic so sánh hoặc điều hướng nếu cần
     Swal.fire({
       icon: "success",
-      title: "Ready to compare!",
-      text: `You have selected ${selectedVariants.filter(Boolean).length} variants.`,
+      title: "Sẵn sàng so sánh!",
+      text: `Bạn đã chọn ${selectedVariants.filter(Boolean).length} biến thể.`,
     });
   };
 
@@ -151,10 +151,10 @@ export default function ProductsCompare() {
         <div className="w-full mb-5">
           <PageTitle
             breadcrumb={[
-              { name: "home", path: "/" },
-              { name: "compare", path: "/products-compare" },
+              { name: "Trang chủ", path: "/" },
+              { name: "So sánh sản phẩm", path: "/products-compare" },
             ]}
-            title="Product Comparison"
+            title="So sánh sản phẩm"
           />
         </div>
 
@@ -164,17 +164,17 @@ export default function ProductsCompare() {
               <tbody>
                 <tr>
                   <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA] font-semibold">
-                    Product Comparison
+                    So sánh sản phẩm
                     <p className="text-[13px] text-qgraytwo mt-2">
-                      Search and select variants to compare
+                      Tìm kiếm và chọn biến thể để so sánh
                     </p>
                   </td>
                   {Array(MAX_COMPARE)
                     .fill(0)
                     .map((_, i) => (
                       <td key={i} className="w-[235px] bg-white p-4 border border-gray-300">
-                        <InputCom
-                          placeholder="Search Product or Variant..."
+                        <InputForm
+                          placeholder="Tìm sản phẩm hoặc biến thể..."
                           value={searchInputs[i]}
                           inputHandler={(e) => handleSearchInputChange(i, e.target.value)}
                         />
@@ -190,7 +190,7 @@ export default function ProductsCompare() {
                               </li>
                             ))}
                             {filteredLists[i].length === 0 && (
-                              <li className="p-2 text-center text-gray-500">No results</li>
+                              <li className="p-2 text-center text-gray-500">Không có kết quả</li>
                             )}
                           </ul>
                         )}
@@ -208,16 +208,16 @@ export default function ProductsCompare() {
                               {selectedVariants[i].productName}
                             </p>
                             <p className="text-center text-[15px] font-medium text-qred leading-[24px] mb-1">
-                              {Number(selectedVariants[i].price).toLocaleString("en-US", {
+                              {Number(selectedVariants[i].price).toLocaleString("vi-VN", {
                                 style: "currency",
-                                currency: "USD",
+                                currency: "VND",
                               })}
                             </p>
                             <button
                               className="block mx-auto text-xs text-blue-500 underline"
                               onClick={() => handleClearVariant(i)}
                             >
-                              Clear
+                              Xóa
                             </button>
                           </div>
                         )}
@@ -226,9 +226,9 @@ export default function ProductsCompare() {
                 </tr>
 
                 {[
-                  { label: "Name", value: (v) => v?.productName || "-" },
+                  { label: "Tên sản phẩm", value: (v) => v?.productName || "-" },
                   {
-                    label: "Image",
+                    label: "Hình ảnh",
                     value: (v) => {
                       const url = getImageUrl(v);
                       return url ? (
@@ -238,20 +238,20 @@ export default function ProductsCompare() {
                       );
                     },
                   },
-                  { label: "Description", value: (v) => v?.productDescription || "-" },
-                  { label: "Brand", value: (v) => v?.brand || "-" },
+                  { label: "Mô tả", value: (v) => v?.productDescription || "-" },
+                  { label: "Thương hiệu", value: (v) => v?.brand || "-" },
                   {
-                    label: "Price",
+                    label: "Giá",
                     value: (v) =>
-                      Number(v?.price).toLocaleString("en-US", {
+                      Number(v?.price).toLocaleString("vi-VN", {
                         style: "currency",
-                        currency: "USD",
+                        currency: "VND",
                       }),
                   },
                   { label: "SKU", value: (v) => v?.sku || "-" },
-                  { label: "Stock", value: (v) => v?.stock ?? "-" },
+                  { label: "Tồn kho", value: (v) => v?.stock ?? "-" },
                   {
-                    label: "Rating",
+                    label: "Đánh giá",
                     value: (v) => (
                       <div className="flex flex-col items-center">
                         <div className="flex">{renderStars(v.average_rating)}</div>
@@ -307,13 +307,13 @@ export default function ProductsCompare() {
                 }`}
               disabled={!canCompare}
             >
-              Compare
+              So sánh
             </button>
           </div>
 
           {!canCompare && (
             <p className="text-center mt-6 text-red-600 font-semibold">
-              Vui Lòng Chọn  {MIN_COMPARE} Sản Phẩm Để So Sánh
+              Vui lòng chọn ít nhất {MIN_COMPARE} sản phẩm để so sánh
             </p>
           )}
         </div>

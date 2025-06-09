@@ -1,4 +1,4 @@
-import InputCom from "../Helpers/InputCom";
+import InputForm from "../Helpers/InputForm";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 import { useState } from "react";
@@ -207,7 +207,7 @@ export default function Contact() {
                 </div>
                 <div className="inputs mt-5">
                   <div className="mb-4">
-                    <InputCom
+                    <InputForm
                       label="Tên Khách Hàng*"
                       placeholder="Vui Lòng Nhập Tên Của Bạn"
                       name="first_name"
@@ -218,7 +218,7 @@ export default function Contact() {
                     />
                   </div>
                   <div className="mb-4">
-                    <InputCom
+                    <InputForm
                       label="Địa Chỉ Email*"
                       placeholder="Vui Lòng Nhập Địa Chỉ Email Của Bạn"
                       name="email"
@@ -229,7 +229,7 @@ export default function Contact() {
                     />
                   </div>
                   <div className="mb-4">
-                    <InputCom
+                    <InputForm
                       label="Phản Hồi*"
                       placeholder="Vui Lòng Nhập Phản Hồi Của Bạn"
                       name="subject"

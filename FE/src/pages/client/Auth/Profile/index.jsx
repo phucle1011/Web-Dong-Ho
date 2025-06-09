@@ -121,7 +121,7 @@ export default function Profile() {
                             <IcoAdress />
                           </span>
                           <span className=" font-normal text-base">
-                            Address
+                            Địa chỉ
                           </span>
                         </div>
                       </Link>

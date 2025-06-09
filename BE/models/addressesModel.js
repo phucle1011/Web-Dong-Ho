@@ -15,10 +15,6 @@ const AddressModel = connection.define('address', {
         type: DataTypes.STRING,
         allowNull: true
     },
-    city: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     district: {
         type: DataTypes.STRING,
         allowNull: false 
