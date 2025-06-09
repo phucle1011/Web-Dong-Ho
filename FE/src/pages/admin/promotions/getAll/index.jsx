@@ -5,11 +5,11 @@ import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import FormDelete from "../../../../components/formDelete";
 import {
-  FaChevronLeft,
-  FaChevronRight,
-  FaAngleDoubleLeft,
-  FaAngleDoubleRight,
-  FaTrashAlt
+    FaChevronLeft,
+    FaChevronRight,
+    FaAngleDoubleLeft,
+    FaAngleDoubleRight,
+    FaTrashAlt
 } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,6 +17,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 function PromotionGetAll() {
+    const [filterSpecial, setFilterSpecial] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [promotions, setPromotions] = useState([]);
@@ -94,7 +95,7 @@ function PromotionGetAll() {
     const perPage = 10;
 
     useEffect(() => {
-        getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate);
+        getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate, filterSpecial);
     }, [currentPage, filterStatus]);
 
     const getPromotions = async (page = 1, search = "", status = "", start = "", end = "") => {
@@ -136,7 +137,7 @@ function PromotionGetAll() {
 
     const handleFilterByDate = () => {
         setCurrentPage(1);
-        getPromotions(1, searchTerm, filterStatus, startDate, endDate);
+        getPromotions(1, searchTerm, filterStatus, startDate, endDate, filterSpecial);
     }
 
     const formatDate = (dateString) => new Date(dateString).toLocaleDateString("vi-VN");
@@ -255,6 +256,7 @@ function PromotionGetAll() {
                             <th className="border p-2">Lượt</th>
                             <th className="border p-2">Bắt đầu</th>
                             <th className="border p-2">Kết thúc</th>
+                            <th className="border p-2">Áp dụng</th>
                             <th className="border p-2">Trạng thái</th>
                             <th className="border p-2">Hành động</th>
                         </tr>
@@ -272,6 +274,13 @@ function PromotionGetAll() {
                                 <td className="border p-2 text-center">{promo.quantity > 0 ? promo.quantity : "Hết lượt"}</td>
                                 <td className="border p-2 text-center">{formatDate(promo.start_date)}</td>
                                 <td className="border p-2 text-center">{formatDate(promo.end_date)}</td>
+                                <td className="border p-2 text-center">
+                                    {promo.applicable_to === "order" ? (
+                                        "Đơn hàng"
+                                    ) : (
+                                        <span className="font-bold">Sản phẩm</span>
+                                    )}
+                                </td>
                                 <td className="border p-2 text-center">
                                     <span
                                         className={`px-2 py-1 rounded-full text-xs font-medium ${promo.status === "expired"
@@ -305,7 +314,7 @@ function PromotionGetAll() {
                                         onClick={() => setSelectedPromotion(promo)}
                                         className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                     >
-                                        <FaTrashAlt/>
+                                        <FaTrashAlt />
                                     </button>
                                 </td>
                             </tr>
@@ -367,16 +376,16 @@ function PromotionGetAll() {
                 </div>
             </div>
 
-      {selectedPromotion && (
-        <FormDelete
-          isOpen={true}
-          onClose={() => setSelectedPromotion(null)}
-          onConfirm={deletePromotion}
-          message={`Bạn có chắc chắn muốn xóa khuyến mãi "${selectedPromotion.name}" không?`}
-        />
-      )}
-    </div>
-  );
+            {selectedPromotion && (
+                <FormDelete
+                    isOpen={true}
+                    onClose={() => setSelectedPromotion(null)}
+                    onConfirm={deletePromotion}
+                    message={`Bạn có chắc chắn muốn xóa khuyến mãi "${selectedPromotion.name}" không?`}
+                />
+            )}
+        </div>
+    );
 }
 
 export default PromotionGetAll;

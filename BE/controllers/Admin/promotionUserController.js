@@ -11,7 +11,6 @@ class PromotionUserController {
         page = 1,
         limit = 10,
         promotionId,
-        onlySpecial = 'false',
       } = req.query;
 
       const currentPage = Math.max(parseInt(page, 10), 1);
@@ -37,7 +36,7 @@ class PromotionUserController {
         model: PromotionUserModel,
         as: 'promotionUsers',
         where: promotionUserWhere,
-        required: promotionId ? true : false,
+        required: true,
         include: [
           {
             model: PromotionModel,
@@ -48,22 +47,15 @@ class PromotionUserController {
               'discount_type',
               'discount_value',
               'special_promotion',
-              'end_date',
+              'status',
             ],
+            where: {
+              special_promotion: true,
+            },
           },
         ],
         attributes: ['id', 'created_at', 'email_sent'],
       };
-
-      if (onlySpecial === 'true') {
-        includePromotionUser.where = {
-          ...promotionUserWhere,
-        };
-        includePromotionUser.include[0].where = {
-          special_promotion: true,
-        };
-        includePromotionUser.required = true;
-      }
 
       const { count, rows } = await UserModel.findAndCountAll({
         where: userWhere,
@@ -90,15 +82,13 @@ class PromotionUserController {
           isSpecialPromotion: Boolean(pu.Promotion?.special_promotion),
           promotionReceivedDate: pu.created_at,
           emailSent: pu.email_sent || false,
-           isExpired: pu.Promotion?.end_date
-            ? new Date(pu.Promotion.end_date) < new Date()
-            : false,
+          status: pu.Promotion?.status || 'inactive',
         })),
       }));
 
       res.status(200).json({
         status: 200,
-        message: 'Lấy danh sách người dùng với các mã giảm thành công',
+        message: 'Lấy danh sách người dùng với các mã giảm đặc biệt thành công',
         data: formatted,
         pagination: {
           totalPages: Math.ceil(count / currentLimit),
@@ -112,7 +102,7 @@ class PromotionUserController {
     }
   }
 
-   static async checkPromotionExpiry(req, res) {
+  static async checkPromotionExpiry(req, res) {
     try {
       const { promotionId } = req.body;
       if (!promotionId) {

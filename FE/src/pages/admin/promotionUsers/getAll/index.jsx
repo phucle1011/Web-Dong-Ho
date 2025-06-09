@@ -50,8 +50,9 @@ function PromotionList() {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`);
       const data = res.data.data || [];
-      setPromotions(data);
-      if (data.length > 0) setSelectedPromotionId(data[0].id);
+      const specialPromotions = data.filter((promo) => promo.special_promotion);
+      setPromotions(specialPromotions);
+      if (specialPromotions.length > 0) setSelectedPromotionId(specialPromotions[0].id);
     } catch (err) {
       toast.error("Không thể tải danh sách mã giảm.");
     } finally {
@@ -103,18 +104,6 @@ function PromotionList() {
     }
   };
 
-  const checkPromotionExpiry = async (promotionId) => {
-    try {
-      const res = await axios.post(`${Constants.DOMAIN_API}/admin/check-promotion-expiry`, {
-        promotionId,
-      });
-      return res.data.isExpired;
-    } catch (error) {
-      console.error('Error checking promotion expiry:', error.message);
-      return false;
-    }
-  };
-
   const handleSendEmails = async (useDefault = false) => {
     let subject = emailSubject;
     let content = emailContent;
@@ -133,9 +122,8 @@ function PromotionList() {
       return;
     }
 
-    const isExpired = await checkPromotionExpiry(selectedPromotionId);
-    if (isExpired) {
-      toast.error("Không thể gửi email vì mã giảm giá đã hết hạn.");
+    if (selectedPromotion.status === 'expired' || selectedPromotion.status === 'inactive') {
+      toast.error("Không thể gửi email vì mã giảm giá không hoạt động.");
       return;
     }
 
@@ -179,9 +167,8 @@ function PromotionList() {
     const customer = customers.find((c) => c.id === customerId);
     if (!customer) return;
 
-    const isExpired = await checkPromotionExpiry(selectedPromotionId);
-    if (isExpired) {
-      toast.error("Không thể gửi email vì mã giảm giá đã hết hạn.");
+    if (selectedPromotion.status === 'expired' || selectedPromotion.status === 'inactive') {
+      toast.error("Không thể gửi email vì mã giảm giá không hoạt động.");
       return;
     }
 
@@ -227,12 +214,8 @@ function PromotionList() {
   };
 
   const selectedPromotion = promotions.find((p) => p.id === selectedPromotionId);
-  const isSelectedPromotionExpired = selectedPromotion?.end_date
-    ? new Date(selectedPromotion.end_date).toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }) <
-    new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })
-    : false;
   const promotionTitle = selectedPromotion
-    ? `cho mã giảm (${selectedPromotion.name || "Mã không tên"}${isSelectedPromotionExpired ? " - Hết hạn" : ""})`
+    ? `cho mã giảm (${selectedPromotion.name || "Mã không tên"} - ${selectedPromotion.status})`
     : "";
 
   const handleSearch = () => {
@@ -251,62 +234,50 @@ function PromotionList() {
     <div className="container mx-auto p-6 bg-white shadow rounded-lg flex gap-8 min-h-[600px]">
       <div className="w-1/3 border rounded-lg shadow-sm p-4 flex flex-col">
         <h3 className="text-xl font-semibold mb-4 text-blue-700 border-b pb-2">
-          Danh sách mã giảm giá
+          Danh sách mã giảm giá đặc biệt
         </h3>
         {loadingPromotions ? (
           <div className="text-center text-gray-500 mt-10">Đang tải...</div>
         ) : promotions.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10">Không có mã giảm.</div>
+          <div className="text-center text-gray-400 mt-10">Không có mã giảm đặc biệt.</div>
         ) : (
           <ul className="overflow-auto max-h-[460px] custom-scrollbar pr-2">
-            {promotions.map((promo) => {
-              const isExpired = promo.end_date
-                ? new Date(promo.end_date).toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }) <
-                new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })
-                : false;
-              return (
-                <li
-                  key={promo.id}
-                  onClick={() => setSelectedPromotionId(promo.id)}
-                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? "bg-blue-100 shadow" : "hover:bg-blue-50"
-                    } ${isExpired ? "opacity-60" : ""}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-base text-blue-900">
-                        {promo.name || "Mã không tên"}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {promo.discount_value !== undefined
-                          ? promo.discount_type === "percentage"
-                            ? `Giảm ${promo.discount_value}%`
-                            : `Giảm ${promo.discount_value.toLocaleString()}đ`
-                          : "Chưa xác định"}
-                        {promo.end_date && (
-                          <div className="text-xs text-gray-500">
-                            Hết hạn: {new Date(promo.end_date).toLocaleString('vi-VN', {
-                              timeZone: 'Asia/Ho_Chi_Minh',
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            })}
-                            {promo.code && (
-                              <div className="text-xs text-blue-600">
-                                Mã: <span className="font-medium">{promo.code}</span>
-                              </div>
-                            )}
+            {promotions.map((promo) => (
+              <li
+                key={promo.id}
+                onClick={() => setSelectedPromotionId(promo.id)}
+                className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? "bg-blue-100 shadow" : "hover:bg-blue-50"
+                  } ${promo.status === 'expired' || promo.status === 'inactive' ? "opacity-60" : ""}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-base text-blue-900">
+                      {promo.name || "Mã không tên"}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {promo.discount_value !== undefined
+                        ? promo.discount_type === "percentage"
+                          ? `Giảm ${promo.discount_value}%`
+                          : `Giảm ${promo.discount_value.toLocaleString()}đ`
+                        : "Chưa xác định"}
+                      <div className="text-xs text-gray-500">
+                        Trạng thái: {promo.status}
+                        {promo.code && (
+                          <div className="text-xs text-blue-600">
+                            Mã: <span className="font-medium">{promo.code}</span>
                           </div>
                         )}
                       </div>
                     </div>
-                    {isExpired && (
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                        Hết hạn
-                      </span>
-                    )}
                   </div>
-                </li>
-              );
-            })}
+                  {promo.status === 'expired' && (
+                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                      Hết hạn
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -318,22 +289,34 @@ function PromotionList() {
           </h3>
           <div className="flex gap-2">
             <button
-              className={`bg-blue-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 || isSelectedPromotionExpired
+              className={`bg-blue-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
+                selectedPromotion?.status === 'expired' ||
+                selectedPromotion?.status === 'inactive'
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:bg-blue-700"
                 }`}
               onClick={() => handleSendEmails(true)}
-              disabled={selectedCustomerIds.length === 0 || isSelectedPromotionExpired}
+              disabled={
+                selectedCustomerIds.length === 0 ||
+                selectedPromotion?.status === 'expired' ||
+                selectedPromotion?.status === 'inactive'
+              }
             >
               Gửi Email ({selectedCustomerIds.length})
             </button>
             <button
-              className={`bg-green-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 || isSelectedPromotionExpired
+              className={`bg-green-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
+                selectedPromotion?.status === 'expired' ||
+                selectedPromotion?.status === 'inactive'
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:bg-green-700"
                 }`}
               onClick={() => setIsEmailModalOpen(true)}
-              disabled={selectedCustomerIds.length === 0 || isSelectedPromotionExpired}
+              disabled={
+                selectedCustomerIds.length === 0 ||
+                selectedPromotion?.status === 'expired' ||
+                selectedPromotion?.status === 'inactive'
+              }
             >
               Soạn Email ({selectedCustomerIds.length})
             </button>
@@ -374,7 +357,7 @@ function PromotionList() {
                         type="checkbox"
                         checked={paginatedCustomers.every((c) => selectedCustomerIds.includes(c.id))}
                         onChange={handleSelectAll}
-                        disabled={isSelectedPromotionExpired}
+                        disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                       />
                     </th>
                     <th className="border p-2">Tên</th>
@@ -397,7 +380,7 @@ function PromotionList() {
                           type="checkbox"
                           checked={selectedCustomerIds.includes(cus.id)}
                           onChange={() => handleCheckboxChange(cus.id)}
-                          disabled={isSelectedPromotionExpired}
+                          disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                         />
                       </td>
                       <td className="border p-2 text-center">{cus.name}</td>
@@ -413,11 +396,11 @@ function PromotionList() {
                         ) : (
                           <button
                             onClick={() => handleQuickSendEmail(cus.id)}
-                            className={`px-3 py-1 rounded text-sm text-white ${isSelectedPromotionExpired
+                            className={`px-3 py-1 rounded text-sm text-white ${selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'
                               ? "bg-gray-400 cursor-not-allowed"
                               : "bg-blue-600 hover:bg-blue-700"
                               }`}
-                            disabled={isSelectedPromotionExpired}
+                            disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                           >
                             Gửi mail
                           </button>
@@ -452,8 +435,7 @@ function PromotionList() {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
-                          }`}
+                        className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"}`}
                       >
                         {page}
                       </button>
@@ -492,7 +474,7 @@ function PromotionList() {
                   onChange={(e) => setEmailSubject(e.target.value)}
                   className="w-full p-2 border rounded-md"
                   placeholder="Nhập tiêu đề email"
-                  disabled={isSelectedPromotionExpired}
+                  disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                 />
               </div>
               <div className="mb-3">
@@ -502,7 +484,7 @@ function PromotionList() {
                   value={emailContent}
                   onChange={setEmailContent}
                   className="min-h-[200px]"
-                  readOnly={isSelectedPromotionExpired}
+                  readOnly={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                 />
               </div>
               <div className="flex justify-end gap-3 mt-4">
@@ -514,12 +496,12 @@ function PromotionList() {
                   Hủy
                 </button>
                 <button
-                  className={`px-4 py-2 rounded text-white ${isSelectedPromotionExpired || sendingEmail
+                  className={`px-4 py-2 rounded text-white ${selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
                     }`}
                   onClick={() => handleSendEmails(false)}
-                  disabled={isSelectedPromotionExpired || sendingEmail}
+                  disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail}
                 >
                   {sendingEmail ? "Đang gửi..." : "Gửi email"}
                 </button>
