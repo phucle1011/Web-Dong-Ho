@@ -17,120 +17,120 @@ import FormDelete from "../../../../../components/formDelete";
 import { Link } from "react-router-dom";
 
 export default function OrderTab() {
-  const [orders, setOrders] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const recordsPerPage = 10;
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [statusCounts, setStatusCounts] = useState({
-    all: 0,
-    pending: 0,
-    confirmed: 0,
-    shipping: 0,
-    completed: 0,
-    delivered: 0,
-    cancelled: 0,
-  });
+  // const [orders, setOrders] = useState([]);
+  // const [currentPage, setCurrentPage] = useState(1);
+  // const [totalPages, setTotalPages] = useState(1);
+  // const [selectedOrder, setSelectedOrder] = useState(null);
+  // const recordsPerPage = 10;
+  // const [startDate, setStartDate] = useState(null);
+  // const [endDate, setEndDate] = useState(null);
+  // const [statusFilter, setStatusFilter] = useState("all");
+  // const [statusCounts, setStatusCounts] = useState({
+  //   all: 0,
+  //   pending: 0,
+  //   confirmed: 0,
+  //   shipping: 0,
+  //   completed: 0,
+  //   delivered: 0,
+  //   cancelled: 0,
+  // });
 
   const translateStatus = (status) => {
-    switch (status) {
-      case "pending":
-        return "Chờ xác nhận";
-      case "confirmed":
-        return "Đã xác nhận";
-      case "shipping":
-        return "Đang giao";
-      case "completed":
-        return "Hoàn thành";
-      case "delivered":
-        return "Đã giao hàng thành công";
-      case "cancelled":
-        return "Đã hủy";
-      default:
-        return status;
-    }
+    // switch (status) {
+    //   case "pending":
+    //     return "Chờ xác nhận";
+    //   case "confirmed":
+    //     return "Đã xác nhận";
+    //   case "shipping":
+    //     return "Đang giao";
+    //   case "completed":
+    //     return "Hoàn thành";
+    //   case "delivered":
+    //     return "Đã giao hàng thành công";
+    //   case "cancelled":
+    //     return "Đã hủy";
+    //   default:
+    //     return status;
+    // }
   };
 
   function formatDateLocal(date) {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    // const year = date.getFullYear();
+    // const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    // const day = date.getDate().toString().padStart(2, '0');
+    // return `${year}-${month}-${day}`;
   }
 
   const fetchOrders = async (page = 1) => {
-    try {
-      const user = localStorage.getItem("user");
-      const userId = user ? JSON.parse(user).id : null;
+    // try {
+    //   const user = localStorage.getItem("user");
+    //   const userId = user ? JSON.parse(user).id : null;
 
-      if (!userId) {
-        toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-        return;
-      }
-      const params = {
-        page,
-        limit: recordsPerPage,
-      };
+    //   if (!userId) {
+    //     toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+    //     return;
+    //   }
+    //   const params = {
+    //     page,
+    //     limit: recordsPerPage,
+    //   };
 
-      if (statusFilter && statusFilter !== "all") {
-        params.status = statusFilter;
-      }
+    //   if (statusFilter && statusFilter !== "all") {
+    //     params.status = statusFilter;
+    //   }
 
-      if (startDate) {
-        params.startDate = formatDateLocal(startDate);
-      }
-      if (endDate) {
-        params.endDate = formatDateLocal(endDate);
-      }
+    //   if (startDate) {
+    //     params.startDate = formatDateLocal(startDate);
+    //   }
+    //   if (endDate) {
+    //     params.endDate = formatDateLocal(endDate);
+    //   }
 
-      const res = await axios.get(`${Constants.DOMAIN_API}/orders`, {
-        params: { userId },
-      });
+    //   const res = await axios.get(`${Constants.DOMAIN_API}/orders`, {
+    //     params: { userId },
+    //   });
 
-      setOrders(res.data.data || []);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      setStatusCounts(res.data.statusCounts || statusCounts);
+    //   setOrders(res.data.data || []);
+    //   setTotalPages(res.data.pagination?.totalPages || 1);
+    //   setStatusCounts(res.data.statusCounts || statusCounts);
 
-      if (!res.data.data.length) {
-        if (!toast.isActive("no-orders")) {
-          toast.info("Không tìm thấy đơn hàng nào.", { toastId: "no-orders" });
-        }
-      }
-    } catch (error) {
-      console.error("Lỗi khi tải đơn hàng:", error);
-      toast.error("Lỗi tải dữ liệu từ máy chủ.");
-    }
+    //   if (!res.data.data.length) {
+    //     if (!toast.isActive("no-orders")) {
+    //       toast.info("Không tìm thấy đơn hàng nào.", { toastId: "no-orders" });
+    //     }
+    //   }
+    // } catch (error) {
+    //   console.error("Lỗi khi tải đơn hàng:", error);
+    //   toast.error("Lỗi tải dữ liệu từ máy chủ.");
+    // }
   };
 
   useEffect(() => {
-    fetchOrders(currentPage);
+    // fetchOrders(currentPage);
   }, [currentPage, statusFilter]);
 
   const deleteOrder = async () => {
     if (!selectedOrder) return;
-    try {
-      await axios.delete(
-        `${Constants.DOMAIN_API}/admin/orders/delete/${selectedOrder.id}`
-      );
-      toast.success("Hủy đơn hàng thành công");
-      setSelectedOrder(null);
-    } catch (error) {
-      const message = error.response?.data?.message || "";
-      if (
-        message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
-      ) {
-        toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
-      } else if (message === "Id không tồn tại") {
-        toast.error("Đơn hàng không tồn tại");
-      } else {
-        toast.error("Không thể hủy đơn hàng");
-      }
-    } finally {
-      setSelectedOrder(null);
-    }
+    // try {
+    //   await axios.delete(
+    //     `${Constants.DOMAIN_API}/admin/orders/delete/${selectedOrder.id}`
+    //   );
+    //   toast.success("Hủy đơn hàng thành công");
+    //   setSelectedOrder(null);
+    // } catch (error) {
+    //   const message = error.response?.data?.message || "";
+    //   if (
+    //     message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
+    //   ) {
+    //     toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
+    //   } else if (message === "Id không tồn tại") {
+    //     toast.error("Đơn hàng không tồn tại");
+    //   } else {
+    //     toast.error("Không thể hủy đơn hàng");
+    //   }
+    // } finally {
+    //   setSelectedOrder(null);
+    // }
   };
 
   return (

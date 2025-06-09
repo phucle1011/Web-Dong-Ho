@@ -82,17 +82,17 @@ class WishlistController {
                             },
                             {
                                 model: ProductVariantAttributeValueModel,
-                                as: 'attributeValues', // Tên alias phải khớp với connectModels.js
+                                as: 'attributeValues',
                                 attributes: ['value'],
                                 include: [{
                                     model: ProductAttributeModel,
-                                    as: 'attribute', // Tên attribute như "Màu sắc", "Dung lượng"
+                                    as: 'attribute',
                                     attributes: ['name'],
                                 }]
                             },
                             {
                                 model: VariantImageModel,
-                                as: 'images', // Nếu bạn muốn hiển thị ảnh biến thể
+                                as: 'images',
                                 attributes: ['image_url'],
                                 required: false,
                             }

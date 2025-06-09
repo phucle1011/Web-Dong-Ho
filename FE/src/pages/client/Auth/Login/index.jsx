@@ -3,6 +3,8 @@ import Layout from "../../Partials/LayoutHomeThree";
 import Thumbnail from "./Thumbnail";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
+import Constants from "../../../../Constants";
+
 
 export default function Login() {
   const [checked, setValue] = useState(!!localStorage.getItem("token"));
@@ -53,7 +55,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/auth/login", {
+      const response = await fetch(`${Constants.DOMAIN_API}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

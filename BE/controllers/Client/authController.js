@@ -140,7 +140,7 @@ class AuthController {
             const expiresIn = rememberMe ? "30d" : "2h";
 
             const token = jwt.sign(
-                { id: user.id, name: user.name, email: user.email, role: user.role },
+                { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone, email_verified_at: user.email_verified_at },
                 JWT_SECRET,
                 { expiresIn }
             );
@@ -151,6 +151,8 @@ class AuthController {
                     id: user.id,
                     name: user.name,
                     email: user.email,
+                    phone: user.phone,
+                    email_verified_at: user.email_verified_at,
                     role: user.role,
                     status: user.status
                 }
