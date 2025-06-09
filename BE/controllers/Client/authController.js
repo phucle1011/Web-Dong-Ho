@@ -117,49 +117,50 @@ class AuthController {
             return errorResponse(res, "Liên kết không hợp lệ!", 400);
         }
     }
+
     //------------------[ LOGIN ]------------------
-   static async login(req, res) {
-    try {
-        const { email, password, rememberMe } = req.body;
+    static async login(req, res) {
+        try {
+            const { email, password, rememberMe } = req.body;
 
-        const user = await UserModel.findOne({ where: { email } });
-        if (!user) {
-            return errorResponse(res, "Email không tồn tại!", 400);
-        }
-
-        if (user.status === 'locked') {
-            return errorResponse(res, "Tài khoản bị khóa!", 403);
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return errorResponse(res, "Mật khẩu không chính xác!", 400);
-        }
-
-        const expiresIn = rememberMe ? "30d" : "2h";
-
-        const token = jwt.sign(
-            { id: user.id, name: user.name, email: user.email, role: user.role },
-            JWT_SECRET,
-            { expiresIn }
-        );
-
-        return successResponse(res, "Đăng nhập thành công!", {
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                status: user.status
+            const user = await UserModel.findOne({ where: { email } });
+            if (!user) {
+                return errorResponse(res, "Email không tồn tại!", 400);
             }
-        }, 200);
 
-    } catch (error) {
-        console.error("Lỗi server:", error);
-        return errorResponse(res, "Đăng nhập thất bại!", 500);
+            if (user.status === 'locked') {
+                return errorResponse(res, "Tài khoản bị khóa!", 403);
+            }
+
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                return errorResponse(res, "Mật khẩu không chính xác!", 400);
+            }
+
+            const expiresIn = rememberMe ? "30d" : "2h";
+
+            const token = jwt.sign(
+                { id: user.id, name: user.name, email: user.email, role: user.role },
+                JWT_SECRET,
+                { expiresIn }
+            );
+
+            return successResponse(res, "Đăng nhập thành công!", {
+                token,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    status: user.status
+                }
+            }, 200);
+
+        } catch (error) {
+            console.error("Lỗi server:", error);
+            return errorResponse(res, "Đăng nhập thất bại!", 500);
+        }
     }
-}
 
     //-------------------[ RESET PASSWORD ]--------------------------
     static async resetPasswod(req, res) {

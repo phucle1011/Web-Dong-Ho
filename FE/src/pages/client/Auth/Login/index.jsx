@@ -77,7 +77,7 @@ export default function Login() {
         toast.success("Đăng nhập thành công!");
         navigate("/");
       } else {
-        toast.success(result.message || "Đăng nhập thất bại!");
+        toast.error(result.message || "Đăng nhập thất bại!");
       }
     } catch (error) {
       console.error(error);
