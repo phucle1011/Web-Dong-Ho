@@ -18,6 +18,9 @@ const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
+
+// router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
+
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------\
@@ -29,9 +32,6 @@ router.get('/orders/list', OrderController.get);
 router.get('/orders/:id', OrderController.getById);
 router.put('/orders/edit/:id', OrderController.update);
 router.delete("/orders/delete/:id", OrderController.delete);
-
-
-router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
 
 //------------------[ USERS ]------------------\
 router.get('/user/list', UserController.get);
@@ -88,10 +88,6 @@ router.get('/product-variants', ProductController.getAllVariants);
 router.delete('/product-variants/deleteAttributeValueById/:id', ProductController.deleteAttributeValueById);
 router.post('/products/imagesClauding', ProductController.deleteImagesClauding);
 
-
-
-
-
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);
 router.get('/address/user/:id', AddressController.getAddressesByUser);
@@ -109,7 +105,6 @@ router.get('/blog/:id', BlogController.getById);
 router.post('/blog/add', BlogController.create);
 router.put('/blog/:id', BlogController.update);
 router.delete('/blog/:id', BlogController.delete);
-
 
 //------------------[ COMMENT ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
@@ -136,7 +131,7 @@ router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMont
 router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
 router.get('/dashboard/revenue', DashboardController.getRevenueByCustomRange);
 
-
+//------------------[ NOTIFICATION ]------------------\
 router.get('/notification', NotificationController.getNotifications);
 router.get('/notification/:id', NotificationController.getNotificationById);
 router.post('/notification', NotificationController.createNotification);
