@@ -14,12 +14,11 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
   const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
-    const total = calculateTotal();
+    const selectedTotal = calculateSelectedTotal();
     if (onTotalChange) {
-      onTotalChange(total);
+      onTotalChange(selectedTotal);
     }
-
-  }, [cartItems, onTotalChange]);
+  }, [selectedItems, cartItems, onTotalChange]);
 
   useEffect(() => {
     fetchCart();
@@ -30,6 +29,13 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
       onSelectedItemsChange(selectedItems);
     }
   }, [selectedItems, onSelectedItemsChange]);
+
+  useEffect(() => {
+    const selectedTotal = calculateSelectedTotal();
+    if (onTotalChange) {
+      onTotalChange(selectedTotal);
+    }
+  }, [selectedItems, cartItems, onTotalChange]);
 
   const fetchCart = async () => {
     const token = localStorage.getItem("token");
@@ -50,6 +56,17 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
       const price = parseFloat(item.variant?.price || 0);
       const quantity = item.quantity;
       return total + price * quantity;
+    }, 0);
+  };
+
+  const calculateSelectedTotal = () => {
+    return cartItems.reduce((total, item) => {
+      if (selectedItems.includes(item.product_variant_id)) {
+        const price = parseFloat(item.variant?.price || 0);
+        const quantity = parseInt(item.quantity || 0);
+        return total + price * quantity;
+      }
+      return total;
     }, 0);
   };
 

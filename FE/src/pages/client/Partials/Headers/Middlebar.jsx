@@ -11,28 +11,29 @@ import Constants from "../../../../Constants";
 
 export default function Middlebar({ className, type }) {
 
-  const [count, setCount] = useState(0);
-  const userId = 1;
+    const [count, setCount] = useState(0);
 
   useEffect(() => {
-  if (!userId) return;
+    const token = localStorage.getItem("token");
 
-  const fetchCount = async () => {
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
-        params: { userId },
-      });
+    const fetchCount = async () => {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      const count = res.data?.count ?? 0;
+        const count = res.data?.count ?? 0;
 
-      setCount(count);
-    } catch (err) {
-      console.error("Không lấy được số lượng giỏ hàng", err);
-    }
-  };
+        setCount(count);
+      } catch (err) {
+        console.error("Không lấy được số lượng giỏ hàng", err);
+      }
+    };
 
-  fetchCount();
-}, [userId]);
+    fetchCount();
+  }, []);
 
   return (
     <div className={`w-full h-[86px] bg-white ${className}`}>
