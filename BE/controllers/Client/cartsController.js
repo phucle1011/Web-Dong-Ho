@@ -9,7 +9,7 @@ const { Op } = require('sequelize');
 class CartController {
     static async getCartByUser(req, res) {
         try {
-            const userId = req.query.userId;
+            const userId = req.user.id;
 
             const count = await CartModel.sum('quantity', { where: { user_id: userId } });
 
@@ -128,7 +128,8 @@ class CartController {
 
     static async updateCartItem(req, res) {
         try {
-            const { userId, productVariantId } = req.params;
+            const userId = req.user.id;
+            const { productVariantId } = req.params;
             const { quantity } = req.body;
 
             const item = await CartModel.findOne({
@@ -194,7 +195,8 @@ class CartController {
 
     static async removeCartItem(req, res) {
         try {
-            const { userId, productVariantId } = req.params;
+            const { productVariantId } = req.params;
+            const userId = req.user.id;
 
             const deleted = await CartModel.destroy({
                 where: {
@@ -257,7 +259,7 @@ class CartController {
 
     static async clearCartByUser(req, res) {
         try {
-            const { userId } = req.params;
+            const userId = req.user.id;
 
             const deleted = await CartModel.destroy({
                 where: {

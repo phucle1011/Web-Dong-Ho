@@ -47,11 +47,11 @@ router.post('/user/:userId/addresses', AddressController.addAddress);
 
 
 //------------------[ CARTS ]------------------
-router.get("/carts", CartController.getCartByUser);
-router.post("/add-to-carts", CartController.addToCart);
-router.put("/update-to-carts/:userId/:productVariantId", CartController.updateCartItem);
-router.delete("/delete-to-carts/:userId/:productVariantId", CartController.removeCartItem);
-router.delete("/clear-cart/:userId", CartController.clearCartByUser);
+router.get("/carts", checkJWT, CartController.getCartByUser);
+router.post("/add-to-carts", checkJWT, CartController.addToCart);
+router.put("/update-to-carts/:productVariantId", checkJWT, CartController.updateCartItem);
+router.delete("/delete-to-carts/:productVariantId", checkJWT, CartController.removeCartItem);
+router.delete("/clear-cart", checkJWT, CartController.clearCartByUser);
 
 //------------------[ ORDERS ]------------------
 router.get("/orders", OrderController.get);

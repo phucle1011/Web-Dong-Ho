@@ -5,7 +5,7 @@ import { FaTrashAlt } from "react-icons/fa";
 import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
 
-const ProductsTable = ({ className, onTotalChange }) => {
+const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
   const [cartItems, setCartItems] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
@@ -14,26 +14,30 @@ const ProductsTable = ({ className, onTotalChange }) => {
   const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    const userId = user ? JSON.parse(user).id : null;
-
-    if (userId) {
-      fetchCart(userId);
-    }
-  }, []);
-
-  useEffect(() => {
     const total = calculateTotal();
     if (onTotalChange) {
       onTotalChange(total);
     }
-  }, [cartItems, onTotalChange]);
-  
 
-  const fetchCart = async (userId) => {
+  }, [cartItems, onTotalChange]);
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  useEffect(() => {
+    if (onSelectedItemsChange) {
+      onSelectedItemsChange(selectedItems);
+    }
+  }, [selectedItems, onSelectedItemsChange]);
+
+  const fetchCart = async () => {
+    const token = localStorage.getItem("token");
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
-        params: { userId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       setCartItems(res.data.data);
     } catch (error) {
@@ -74,22 +78,26 @@ const ProductsTable = ({ className, onTotalChange }) => {
   };
 
   const handleDelete = async ({ id }) => {
-    const user = localStorage.getItem("user");
-    const userId = user ? JSON.parse(user).id : null;
+    const token = localStorage.getItem("token");
 
-    if (!userId) {
+    if (!token) {
       toast.error("Vui lòng đăng nhập để thực hiện hành động này");
       return;
     }
+
     try {
-      await axios.delete(`${Constants.DOMAIN_API}/delete-to-carts/${userId}/${id}`);
+      await axios.delete(`${Constants.DOMAIN_API}/delete-to-carts/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.product_variant_id !== id)
       );
 
-      fetchCart(userId);
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
-      fetchCart();
+      await fetchCart();
     } catch (error) {
       const message = error.response?.data?.message || "";
       if (message === "Không tìm thấy sản phẩm trong giỏ hàng để xóa") {
@@ -105,20 +113,18 @@ const ProductsTable = ({ className, onTotalChange }) => {
   };
 
   const handleClearCart = async () => {
-    const user = localStorage.getItem("user");
-    const userId = user ? JSON.parse(user).id : null;
+    const token = localStorage.getItem("token");
 
-    if (!userId) {
-      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-      return;
-    }
     try {
-      await axios.delete(`${Constants.DOMAIN_API}/clear-cart/${userId}`);
+      await axios.delete(`${Constants.DOMAIN_API}/clear-cart/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       setCartItems([]);
-
-      await fetchCart(userId);
       toast.success("Đã xóa toàn bộ giỏ hàng");
-
+      await fetchCart();
     } catch (error) {
       toast.error("Không thể xóa toàn bộ giỏ hàng");
     } finally {
@@ -127,35 +133,40 @@ const ProductsTable = ({ className, onTotalChange }) => {
   };
 
   const handleQuantityChange = async (productVariantId, newQuantity) => {
-    const user = localStorage.getItem("user");
-    const userId = user ? JSON.parse(user).id : null;
-
-    if (!userId) {
-      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-      return;
-    }
+    const token = localStorage.getItem("token");
     if (newQuantity < 1) return;
 
     try {
-      await axios.put(`${Constants.DOMAIN_API}/update-to-carts/${userId}/${productVariantId}`, {
-        quantity: newQuantity,
-      });
+      await axios.put(
+        `${Constants.DOMAIN_API}/update-to-carts/${productVariantId}`,
+        { quantity: newQuantity },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        }
+      );
       setCartItems([]);
-
       toast.success("Cập nhật số lượng thành công");
-      await fetchCart(userId);
+      await fetchCart();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");
     }
   };
 
-  const QuantityInput = ({ quantity, onChange }) => {
+  const QuantityInput = ({ quantity, onChange, stock }) => {
     const handleDecrease = () => {
-      if (quantity > 1) onChange(quantity - 1);
+      if (quantity > 1) {
+        onChange(quantity - 1);
+      }
     };
 
     const handleIncrease = () => {
-      onChange(quantity + 1);
+      if (quantity < stock) {
+        onChange(quantity + 1);
+      } else {
+        toast.info("Không thể tăng thêm vì đã đạt số lượng tối đa trong kho");
+      }
     };
 
     return (
@@ -170,13 +181,17 @@ const ProductsTable = ({ className, onTotalChange }) => {
         <input
           type="number"
           min="1"
+          max={stock}
           step="1"
           value={quantity}
           onChange={(e) => {
-            const val = Number(e.target.value);
-            if (val >= 1) onChange(val);
+            const val = parseInt(e.target.value, 10);
+            if (val >= 1 && val <= stock) {
+              onChange(val);
+            }
           }}
-          className="w-full text-center outline-none border-l border-r h-full"
+          className="w-16 h-full text-center outline-none"
+          readOnly
         />
         <button
           onClick={handleIncrease}
@@ -233,7 +248,7 @@ const ProductsTable = ({ className, onTotalChange }) => {
               cartItems.map((item) => {
                 const variant = item.variant;
                 const image = variant?.images?.[0]?.image_url || "";
-                const attributes = variant?.attributeValues || [];
+                const attributes = variant.attributeValues || [];
                 const price = parseFloat(variant.price);
                 const quantity = item.quantity;
                 const stock = variant.stock;
@@ -245,11 +260,17 @@ const ProductsTable = ({ className, onTotalChange }) => {
                     className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""}`}
                   >
                     <td className="text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.includes(item.product_variant_id)}
-                        onChange={() => handleSelect(item.product_variant_id)}
-                      />
+                      {stock === 0 ? (
+                        <span title="Sản phẩm hết hàng, không thể chọn" className="cursor-help text-red-500">
+                        </span>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          disabled={stock === 0}
+                          checked={selectedItems.includes(item.product_variant_id)}
+                          onChange={() => stock !== 0 && handleSelect(item.product_variant_id)}
+                        />
+                      )}
                     </td>
                     <td className="pl-10 py-4">
                       <div className="flex space-x-6 items-center">
@@ -267,7 +288,7 @@ const ProductsTable = ({ className, onTotalChange }) => {
                     </td>
                     <td className="text-center py-4">
                       {attributes.map((attr) => {
-                        const attrName = attr.attribute?.name || "";
+                        const attrName = attr.attribute?.name;
                         const attrValue = attr.value;
                         const isColor = attrName.toLowerCase() === "color";
 
@@ -299,9 +320,8 @@ const ProductsTable = ({ className, onTotalChange }) => {
                         <>
                           <QuantityInput
                             quantity={quantity}
-                            onChange={(newQuantity) =>
-                              handleQuantityChange(item.product_variant_id, newQuantity)
-                            }
+                            stock={stock}
+                            onChange={(newQuantity) => handleQuantityChange(item.product_variant_id, newQuantity)}
                           />
                           <span className="mt-2 text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                             Còn lại: {stock}

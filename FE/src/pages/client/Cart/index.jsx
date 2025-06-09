@@ -4,50 +4,52 @@ import Constants from "../../../Constants";
 import { toast } from "react-toastify";
 
 export default function Cart({ className, type }) {
-  // const user = localStorage.getItem("user");
-  // const userId = user ? JSON.parse(user).id : null;
+   const token = localStorage.getItem("token");
 
-  // if (!userId) {
-  //   toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-  //   return;
-  // }
-  // const [cartItems, setCartItems] = useState([]);
-  // const [loading, setLoading] = useState(false);
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
+      return;
+    }
 
-  // useEffect(() => {
-  //   fetchCart();
-  // }, []);
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // const fetchCart = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
-  //       params: { userId },
-  //     });
-  //     setCartItems(res.data.data);
-  //   } catch (error) {
-  //     console.error("Error fetching cart:", error);
-  //     toast.error("Unable to load cart");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  useEffect(() => {
+    fetchCart();
+  }, []);
 
-  // const newestItems = cartItems.slice(-3);
+  const fetchCart = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setCartItems(res.data.data);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+      toast.error("Unable to load cart");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // const subtotal = newestItems.reduce((total, item) => {
-  //   const price = parseFloat(item.variant?.price || 0);
-  //   const quantity = item.quantity;
-  //   return total + price * quantity;
-  // }, 0);
+  const newestItems = cartItems.slice(-3);
+
+  const subtotal = newestItems.reduce((total, item) => {
+    const price = parseFloat(item.variant?.price || 0);
+    const quantity = item.quantity;
+    return total + price * quantity;
+  }, 0);
 
   return (
     <div
-      // style={{ boxShadow: "0px 15px 50px 0px rgba(0, 0, 0, 0.14)" }}
-      // className={`w-[300px] bg-white border-t-[3px] ${type === 3 ? "border-qh3-blue" : "cart-wrapper"
-      //   } ${className || ""}`}
+      style={{ boxShadow: "0px 15px 50px 0px rgba(0, 0, 0, 0.14)" }}
+      className={`w-[300px] bg-white border-t-[3px] ${type === 3 ? "border-qh3-blue" : "cart-wrapper"
+        } ${className || ""}`}
     >
-      {/* <div className="w-full h-full">
+      <div className="w-full h-full">
         <div className="product-items h-[310px] overflow-y-scroll">
           <ul>
             {loading ? (
@@ -132,7 +134,7 @@ export default function Cart({ className, type }) {
             Nhận trả lại trong vòng <span className="text-qblack">30 ngày</span>
           </p>
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }

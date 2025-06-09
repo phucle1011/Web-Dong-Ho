@@ -16,8 +16,8 @@ export default function CardPage({ cart = true }) {
   const [promoCode, setPromoCode] = useState("");
   const [error, setError] = useState("");
   const [activePromotions, setActivePromotions] = useState([]);
+  const [selectedProductVariants, setSelectedProductVariants] = useState([]);
 
-  // Lấy danh sách voucher active dựa trên tổng tiền đơn hàng
   useEffect(() => {
     const fetchActivePromotions = async () => {
       try {
@@ -48,7 +48,6 @@ export default function CardPage({ cart = true }) {
     fetchActivePromotions();
   }, [totalPrice]);
 
-  // Tính toán giảm giá dựa trên voucher đã chọn và tổng tiền
   useEffect(() => {
     if (selectedVoucher) {
       if (selectedVoucher.discount_type === "shipping") {
@@ -70,7 +69,6 @@ export default function CardPage({ cart = true }) {
     }
   }, [selectedVoucher, totalPrice]);
 
-  // Khi nhập mã giảm giá, bỏ chọn voucher và reset lỗi
   useEffect(() => {
     if (promoCode) {
       setSelectedVoucher(null);
@@ -162,7 +160,11 @@ export default function CardPage({ cart = true }) {
           </div>
           <div className="w-full mt-[23px]">
             <div className="container-x mx-auto">
-              <ProductsTable className="mb-[30px]" onTotalChange={setTotalPrice} />
+              <ProductsTable
+                className="mb-[30px]"
+                onTotalChange={setTotalPrice}
+                onSelectedItemsChange={setSelectedProductVariants}
+              />
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                 <div className="w-[150px] h-[50px]">
@@ -331,11 +333,17 @@ export default function CardPage({ cart = true }) {
                     </div>
                   </div>
 
-                  <Link to="/checkout">
-                    <div className="w-full h-[50px] black-btn flex justify-center items-center">
-                      <span className="text-sm font-semibold">Tiến hành thanh toán</span>
+                  {selectedProductVariants.length > 0 ? (
+                    <Link to="/checkout">
+                      <div className="w-full h-[50px] black-btn flex justify-center items-center">
+                        <span className="text-sm font-semibold">Tiến hành thanh toán</span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="w-full h-[50px] bg-gray-300 flex justify-center items-center cursor-not-allowed">
+                      <span className="text-sm font-semibold text-gray-500">Tiến hành thanh toán</span>
                     </div>
-                  </Link>
+                  )}
                 </div>
               </div>
             </div>
