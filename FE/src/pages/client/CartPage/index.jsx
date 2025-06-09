@@ -17,11 +17,13 @@ export default function CardPage({ cart = true }) {
   const [error, setError] = useState("");
   const [activePromotions, setActivePromotions] = useState([]);
   const [selectedProductVariants, setSelectedProductVariants] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchActivePromotions = async () => {
+      setIsLoading(true);
       try {
-        const token = sessionStorage.getItem("token");
+        const token = localStorage.getItem("token");
         if (!token) {
           setError("Vui lòng đăng nhập để xem mã giảm giá.");
           setActivePromotions([]);
@@ -43,36 +45,54 @@ export default function CardPage({ cart = true }) {
         } else {
           setError("Không thể tải danh sách mã giảm giá.");
         }
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchActivePromotions();
   }, [totalPrice]);
 
   useEffect(() => {
+    let voucherDiscount = 0;
     if (selectedVoucher) {
+      if (totalPrice < selectedVoucher.min_price_threshold) {
+        setSelectedVoucher(null);
+        setError(`Đơn hàng phải tối thiểu ${selectedVoucher.min_price_threshold.toLocaleString()}₫ để sử dụng voucher này.`);
+        return;
+      }
       if (selectedVoucher.discount_type === "shipping") {
-        setDiscountInfo({ discountAmount: 0, max_price: 0 });
+        voucherDiscount = 0;
       } else if (selectedVoucher.discount_type === "percentage") {
-        const discount = Math.min(
+        voucherDiscount = Math.min(
           (totalPrice * selectedVoucher.discount_value) / 100,
           selectedVoucher.max_price || Infinity
         );
-        setDiscountInfo({ discountAmount: discount, max_price: selectedVoucher.max_price });
       } else if (selectedVoucher.discount_type === "fixed") {
-        const discount = Math.min(selectedVoucher.discount_value, totalPrice);
-        setDiscountInfo({ discountAmount: discount, max_price: selectedVoucher.max_price });
+        voucherDiscount = Math.min(selectedVoucher.discount_value, totalPrice);
       }
-      setError("");
-      setPromoCode("");
-    } else {
-      setDiscountInfo(null);
     }
+
+    setDiscountInfo((prev) => {
+      const promoDiscount = prev?.promoDiscount || 0;
+      const totalDiscount = Math.min(voucherDiscount + promoDiscount, totalPrice);
+      return {
+        ...prev,
+        voucherDiscount,
+        promoDiscount,
+        discountAmount: totalDiscount,
+        max_price: selectedVoucher?.max_price || prev?.max_price || 0,
+      };
+    });
   }, [selectedVoucher, totalPrice]);
 
   useEffect(() => {
-    if (promoCode) {
-      setSelectedVoucher(null);
-      setDiscountInfo(null);
+    if (!promoCode) {
+      setDiscountInfo((prev) => ({
+        ...prev,
+        promoDiscount: 0,
+        discountAmount: prev?.voucherDiscount || 0,
+        max_price: prev?.max_price || 0,
+      }));
       setError("");
     }
   }, [promoCode]);
@@ -81,9 +101,7 @@ export default function CardPage({ cart = true }) {
     if (selectedVoucher && selectedVoucher.id === voucher.id) {
       setSelectedVoucher(null);
       setError("");
-      return;
-    }
-    if (totalPrice >= voucher.min_price_threshold) {
+    } else if (totalPrice >= voucher.min_price_threshold) {
       setSelectedVoucher(voucher);
       setError("");
     } else {
@@ -98,8 +116,9 @@ export default function CardPage({ cart = true }) {
       setError("Vui lòng nhập mã giảm giá.");
       return;
     }
+    setIsLoading(true);
     try {
-      const token = sessionStorage.getItem("token");
+      const token = localStorage.getItem("token");
       if (!token) {
         setError("Vui lòng đăng nhập để áp dụng mã giảm giá.");
         return;
@@ -117,18 +136,40 @@ export default function CardPage({ cart = true }) {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         throw new Error(data.message || "Có lỗi xảy ra khi áp dụng mã.");
       }
+      if (!data.data) {
+        throw new Error("Dữ liệu giảm giá không hợp lệ.");
+      }
 
-      setDiscountInfo(data.data);
-      setSelectedVoucher(null);
+      const promoDiscount = data.data.discountAmount;
+      const voucherDiscount = discountInfo?.voucherDiscount || 0;
+      const totalDiscount = Math.min(voucherDiscount + promoDiscount, totalPrice);
+
+      setDiscountInfo((prev) => ({
+        ...data.data,
+        promoDiscount,
+        voucherDiscount,
+        discountAmount: totalDiscount,
+        max_price: selectedVoucher?.max_price || data.data.max_price || 0,
+      }));
       setError("");
     } catch (err) {
-      setDiscountInfo(null);
+      setDiscountInfo((prev) => ({
+        ...prev,
+        promoDiscount: 0,
+        discountAmount: prev?.voucherDiscount || 0,
+      }));
       setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleClearPromoCode = () => {
+    setPromoCode("");
+    setError("");
   };
 
   const finalTotal = discountInfo ? totalPrice - discountInfo.discountAmount : totalPrice;
@@ -167,20 +208,31 @@ export default function CardPage({ cart = true }) {
               />
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                <div className="w-[150px] h-[50px]">
+                <div className="relative w-[150px] h-[50px]">
                   <InputCom
                     type="text"
                     placeholder="Mã giảm giá"
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
                   />
+                  {promoCode && (
+                    <button
+                      type="button"
+                      onClick={handleClearPromoCode}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      aria-label="Xóa mã giảm giá"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
                   onClick={handleApplyDiscount}
                   className="w-[120px] h-[50px] black-btn"
+                  disabled={isLoading}
                 >
-                  <span className="text-sm font-semibold">Áp dụng</span>
+                  <span className="text-sm font-semibold">{isLoading ? "Đang xử lý..." : "Áp dụng"}</span>
                 </button>
               </div>
 
@@ -190,53 +242,61 @@ export default function CardPage({ cart = true }) {
 
               <div className="voucher-section mb-6 max-w-md">
                 <h3 className="text-[16px] font-semibold text-gray-800 mb-3">Chọn Voucher</h3>
-                {activePromotions.map((voucher) => {
-                  const disabled = totalPrice < voucher.min_price_threshold;
-                  const isSelected = selectedVoucher && selectedVoucher.id === voucher.id;
-                  return (
-                    <div
-                      key={voucher.id}
-                      className={`flex items-center justify-between p-3 border rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200
-                      ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 hover:bg-gray-50"} 
-                      ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-                      onClick={() => !disabled && handleVoucherSelect(voucher)}
-                      style={{ maxWidth: '400px' }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if ((e.key === "Enter" || e.key === " ") && !disabled) {
-                          handleVoucherSelect(voucher);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center flex-1 min-w-0">
-                        {voucher.discount_type === "shipping" && (
-                          <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
-                        )}
-                        {voucher.discount_type !== "shipping" && (
-                          <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
-                        )}
-                        <span className="text-sm flex-1 text-gray-700 flex-wrap">
-                          {voucher.name}{" "}
-                          {voucher.discount_type === 'percentage' && (
-                            <span className="text-gray-500">
-                              (Giảm {voucher.discount_type === 'percentage' && voucher.discount_value}%{voucher.max_price ? `, Tối đa ${voucher.max_price.toLocaleString()}₫` : ''})
-                            </span>
+                {isLoading ? (
+                  <p className="text-gray-500">Đang tải danh sách voucher...</p>
+                ) : activePromotions.length === 0 ? (
+                  <p className="text-gray-500">Không có voucher khả dụng.</p>
+                ) : (
+                  activePromotions.map((voucher) => {
+                    const disabled = totalPrice < voucher.min_price_threshold;
+                    const isSelected = selectedVoucher && selectedVoucher.id === voucher.id;
+                    return (
+                      <div
+                        key={voucher.id}
+                        className={`flex items-center justify-between p-3 border rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200
+                          ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 hover:bg-gray-50"} 
+                          ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                        onClick={() => !disabled && handleVoucherSelect(voucher)}
+                        style={{ maxWidth: '400px' }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Chọn voucher ${voucher.name}${disabled ? ", không khả dụng" : ""}`}
+                        aria-selected={isSelected}
+                        onKeyDown={(e) => {
+                          if ((e.key === "Enter" || e.key === " ") && !disabled) {
+                            handleVoucherSelect(voucher);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center flex-1 min-w-0">
+                          {voucher.discount_type === "shipping" && (
+                            <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
                           )}
-                          {voucher.discount_type === 'fixed' && (
-                            <span className="text-gray-500">
-                              (Giảm {voucher.discount_value.toLocaleString()}₫)
-                            </span>
+                          {voucher.discount_type !== "shipping" && (
+                            <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
                           )}
-                          <span className="text-gray-500"> (Đơn tối thiểu {voucher.min_price_threshold.toLocaleString()}₫)</span>
-                        </span>
+                          <span className="text-sm flex-1 text-gray-700 flex-wrap">
+                            {voucher.name}{" "}
+                            {voucher.discount_type === 'percentage' && (
+                              <span className="text-gray-500">
+                                (Giảm {voucher.discount_value}%{voucher.max_price ? `, Tối đa ${voucher.max_price.toLocaleString()}₫` : ''})
+                              </span>
+                            )}
+                            {voucher.discount_type === 'fixed' && (
+                              <span className="text-gray-500">
+                                (Giảm {voucher.discount_value.toLocaleString()}₫)
+                              </span>
+                            )}
+                            <span className="text-gray-500"> (Đơn tối thiểu {voucher.min_price_threshold.toLocaleString()}₫)</span>
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <span className="text-green-500 font-bold text-xl ml-3 flex-shrink-0">✓</span>
+                        )}
                       </div>
-                      {isSelected && (
-                        <span className="text-green-500 font-bold text-xl ml-3 flex-shrink-0">✓</span>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               <div className="w-full mt-[30px] flex sm:justify-end">
@@ -250,14 +310,23 @@ export default function CardPage({ cart = true }) {
                     </div>
                     {discountInfo && (
                       <>
-                        <div className="flex justify-between mb-3">
-                          <p className="text-[15px] font-medium text-qblack">Giảm giá</p>
-                          <p className="text-[15px] font-medium text-green-600">
-                            -{discountInfo.discountAmount.toLocaleString()}₫
-                          </p>
-                        </div>
-
-                        {discountInfo.max_price && (
+                        {discountInfo.promoDiscount > 0 && (
+                          <div className="flex justify-between mb-3">
+                            <p className="text-[15px] font-medium text-qblack">Giảm giá (Mã đặc biệt)</p>
+                            <p className="text-[15px] font-medium text-green-600">
+                              -{discountInfo.promoDiscount.toLocaleString()}₫
+                            </p>
+                          </div>
+                        )}
+                        {discountInfo.voucherDiscount > 0 && (
+                          <div className="flex justify-between mb-3">
+                            <p className="text-[15px] font-medium text-qblack">Giảm giá (Voucher)</p>
+                            <p className="text-[15px] font-medium text-green-600">
+                              -{discountInfo.voucherDiscount.toLocaleString()}₫
+                            </p>
+                          </div>
+                        )}
+                        {discountInfo.max_price && (discountInfo.voucherDiscount > 0 || discountInfo.promoDiscount > 0) && (
                           <div className="flex justify-between mb-3">
                             <p className="text-[13px] text-qgraytwo italic">Giảm tối đa</p>
                             <p className="text-[13px] text-qgraytwo italic">
@@ -265,7 +334,6 @@ export default function CardPage({ cart = true }) {
                             </p>
                           </div>
                         )}
-
                         <div className="flex justify-between mb-3">
                           <p className="text-[15px] font-medium text-qblack">Tổng sau giảm</p>
                           <p className="text-[15px] font-medium text-qred">
@@ -274,7 +342,6 @@ export default function CardPage({ cart = true }) {
                         </div>
                       </>
                     )}
-
                     <div className="w-full h-[1px] bg-[#EDEDED]"></div>
                   </div>
 
@@ -328,7 +395,7 @@ export default function CardPage({ cart = true }) {
                     <div className="flex justify-between">
                       <p className="text-[18px] font-medium text-qblack">Tổng cộng</p>
                       <p className="text-[18px] font-medium text-qred">
-                        {finalTotal.toLocaleString()}₫
+                        {totalPrice.toLocaleString("vi-VN")}₫
                       </p>
                     </div>
                   </div>
@@ -343,6 +410,9 @@ export default function CardPage({ cart = true }) {
                     <div className="w-full h-[50px] bg-gray-300 flex justify-center items-center cursor-not-allowed">
                       <span className="text-sm font-semibold text-gray-500">Tiến hành thanh toán</span>
                     </div>
+                  )}
+                  {selectedProductVariants.length === 0 && (
+                    <p className="text-red-500 text-sm mt-2">Vui lòng chọn ít nhất một sản phẩm để thanh toán.</p>
                   )}
                 </div>
               </div>

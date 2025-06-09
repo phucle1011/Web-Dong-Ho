@@ -269,7 +269,11 @@ function PromotionGetAll() {
                                 <td className="border p-2 text-center">
                                     {promo.discount_type === "percentage"
                                         ? `${promo.discount_value}%`
-                                        : `${promo.discount_value.toLocaleString()}đ`}
+
+                                        : `${Number(promo.discount_value).toLocaleString("vi-VN", {
+                                            style: "currency",
+                                            currency: "VND",
+                                        })}`}
                                 </td>
                                 <td className="border p-2 text-center">{promo.quantity > 0 ? promo.quantity : "Hết lượt"}</td>
                                 <td className="border p-2 text-center">{formatDate(promo.start_date)}</td>
