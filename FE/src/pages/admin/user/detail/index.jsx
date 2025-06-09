@@ -131,15 +131,15 @@ function UserDetail() {
     }
   };
 
-  const fetchProvinces = async () => {
-    try {
-      const response = await axios.get("https://open.oapi.vn/location/provinces?page=0&size=30&query= ");
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách tỉnh:", error);
-      return [];
-    }
-  };
+  // const fetchProvinces = async () => {
+  //   try {
+  //     const response = await axios.get("https://open.oapi.vn/location/provinces?page=0&size=30&query= ");
+  //     return response.data.data || [];
+  //   } catch (error) {
+  //     console.error("Lỗi khi lấy danh sách tỉnh:", error);
+  //     return [];
+  //   }
+  // };
 
   const fetchDistricts = async (provinceId) => {
     if (!provinceId) return [];
@@ -281,12 +281,6 @@ function UserDetail() {
       <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${addressData?.address_line || ''}">
     </div>
     <div class="mb-4">
-      <label for="swal-city" class="form-label font-semibold block mb-1">Tỉnh/Thành phố:</label>
-      <select id="swal-city" class="form-select w-full border rounded px-3 py-2">
-        ${cityOptions}
-      </select>
-    </div>
-    <div class="mb-4">
       <label for="swal-district" class="form-label font-semibold block mb-1">Quận/Huyện:</label>
       <select id="swal-district" class="form-select w-full border rounded px-3 py-2" ${isEdit && addressData ? '' : 'disabled'}>
         <option value="">${addressData?.district || ''}</option>
@@ -379,8 +373,6 @@ function UserDetail() {
       cancelButtonText: "Hủy",
       preConfirm: () => {
         const address_line = Swal.getPopup().querySelector("#swal-address_line").value.trim();
-        const cityId = Swal.getPopup().querySelector("#swal-city").value;
-        const cityName = Swal.getPopup().querySelector("#swal-city").selectedOptions[0]?.text || "";
         const districtId = Swal.getPopup().querySelector("#swal-district").value;
         const districtName = Swal.getPopup().querySelector("#swal-district").selectedOptions[0]?.text || "";
         const provinceId = Swal.getPopup().querySelector("#swal-province").value;
@@ -395,7 +387,6 @@ function UserDetail() {
         return {
           address_line,
           cityId,
-          city: cityName,
           districtId,
           district: districtName,
           provinceId,
@@ -580,7 +571,7 @@ function UserDetail() {
             <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
               <thead className="bg-gray-100">
                 <tr>
-                  {["ID", "Địa chỉ", "Thành phố", "Quận/Huyện", "Xã/Phường", "Mặc định", "Thao tác"].map(header => (
+                  {["ID", "Địa chỉ", "Quận/Huyện", "Xã/Phường", "Mặc định", "Thao tác"].map(header => (
                     <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                       {header}
                     </th>
@@ -592,7 +583,6 @@ function UserDetail() {
                   <tr key={addr.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">{addr.id}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.city}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{addr.district}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{addr.province}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">

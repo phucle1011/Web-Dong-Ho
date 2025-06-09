@@ -129,11 +129,11 @@ export default function Signup() {
         toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực.");
         navigate("/login");
       } else {
-        alert(result.message || "Đăng ký thất bại!");
+        toast.error(result.message || "Đăng ký thất bại!");
       }
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau!");
+      toast.error("Có lỗi xảy ra khi đăng ký. Vui lòng thử lại sau!");
     } finally {
       setLoading(false);
     }
