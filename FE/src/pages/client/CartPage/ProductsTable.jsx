@@ -80,11 +80,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
   const handleDelete = async ({ id }) => {
     const token = localStorage.getItem("token");
 
-    if (!token) {
-      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-      return;
-    }
-
     try {
       await axios.delete(`${Constants.DOMAIN_API}/delete-to-carts/${id}`, {
         headers: {

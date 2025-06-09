@@ -4,12 +4,7 @@ import Constants from "../../../Constants";
 import { toast } from "react-toastify";
 
 export default function Cart({ className, type }) {
-   const token = localStorage.getItem("token");
-
-    if (!token) {
-      toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-      return;
-    }
+  const token = localStorage.getItem("token");
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -19,6 +14,11 @@ export default function Cart({ className, type }) {
   }, []);
 
   const fetchCart = async () => {
+    if (!token) {
+      console.warn("Chưa đăng nhập, không thể tải giỏ hàng");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
@@ -28,8 +28,8 @@ export default function Cart({ className, type }) {
       });
       setCartItems(res.data.data);
     } catch (error) {
-      console.error("Error fetching cart:", error);
-      toast.error("Unable to load cart");
+      console.error("Lỗi gọi API:", error.response?.data || error.message);
+      toast.error("Không thể tải giỏ hàng");
     } finally {
       setLoading(false);
     }
