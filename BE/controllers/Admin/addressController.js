@@ -79,94 +79,89 @@ class AddressController {
     }
   }
 
-  // Thêm địa chỉ mới
- static async addAddress(req, res) {
-  const {
-    address_line,
-    city,
-    district,
-    province,
-    is_default
-  } = req.body;
-
-  const user_id = req.params.userId;
-
-  try {
-    if (!user_id) {
-      return res.status(400).json({ success: false, message: 'user_id là bắt buộc' });
-    }
-
-    // Nếu is_default là true, cập nhật các địa chỉ khác về false
-    if (is_default) {
-      await AddressModel.update({ is_default: false }, { where: { user_id } });
-    }
-
-    const newAddress = await AddressModel.create({
+  static async addAddress(req, res) {
+    const {
       address_line,
       city,
       district,
-      province,
-      is_default: !!is_default, // ép boolean
-      user_id
-    });
+      ward,
+      is_default
+    } = req.body;
 
-    return res.status(201).json({ success: true, data: newAddress, message: 'Thêm địa chỉ thành công' });
-  } catch (error) {
-    console.error('Error in AddressController.addAddress:', error);
-    return res.status(500).json({ success: false, message: 'Lỗi server khi thêm địa chỉ' });
-  }
-}
+    const user_id = req.params.userId;
 
-  // Cập nhật địa chỉ
- static async updateAddress(req, res) {
-  const { id } = req.params;
-  const {
-    address_line,
-    city,
-    district,
-    province,
-    is_default
-  } = req.body;
+    try {
+      if (!user_id) {
+        return res.status(400).json({ success: false, message: 'user_id là bắt buộc' });
+      }
 
-  try {
-    const address = await AddressModel.findOne({ where: { id } });
-    if (!address) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ' });
-    }
+      if (is_default) {
+        await AddressModel.update({ is_default: false }, { where: { user_id } });
+      }
 
-    // Nếu đang set địa chỉ này thành mặc định thì set các địa chỉ khác của user về false
-    if (is_default) {
-      await AddressModel.update(
-        { is_default: false },
-        {
-          where: {
-            user_id: address.user_id,
-            id: { [Op.ne]: id } // Không update địa chỉ hiện tại
-          }
-        }
-      );
-    }
-
-    await AddressModel.update(
-      {
+      const newAddress = await AddressModel.create({
         address_line,
         city,
         district,
-        province,
-        is_default: !!is_default
-      },
-      { where: { id } }
-    );
+        ward,
+        is_default: !!is_default, 
+        user_id
+      });
 
-    return res.status(200).json({ success: true, message: 'Cập nhật địa chỉ thành công' });
-  } catch (error) {
-    console.error('Error in AddressController.updateAddress:', error);
-    return res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật địa chỉ' });
+      return res.status(201).json({ success: true, data: newAddress, message: 'Thêm địa chỉ thành công' });
+    } catch (error) {
+      console.error('Error in AddressController.addAddress:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server khi thêm địa chỉ' });
+    }
   }
-}
 
+  static async updateAddress(req, res) {
+    const { id } = req.params;
+    const {
+      address_line,
+      city,
+      district,
+      ward,
+      is_default
+    } = req.body;
 
-  // Xóa địa chỉ
+    try {
+      const address = await AddressModel.findOne({ where: { id } });
+      if (!address) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ' });
+      }
+
+      // Nếu đang set địa chỉ này thành mặc định thì set các địa chỉ khác của user về false
+      if (is_default) {
+        await AddressModel.update(
+          { is_default: false },
+          {
+            where: {
+              user_id: address.user_id,
+              id: { [Op.ne]: id } 
+            }
+          }
+        );
+      }
+
+      await AddressModel.update(
+        {
+          address_line,
+          city,
+          district,
+          ward,
+          is_default: !!is_default
+        },
+        { where: { id } }
+      );
+
+      return res.status(200).json({ success: true, message: 'Cập nhật địa chỉ thành công' });
+    } catch (error) {
+      console.error('Error in AddressController.updateAddress:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật địa chỉ' });
+    }
+  }
+
   static async deleteAddress(req, res) {
     const { id } = req.params;
 

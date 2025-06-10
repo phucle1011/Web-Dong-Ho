@@ -4,6 +4,10 @@ import Constants from "../../../../Constants";
 import { toast } from "react-toastify";
 import axios from "axios";
 import Swal from "sweetalert2";
+import {
+  FaTrashAlt,
+  FaEdit 
+} from "react-icons/fa";
 
 function UserDetail() {
   const { id } = useParams();
@@ -14,6 +18,15 @@ function UserDetail() {
   const [selectedNewStatus, setSelectedNewStatus] = useState('');
   const [reasonOption, setReasonOption] = useState('');
   const [customReason, setCustomReason] = useState('');
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedWard, setSelectedWard] = useState("");
+  const [isEdit, setIsEdit] = useState("");
+  const [addressData, setAddressData] = useState("");
 
   useEffect(() => {
     fetchUserDetail();
@@ -68,6 +81,7 @@ function UserDetail() {
     }
   };
 
+
   // Danh sách lý do theo trạng thái
   const getReasonOptionsForStatus = (status) => {
     switch (status) {
@@ -100,15 +114,6 @@ function UserDetail() {
             <option value="Khác">Khác</option>
           </>
         );
-        // case "pending":
-        return (
-          <>
-            <option value="">-- Chọn lý do --</option>
-            <option value="Chờ xác minh email">Chờ xác minh email</option>
-            <option value="Chờ duyệt tài liệu">Chờ duyệt tài liệu</option>
-            <option value="Khác">Khác</option>
-          </>
-        );
       default:
         return (
           <>
@@ -131,65 +136,294 @@ function UserDetail() {
     }
   };
 
-  // const fetchProvinces = async () => {
-  //   try {
-  //     const response = await axios.get("https://open.oapi.vn/location/provinces?page=0&size=30&query= ");
-  //     return response.data.data || [];
-  //   } catch (error) {
-  //     console.error("Lỗi khi lấy danh sách tỉnh:", error);
-  //     return [];
-  //   }
-  // };
 
-  const fetchDistricts = async (provinceId) => {
-    if (!provinceId) return [];
-    try {
-      const response = await axios.get(`https://open.oapi.vn/location/districts/ ${provinceId}?page=0&size=30&query=`);
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách quận/huyện:", error);
-      return [];
-    }
+  // Phần address
+  const getProvinceName = (list, id) => {
+    const item = list.find(i => i.ProvinceID == id);
+    return item?.ProvinceName || '';
   };
 
-  const fetchWards = async (districtId) => {
-    if (!districtId) return [];
-    try {
-      const response = await axios.get(`https://open.oapi.vn/location/wards/ ${districtId}?page=0&size=30&query=`);
-      return response.data.data || [];
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách xã/phường:", error);
-      return [];
-    }
+  const getDistrictName = (list, id) => {
+    const item = list.find(i => i.DistrictID == id);
+    return item?.DistrictName || '';
+  };
+
+  const getWardName = (list, id) => {
+    const item = list.find(i => i.WardCode == id);
+    return item?.WardName || '';
+  };
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/provinces`);
+        setProvinces(res.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách tỉnh:", error);
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProvince) return;
+
+    const fetchDistricts = async () => {
+      try {
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${selectedProvince}`
+        );
+        setDistricts(res.data);
+        setWards([]);
+        setSelectedDistrict("");
+        setSelectedWard("");
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách quận:", error);
+      }
+    };
+
+    fetchDistricts();
+  }, [selectedProvince]);
+
+  useEffect(() => {
+    if (!selectedDistrict) return;
+
+    const fetchWards = async () => {
+      try {
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${selectedDistrict}`
+        );
+        setWards(res.data);
+        setSelectedWard("");
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách phường:", error);
+      }
+    };
+
+    fetchWards();
+  }, [selectedDistrict]);
+
+  const showAddressModal = (address = null) => {
+    const isEdit = !!address;
+
+    Swal.fire({
+      title: isEdit ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới",
+      html: `
+      <div class="container mt-3 text-left">
+        <form>
+          <div class="mb-4">
+            <label for="swal-address_line" class="form-label font-semibold block mb-1">Địa chỉ:</label>
+            <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${address?.address_line || ''}">
+          </div>
+          <div class="mb-4">
+            <label for="swal-province" class="form-label font-semibold block mb-1">Tỉnh/Thành phố:</label>
+            <select id="swal-province" class="form-select w-full border rounded px-3 py-2">
+              <option value="">Chọn tỉnh/thành phố</option>
+              ${provinces.map(p => `<option value="${p.ProvinceID}">${p.ProvinceName}</option>`).join("")}
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="swal-district" class="form-label font-semibold block mb-1">Quận/Huyện:</label>
+            <select id="swal-district" class="form-select w-full border rounded px-3 py-2" disabled>
+              <option value="">Chọn quận/huyện</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="swal-ward" class="form-label font-semibold block mb-1">Xã/Phường:</label>
+            <select id="swal-ward" class="form-select w-full border rounded px-3 py-2" disabled>
+              <option value="">Chọn xã/phường</option>
+            </select>
+          </div>
+          <div class="form-check mb-3 flex items-center">
+            <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${address?.is_default === 1 ? "checked" : ""}>
+            <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
+          </div>
+        </form>
+      </div>
+    `,
+      didOpen: async () => {
+        const provinceSelect = Swal.getPopup().querySelector("#swal-province");
+        const districtSelect = Swal.getPopup().querySelector("#swal-district");
+        const wardSelect = Swal.getPopup().querySelector("#swal-ward");
+        const addressInput = Swal.getPopup().querySelector("#swal-address_line");
+
+        const fetchDistricts = async (provinceId) => {
+          try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${provinceId}`);
+            return res.data;
+          } catch (err) {
+            console.error("Lỗi tải quận:", err);
+            return [];
+          }
+        };
+
+        const fetchWards = async (districtId) => {
+          try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${districtId}`);
+            return res.data;
+          } catch (err) {
+            console.error("Lỗi tải phường:", err);
+            return [];
+          }
+        };
+
+        // Hàm cập nhật địa chỉ đầy đủ vào ô input
+        const updateFullAddress = () => {
+          const provinceName = provinceSelect.options[provinceSelect.selectedIndex]?.text || "";
+          const districtName = districtSelect.options[districtSelect.selectedIndex]?.text || "";
+          const wardName = wardSelect.options[wardSelect.selectedIndex]?.text || "";
+
+          let fullAddress = "";
+
+          if (wardName && districtName && provinceName) {
+            fullAddress = `${wardName}, ${districtName}, ${provinceName}`;
+          } else if (districtName && provinceName) {
+            fullAddress = `${districtName}, ${provinceName}`;
+          } else if (provinceName) {
+            fullAddress = `${provinceName}`;
+          }
+
+          addressInput.value = fullAddress;
+        };
+
+        // Load dữ liệu cũ nếu là edit
+        if (isEdit && address) {
+          const province = provinces.find(p => p.ProvinceName === address.city);
+          if (province) {
+            provinceSelect.value = province.ProvinceID;
+
+            districtSelect.disabled = false;
+            const districts = await fetchDistricts(province.ProvinceID);
+            districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+            districts.forEach(d => {
+              const option = document.createElement("option");
+              option.value = d.DistrictID;
+              option.text = d.DistrictName;
+              if (d.DistrictName === address.district) option.selected = true;
+              districtSelect.appendChild(option);
+            });
+
+            // Lấy DistrictID từ dropdown quận đã chọn
+            const selectedDistrictOption = districtSelect.options[districtSelect.selectedIndex];
+            const districtId = selectedDistrictOption?.value;
+
+            if (districtId) {
+              wardSelect.disabled = false;
+              const wards = await fetchWards(districtId); // Dùng districtId ở đây ✅
+              wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+              wards.forEach(w => {
+                const option = document.createElement("option");
+                option.value = w.WardCode;
+                option.text = w.WardName;
+                if (w.WardName === address.ward) option.selected = true; // So sánh theo tên ✅
+                wardSelect.appendChild(option);
+              });
+            }
+          }
+
+          updateFullAddress();
+        }
+
+        // Sự kiện chọn tỉnh
+        provinceSelect.addEventListener("change", async (e) => {
+          const provinceId = e.target.value;
+          districtSelect.disabled = !provinceId;
+          wardSelect.disabled = true;
+          districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+          wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+
+          if (!provinceId) return;
+
+          const districts = await fetchDistricts(provinceId);
+          districts.forEach(d => {
+            const option = document.createElement("option");
+            option.value = d.DistrictID;
+            option.text = d.DistrictName;
+            districtSelect.appendChild(option);
+          });
+
+          updateFullAddress();
+        });
+
+        // Sự kiện chọn quận
+        districtSelect.addEventListener("change", async (e) => {
+          const districtId = e.target.value;
+          wardSelect.disabled = !districtId;
+          wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+
+          if (!districtId) return;
+
+          const wards = await fetchWards(districtId);
+          wards.forEach(w => {
+            const option = document.createElement("option");
+            option.value = w.WardCode;
+            option.text = w.WardName;
+            wardSelect.appendChild(option);
+          });
+
+          updateFullAddress();
+        });
+
+        // Sự kiện chọn phường
+        wardSelect.addEventListener("change", () => {
+          updateFullAddress();
+        });
+      },
+      showCancelButton: true,
+      confirmButtonText: isEdit ? "Cập nhật" : "Thêm",
+      cancelButtonText: "Hủy",
+      preConfirm: () => {
+        const address_line = Swal.getPopup().querySelector("#swal-address_line").value.trim();
+        const provinceSelect = Swal.getPopup().querySelector("#swal-province");
+        const districtSelect = Swal.getPopup().querySelector("#swal-district");
+        const wardSelect = Swal.getPopup().querySelector("#swal-ward");
+        const is_default = Swal.getPopup().querySelector("#swal-is_default").checked ? 1 : 0;
+
+        const city = provinceSelect.options[provinceSelect.selectedIndex]?.text || "";
+        const district = districtSelect.options[districtSelect.selectedIndex]?.text || "";
+        const ward = wardSelect.options[wardSelect.selectedIndex]?.text || "";
+
+        if (!city || !district || !ward) {
+          Swal.showValidationMessage("Vui lòng chọn đầy đủ tỉnh/quận/phường.");
+          return false;
+        }
+
+        return {
+          address_line,
+          city,
+          district,
+          ward,
+          is_default,
+        };
+      },
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        if (isEdit) {
+          await handleUpdateAddress(address.id, result.value);
+        } else {
+          await handleAddAddress(result.value);
+        }
+        fetchUserDetail();
+      }
+    });
   };
 
   const handleAddAddress = async (addressData) => {
     if (addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
       if (hasDefault) {
-        Swal.fire({
-          icon: "warning",
-          title: "Chỉ được có một địa chỉ mặc định!",
-          text: "Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ mới làm mặc định.",
-        });
+        toast.success("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
         return;
       }
     }
     try {
       const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
-      Swal.fire({
-        icon: "success",
-        title: "Thêm địa chỉ thành công!",
-        text: res.data.message,
-      });
+      toast.success("Thêm địa chỉ thành công");
       fetchUserDetail();
     } catch (error) {
       console.error("Lỗi khi thêm địa chỉ:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Lỗi!",
-        text: error.response?.data?.message || "Không thể thêm địa chỉ.",
-      });
+      toast.success("Thêm địa chỉ thất bại");
     }
   };
 
@@ -199,11 +433,7 @@ function UserDetail() {
         (addr) => addr.is_default === 1 && addr.id !== addressId
       );
       if (hasOtherDefault) {
-        Swal.fire({
-          icon: "warning",
-          title: "Chỉ được có một địa chỉ mặc định!",
-          text: "Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.",
-        });
+        toast.success("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
         return;
       }
     }
@@ -212,19 +442,11 @@ function UserDetail() {
         `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
         addressData
       );
-      Swal.fire({
-        icon: "success",
-        title: "Cập nhật địa chỉ thành công!",
-        text: res.data.message,
-      });
+      toast.success("Cập nhật địa chỉ thành công");
       fetchUserDetail();
     } catch (error) {
       console.error("Lỗi khi cập nhật địa chỉ:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Lỗi!",
-        text: error.response?.data?.message || "Không thể cập nhật địa chỉ.",
-      });
+      toast.success("Lỗi khi cập nhật địa chỉ");
     }
   };
 
@@ -262,156 +484,13 @@ function UserDetail() {
     });
   };
 
-  const showAddressModal = async (addressData = null) => {
-    const provinces = await fetchProvinces();
-    let cityOptions = `<option value="">${addressData?.city || ''}</option>`;
-    provinces.forEach((province) => {
-      cityOptions += `<option value="${province.id}" ${addressData?.cityId === province.id ? 'selected' : ''}>${province.name}</option>`;
-    });
-
-    const isEdit = !!addressData;
-
-    Swal.fire({
-      title: isEdit ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới",
-      html: `
-<div class="container mt-3 text-left">
-  <form>
-    <div class="mb-4">
-      <label for="swal-address_line" class="form-label font-semibold block mb-1">Địa chỉ:</label>
-      <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${addressData?.address_line || ''}">
-    </div>
-    <div class="mb-4">
-      <label for="swal-district" class="form-label font-semibold block mb-1">Quận/Huyện:</label>
-      <select id="swal-district" class="form-select w-full border rounded px-3 py-2" ${isEdit && addressData ? '' : 'disabled'}>
-        <option value="">${addressData?.district || ''}</option>
-      </select>
-    </div>
-    <div class="mb-4">
-      <label for="swal-province" class="form-label font-semibold block mb-1">Xã/Phường/Thị Trấn:</label>
-      <select id="swal-province" class="form-select w-full border rounded px-3 py-2" ${isEdit && addressData ? '' : 'disabled'}>
-        <option value="">${addressData?.province || ''}</option>
-      </select>
-    </div>
-    <div class="form-check mb-3 flex items-center">
-      <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${addressData?.is_default === 1 ? "checked" : ""}>
-      <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
-    </div>
-  </form>
-</div>
-`,
-      didOpen: async () => {
-        const citySelect = Swal.getPopup().querySelector("#swal-city");
-        const districtSelect = Swal.getPopup().querySelector("#swal-district");
-        const wardSelect = Swal.getPopup().querySelector("#swal-province");
-
-        if (isEdit && addressData) {
-          citySelect.value = addressData.cityId || "";
-          if (addressData.cityId) {
-            districtSelect.disabled = false;
-            const districts = await fetchDistricts(addressData.cityId);
-            let districtOptions = '<option value="">Chọn quận/huyện</option>';
-            districts.forEach((d) => {
-              districtOptions += `<option value="${d.id}" ${parseInt(addressData.districtId) === d.id ? 'selected' : ''}>${d.name}</option>`;
-            });
-            districtSelect.innerHTML = districtOptions;
-            if (districtSelect.querySelector(`option[value="${addressData.districtId}"]`)) {
-              districtSelect.value = addressData.districtId;
-            }
-            if (addressData.districtId) {
-              wardSelect.disabled = false;
-              const wards = await fetchWards(addressData.districtId);
-              let wardOptions = '<option value="">Chọn xã/phường</option>';
-              wards.forEach((w) => {
-                wardOptions += `<option value="${w.id}" ${parseInt(addressData.wardId) === w.id ? 'selected' : ''}>${w.name}</option>`;
-              });
-              wardSelect.innerHTML = wardOptions;
-              if (wardSelect.querySelector(`option[value="${addressData.wardId}"]`)) {
-                wardSelect.value = addressData.wardId;
-              }
-            }
-          }
-        }
-
-        citySelect.addEventListener("change", async (e) => {
-          const provinceId = e.target.value;
-          if (!provinceId) {
-            districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
-            districtSelect.disabled = true;
-            wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-            wardSelect.disabled = true;
-            return;
-          }
-          districtSelect.disabled = false;
-          const districts = await fetchDistricts(provinceId);
-          let districtOptions = '<option value="">Chọn quận/huyện</option>';
-          districts.forEach((d) => {
-            districtOptions += `<option value="${d.id}">${d.name}</option>`;
-          });
-          districtSelect.innerHTML = districtOptions;
-          wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-          wardSelect.disabled = true;
-        });
-
-        districtSelect.addEventListener("change", async (e) => {
-          const districtId = e.target.value;
-          if (!districtId) {
-            wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-            wardSelect.disabled = true;
-            return;
-          }
-          wardSelect.disabled = false;
-          const wards = await fetchWards(districtId);
-          let wardOptions = '<option value="">Chọn xã/phường</option>';
-          wards.forEach((w) => {
-            wardOptions += `<option value="${w.id}">${w.name}</option>`;
-          });
-          wardSelect.innerHTML = wardOptions;
-        });
-      },
-      showCancelButton: true,
-      confirmButtonText: isEdit ? "Cập nhật" : "Thêm",
-      cancelButtonText: "Hủy",
-      preConfirm: () => {
-        const address_line = Swal.getPopup().querySelector("#swal-address_line").value.trim();
-        const districtId = Swal.getPopup().querySelector("#swal-district").value;
-        const districtName = Swal.getPopup().querySelector("#swal-district").selectedOptions[0]?.text || "";
-        const provinceId = Swal.getPopup().querySelector("#swal-province").value;
-        const provinceName = Swal.getPopup().querySelector("#swal-province").selectedOptions[0]?.text || "";
-        const is_default = Swal.getPopup().querySelector("#swal-is_default").checked ? 1 : 0;
-
-        if (!address_line || !cityId || !districtId || !provinceId) {
-          Swal.showValidationMessage("Vui lòng nhập đầy đủ thông tin địa chỉ");
-          return false;
-        }
-
-        return {
-          address_line,
-          cityId,
-          districtId,
-          district: districtName,
-          provinceId,
-          province: provinceName,
-          is_default,
-        };
-      },
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (isEdit) {
-          handleUpdateAddress(addressData.id, result.value);
-        } else {
-          handleAddAddress(result.value);
-        }
-      }
-    });
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white-50 min-h-screen">
       {/* Thông tin người dùng */}
       <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
-        <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">
+        <h1 className="text-xl font-semibold">
           Thông Tin người dùng
-        </h3>
+        </h1>
 
         {/* Layout: Avatar bên trái - Thông tin bên phải */}
         <div className="flex flex-col md:flex-row gap-6">
@@ -555,13 +634,13 @@ function UserDetail() {
 
       {/* Phần địa chỉ */}
       <section className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h3 className="text-2xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
+        <h3 className="text-xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
           Địa chỉ
           <button
             className="px-2 py-1 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition duration-200 ease-in-out text-sm flex items-center"
             onClick={() => showAddressModal()}
           >
-            <i className="fas fa-plus mr-1 text-xs"></i> Thêm địa chỉ mới
+            <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ mới
           </button>
         </h3>
         {addresses.length === 0 ? (
@@ -571,7 +650,7 @@ function UserDetail() {
             <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
               <thead className="bg-gray-100">
                 <tr>
-                  {["ID", "Địa chỉ", "Quận/Huyện", "Xã/Phường", "Mặc định", "Thao tác"].map(header => (
+                  {["ID", "Địa chỉ", "Xã/Phường", "Quận/Huyện", "Tỉnh/Thành phố", "Mặc định", "Thao tác"].map(header => (
                     <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                       {header}
                     </th>
@@ -583,8 +662,9 @@ function UserDetail() {
                   <tr key={addr.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">{addr.id}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.ward}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{addr.district}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.province}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{addr.city}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">
                       {addr.is_default === 1 ? (
                         <span className="text-green-600">Có</span>
@@ -594,16 +674,16 @@ function UserDetail() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap space-x-2">
                       <button
-                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-green-700"
                         onClick={() => showAddressModal(addr)}
                       >
-                        Cập nhật
+                        <FaEdit size={24} />
                       </button>
                       <button
-                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                        className="text-2xl p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                         onClick={() => handleDeleteAddress(addr.id)}
                       >
-                        Xóa
+                        <FaTrashAlt/>
                       </button>
                     </td>
                   </tr>

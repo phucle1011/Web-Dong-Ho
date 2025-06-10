@@ -158,7 +158,7 @@ function OrderDetail() {
       </div>
 
       <div className="bg-white shadow-md rounded-md p-4">
-        <h3 className="font-semibold mb-3">Sản phẩm</h3>
+        <h1 className="text-xl font-semibold">Sản phẩm</h1>
         <table className="w-full border-collapse border text-center">
           <thead>
             <tr className="bg-gray-200">

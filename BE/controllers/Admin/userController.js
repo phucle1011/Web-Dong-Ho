@@ -92,7 +92,7 @@ class UserController {
                 include: [{
                     model: AddressModel,
                     as: 'addresses',
-                    attributes: ['id', 'address_line', 'district', 'province', 'is_default', 'created_at', 'updated_at']
+                    attributes: ['id', 'address_line', 'district', 'city', 'ward', 'is_default', 'created_at', 'updated_at']
                 }]
             });
 

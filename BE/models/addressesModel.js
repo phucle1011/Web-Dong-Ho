@@ -19,7 +19,11 @@ const AddressModel = connection.define('address', {
         type: DataTypes.STRING,
         allowNull: false 
     },
-    province: {
+    city: {
+        type: DataTypes.STRING,
+        allowNull: false 
+    },
+    ward: {
         type: DataTypes.STRING,
         allowNull: false 
     },
