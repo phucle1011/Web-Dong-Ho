@@ -18,6 +18,7 @@ function PromotionEdit() {
         watch,
         reset,
         getValues,
+        setValue,
         formState: { errors }
     } = useForm();
 
@@ -99,6 +100,10 @@ function PromotionEdit() {
                         type="text"
                         {...register("name", { required: "Tên khuyến mãi không được bỏ trống" })}
                         className="w-full border rounded px-3 py-2"
+                        onChange={(e) => {
+                            const upper = e.target.value.toUpperCase();
+                            setValue("name", upper);
+                        }}
                         disabled={isExpired || isActive}
                     />
                     {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}

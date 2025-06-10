@@ -40,6 +40,8 @@ function PromotionCreate() {
     }
   });
 
+  const applicableTo = watch("applicable_to");
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -160,7 +162,12 @@ function PromotionCreate() {
             <label className="block mb-1 font-medium">Tên khuyến mãi</label>
             <input
               type="text"
-              {...register("name", { required: "Tên khuyến mãi không được bỏ trống" })}
+              {...register("name", {
+                required: "Tên khuyến mãi không được bỏ trống",
+                onChange: (e) => {
+                  e.target.value = e.target.value.toUpperCase();
+                },
+              })}
               className="w-full border rounded px-3 py-2"
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
@@ -392,46 +399,48 @@ function PromotionCreate() {
             </select>
           </div>
 
-          <div>
-            <label className="block mb-1 font-medium flex items-center justify-between">
-              <span>Áp dụng cho khách hàng đặc biệt</span>
-              <label className="inline-flex relative items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={showUserList}
-                  onChange={() => setShowUserList(prev => !prev)}
-                />
-                <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600
-                  peer-focus:ring-4 peer-focus:ring-green-300
-                  dark:peer-focus:ring-green-800
-                  peer-checked:after:translate-x-full
-                  peer-checked:after:border-white
-                  after:content-[''] after:absolute after:top-0.5 after:left-[2px]
-                  after:bg-white after:border-gray-300 after:border after:rounded-full
-                  after:h-5 after:w-5 after:transition-all dark:border-gray-600">
-                </div>
+          {applicableTo === "order" && (
+            <div>
+              <label className="block mb-1 font-medium flex items-center justify-between">
+                <span>Áp dụng cho khách hàng đặc biệt</span>
+                <label className="inline-flex relative items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={showUserList}
+                    onChange={() => setShowUserList(prev => !prev)}
+                  />
+                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600
+                      peer-focus:ring-4 peer-focus:ring-green-300
+                      dark:peer-focus:ring-green-800
+                      peer-checked:after:translate-x-full
+                      peer-checked:after:border-white
+                      after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+                      after:bg-white after:border-gray-300 after:border after:rounded-full
+                      after:h-5 after:w-5 after:transition-all dark:border-gray-600">
+                  </div>
+                </label>
               </label>
-            </label>
-            <Controller
-              name="user_ids"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  options={userOptions}
-                  isMulti
-                  closeMenuOnSelect={false}
-                  onChange={(selected) => {
-                    field.onChange(selected ? selected.map(item => item.value) : []);
-                  }}
-                  value={userOptions.filter(option => field.value.includes(option.value))}
-                  placeholder="Chọn khách hàng..."
-                  isDisabled={!showUserList}
-                />
-              )}
-            />
-          </div>
+              <Controller
+                name="user_ids"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    options={userOptions}
+                    isMulti
+                    closeMenuOnSelect={false}
+                    onChange={(selected) => {
+                      field.onChange(selected ? selected.map(item => item.value) : []);
+                    }}
+                    value={userOptions.filter(option => field.value.includes(option.value))}
+                    placeholder="Chọn khách hàng..."
+                    isDisabled={!showUserList}
+                  />
+                )}
+              />
+            </div>
+          )}
         </div>
 
         <div className="col-span-2" >

@@ -5,44 +5,45 @@ const sequelize = require('../../config/database');
 
 class PromotionController {
     static async getActivePromotions(req, res) {
-    try {
-        const userId = req.userId || req.user?.id; // cách lấy userId từ token/session tùy app bạn
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để lấy mã giảm giá' });
+        try {
+            const userId = req.userId || req.user?.id; // cách lấy userId từ token/session tùy app bạn
+            if (!userId) {
+                return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để lấy mã giảm giá' });
+            }
+
+            const { orderTotal } = req.query;
+            const now = new Date();
+
+            const total = parseFloat(orderTotal);
+
+            if (isNaN(total) || total <= 0) {
+                return res.status(400).json({ success: false, message: 'Tổng đơn hàng không hợp lệ' });
+            }
+
+            const promotions = await PromotionModel.findAll({
+                where: {
+                    status: 'active',
+                    start_date: { [Op.lte]: now },
+                    end_date: { [Op.gte]: now },
+                    quantity: { [Op.gt]: 0 },
+                    min_price_threshold: { [Op.lte]: total },
+                    applicable_to: 'order',
+                },
+                attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold', 'end_date']
+            });
+
+            return res.json({
+                success: true,
+                data: promotions
+            });
+        } catch (error) {
+            console.error('[getActivePromotions] Lỗi:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi máy chủ khi lấy danh sách mã giảm giá'
+            });
         }
-
-        const { orderTotal } = req.query;
-        const now = new Date();
-
-        const total = parseFloat(orderTotal);
-
-        if (isNaN(total) || total <= 0) {
-            return res.status(400).json({ success: false, message: 'Tổng đơn hàng không hợp lệ' });
-        }
-
-        const promotions = await PromotionModel.findAll({
-            where: {
-                status: 'active',
-                start_date: { [Op.lte]: now },
-                end_date: { [Op.gte]: now },
-                quantity: { [Op.gt]: 0 },
-                min_price_threshold: { [Op.lte]: total },
-            },
-            attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold']
-        });
-
-        return res.json({
-            success: true,
-            data: promotions
-        });
-    } catch (error) {
-        console.error('[getActivePromotions] Lỗi:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Lỗi máy chủ khi lấy danh sách mã giảm giá'
-        });
     }
-}
 
 
     static async applyDiscount(req, res) {
