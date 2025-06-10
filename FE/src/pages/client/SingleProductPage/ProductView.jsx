@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import Star from "../Helpers/icons/Star";
 import Selectbox from "../Helpers/Selectbox";
 import axios from "axios";
+import { useParams } from "react-router-dom";
+import { Star, StarHalf, Star as StarOutline } from "lucide-react"; // hoặc icon bạn dùng
 
 export default function ProductView({ className, reportHandler }) {
   const [productData, setProductData] = useState(null);
@@ -33,74 +34,74 @@ const [filteredVariants, setFilteredVariants] = useState([]);
   });
 
   const [selectedImage, setSelectedImage] = useState("");
+  const { id: productId } = useParams(); 
+useEffect(() => {
+  async function fetchProduct() {
+    try {
+      setLoading(true);
+      
 
-  useEffect(() => {
-    async function fetchProduct() {
-      try {
-        setLoading(true);
-        const productId = 1;
-        const res = await axios.get(
-          `http://localhost:5000/products/${productId}/variants`
-        );
-        const { product } = res.data;
-        setProductData(product);
-        setVariants(product.variants);
-        setImages(product.variantImages);
-        setAllVariants(product.variants); 
-
-        // Trích xuất các loại thuộc tính
-        const extractAttributeValues = (attrName, keyName) => {
-  const seen = new Set();
-
-  return product.variants
-    .map((variant) => {
-      const attr = variant.attributeValues.find(
-        (a) => a.attribute.name === attrName
+      const res = await axios.get(
+        `http://localhost:5000/products/${productId}/variants`
       );
-      return {
-        id: variant.id,
-        [keyName]: attr ? attr.value : null,
-        image: variant.images[0]?.image_url || "",
+
+      const { product } = res.data;
+      setProductData(product);
+      setVariants(product.variants);
+      setImages(product.variantImages);
+      setAllVariants(product.variants);
+      console.log(product.variants);
+      
+      // Trích xuất các loại thuộc tính
+      const extractAttributeValues = (attrName, keyName) => {
+        const seen = new Set();
+
+        return product.variants
+          .map((variant) => {
+            const attr = variant.attributeValues.find(
+              (a) => a.attribute.name === attrName
+            );
+            return {
+              id: variant.id,
+              [keyName]: attr ? attr.value : null,
+              image: variant.images[0]?.image_url || "",
+            };
+          })
+          .filter((item) => {
+            const value = item[keyName];
+            if (!value || seen.has(value)) return false;
+            seen.add(value);
+            return true;
+          });
       };
-    })
-    .filter((item) => {
-      const value = item[keyName];
-      if (!value || seen.has(value)) return false;
-      seen.add(value);
-      return true;
-    });
-};
 
+      setFilterOptions({
+        dialSizes: extractAttributeValues("Dial Size", "dialSize"),
+        waterResistances: extractAttributeValues(
+          "Water Resistance",
+          "waterResistance"
+        ),
+        strapMaterials: extractAttributeValues(
+          "Strap Material",
+          "strapMaterial"
+        ),
+        movementTypes: extractAttributeValues("Movement Type", "movementType"),
+        colors: extractAttributeValues("Color", "color"),
+      });
 
-        setFilterOptions({
-          dialSizes: extractAttributeValues("Dial Size", "dialSize"),
-          waterResistances: extractAttributeValues(
-            "Water Resistance",
-            "waterResistance"
-          ),
-          strapMaterials: extractAttributeValues(
-            "Strap Material",
-            "strapMaterial"
-          ),
-          movementTypes: extractAttributeValues(
-            "Movement Type",
-            "movementType"
-          ),
-          colors: extractAttributeValues("Color", "color"),
-        });
-
-        // Ảnh mặc định
-        const firstImage = product.thumbnail;
-        if (firstImage) setSelectedImage(firstImage);
-      } catch (err) {
-        setError(err.message || "Something went wrong");
-      } finally {
-        setLoading(false);
-      }
+      // Ảnh mặc định
+      const firstImage = product.thumbnail;
+      if (firstImage) setSelectedImage(firstImage);
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    fetchProduct();
-  }, []);
+  fetchProduct();
+}, []);
+
 
  const updateFilter = (type, value) => {
   setSelectedFilters((prev) => {
@@ -280,6 +281,30 @@ const [filteredVariants, setFilteredVariants] = useState([]);
   // axios.post('/api/cart', { variantId, quantity })
 };
 
+const avgRating = productData.averageRating ; // trung bình từ API
+const ratingCount = productData.ratingCount; // tổng số lượt đánh giá
+
+const renderStars = (avgRating) => {
+  const fullStars = Math.floor(avgRating);
+  const hasHalfStar = avgRating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  return (
+    <>
+      {Array(fullStars)
+        .fill()
+        .map((_, i) => (
+          <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" />
+        ))}
+      {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
+      {Array(emptyStars)
+        .fill()
+        .map((_, i) => (
+          <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
+        ))}
+    </>
+  );
+};
 
 
 
@@ -294,9 +319,13 @@ const [filteredVariants, setFilteredVariants] = useState([]);
           <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
             <img src={selectedImage} alt="" className="object-contain" />
 
-            <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
-              <span>-50%</span>
-            </div>
+              {allVariants.some(variant => variant.promotionProducts && variant.promotionProducts.length > 0) && (
+  <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
+    <span>sale</span>
+  </div>
+)}
+
+            
           </div>
           <div className="flex gap-2 flex-wrap">
   {(selectedVariant ? variantImages : images).map((img) => (
@@ -325,6 +354,7 @@ const [filteredVariants, setFilteredVariants] = useState([]);
             data-aos="fade-up"
             className="text-qgray text-xs font-normal uppercase tracking-wider mb-2 inline-block"
           >
+          
             Mobile Phones
           </span>
           <p
@@ -338,16 +368,15 @@ const [filteredVariants, setFilteredVariants] = useState([]);
             data-aos="fade-up"
             className="flex space-x-[10px] items-center mb-6"
           >
-            <div className="flex">
-              <Star />
-              <Star />
-              <Star />
-              <Star />
-              <Star />
-            </div>
-            <span className="text-[13px] font-normal text-qblack">
-              6 Reviews
-            </span>
+            <div data-aos="fade-up" className="flex space-x-[10px] items-center mb-6">
+  <div className="flex">
+    {renderStars(avgRating)}
+  </div>
+  <span className="text-[13px] font-normal text-qblack">
+    {ratingCount} Reviews
+  </span>
+</div>
+
           </div>
 
           
@@ -427,7 +456,7 @@ const [filteredVariants, setFilteredVariants] = useState([]);
 
 
           </div>
-
+          {filterOptions.colors.length > 0 && (
           <div data-aos="fade-up" className="colors mb-[30px]">
             <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
               COLOR
@@ -470,45 +499,51 @@ const [filteredVariants, setFilteredVariants] = useState([]);
               </div>
             </div>
           </div>
+          )}
 
           {/* Dial Size */}
-          <div>
-            <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
-              dialSize
-            </span>
-            <div
-              className="owl-stage flex gap-2 overflow-x-auto py-2"
-              style={{ width: "100%" }}
-            >
-              {filterOptions.dialSizes.map(({ id, dialSize }) => {
-                const isValid = validDialSizes.has(dialSize);
-                const isSelected = selectedFilters.dialSize === dialSize;
+          {filterOptions.dialSizes.length > 0 && (
+  <div>
+    <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
+      dialSize
+    </span>
+    <div
+      className="owl-stage flex gap-2 overflow-x-auto py-2"
+      style={{ width: "100%" }}
+    >
+      {filterOptions.dialSizes.map(({ id, dialSize }) => {
+        const isValid = validDialSizes.has(dialSize);
+        const isSelected = selectedFilters.dialSize === dialSize;
 
-                return (
-                  <button
-                    key={id}
-                    onClick={() =>
-                      isValid && updateFilter("dialSize", dialSize)
-                    }
-                    disabled={!isValid}
-                    className={`px-3 py-1 rounded-md border transition
-        ${
-          isSelected
-            ? "bg-blue-600 text-white border-blue-600"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-        }
-        ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-      `}
-                  >
-                    {dialSize}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        return (
+          <button
+            key={id}
+            onClick={() =>
+              isValid && updateFilter("dialSize", dialSize)
+            }
+            disabled={!isValid}
+            className={`px-3 py-1 rounded-md border transition
+              ${
+                isSelected
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+              }
+              ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+            `}
+          >
+            {dialSize}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+)}
+
 
           {/* Water Resistance */}
+           {filterOptions.waterResistances.length > 0 && (
           <div>
+            
             <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
               waterResistance
             </span>
@@ -544,8 +579,10 @@ const [filteredVariants, setFilteredVariants] = useState([]);
               })}
             </div>
           </div>
+           )}
 
           {/* Strap Material */}
+           {filterOptions.strapMaterials.length > 0 && (
           <div>
             <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
               strapMaterial
@@ -581,8 +618,10 @@ const [filteredVariants, setFilteredVariants] = useState([]);
               })}
             </div>
           </div>
+        )}
 
           {/* Movement Type */}
+          {filterOptions.movementTypes.length > 0 && (
           <div>
             <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
               movementType
@@ -618,6 +657,7 @@ const [filteredVariants, setFilteredVariants] = useState([]);
               })}
             </div>
           </div>
+          )}
 
           
 
@@ -702,14 +742,15 @@ const [filteredVariants, setFilteredVariants] = useState([]);
 
           <div data-aos="fade-up" className="mb-[20px]">
             <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">Category :</span> Kitchen
+              <span className="text-qblack">Category :</span> {productData.category}
             </p>
             <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">Tags :</span> Beer, Foamer
+              <span className="text-qblack">Brand :</span>  {productData.brand}
+
             </p>
-            <p className="text-[13px] text-qgray leading-7">
+            {/* <p className="text-[13px] text-qgray leading-7">
               <span className="text-qblack">SKU:</span> KE-91039
-            </p>
+            </p> */}
           </div>
 
           <div

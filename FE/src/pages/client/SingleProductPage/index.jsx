@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState,useEffect,  } from "react";
 import data from "../../../data/products.json";
 import BreadcrumbCom from "../BreadcrumbCom";
 import ProductCardStyleOne from "../Helpers/Cards/ProductCardStyleOne";
@@ -8,6 +8,9 @@ import Layout from "../Partials/LayoutHomeThree";
 import ProductView from "./ProductView";
 import Reviews from "./Reviews";
 import SallerInfo from "./SallerInfo";
+import axios from "axios";
+import { useParams } from "react-router-dom";
+
 
 export default function SingleProductPage() {
   const [tab, setTab] = useState("des");
@@ -51,6 +54,21 @@ export default function SingleProductPage() {
       review: 5,
     },
   ]);
+//   const { id } = useParams();
+
+//   const [relatedProducts, setRelatedProducts] = useState([]);
+// useEffect(() => {
+//   axios.get(`http://localhost:5000/products/${id}/similar`)
+//     .then((res) => {
+//       setRelatedProducts(res.data.similarProducts);
+//       console.log(res.data);
+       
+//     })
+//     .catch((err) => {
+//       console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
+//     });
+// }, [id]);
+
   const reviewAction = () => {
     setLoading(true);
     setTimeout(() => {
@@ -120,7 +138,7 @@ export default function SingleProductPage() {
                           : "border-transparent text-qgray"
                       }`}
                     >
-                      Description
+                      Mô Tả
                     </span>
                   </li>
                   <li>
@@ -235,24 +253,25 @@ export default function SingleProductPage() {
             <div className="container-x mx-auto">
               <div className="w-full py-[60px]">
                 <h1 className="sm:text-3xl text-xl font-600 text-qblacktext leading-none mb-[30px]">
-                  Related Product
+                  Sản Phẩm Tương Tự 
                 </h1>
-                <div
-                  data-aos="fade-up"
-                  className="grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5"
-                >
-                  <DataIteration
-                    datas={data.products}
-                    startLength={5}
-                    endLength={9}
-                  >
-                    {({ datas }) => (
-                      <div key={datas.id} className="item">
-                        <ProductCardStyleOne datas={datas} />
-                      </div>
-                    )}
-                  </DataIteration>
-                </div>
+                {/* <div
+  data-aos="fade-up"
+  className="grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5"
+>
+  <DataIteration
+    datas={relatedProducts}
+    startLength={0}
+    endLength={relatedProducts.length}
+  >
+    {(item) => (
+      <div key={item.id} className="item">
+        <ProductCardStyleOne datas={item} />
+      </div>
+    )}
+  </DataIteration>
+</div> */}
+
               </div>
             </div>
           </div>

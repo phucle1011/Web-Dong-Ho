@@ -18,6 +18,7 @@ const { checkJWT } = require('../services/authCheck');
 
 //------------------[ PRODUCTS ]------------------
 router.get('/products/:id/variants', ProductController.getVariantsWithPromotion);
+router.get('/products/:id/similar', ProductController.getSimilarProducts);
 
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getCategories);
