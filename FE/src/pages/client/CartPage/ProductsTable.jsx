@@ -5,7 +5,7 @@ import { FaTrashAlt } from "react-icons/fa";
 import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
 
-const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
+const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCartItemsChange }) => {
   const [cartItems, setCartItems] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
@@ -31,11 +31,10 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange }) => {
   }, [selectedItems, onSelectedItemsChange]);
 
   useEffect(() => {
-    const selectedTotal = calculateSelectedTotal();
-    if (onTotalChange) {
-      onTotalChange(selectedTotal);
+    if (onCartItemsChange) {
+      onCartItemsChange(cartItems);
     }
-  }, [selectedItems, cartItems, onTotalChange]);
+  }, [cartItems, onCartItemsChange]);
 
   const fetchCart = async () => {
     const token = localStorage.getItem("token");

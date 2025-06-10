@@ -18,6 +18,7 @@ export default function CardPage({ cart = true }) {
   const [activePromotions, setActivePromotions] = useState([]);
   const [selectedProductVariants, setSelectedProductVariants] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
     const fetchActivePromotions = async () => {
@@ -104,6 +105,7 @@ export default function CardPage({ cart = true }) {
     } else if (totalPrice >= voucher.min_price_threshold) {
       setSelectedVoucher(voucher);
       setError("");
+      localStorage.setItem("selectedVoucher", JSON.stringify(voucher));
     } else {
       setSelectedVoucher(null);
       setError(`Đơn hàng phải tối thiểu ${voucher.min_price_threshold.toLocaleString()}₫ để sử dụng voucher này.`);
@@ -174,6 +176,38 @@ export default function CardPage({ cart = true }) {
 
   const finalTotal = discountInfo ? totalPrice - discountInfo.discountAmount : totalPrice;
 
+  useEffect(() => {
+
+  }, [selectedProductVariants, cartItems]);
+
+  useEffect(() => {
+    const savedVoucher = localStorage.getItem("selectedVoucher");
+    if (savedVoucher) {
+      const parsed = JSON.parse(savedVoucher);
+      setSelectedVoucher(parsed);
+    }
+  }, []);
+
+  const saveFinalTotalToLocalStorage = () => {
+  const finalData = {
+    label: discountInfo ? "" : "",
+    amount: discountInfo
+      ? totalPrice - discountInfo.discountAmount
+      : totalPrice,
+    formattedAmount: discountInfo
+      ? (totalPrice - discountInfo.discountAmount).toLocaleString("vi-VN")
+      : totalPrice.toLocaleString("vi-VN"),
+    hasDiscount: !!discountInfo,
+    discountAmount: discountInfo?.discountAmount || 0,
+  };
+
+  localStorage.setItem("finalTotal", JSON.stringify(finalData));
+};
+
+useEffect(() => {
+  saveFinalTotalToLocalStorage();
+}, [totalPrice, discountInfo]);
+
   return (
     <Layout childrenClasses={cart ? "pt-0 pb-0" : ""}>
       {cart === false ? (
@@ -205,6 +239,7 @@ export default function CardPage({ cart = true }) {
                 className="mb-[30px]"
                 onTotalChange={setTotalPrice}
                 onSelectedItemsChange={setSelectedProductVariants}
+                onCartItemsChange={setCartItems}
               />
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
@@ -391,17 +426,41 @@ export default function CardPage({ cart = true }) {
                     </div>
                   </button>
 
-                  <div className="total mb-6">
-                    <div className="flex justify-between">
-                      <p className="text-[18px] font-medium text-qblack">Tổng cộng</p>
-                      <p className="text-[18px] font-medium text-qred">
-                        {totalPrice.toLocaleString("vi-VN")}₫
-                      </p>
-                    </div>
+                  <div className="flex justify-between mb-3">
+                    <p className="text-[18px] font-medium text-qblack">
+                      {discountInfo ? "Tổng sau giảm" : "Tổng cộng"}
+                    </p>
+                    <p className="text-[18px] font-medium text-qred">
+                      {discountInfo
+                        ? (totalPrice - discountInfo.discountAmount).toLocaleString("vi-VN")
+                        : totalPrice.toLocaleString("vi-VN")}
+                      ₫
+                    </p>
                   </div>
 
                   {selectedProductVariants.length > 0 ? (
-                    <Link to="/checkout">
+                    <Link
+                      to={{
+                        pathname: "/checkout",
+                        state: {
+                          selectedProductVariants,
+                          cartItems: cartItems.filter((item) =>
+                            selectedProductVariants.includes(item.product_variant_id)
+                          ),
+                        },
+                      }}
+                      onClick={() => {
+                        localStorage.setItem(
+                          "checkoutData",
+                          JSON.stringify({
+                            selectedProductVariants,
+                            cartItems: cartItems.filter((item) =>
+                              selectedProductVariants.includes(item.product_variant_id)
+                            ),
+                          })
+                        );
+                      }}
+                    >
                       <div className="w-full h-[50px] black-btn flex justify-center items-center">
                         <span className="text-sm font-semibold">Tiến hành thanh toán</span>
                       </div>
