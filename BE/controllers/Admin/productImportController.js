@@ -1,7 +1,7 @@
 // controllers/Admin/productImportController.js
 const XLSX = require("xlsx");
 const Product = require("../../models/productsModel");
-const ProductVariant = require("../../models/productVariantModel");
+const ProductVariant = require("../../models/productVariantsModel");
 
 class ProductImportController {
   // Hàm 1: Import sản phẩm
