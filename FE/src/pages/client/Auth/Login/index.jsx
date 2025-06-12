@@ -1,16 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../../Partials/LayoutHomeThree";
 import Thumbnail from "./Thumbnail";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
 import Constants from "../../../../Constants";
-
+import { jwtDecode } from 'jwt-decode';
 
 export default function Login() {
   const [checked, setValue] = useState(!!localStorage.getItem("token"));
   const rememberMe = () => {
     setValue(!checked);
   };
+  const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
@@ -28,16 +29,16 @@ export default function Login() {
     const newErrors = {};
     let isValid = true;
 
+    // Kiểm tra email
     if (!formData.email.trim()) {
       newErrors.email = "Email không được để trống!";
       isValid = false;
-    } else if (
-      !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(formData.email)
-    ) {
-      newErrors.email = "Email không hợp lệ!";
+    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(formData.email)) {
+      newErrors.email = "Email không đúng định dạng!";
       isValid = false;
     }
 
+    // Kiểm tra mật khẩu
     if (!formData.password.trim()) {
       newErrors.password = "Mật khẩu không được để trống!";
       isValid = false;
@@ -53,6 +54,7 @@ export default function Login() {
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setLoading(true);
+    setErrors({});
 
     try {
       const response = await fetch(`${Constants.DOMAIN_API}/auth/login`, {
@@ -68,26 +70,77 @@ export default function Login() {
 
       const result = await response.json();
 
+      if (!result.success) {
+        switch (result.message) {
+          case "Email không tồn tại!":
+            setErrors({ email: "Email không tồn tại!" });
+            toast.error("Email không tồn tại!");
+            break;
+
+          case "Tài khoản bị khóa!":
+            setErrors({ email: "Tài khoản bị khóa!" });
+            toast.error("Tài khoản bị khóa. Vui lòng liên hệ hỗ trợ.");
+            break;
+
+          case "Mật khẩu không chính xác!":
+            setErrors({ password: "Mật khẩu không đúng!" });
+            toast.error("Mật khẩu không chính xác!");
+            break;
+
+          case "Tài khoản bị khóa!":
+            setFormError("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+            toast.error("Tài khoản bị khóa. Vui lòng liên hệ hỗ trợ.");
+            break;
+
+          default:
+            toast.error(result.message || "Đăng nhập thất bại!");
+            break;
+        }
+        setLoading(false);
+        return;
+      }
+
+      const { token } = result.data;
+
+      localStorage.setItem("token", token);
+
       if (!result.data.user.email_verified_at) {
         toast.info("Vui lòng xác thực email trước khi sử dụng!");
       }
-      if (result.success) {
-        const { token } = result.data;
 
-        localStorage.setItem("token", token);
+      toast.success("Đăng nhập thành công!");
 
-        toast.success("Đăng nhập thành công!");
-        navigate("/");
-      } else {
-        toast.error(result.message || "Đăng nhập thất bại!");
-      }
+      navigate("/");
     } catch (error) {
-      console.error(error);
-      toast.error("Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại sau!");
+      console.error("Lỗi khi đăng nhập:", error);
+      toast.error("Có lỗi xảy ra. Vui lòng thử lại sau!");
     } finally {
       setLoading(false);
     }
   };
+
+  const isTokenValid = () => {
+    const token = localStorage.getItem("token");
+    if (!token) return false;
+
+    try {
+      const decoded = jwtDecode(token);
+      const expirationTime = decoded.exp * 1000;
+      return Date.now() < expirationTime;
+    } catch (error) {
+      console.error("Invalid token", error);
+      return false;
+    }
+  };
+
+
+  useEffect(() => {
+    if (localStorage.getItem("token") && !isTokenValid()) {
+      localStorage.removeItem("token");
+      // localStorage.removeItem("tokenExpire");
+      toast.info("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    }
+  }, []);
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -106,6 +159,8 @@ export default function Login() {
                     </svg>
                   </div>
                 </div>
+
+                {formError && <div className="text-red-500 text-sm mb-4">{formError}</div>}
 
                 {/* Email */}
                 <div className="mb-4">

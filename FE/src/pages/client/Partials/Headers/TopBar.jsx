@@ -18,7 +18,8 @@ export default function TopBar({ className }) {
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem("token"); 
+    localStorage.removeItem("token");
+    localStorage.removeItem("tokenExpire");
     setShowLogoutModal(false);
     navigate("/");
   };
