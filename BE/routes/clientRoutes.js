@@ -63,7 +63,11 @@ router.delete("/delete-to-carts/:productVariantId", checkJWT, CartController.rem
 router.delete("/clear-cart", checkJWT, CartController.clearCartByUser);
 
 //------------------[ ORDERS ]------------------
-router.get("/orders", OrderController.get);
+router.post("/orders", OrderController.create);
+router.post("/orders-momo", OrderController.createMomoUrl);
+
+//------------------[ SHIPPING ]------------------
+router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);
 
 //------------------[ AUTH ]------------------\
 router.post('/auth/register', AuthController.register);
