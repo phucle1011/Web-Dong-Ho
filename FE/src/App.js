@@ -100,7 +100,7 @@ const AppRoutes = () => {
 
      
 
-      <Route
+      {/* <Route
         path="/admin"
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
@@ -112,9 +112,9 @@ const AppRoutes = () => {
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail />} />
-        </Route>
+        </Route> */}
         {/* các route con khác */}
-        <Route path="user">
+        {/* <Route path="user">
           <Route path="getAll" element={<UserList />} />
           <Route path="detail/:id" element={<UserDetail />} />
         </Route>
@@ -174,11 +174,11 @@ const AppRoutes = () => {
         <Route path="promotionusers">
           <Route path="getAll" element={<PromotionList />} />
         </Route>
-      </Route>
+      </Route> */}
 
 
       {/*--------------------ADMIN-------------------- */}
-      {/* <Route path="/admin/login" element={<LoginAdmin />} />
+      <Route path="/admin/login" element={<LoginAdmin />} />
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="orders">
@@ -245,7 +245,7 @@ const AppRoutes = () => {
         <Route path="promotionusers">
           <Route path="getAll" element={<PromotionList />} />
         </Route>
-      </Route> */}
+      </Route>
       
       <Route path="/*" element={<FourZeroFour />} />
     </Routes>
