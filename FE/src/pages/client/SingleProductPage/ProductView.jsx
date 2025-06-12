@@ -3,6 +3,9 @@ import Selectbox from "../Helpers/Selectbox";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react"; // hoặc icon bạn dùng
+import { decodeToken } from '../Helpers/jwtDecode'; 
+
+
 
 export default function ProductView({ className, reportHandler }) {
   const [productData, setProductData] = useState(null);
@@ -268,18 +271,44 @@ useEffect(() => {
 
 
 
-  const handleAddToCart = (variantId, quantity) => {
+  const handleAddToCart = async (variantId, quantity) => {
   if (!variantId) {
     alert("Bạn chưa chọn biến thể sản phẩm.");
     return;
   }
+  
+const token = localStorage.getItem('token');
+const decoded = decodeToken(token);
 
-  // Gửi lên API hoặc cập nhật state ở đây
-  console.log("Add to cart:", { variantId, quantity });
+console.log("👤 User ID trong token:", decoded?.id);  // hoặc decoded.name, decoded.email, v.v.
 
-  // Ví dụ gọi API
-  // axios.post('/api/cart', { variantId, quantity })
+  const userId = decoded?.id;
+
+  if (!token || !userId) {
+    alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
+    return;
+  }
+
+  try {
+    const response = await axios.post('http://localhost:5000/add-to-carts', {
+      userId,      // Gửi thêm userId
+      productVariantId : variantId,
+      quantity,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    console.log("🛒 Đã thêm vào giỏ hàng:", response.data);
+    alert("Đã thêm vào giỏ hàng thành công!");
+
+  } catch (error) {
+    console.error("❌ Lỗi khi thêm vào giỏ hàng:", error);
+    alert("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+  }
 };
+
 
 const avgRating = productData.averageRating ; // trung bình từ API
 const ratingCount = productData.ratingCount; // tổng số lượt đánh giá
@@ -721,19 +750,13 @@ const renderStars = (avgRating) => {
       return;
     }
 
-    // Gửi dữ liệu
-    const payload = {
-      variantId: selectedVariant.id,
-      quantity: quantity,
-    };
-
-    console.log("Add to cart:", payload);
-    // Gọi API add to cart ở đây nếu có
+    handleAddToCart(selectedVariant.id, quantity);
   }}
   className="black-btn text-sm font-semibold w-full h-full"
 >
   Add To Cart
 </button>
+
 
 
 

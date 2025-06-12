@@ -11,8 +11,9 @@ import {
   FaChevronRight,
   FaAngleDoubleRight
 } from "react-icons/fa";
+import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 
-
+import * as XLSX from "xlsx";
 const AdminProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -124,6 +125,28 @@ useEffect(() => {
     }
   };
   if (!formData) return <div>Đang tải...</div>;
+  const handleThumbnailChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    // Gọi hàm upload từ file riêng của bạn
+    const imageUrl = await uploadToCloudinary(file); // Đảm bảo đã import hoặc dùng đúng hàm
+console.log(imageUrl);
+
+    // Cập nhật lại thumbnail cho form
+    setFormData((prev) => ({
+      ...prev,
+      thumbnail: imageUrl.url,
+    }));
+
+    toast.success("Tải ảnh lên thành công!");
+  } catch (error) {
+    console.error("Lỗi khi upload ảnh:", error);
+    toast.error("Tải ảnh thất bại!");
+  }
+};
+
 
   return (
     <div className="container mx-auto p-4">
@@ -131,12 +154,24 @@ useEffect(() => {
         <h2 className="text-2xl font-semibold mb-4">Chỉnh sửa sản phẩm</h2>
 
         <div className="flex gap-6 mb-4">
-  {/* Hình ảnh thumbnail */}
+  <div className="flex flex-col items-start gap-2">
+  {/* Ảnh thumbnail */}
   <img
     src={formData.thumbnail || "https://via.placeholder.com/150"}
-    alt={formData.name}
+    alt={formData.thumbnail}
     className="w-40 h-40 object-cover rounded"
   />
+
+  {/* Input upload ảnh thumbnail nằm bên dưới ảnh */}
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleThumbnailChange}
+    className="mt-2"
+  />
+</div>
+
+
 
   {/* Inputs chia 2 cột */}
   <div className="flex-1">

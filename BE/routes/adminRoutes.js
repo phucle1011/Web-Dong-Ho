@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { checkJWT, isAdmin } = require('../services/authCheck');
+const upload = require('../config/middleware/upload');
 
 const OrderController = require('../controllers/Admin/ordersController');
 const categoryController = require('../controllers/Admin/categoryController');
@@ -18,6 +19,8 @@ const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
+const importProducts = require('../controllers/Admin/productImportController');
+
 
 // router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
 
@@ -87,6 +90,9 @@ router.get("/variants/:variant_id", ProductController.getVariantById);
 router.get('/product-variants', ProductController.getAllVariants);
 router.delete('/product-variants/deleteAttributeValueById/:id', ProductController.deleteAttributeValueById);
 router.post('/products/imagesClauding', ProductController.deleteImagesClauding);
+
+router.post('/products/import', upload.single("file"), importProducts.importProducts);
+
 
 //------------------[ ADDRESS ]------------------\
 router.get('/address/list', AddressController.getAllAddress);

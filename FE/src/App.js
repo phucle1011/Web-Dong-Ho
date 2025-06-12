@@ -91,7 +91,7 @@ const AppRoutes = () => {
         <Route path="/products-compaire" element={<ProductsCompaire />} />
         <Route path="/saller-page" element={<SallerPage />} />
         <Route path="/sallers" element={<Sallers />} />
-        {/* <Route path="/product/:id" element={<SingleProductPage />} /> */}
+        <Route path="/product/:id" element={<SingleProductPage />} />
         <Route path="/terms-condition" element={<TermsCondition />} />
         <Route path="/tracking-order" element={<TrackingOrder />} />
         <Route path="/wishlist" element={<Wishlist />} />

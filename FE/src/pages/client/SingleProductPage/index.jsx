@@ -54,20 +54,20 @@ export default function SingleProductPage() {
       review: 5,
     },
   ]);
-//   const { id } = useParams();
+  const { id } = useParams();
 
-//   const [relatedProducts, setRelatedProducts] = useState([]);
-// useEffect(() => {
-//   axios.get(`http://localhost:5000/products/${id}/similar`)
-//     .then((res) => {
-//       setRelatedProducts(res.data.similarProducts);
-//       console.log(res.data);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+useEffect(() => {
+  axios.get(`http://localhost:5000/products/${id}/similar`)
+    .then((res) => {
+      setRelatedProducts(res.data.similarProducts);
+      console.log(res.data.similarProducts);
        
-//     })
-//     .catch((err) => {
-//       console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
-//     });
-// }, [id]);
+    })
+    .catch((err) => {
+      console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
+    });
+}, [id]);
 
   const reviewAction = () => {
     setLoading(true);
@@ -255,22 +255,17 @@ export default function SingleProductPage() {
                 <h1 className="sm:text-3xl text-xl font-600 text-qblacktext leading-none mb-[30px]">
                   Sản Phẩm Tương Tự 
                 </h1>
-                {/* <div
+                <div
   data-aos="fade-up"
   className="grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5"
 >
-  <DataIteration
-    datas={relatedProducts}
-    startLength={0}
-    endLength={relatedProducts.length}
-  >
-    {(item) => (
-      <div key={item.id} className="item">
-        <ProductCardStyleOne datas={item} />
-      </div>
-    )}
-  </DataIteration>
-</div> */}
+  {relatedProducts.map((item) => (
+    <div key={item.id}>
+      <ProductCardStyleOne datas={item} />
+    </div>
+  ))}
+</div>
+
 
               </div>
             </div>
