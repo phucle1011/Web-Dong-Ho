@@ -70,6 +70,10 @@ router.post('/auth/login', AuthController.login);
 
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
+// routes/productVariantRoutes.js
 
-router.get('/:id', ProductVariantController.getProductVariantDetail);
+router.get('/stock', ProductClientController.countStockGroupByProductId);
+
+router.get('/product-variants/:id', ProductVariantController.getProductVariantDetail);
+router.get('/products/discounted', ProductVariantController.getDiscountedProducts);
 module.exports = router;

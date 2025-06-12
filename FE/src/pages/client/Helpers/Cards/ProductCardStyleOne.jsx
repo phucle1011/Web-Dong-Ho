@@ -5,47 +5,70 @@ import Star from "../icons/Star";
 import ThinLove from "../icons/ThinLove";
 
 export default function ProductCardStyleOne({ datas, type }) {
-  // Sử dụng dữ liệu từ props.datas
   const product = datas || {};
   const variants = Array.isArray(product.variants) ? product.variants : [];
 
-  // Xử lý giá: Lấy giá thấp nhất từ các variant còn hàng hoặc giá offer
-  let mainPrice = product.offer_price || product.price || 0;
-  let originalPrice = product.price || 0;
+  // Initialize prices
+  let displayPrice = 0;
+  let displayOriginalPrice = 0;
   let hasStock = true;
+  let discountPercent = 0;
 
+  // Handle variants if they exist
   if (variants.length > 0) {
+    // Filter valid variants (in stock and valid price)
     const validVariants = variants.filter(
-      (variant) =>
-        variant.price &&
-        !isNaN(parseFloat(variant.price)) &&
-        variant.stock > 0
+      (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
     );
+
     if (validVariants.length > 0) {
-      mainPrice = Math.min(
-        ...validVariants.map((variant) => parseFloat(variant.price))
-      );
-      hasStock = true;
+      // Find the variant with the lowest price (prefer discounted price if available)
+      const cheapestVariant = validVariants.reduce((prev, current) => {
+        const prevPrice = current.promotion?.discounted_price
+          ? parseFloat(current.promotion.discounted_price)
+          : parseFloat(current.price);
+        const currentPrice = current.promotion?.discounted_price
+          ? parseFloat(current.promotion.discounted_price)
+          : parseFloat(current.price);
+        return currentPrice < prevPrice ? current : prev;
+      }, validVariants[0]);
+console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
+
+      displayOriginalPrice = parseFloat(cheapestVariant.price) || 0;
+      displayPrice = cheapestVariant.promotion?.discounted_price
+        ? parseFloat(cheapestVariant.promotion.discounted_price)
+        : parseFloat(cheapestVariant.price) || 0;
+      discountPercent = cheapestVariant.promotion?.discount_percent
+        ? parseFloat(cheapestVariant.promotion.discount_percent)
+        : 0;
+
+      // Ensure discountPercent is reasonable (0-100%)
+      if (discountPercent > 100 || discountPercent < 0) {
+        discountPercent = 0;
+      }
     } else {
       hasStock = false;
+      displayPrice = 0;
+      displayOriginalPrice = 0;
     }
+  } else {
+    // Fallback to product price if no variants
+    displayPrice = parseFloat(product.price) || 0;
+    displayOriginalPrice = parseFloat(product.price) || 0;
+    hasStock = parseInt(product.stock) > 0;
   }
 
-  // Ảnh sản phẩm fallback
-  const thumbnail =
-    product.thumbnail && product.thumbnail.trim() !== ""
-      ? product.thumbnail
-      : "/images/no-image.jpg";
+  // Fallback for product image
+  const thumbnail = product.thumbnail?.trim() || "/images/no-image.jpg";
 
-  // Tên sản phẩm fallback
-  const productName =
-    product.name && product.name.trim() !== ""
-      ? product.name
-      : product.title || "Sản phẩm không tên";
+  // Fallback for product name
+  const productName = product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
 
-  // Tính phần trăm sản phẩm còn lại cho campaign
+  // Calculate campaign progress if applicable
   const available =
-    product.campaingn_product && product.cam_product_sale && product.cam_product_available
+    product.campaingn_product &&
+    typeof product.cam_product_sale === "number" &&
+    typeof product.cam_product_available === "number"
       ? (product.cam_product_sale /
           (product.cam_product_available + product.cam_product_sale)) *
         100
@@ -56,7 +79,7 @@ export default function ProductCardStyleOne({ datas, type }) {
       className="product-card-one w-full h-full bg-white relative group overflow-hidden"
       style={{ boxShadow: "0px 15px 64px 0px rgba(0, 0, 0, 0.05)" }}
     >
-      {/* Hình ảnh sản phẩm */}
+      {/* Product image */}
       <div
         className="product-card-img w-full h-[300px]"
         style={{
@@ -69,7 +92,7 @@ export default function ProductCardStyleOne({ datas, type }) {
           <div className="px-[30px] absolute left-0 top-3 w-full">
             <div className="progress-title flex justify-between">
               <p className="text-xs text-qblack font-400 leading-6">
-                Prodcuts Available
+                Sản phẩm còn lại
               </p>
               <span className="text-sm text-qblack font-600 leading-6">
                 {product.cam_product_available || 0}
@@ -97,12 +120,20 @@ export default function ProductCardStyleOne({ datas, type }) {
             </span>
           </div>
         )}
+        {/* Discount badge */}
+        {discountPercent > 0 && (
+          <div className="discount-badge absolute left-[14px] top-[17px]">
+            <span className="text-[9px] font-700 leading-none py-[6px] px-3 uppercase text-white bg-qred rounded-full tracking-wider">
+              -{discountPercent.toFixed(0)}%
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Nội dung sản phẩm */}
-      <div className="product-card-details px-[30px] pb-[30px] relative">
-        {/* Nút Thêm giỏ hàng */}
-        <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out">
+      {/* Product details */}
+      <div className="product-card-details px-[30px] pb-[30px] relative min-h-[150px]">
+        {/* Add to cart button */}
+        <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
           <button
             type="button"
             className={`w-full py-2.5 rounded-lg text-white font-medium transition-colors duration-200 ${
@@ -127,40 +158,55 @@ export default function ProductCardStyleOne({ datas, type }) {
             </div>
           </button>
         </div>
-        {/* Đánh giá */}
+        {/* Reviews */}
         <div className="reviews flex space-x-[1px] mb-3">
-          {Array.from(Array(product.review || 5), () => (
-            <span key={Math.random()}>
+          {Array.from({ length: product.review || 5 }).map((_, i) => (
+            <span key={i}>
               <Star className="w-4 h-4 text-yellow-400" />
             </span>
           ))}
         </div>
-        {/* Tên sản phẩm */}
+        {/* Product name */}
         <Link to={`/product/${product.id || "unknown"}`}>
           <p className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600">
             {productName}
           </p>
         </Link>
-        {/* Giá */}
-        <p className="price">
-          {originalPrice > mainPrice && (
-            <span className="main-price text-qgray line-through font-600 text-[18px]">
-              {Number(originalPrice).toLocaleString("vi-VN", {
+        {/* Price */}
+        {displayPrice > 0 ? (
+          <p className="price flex items-center space-x-2">
+            <span
+              className={`offer-price ${
+                discountPercent > 0 ? "text-qred" : "text-qblack"
+              } font-600 text-[18px]`}
+            >
+              {Number(displayPrice).toLocaleString("vi-VN", {
                 style: "currency",
                 currency: "VND",
               })}
             </span>
-          )}
-          <span className="offer-price text-qred font-600 text-[18px] ml-2">
-            {Number(mainPrice).toLocaleString("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            })}
-          </span>
-        </p>
+            {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+              <>
+                <span className="main-price text-qgray line-through font-600 text-[16px]">
+                  {Number(displayOriginalPrice).toLocaleString("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  })}
+                </span>
+                <span className="discount-percent text-white text-xs font-semibold bg-qred px-2 py-0.5 rounded">
+                  -{discountPercent.toFixed(0)}%
+                </span>
+              </>
+            )}
+          </p>
+        ) : (
+          <p className="price text-qgray font-600 text-[16px]">
+            Giá không khả dụng
+          </p>
+        )}
       </div>
 
-      {/* Các nút truy cập nhanh */}
+      {/* Quick access buttons */}
       <div className="quick-access-btns flex flex-col space-y-2 absolute group-hover:right-4 -right-10 top-20 transition-all duration-300 ease-in-out">
         <a href="#">
           <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">

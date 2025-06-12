@@ -8,6 +8,7 @@ import Layout from "../Partials/LayoutHomeThree";
 import ProductsFilter from "./ProductsFilter";
 
 export default function AllProductPage() {
+  // State declarations
   const [products, setProducts] = useState([]);
   const [filters, setFilter] = useState({
     mobileLaptop: false,
@@ -36,30 +37,26 @@ export default function AllProductPage() {
     sizeXXL: false,
     sizeFit: false,
   });
-
-  const checkboxHandler = (e) => {
-    const { name } = e.target;
-    setFilter((prevState) => ({
-      ...prevState,
-      [name]: !prevState[name],
-    }));
-  };
-  const [volume, setVolume] = useState({ min: 200, max: 50000000 }); // Điều chỉnh max để phù hợp với giá lớn
+  const [volume, setVolume] = useState({ min: 200, max: 50000000 });
   const [storage, setStorage] = useState(null);
-  const filterStorage = (value) => {
-    setStorage(value);
-  };
   const [filterToggle, setToggle] = useState(false);
 
+  // Checkbox handler
+  const checkboxHandler = (e) => {
+    const { name } = e.target;
+    setFilter((prev) => ({
+      ...prev,
+      [name]: !prev[name],
+    }));
+  };
+
+  // Fetch products
   useEffect(() => {
     async function fetchProducts() {
       try {
         const res = await axios.get(`${Constants.DOMAIN_API}/products`);
-        if (Array.isArray(res.data.data)) {
-          setProducts(res.data.data);
-        } else {
-          setProducts([]);
-        }
+        console.log("API Response:", res.data);
+        setProducts(Array.isArray(res.data.data) ? res.data.data : []);
       } catch (error) {
         console.error("Lỗi khi lấy danh sách sản phẩm:", error);
         setProducts([]);
@@ -68,29 +65,47 @@ export default function AllProductPage() {
     fetchProducts();
   }, []);
 
+  // Define filteredProducts after all dependencies are declared
   const filteredProducts = products.filter((product) => {
-    const matchesCategory = Object.keys(filters).some(
-      (key) => filters[key] && product.category?.name.toLowerCase().includes(key)
+    const selectedFilters = Object.keys(filters).filter((key) => filters[key]);
+
+    const matchesCategory = selectedFilters.some((key) =>
+      product.category?.name?.toLowerCase()?.includes(key.toLowerCase())
     );
-    const matchesPrice =
-      product.variants?.[0]?.price
-        ? parseFloat(product.variants[0].price) >= volume.min &&
-          parseFloat(product.variants[0].price) <= volume.max
-        : true; // Nếu không có giá, vẫn hiển thị
+
+    const matchesBrand = selectedFilters.some((key) =>
+      product.brand?.name?.toLowerCase()?.includes(key.toLowerCase())
+    );
+
+    const matchesPrice = product.variants?.length
+      ? product.variants.some((variant) => {
+          const price = variant.promotion?.discounted_price
+            ? parseFloat(variant.promotion.discounted_price)
+            : parseFloat(variant.price) || 0;
+          return (
+            price >= volume.min &&
+            price <= volume.max &&
+            parseInt(variant.stock || 0) > 0
+          );
+        })
+      : true;
+
     const matchesStorage = storage
-      ? product.variants.some((v) =>
-          v.attributeValues.some((attr) => attr.value === storage)
+      ? product.variants?.some((v) =>
+          v.attributeValues?.some((attr) => attr.value === storage)
         )
       : true;
-    const matchesBrand = Object.keys(filters).some(
-      (key) => filters[key] && product.brand?.name.toLowerCase().includes(key)
-    );
+
+    const noFilterSelected = selectedFilters.length === 0;
+
     return (
-      (matchesCategory || matchesBrand || !Object.values(filters).some((v) => v)) &&
+      (matchesCategory || matchesBrand || noFilterSelected) &&
       matchesPrice &&
       matchesStorage
     );
   });
+
+  console.log("Filtered Products:", filteredProducts);
 
   return (
     <Layout>
@@ -98,6 +113,7 @@ export default function AllProductPage() {
         <div className="container-x mx-auto max-w-7xl">
           <BreadcrumbCom />
           <div className="w-full lg:flex lg:gap-8">
+            {/* Filter */}
             <div className="lg:w-[270px] mb-8 lg:mb-0">
               <ProductsFilter
                 filterToggle={filterToggle}
@@ -105,10 +121,9 @@ export default function AllProductPage() {
                 filters={filters}
                 checkboxHandler={checkboxHandler}
                 volume={volume}
-                volumeHandler={(value) => setVolume(value)}
+                volumeHandler={setVolume}
                 storage={storage}
-                filterstorage={filterStorage}
-                className="mb-8"
+                filterstorage={setStorage}
               />
               <div className="w-full hidden lg:block h-[295px] overflow-hidden rounded-lg">
                 <img
@@ -119,17 +134,23 @@ export default function AllProductPage() {
               </div>
             </div>
 
+            {/* Product List */}
             <div className="flex-1">
               <div className="products-sorting w-full bg-white h-auto md:h-[70px] flex flex-col md:flex-row md:items-center justify-between p-6 mb-10 rounded-lg shadow-sm">
                 <div>
                   <p className="font-medium text-sm text-gray-600">
-                    <span>Showing</span> 1–{filteredProducts.length} of {products.length} results
+                    Showing 1–{filteredProducts.length} of {products.length}{" "}
+                    results
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-medium text-sm text-gray-600">Sort by:</span>
+                  <span className="font-medium text-sm text-gray-600">
+                    Sort by:
+                  </span>
                   <div className="flex items-center gap-2 border-b border-gray-300">
-                    <span className="font-medium text-sm text-gray-600">Default</span>
+                    <span className="font-medium text-sm text-gray-600">
+                      Default
+                    </span>
                     <svg
                       width="10"
                       height="6"
@@ -162,14 +183,23 @@ export default function AllProductPage() {
                   </svg>
                 </button>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                <DataIteration datas={filteredProducts} startLength={0} endLength={filteredProducts.length}>
-                  {({ datas }) => (
-                    <div data-aos="fade-up" key={datas.id}>
-                      <ProductCardStyleOne datas={datas} type={3} />
-                    </div>
-                  )}
-                </DataIteration>
+                {filteredProducts.length > 0 ? (
+                  <DataIteration
+                    datas={filteredProducts}
+                    startLength={0}
+                    endLength={filteredProducts.length}
+                  >
+                    {({ datas }) => (
+                      <div data-aos="fade-up" key={datas.id}>
+                        <ProductCardStyleOne datas={datas} type={3} />
+                      </div>
+                    )}
+                  </DataIteration>
+                ) : (
+                  <p>Không có sản phẩm nào để hiển thị.</p>
+                )}
               </div>
             </div>
           </div>
