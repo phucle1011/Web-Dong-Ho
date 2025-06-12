@@ -310,13 +310,13 @@ function UserDetail() {
 
             if (districtId) {
               wardSelect.disabled = false;
-              const wards = await fetchWards(districtId); // Dùng districtId ở đây ✅
+              const wards = await fetchWards(districtId); 
               wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
               wards.forEach(w => {
                 const option = document.createElement("option");
                 option.value = w.WardCode;
                 option.text = w.WardName;
-                if (w.WardName === address.ward) option.selected = true; // So sánh theo tên ✅
+                if (w.WardName === address.ward) option.selected = true; 
                 wardSelect.appendChild(option);
               });
             }
@@ -466,19 +466,11 @@ function UserDetail() {
           const res = await axios.delete(
             `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`
           );
-          Swal.fire({
-            icon: "success",
-            title: "Xóa thành công!",
-            text: res.data.message,
-          });
+           toast.success("Xóa địa chỉ thành công");
           fetchUserDetail();
         } catch (error) {
           console.error("Lỗi khi xóa địa chỉ:", error);
-          Swal.fire({
-            icon: "error",
-            title: "Lỗi!",
-            text: error.response?.data?.message || "Không thể xóa địa chỉ.",
-          });
+          toast.success("Lỗi khi xóa địa chỉ");
         }
       }
     });
@@ -674,13 +666,13 @@ function UserDetail() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap space-x-2">
                       <button
-                        className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-green-700"
+                        className="text-xl p-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                         onClick={() => showAddressModal(addr)}
                       >
-                        <FaEdit size={24} />
+                        <FaEdit size={20} />
                       </button>
                       <button
-                        className="text-2xl p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                        className="text-xl p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                         onClick={() => handleDeleteAddress(addr.id)}
                       >
                         <FaTrashAlt/>

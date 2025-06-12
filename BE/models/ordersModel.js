@@ -30,7 +30,7 @@ const OrderModel = connection.define('orders', {
     },
     cancellation_reason: {
         type: DataTypes.STRING,
-        allowNull: false 
+        allowNull: true 
     },
     shipping_fee: {
         type: DataTypes.DECIMAL(10, 2),

@@ -4,6 +4,13 @@ import Layout from "../Partials/LayoutHomeThree";
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { decodeToken } from "../Helpers/jwtDecode";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMapMarkerAlt, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { Link } from "react-router-dom";
+import Constants from "../../../Constants";
+import Swal from "sweetalert2";
+import axios from 'axios';
+import { toast } from "react-toastify";
 
 export default function CheakoutPage() {
 
@@ -15,6 +22,38 @@ export default function CheakoutPage() {
   const [finalData, setFinalData] = useState(null);
   const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
+  const [defaultAddress, setDefaultAddress] = useState(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [allAddresses, setAllAddresses] = useState([]);
+  const [addressForm, setAddressForm] = useState({
+    address_line: "",
+    city: "",
+    district: "",
+    ward: "",
+  });
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [provinces, setProvinces] = useState([]);
+  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
+
+  const [addresses, setAddresses] = useState([]);
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [selectedNewStatus, setSelectedNewStatus] = useState('');
+  const [reasonOption, setReasonOption] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedWard, setSelectedWard] = useState("");
+  const [isEdit, setIsEdit] = useState("");
+  const [addressData, setAddressData] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [addressToSetDefault, setAddressToSetDefault] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [noteValue, setNoteValue] = useState("");
+
+  const decoded = decodeToken(token);
+  const id = decoded?.id;
 
   useEffect(() => {
     if (!location.state && !localStorage.getItem("checkoutData")) {
@@ -90,10 +129,7 @@ export default function CheakoutPage() {
     const token = localStorage.getItem("token");
 
     if (token) {
-      console.log("Token retrieved from localStorage:", token);
-
       const decoded = decodeToken(token);
-      console.log("Decoded user data:", decoded);
 
       if (decoded) {
         setUser(decoded);
@@ -105,6 +141,708 @@ export default function CheakoutPage() {
       console.warn("No token found in localStorage.");
     }
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDefaultAddress = async () => {
+      if (!user || !user.id) {
+        console.warn("Người dùng chưa đăng nhập hoặc không có ID");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch(`${Constants.DOMAIN_API}/admin/address/user/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!isMounted) return;
+
+        if (response.ok && data.success && Array.isArray(data.data)) {
+          const defaultAddr = data.data.find(addr => addr.is_default === 1);
+          setDefaultAddress(defaultAddr || null);
+        } else {
+          console.error("Lỗi từ server:", data.message || "Không tìm thấy địa chỉ");
+          setDefaultAddress(null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Lỗi khi lấy địa chỉ:", error);
+          setDefaultAddress(null);
+        }
+      }
+    };
+
+    fetchDefaultAddress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    const fetchAllAddresses = async () => {
+      if (!user || !user.id) return;
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${Constants.DOMAIN_API}/admin/address/user/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success && Array.isArray(data.data)) {
+          setAllAddresses(data.data);
+        } else {
+          console.error("Không thể lấy danh sách địa chỉ:", data.message);
+        }
+      } catch (error) {
+        console.error("Lỗi kết nối server:", error);
+      }
+    };
+
+    fetchAllAddresses();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const response = await fetch(`${Constants.DOMAIN_API}/apiRoutes/provinces`);
+        const data = await response.json();
+        if (response.ok && Array.isArray(data)) {
+          setProvinces(data);
+        } else {
+          console.error("Không thể tải danh sách tỉnh");
+        }
+      } catch (error) {
+        console.error("Lỗi kết nối đến server:", error);
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
+  const handleAddNewAddress = () => {
+    setAddressForm({
+      name: user?.name || "",
+      phone: user?.phone || "",
+      address_line: "",
+      city: "",
+      district: "",
+      ward: ""
+    });
+    setEditingAddressId(null);
+    setShowAddressModal(true);
+  };
+
+  const handleEditAddress = (address) => {
+    setAddressForm({
+      name: address.name,
+      phone: address.phone,
+      address_line: address.address_line,
+      city: address.city,
+      district: address.district,
+      ward: address.ward
+    });
+    setDistricts(provinces.find(p => p.id === address.city)?.districts || []);
+    setWards(districts.find(d => d.id === address.district)?.wards || []);
+
+    setEditingAddressId(address.id);
+    setShowAddressModal(true);
+  };
+
+  const handleSubmitAddress = async (e) => {
+    e.preventDefault();
+    const url = editingAddressId
+      ? `${Constants.DOMAIN_API}/admin/address/${editingAddressId}`
+      : `${Constants.DOMAIN_API}/admin/address`;
+    const method = editingAddressId ? "PUT" : "POST";
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...addressForm,
+          is_default: defaultAddress && !editingAddressId ? 1 : 0
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const updatedAddresses = [...allAddresses];
+
+        if (editingAddressId) {
+          const index = updatedAddresses.findIndex((a) => a.id === editingAddressId);
+          updatedAddresses[index] = { ...updatedAddresses[index], ...addressForm };
+        } else {
+          updatedAddresses.push(data.data);
+        }
+
+        setAllAddresses(updatedAddresses);
+
+        if (!defaultAddress && !editingAddressId) {
+          setDefaultAddress(data.data);
+        }
+
+        setShowAddressModal(false);
+      } else {
+        alert("Lỗi khi lưu địa chỉ.");
+      }
+    } catch (error) {
+      console.error("Lỗi khi gửi yêu cầu:", error);
+      alert("Không thể kết nối với máy chủ.");
+    }
+  };
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/provinces`);
+        setProvinces(res.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách tỉnh:", error);
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProvince) return;
+
+    const fetchDistricts = async () => {
+      try {
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${selectedProvince}`
+        );
+        setDistricts(res.data);
+        setWards([]);
+        setSelectedDistrict("");
+        setSelectedWard("");
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách quận:", error);
+      }
+    };
+
+    fetchDistricts();
+  }, [selectedProvince]);
+
+  useEffect(() => {
+    if (!selectedDistrict) return;
+
+    const fetchWards = async () => {
+      try {
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${selectedDistrict}`
+        );
+        setWards(res.data);
+        setSelectedWard("");
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách phường:", error);
+      }
+    };
+
+    fetchWards();
+  }, [selectedDistrict]);
+
+  const showAddressModalDiaLog = (address = null) => {
+    const isEdit = !!address;
+
+    Swal.fire({
+      title: isEdit ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới",
+      html: `
+      <div class="container mt-3 text-left">
+        <form>
+          <div class="mb-4">
+            <label for="swal-address_line" class="form-label font-semibold block mb-1">Địa chỉ:</label>
+            <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${address?.address_line || ''}">
+          </div>
+          <div class="mb-4">
+            <label for="swal-province" class="form-label font-semibold block mb-1">Tỉnh/Thành phố:</label>
+            <select id="swal-province" class="form-select w-full border rounded px-3 py-2">
+              <option value="">Chọn tỉnh/thành phố</option>
+              ${provinces.map(p => `<option value="${p.ProvinceID}">${p.ProvinceName}</option>`).join("")}
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="swal-district" class="form-label font-semibold block mb-1">Quận/Huyện:</label>
+            <select id="swal-district" class="form-select w-full border rounded px-3 py-2" disabled>
+              <option value="">Chọn quận/huyện</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="swal-ward" class="form-label font-semibold block mb-1">Xã/Phường:</label>
+            <select id="swal-ward" class="form-select w-full border rounded px-3 py-2" disabled>
+              <option value="">Chọn xã/phường</option>
+            </select>
+          </div>
+          <div class="form-check mb-3 flex items-center">
+            <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${address?.is_default === 1 ? "checked" : ""}>
+            <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
+          </div>
+        </form>
+      </div>
+    `,
+      didOpen: async () => {
+        const provinceSelect = Swal.getPopup().querySelector("#swal-province");
+        const districtSelect = Swal.getPopup().querySelector("#swal-district");
+        const wardSelect = Swal.getPopup().querySelector("#swal-ward");
+        const addressInput = Swal.getPopup().querySelector("#swal-address_line");
+
+        const fetchDistricts = async (provinceId) => {
+          try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${provinceId}`);
+            return res.data;
+          } catch (err) {
+            console.error("Lỗi tải quận:", err);
+            return [];
+          }
+        };
+
+        const fetchWards = async (districtId) => {
+          try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${districtId}`);
+            return res.data;
+          } catch (err) {
+            console.error("Lỗi tải phường:", err);
+            return [];
+          }
+        };
+
+        // Hàm cập nhật địa chỉ đầy đủ vào ô input
+        const updateFullAddress = () => {
+          const provinceName = provinceSelect.options[provinceSelect.selectedIndex]?.text || "";
+          const districtName = districtSelect.options[districtSelect.selectedIndex]?.text || "";
+          const wardName = wardSelect.options[wardSelect.selectedIndex]?.text || "";
+
+          let fullAddress = "";
+
+          if (wardName && districtName && provinceName) {
+            fullAddress = `${wardName}, ${districtName}, ${provinceName}`;
+          } else if (districtName && provinceName) {
+            fullAddress = `${districtName}, ${provinceName}`;
+          } else if (provinceName) {
+            fullAddress = `${provinceName}`;
+          }
+
+          addressInput.value = fullAddress;
+        };
+
+        // Load dữ liệu cũ nếu là edit
+        if (isEdit && address) {
+          const province = provinces.find(p => p.ProvinceName === address.city);
+          if (province) {
+            provinceSelect.value = province.ProvinceID;
+
+            districtSelect.disabled = false;
+            const districts = await fetchDistricts(province.ProvinceID);
+            districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+            districts.forEach(d => {
+              const option = document.createElement("option");
+              option.value = d.DistrictID;
+              option.text = d.DistrictName;
+              if (d.DistrictName === address.district) option.selected = true;
+              districtSelect.appendChild(option);
+            });
+
+            // Lấy DistrictID từ dropdown quận đã chọn
+            const selectedDistrictOption = districtSelect.options[districtSelect.selectedIndex];
+            const districtId = selectedDistrictOption?.value;
+
+            if (districtId) {
+              wardSelect.disabled = false;
+              const wards = await fetchWards(districtId);
+              wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+              wards.forEach(w => {
+                const option = document.createElement("option");
+                option.value = w.WardCode;
+                option.text = w.WardName;
+                if (w.WardName === address.ward) option.selected = true;
+                wardSelect.appendChild(option);
+              });
+            }
+          }
+
+          updateFullAddress();
+        }
+
+        // Sự kiện chọn tỉnh
+        provinceSelect.addEventListener("change", async (e) => {
+          const provinceId = e.target.value;
+          districtSelect.disabled = !provinceId;
+          wardSelect.disabled = true;
+          districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
+          wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+
+          if (!provinceId) return;
+
+          const districts = await fetchDistricts(provinceId);
+          districts.forEach(d => {
+            const option = document.createElement("option");
+            option.value = d.DistrictID;
+            option.text = d.DistrictName;
+            districtSelect.appendChild(option);
+          });
+
+          updateFullAddress();
+        });
+
+        // Sự kiện chọn quận
+        districtSelect.addEventListener("change", async (e) => {
+          const districtId = e.target.value;
+          wardSelect.disabled = !districtId;
+          wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+
+          if (!districtId) return;
+
+          const wards = await fetchWards(districtId);
+          wards.forEach(w => {
+            const option = document.createElement("option");
+            option.value = w.WardCode;
+            option.text = w.WardName;
+            wardSelect.appendChild(option);
+          });
+
+          updateFullAddress();
+        });
+
+        // Sự kiện chọn phường
+        wardSelect.addEventListener("change", () => {
+          updateFullAddress();
+        });
+      },
+      showCancelButton: true,
+      confirmButtonText: isEdit ? "Cập nhật" : "Thêm",
+      cancelButtonText: "Hủy",
+      preConfirm: () => {
+        const address_line = Swal.getPopup().querySelector("#swal-address_line").value.trim();
+        const provinceSelect = Swal.getPopup().querySelector("#swal-province");
+        const districtSelect = Swal.getPopup().querySelector("#swal-district");
+        const wardSelect = Swal.getPopup().querySelector("#swal-ward");
+        const is_default = Swal.getPopup().querySelector("#swal-is_default").checked ? 1 : 0;
+
+        const city = provinceSelect.options[provinceSelect.selectedIndex]?.text || "";
+        const district = districtSelect.options[districtSelect.selectedIndex]?.text || "";
+        const ward = wardSelect.options[wardSelect.selectedIndex]?.text || "";
+
+        if (!city || !district || !ward) {
+          Swal.showValidationMessage("Vui lòng chọn đầy đủ tỉnh/quận/phường.");
+          return false;
+        }
+
+        return {
+          address_line,
+          city,
+          district,
+          ward,
+          is_default,
+        };
+      },
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        if (isEdit) {
+          await handleUpdateAddress(address.id, result.value);
+        } else {
+          await handleAddAddress(result.value);
+        }
+      }
+    });
+  };
+
+  const handleAddAddress = async (addressData) => {
+    try {
+      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+
+      const updatedAddresses = [...allAddresses, res.data];
+      setAllAddresses(updatedAddresses);
+
+      if (addressData.is_default === 1) {
+        setDefaultAddress(res.data);
+      }
+
+      toast.success("Thêm địa chỉ thành công");
+    } catch (error) {
+      console.error("Lỗi khi thêm địa chỉ:", error);
+      toast.error("Thêm địa chỉ thất bại");
+    }
+  };
+
+  const handleUpdateAddress = async (addressId, addressData) => {
+    const hasOtherDefault = allAddresses.some(
+      (addr) => addr.is_default === 1 && addr.id !== addressId
+    );
+
+    if (addressData.is_default === 1 && hasOtherDefault) {
+      toast.error("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
+      return;
+    }
+
+    try {
+      const res = await axios.put(
+        `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
+        addressData
+      );
+      toast.success("Cập nhật địa chỉ thành công");
+
+      const updatedAddresses = allAddresses.map(addr =>
+        addr.id === addressId ? { ...addr, ...addressData } : addr
+      );
+      setAllAddresses(updatedAddresses);
+    } catch (error) {
+      console.error("Lỗi khi cập nhật địa chỉ:", error);
+      toast.error("Lỗi khi cập nhật địa chỉ");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      const currentPath = window.location.pathname;
+      if (currentPath !== "/checkout") {
+        localStorage.removeItem("selectedVoucher");
+        localStorage.removeItem("finalTotal");
+        localStorage.removeItem("checkoutData");
+      }
+    };
+  }, []);
+
+  const handleSetDefaultAddress = async (addressId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
+        { is_default: 1 },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (res.data.success) {
+        const updatedAddresses = allAddresses.map(addr =>
+          addr.id === addressId ? { ...addr, is_default: 1 } : { ...addr, is_default: 0 }
+        );
+        setAllAddresses(updatedAddresses);
+        setDefaultAddress(updatedAddresses.find(addr => addr.is_default === 1));
+        toast.success("Đặt làm địa chỉ mặc định thành công");
+      }
+    } catch (error) {
+      console.error("Lỗi khi đặt làm địa chỉ mặc định:", error);
+      toast.error("Không thể cập nhật địa chỉ mặc định");
+    }
+  };
+
+  const confirmSetDefaultAddress = (addressId) => {
+    const address = allAddresses.find(addr => addr.id === addressId);
+
+    Swal.fire({
+      title: "Xác nhận",
+      text: "Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đồng ý",
+      cancelButtonText: "Hủy"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await handleSetDefaultAddress(addressId);
+      }
+    });
+  };
+
+  const getProvinceIdByName = async (provinceName) => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/provinces`);
+      const provinces = res.data;
+
+      const province = provinces.find(p =>
+        p.ProvinceName.toLowerCase().includes(provinceName.toLowerCase())
+      );
+
+      if (!province) {
+        throw new Error(`Không tìm thấy mã tỉnh cho ${provinceName}`);
+      }
+
+      return province.ProvinceID;
+    } catch (error) {
+      console.error("Lỗi khi lấy ProvinceID:", error.message);
+      toast.error("Không thể lấy mã tỉnh");
+      return null;
+    }
+  };
+
+  const getDistrictIdByProvinceAndName = async (provinceId, districtName) => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${provinceId}`);
+      const districts = res.data;
+
+      const district = districts.find(d =>
+        d.DistrictName.toLowerCase().includes(districtName.toLowerCase())
+      );
+
+      if (!district) {
+        throw new Error(`Không tìm thấy mã quận/huyện cho ${districtName}`);
+      }
+
+      return district.DistrictID;
+    } catch (error) {
+      console.error("Lỗi khi lấy DistrictID:", error.message);
+      toast.error("Không thể lấy mã quận/huyện");
+      return null;
+    }
+  };
+
+  const getWardCodeByDistrictAndName = async (districtId, wardName) => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${districtId}`);
+      const wards = res.data;
+
+      const ward = wards.find(w =>
+        w.WardName.toLowerCase().includes(wardName.toLowerCase())
+      );
+
+      if (!ward) {
+        throw new Error(`Không tìm thấy mã phường/xã cho ${wardName}`);
+      }
+
+      return ward.WardCode;
+    } catch (error) {
+      console.error("Lỗi khi lấy WardCode:", error.message);
+      toast.error("Không thể lấy mã phường/xã");
+      return null;
+    }
+  };
+
+const handleCheckout = async () => {
+    try {
+        
+        const selectedPaymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value;
+
+        if (!selectedPaymentMethod) {
+            toast.error("Vui lòng chọn phương thức thanh toán");
+            return;
+        }
+
+        const payload = {
+            products: checkoutItems,
+            user_id: user.id,
+            name: user.name,
+            phone: user.phone,
+            email: user.email,
+            address: defaultAddress?.address_line || "",
+            note: noteValue,
+            payment_method: selectedPaymentMethod
+        };
+
+        console.log("Payload before send:", JSON.stringify(payload, null, 2));
+
+        let url = `${Constants.DOMAIN_API}/orders`;
+
+        if (selectedPaymentMethod === "Momo") {
+            url = `${Constants.DOMAIN_API}/orders-momo`;
+        }
+
+        const response = await axios.post(url, payload);
+
+        console.log("Response from checkout:", response.data);
+
+        if (response.data.success) {
+            if (selectedPaymentMethod === "Momo" && response.data.data?.payUrl) {
+                window.location.href = response.data.data.payUrl;
+            } else {
+                toast.success("Đặt hàng thành công!");
+                navigate("/cart");
+            }
+        } else {
+            throw new Error(response.data.message || "Có lỗi xảy ra");
+        }
+    } catch (error) {
+        console.error("Lỗi đặt hàng:", error.message);
+        toast.error(error.response?.data?.message || "Có lỗi xảy ra khi đặt hàng.");
+    }
+};
+
+  // const calculateShippingFee = async () => {
+  //   if (!defaultAddress) {
+  //     toast.error("Chưa có địa chỉ mặc định");
+  //     return;
+  //   }
+  //   const { city, district, ward } = defaultAddress;
+  //   try {
+  //     // Lấy ProvinceID
+  //     const provinceId = await getProvinceIdByName(city);
+  //     if (!provinceId) throw new Error("Không tìm thấy mã tỉnh");
+  //     // Lấy DistrictID
+  //     const districtId = await getDistrictIdByProvinceAndName(provinceId, district);
+  //     if (!districtId) throw new Error("Không tìm thấy mã quận");
+  //     // Lấy WardCode
+  //     const wardCode = await getWardCodeByDistrictAndName(districtId, ward);
+  //     if (!wardCode) throw new Error("Không tìm thấy mã phường");
+
+  //     // 📍 Địa chỉ kho hàng (gửi)
+  //     const warehouse = {
+  //       from_district_id: 1449,     // Quận Cái Răng
+  //       from_ward_code: "281113",   // Phường Thường Thạnh
+  //     };
+
+  //     // ✅ Tính phí vận chuyển qua GHN
+  //     const feeRes = await axios.post(
+  //       `${Constants.DOMAIN_API}/shipping/shipping-fee`,
+  //       {
+  //         from_district_id: Number(warehouse.from_district_id),
+  //         from_ward_code: warehouse.from_ward_code,
+  //         to_district_id: Number(districtId),
+  //         to_ward_code: wardCode,
+  //         service_id: 53321,
+  //         weight: 500,
+  //         length: 20,
+  //         width: 20,
+  //         height: 15,
+  //         insurance_value: 0
+  //       }
+  //     );
+  //     if (feeRes.data.success && feeRes.data.data) {
+  //       const shippingFee = feeRes.data.data.total || 0;
+  //       setFinalData(prev => ({
+  //         ...prev,
+  //         shippingFee: shippingFee,
+  //         formattedAmount: ((prev?.total || 0) + shippingFee).toLocaleString("vi-VN")
+  //       }));
+  //       toast.success(`Phí vận chuyển: ${shippingFee.toLocaleString("vi-VN")}₫`);
+  //     } else {
+  //       toast.error("Không thể tính phí vận chuyển");
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ Lỗi khi tính phí vận chuyển:", error);
+  //     if (error.response?.data?.message.includes('route not found')) {
+  //       toast.error("Tuyến đường này không được hỗ trợ bởi GHN.");
+  //     } else if (error.response?.data?.message) {
+  //       toast.error(error.response.data.message);
+  //     } else {
+  //       toast.error("Có lỗi xảy ra khi tính phí vận chuyển");
+  //     }
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   if (defaultAddress) {
+  //     calculateShippingFee();
+  //   }
+  // }, [defaultAddress]);
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -127,7 +865,6 @@ export default function CheakoutPage() {
                 </h1>
                 <div className="form-area">
                   <form className="w-full px-10 py-[30px] border border-[#EDEDED]">
-
                     <div className="mb-5">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên*</label>
                       <div className="relative">
@@ -173,26 +910,114 @@ export default function CheakoutPage() {
                         />
                       </div>
                     </div>
+                    <div className="mb-5">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú (tùy chọn)</label>
+                      <textarea
+                        placeholder="Ví dụ: Giao hàng sau 17h, không gọi điện..."
+                        value={noteValue}
+                        onChange={(e) => setNoteValue(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-none"
+                        rows="3"
+                      />
+                    </div>
 
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ*</label>
-                      <div class="max-w-md mx-auto p-4">
-                        <div class="flex items-start space-x-2">
-                          <i class="fas fa-map-marker-alt text-black text-lg mt-1"></i>
-                          <div class="flex-1">
-                            <p class="font-sans font-semibold text-black text-base leading-5 truncate max-w-full">
-                              Lê Nguyễn Hoàng Phúc (+84)03*****...
-                            </p>
-                            <p class="font-sans text-gray-600 text-sm leading-5">
-                              Kv. Phú Mỹ,nhà trọ Thịnh Phát
-                            </p>
-                            <p class="font-sans text-gray-600 text-sm leading-5">
-                              Thường Thạnh, Cái Răng, Cần Thơ, Việt Nam
-                            </p>
+
+                      <div className="w-full p-4 border border-gray-200 rounded-lg bg-white shadow-sm relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddressDropdown(!showAddressDropdown)}
+                          className="absolute top-2 right-3 text-blue-500 text-xl font-bold z-10"
+                        >
+                          <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            className={`transition-transform duration-300 ${showAddressDropdown ? "rotate-180" : ""}`}
+                          >
+                            {showAddressDropdown ? (
+                              <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6 1.41 1.41z" />
+                            ) : (
+                              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                            )}
+                          </svg>
+                        </button>
+
+                        {!showAddressDropdown && defaultAddress ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="text-red-500">
+                              <FontAwesomeIcon icon={faMapMarkerAlt} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-sans font-semibold text-black text-base leading-5 truncate">
+                                {user?.name} (+84) {user?.phone}
+                              </p>
+                              <p className="font-sans text-gray-600 text-sm leading-5">
+                                {defaultAddress.address_line}, Việt Nam
+                              </p>
+                            </div>
+                            <i className="fas fa-chevron-right text-gray-400 text-base"></i>
                           </div>
-                          <i class="fas fa-chevron-right text-gray-400 text-base mt-2"></i>
-                        </div>
+                        ) : null}
+
+                        {showAddressDropdown && (
+                          <>
+                            <div className="flex items-center justify-between mt-2 mb-4">
+                              <button
+                                type="button"
+                                className="px-2 py-1 text-gray-500 rounded-md hover:text-gray-700 transition duration-200 ease-in-out text-sm flex items-center space-x-1 "
+                                onClick={() => showAddressModalDiaLog()}
+                              >
+                                <span>+ Thêm địa chỉ mới</span>
+                              </button>
+                            </div>
+
+                            <div className="mt-2 border-t pt-4">
+                              {allAddresses.length > 0 ? (
+                                allAddresses.map((address) => (
+                                  <div key={address.id} className="mb-4 border-b pb-3 last:border-b-0">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <p className="font-semibold">{user?.name} (+84) {user?.phone}</p>
+                                        <p>{`${address.address_line}, Việt Nam`}</p>
+                                        {address.is_default === 1 ? (
+                                          <span className="inline-block px-2 py-1 bg-gray-200 text-gray-500 rounded-sm mt-1">
+                                            Mặc định
+                                          </span>
+                                        ) : (
+                                          <button type="button"
+                                            onClick={() => confirmSetDefaultAddress(address.id)}
+                                            className="text-green-500 hover:text-green-700 text-sm"
+                                          >
+                                            Đặt làm mặc định
+                                          </button>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col space-y-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => showAddressModalDiaLog(address)}
+                                          className="text-red-500 hover:text-red-700 text-sm"
+                                        >
+                                          Sửa
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-gray-500 px-3">Chưa có địa chỉ nào.</p>
+                              )}
+                            </div>
+                          </>
+                        )}
+
+                        {!defaultAddress && !showAddressDropdown && (
+                          <div className="text-gray-500">Chưa có địa chỉ mặc định</div>
+                        )}
                       </div>
+
                     </div>
                   </form>
                 </div>
@@ -306,6 +1131,14 @@ export default function CheakoutPage() {
                     </div>
                   )}
 
+                  {/* <button
+                    type="button"
+                    onClick={calculateShippingFee}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                  >
+                    Tính phí vận chuyển
+                  </button> */}
+
                   {checkoutItems.length > 0 && (
                     <div className="mt-6 pt-4 border-t flex justify-between items-center">
                       <span className="text-xl font-bold">Tổng cộng:</span>
@@ -324,15 +1157,12 @@ export default function CheakoutPage() {
                           <div className="input-radio">
                             <input
                               type="radio"
-                              name="price"
-                              className="accent-pink-500"
-                              id="delivery"
+                              name="payment_method"
+                              value="MoMo"
+                              defaultChecked
                             />
                           </div>
-                          <label
-                            htmlFor="delivery"
-                            className="text-[18px] text-normal text-qblack"
-                          >
+                          <label htmlFor="momo" className="text-[18px] text-normal text-qblack">
                             MoMo
                           </label>
                         </div>
@@ -355,15 +1185,30 @@ export default function CheakoutPage() {
                           </label>
                         </div>
                       </li>
+                      <li>
+                        <div className="flex space-x-2.5 items-center mb-5">
+                          <div className="input-radio">
+                            <input
+                              type="radio"
+                              name="payment_method"
+                              value="COD"
+                              defaultChecked
+                            />
+                          </div>
+                          <label htmlFor="cod" className="text-[18px] text-normal text-qblack">
+                            Thanh toán khi nhận hàng
+                          </label>
+                        </div>
+                      </li>
                     </ul>
                   </div>
-                  <a href="#">
-                    <div className="w-full h-[50px] black-btn flex justify-center items-center">
-                      <span className="text-sm font-semibold">
-                        Đặt hàng ngay
-                      </span>
-                    </div>
-                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCheckout}
+                    className="w-full h-[50px] black-btn flex justify-center items-center mt-4"
+                  >
+                    <span className="text-sm font-semibold">Đặt hàng ngay</span>
+                  </button>
                 </div>
               </div>
             </div>

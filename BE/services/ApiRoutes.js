@@ -29,7 +29,6 @@ const fetchData = async (url, res) => {
 exports.getProvinces = async (req, res) => {
   const data = await fetchData("https://online-gateway.ghn.vn/shiip/public-api/master-data/province", res);
   if (data) {
-    console.log("Tỉnh thành phố được lấy:", data);
     res.json(data);
   }
 };
@@ -45,7 +44,6 @@ exports.getDistricts = async (req, res) => {
 
   const data = await fetchData(`https://online-gateway.ghn.vn/shiip/public-api/master-data/district?province_id=${provinceID}`, res);
   if (data) {
-    console.log("Quận huyện được lấy cho tỉnh", provinceID, ":", data);
     res.json(data);
   }
 };
@@ -58,7 +56,6 @@ exports.getWards = async (req, res) => {
 
   const data = await fetchData(`https://online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id=${districtID}`, res);
   if (data) {
-    console.log("Phường xã được lấy cho quận huyện", districtID, ":", data);
     res.json(data);
   }
 };

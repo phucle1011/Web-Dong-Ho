@@ -12,6 +12,7 @@ const AuthController = require('../controllers/Client/authController');
 const ProductClientController = require('../controllers/Client/productClientController');
 const ProductVariantController = require('../controllers/Client/productVariantController');
 const OrderController = require('../controllers/Client/ordersController');
+const ShippingController = require('../controllers/Client/shippingController');
 const { checkJWT } = require('../services/authCheck');
 
 //------------------[ CLIENT ROUTES ]------------------
@@ -32,8 +33,8 @@ router.get('/blogs/:id', BlogController.getBlogById);
 router.post("/contact", ContactController.sendContactEmail);
 
 //------------------[ Promotions ]------------------
-router.post('/promotions/apply',checkJWT, PromotionController.applyDiscount);
-router.get('/promotions/active',checkJWT, PromotionController.getActivePromotions);
+router.post('/promotions/apply', checkJWT, PromotionController.applyDiscount);
+router.get('/promotions/active', checkJWT, PromotionController.getActivePromotions);
 
 
 //------------------[ Products Compaire ]------------------
@@ -56,6 +57,11 @@ router.delete("/clear-cart", checkJWT, CartController.clearCartByUser);
 
 //------------------[ ORDERS ]------------------
 router.get("/orders", OrderController.get);
+router.post("/orders", OrderController.create);
+router.post("/orders-momo", OrderController.createMomoUrl);
+
+//------------------[ SHIPPING ]------------------
+router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);
 
 //------------------[ AUTH ]------------------\
 router.post('/auth/register', AuthController.register);
