@@ -10,7 +10,7 @@ export default function AddressesTab() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
+    const token = localStorage.getItem("token");
     if (token) {
       const decoded = decodeToken(token);
       const id = decoded?.user_id || decoded?.id || null;
@@ -366,16 +366,17 @@ export default function AddressesTab() {
               </div>
             </div>
 
-            <p className="mt-2 text-base">
+            <p className="mt-5 text-base">
               <strong>Địa Chỉ Cụ Thể :</strong> {address.address_line}
             </p>
-            <p className="mt-1 text-base">
+            
+            <p className="mt-5 text-base ">
               <strong>Tỉnh Thành Phố :</strong> {address.province}
             </p>
-            <p className="mt-1 text-base">
+            <p className="mt-5 text-base">
               <strong>Quận Huyện :</strong> {address.district}
             </p>
-            <p className="mt-1 text-base">
+            <p className="mt-5 text-base">
               <strong>Mặc Định Địa Chỉ :</strong>{" "}
               {address.is_default ? (
                 <span className="text-green-600 font-semibold">Có</span>

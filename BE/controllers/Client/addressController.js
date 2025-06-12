@@ -52,7 +52,7 @@ class AddressController {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu dữ liệu bắt buộc: address_line, city, district, province, ward",
+        message: "Thiếu dữ liệu bắt buộc: address_line,  district, province",
       });
     }
 

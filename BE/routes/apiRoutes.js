@@ -6,8 +6,8 @@ const getWards = require('../services/ApiRoutes').getWards;
 
 
 //------------------[ API ROUTES ]------------------
-router.get('/apiRoutes/provinces', getProvinces);
-router.get('/apiRoutes/districts', getDistricts);
-router.get('/apiRoutes/wards', getWards);
+router.get('/api/provinces', getProvinces);
+router.get('/api/districts', getDistricts);
+router.get('/api/wards', getWards);
 
 module.exports = router;

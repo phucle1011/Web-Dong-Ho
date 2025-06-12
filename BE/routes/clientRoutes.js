@@ -12,10 +12,17 @@ const AuthController = require('../controllers/Client/authController');
 const ProductClientController = require('../controllers/Client/productClientController');
 const ProductVariantController = require('../controllers/Client/productVariantController');
 const OrderController = require('../controllers/Client/ordersController');
+// const ClientCommentController = require('../controllers/Client/commentsController');
+const  chatWithBot  = require('../controllers/Client/chatboxController');
 const ShippingController = require('../controllers/Client/shippingController');
 const { checkJWT } = require('../services/authCheck');
-
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 //------------------[ CLIENT ROUTES ]------------------
+
+//------------------[ CHATBOX ]------------------//
+router.post("/chatbox",chatWithBot.chatWithBot);
 
 //------------------[ PRODUCTS ]------------------
 router.get('/products/:id/variants', ProductController.getVariantsWithPromotion);
@@ -33,8 +40,8 @@ router.get('/blogs/:id', BlogController.getBlogById);
 router.post("/contact", ContactController.sendContactEmail);
 
 //------------------[ Promotions ]------------------
-router.post('/promotions/apply', checkJWT, PromotionController.applyDiscount);
-router.get('/promotions/active', checkJWT, PromotionController.getActivePromotions);
+router.post('/promotions/apply',checkJWT, PromotionController.applyDiscount);
+router.get('/promotions/active',checkJWT, PromotionController.getActivePromotions);
 
 
 //------------------[ Products Compaire ]------------------
@@ -57,11 +64,6 @@ router.delete("/clear-cart", checkJWT, CartController.clearCartByUser);
 
 //------------------[ ORDERS ]------------------
 router.get("/orders", OrderController.get);
-router.post("/orders", OrderController.create);
-router.post("/orders-momo", OrderController.createMomoUrl);
-
-//------------------[ SHIPPING ]------------------
-router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);
 
 //------------------[ AUTH ]------------------\
 router.post('/auth/register', AuthController.register);
@@ -70,10 +72,14 @@ router.post('/auth/login', AuthController.login);
 
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
-// routes/productVariantRoutes.js
 
-router.get('/stock', ProductClientController.countStockGroupByProductId);
+router.get('/:id', ProductVariantController.getProductVariantDetail);
+
 
 router.get('/product-variants/:id', ProductVariantController.getProductVariantDetail);
 router.get('/products/discounted', ProductVariantController.getDiscountedProducts);
+
+//------------------[ Comment ]------------------//
+// router.post('/add', upload.array('images'), ClientCommentController.addComment);
+
 module.exports = router;
