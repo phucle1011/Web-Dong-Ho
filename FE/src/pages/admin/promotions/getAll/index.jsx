@@ -17,7 +17,6 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 function PromotionGetAll() {
-    const [filterSpecial, setFilterSpecial] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [promotions, setPromotions] = useState([]);
@@ -33,6 +32,7 @@ function PromotionGetAll() {
         expired: 0,
         inactive: 0,
         exhausted: 0,
+        special: 0,
     });
 
     const exportToExcel = () => {
@@ -56,6 +56,7 @@ function PromotionGetAll() {
                 inactive: "Vô hiệu hóa",
                 exhausted: "Hết lượt sử dụng",
             }[promo.status],
+            // promo.special_promotion ? "Có" : "Không",
         ]));
 
         const worksheet = XLSX.utils.aoa_to_sheet([
@@ -67,6 +68,7 @@ function PromotionGetAll() {
                 "Ngày bắt đầu",
                 "Ngày kết thúc",
                 "Trạng thái",
+                "Khách đặc biệt",
             ],
             ...data,
         ]);
@@ -78,6 +80,7 @@ function PromotionGetAll() {
             { wpx: 120 },
             { wpx: 120 },
             { wpx: 100 },
+            { wpx: 100 },
         ];
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Khuyến mãi");
@@ -86,8 +89,7 @@ function PromotionGetAll() {
             type: "array",
         });
         const blob = new Blob([excelBuffer], {
-            type:
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
         });
         saveAs(blob, `danh_sach_khuyen_mai_${new Date().toISOString().slice(0, 10)}.xlsx`);
     };
@@ -95,21 +97,24 @@ function PromotionGetAll() {
     const perPage = 10;
 
     useEffect(() => {
-        getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate, filterSpecial);
+        getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate);
     }, [currentPage, filterStatus]);
 
     const getPromotions = async (page = 1, search = "", status = "", start = "", end = "") => {
         try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`, {
-                params: {
-                    page,
-                    limit: perPage,
-                    searchTerm: search,
-                    status,
-                    startDate: start,
-                    endDate: end
-                },
-            });
+            const params = {
+                page,
+                limit: perPage,
+                searchTerm: search,
+                startDate: start,
+                endDate: end,
+            };
+            if (status === "special") {
+                params.special_promotion = "true";
+            } else {
+                params.status = status;
+            }
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`, { params });
             setPromotions(res.data.data || []);
             setTotalPages(res.data.pagination?.totalPages || 1);
             setStatusCounts(res.data.statusCounts || {});
@@ -137,8 +142,8 @@ function PromotionGetAll() {
 
     const handleFilterByDate = () => {
         setCurrentPage(1);
-        getPromotions(1, searchTerm, filterStatus, startDate, endDate, filterSpecial);
-    }
+        getPromotions(1, searchTerm, filterStatus, startDate, endDate);
+    };
 
     const formatDate = (dateString) => new Date(dateString).toLocaleDateString("vi-VN");
 
@@ -149,6 +154,7 @@ function PromotionGetAll() {
         { key: "expired", label: "Đã hết hạn", color: "bg-red-300", textColor: "text-red-800" },
         { key: "inactive", label: "Vô hiệu hóa", color: "bg-gray-300", textColor: "text-gray-800" },
         { key: "exhausted", label: "Hết lượt", color: "bg-yellow-300", textColor: "text-yellow-800" },
+        { key: "special", label: "Mã giảm đặc biệt", color: "bg-purple-300", textColor: "text-purple-800" },
     ];
 
     return (
@@ -205,8 +211,7 @@ function PromotionGetAll() {
                             setCurrentPage(1);
                             getPromotions(1, searchTerm, key === "all" ? "" : key, startDate, endDate);
                         }}
-                        className={`flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm transition-all ${filterStatus === (key === "all" ? "" : key) ? "bg-[#073272] text-white" : "bg-white text-gray-700"
-                            }`}
+                        className={`flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm transition-all ${filterStatus === (key === "all" ? "" : key) ? "bg-[#073272] text-white" : "bg-white text-gray-700"}`}
                     >
                         {label}
                         <span className={`px-2 py-0.5 rounded ${color} ${textColor} text-xs font-semibold`}>
@@ -230,7 +235,6 @@ function PromotionGetAll() {
                         }
                     }}
                 />
-
                 <button
                     onClick={() => {
                         setSearchTerm("");
@@ -258,6 +262,7 @@ function PromotionGetAll() {
                             <th className="border p-2">Kết thúc</th>
                             <th className="border p-2">Áp dụng</th>
                             <th className="border p-2">Trạng thái</th>
+                            {/* <th className="border p-2">Khách đặc biệt</th> */}
                             <th className="border p-2">Hành động</th>
                         </tr>
                     </thead>
@@ -269,7 +274,6 @@ function PromotionGetAll() {
                                 <td className="border p-2 text-center">
                                     {promo.discount_type === "percentage"
                                         ? `${promo.discount_value}%`
-
                                         : `${Number(promo.discount_value).toLocaleString("vi-VN", {
                                             style: "currency",
                                             currency: "VND",
@@ -279,11 +283,7 @@ function PromotionGetAll() {
                                 <td className="border p-2 text-center">{formatDate(promo.start_date)}</td>
                                 <td className="border p-2 text-center">{formatDate(promo.end_date)}</td>
                                 <td className="border p-2 text-center">
-                                    {promo.applicable_to === "order" ? (
-                                        "Đơn hàng"
-                                    ) : (
-                                        <span className="font-bold">Sản phẩm</span>
-                                    )}
+                                    {promo.applicable_to === "order" ? "Đơn hàng" : <span className="font-bold">Sản phẩm</span>}
                                 </td>
                                 <td className="border p-2 text-center">
                                     <span
@@ -295,8 +295,7 @@ function PromotionGetAll() {
                                                     ? "bg-blue-100 text-blue-800"
                                                     : promo.status === "exhausted"
                                                         ? "bg-yellow-100 text-yellow-800"
-                                                        : "bg-green-100 text-green-800"
-                                            }`}
+                                                        : "bg-green-100 text-green-800"}`}
                                     >
                                         {{
                                             active: "Đang diễn ra",
@@ -307,6 +306,9 @@ function PromotionGetAll() {
                                         }[promo.status]}
                                     </span>
                                 </td>
+                                {/* <td className="border p-2 text-center">
+                                    {promo.special_promotion ? "Có" : "Không"}
+                                </td> */}
                                 <td className="border p-2 text-center space-x-2">
                                     <Link
                                         to={`/admin/promotions/edit/${promo.id}`}
@@ -329,7 +331,6 @@ function PromotionGetAll() {
 
             <div className="flex justify-center mt-6">
                 <div className="flex items-center space-x-1">
-
                     <button
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage(1)}
@@ -337,7 +338,6 @@ function PromotionGetAll() {
                     >
                         <FaAngleDoubleLeft />
                     </button>
-
                     <button
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage((prev) => prev - 1)}
@@ -345,7 +345,6 @@ function PromotionGetAll() {
                     >
                         <FaChevronLeft />
                     </button>
-
                     {[...Array(totalPages)].map((_, i) => {
                         const page = i + 1;
                         if (page >= currentPage - 1 && page <= currentPage + 1) {
@@ -353,8 +352,7 @@ function PromotionGetAll() {
                                 <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
-                                        }`}
+                                    className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"}`}
                                 >
                                     {page}
                                 </button>
@@ -362,7 +360,6 @@ function PromotionGetAll() {
                         }
                         return null;
                     })}
-
                     <button
                         disabled={currentPage === totalPages}
                         onClick={() => setCurrentPage((prev) => prev + 1)}

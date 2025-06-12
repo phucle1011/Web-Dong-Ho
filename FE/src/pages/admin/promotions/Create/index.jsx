@@ -8,7 +8,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 
-
 function PromotionCreate() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -22,7 +21,7 @@ function PromotionCreate() {
     watch,
     setValue,
     getValues,
-    formState: { errors }
+    formState: { errors },
   } = useForm({
     defaultValues: {
       name: "",
@@ -36,11 +35,12 @@ function PromotionCreate() {
       applicable_to: "all_products",
       min_price_threshold: "",
       max_price_threshold: "",
-      user_ids: []
-    }
+      user_ids: [],
+    },
   });
 
   const applicableTo = watch("applicable_to");
+  const discountType = watch("discount_type");
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -57,15 +57,13 @@ function PromotionCreate() {
   const generateCodeFromName = (name) => {
     if (!name) return "";
     let code = name.toUpperCase();
-    code = code.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    code = code.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     code = code.replace(/[^A-Z0-9]+/g, "_");
     code = code.substring(0, 20);
     code = code.replace(/^_+|_+$/g, "");
-
     return code;
   };
 
-  // Theo dõi tên và cập nhật mã
   const nameValue = watch("name");
   useEffect(() => {
     const code = generateCodeFromName(nameValue);
@@ -73,12 +71,10 @@ function PromotionCreate() {
     setValue("code", code);
   }, [nameValue, setValue]);
 
-
-  const userOptions = users.map(user => ({
+  const userOptions = users.map((user) => ({
     value: user.id,
     label: user.name || user.email || `User ${user.id}`,
   }));
-
 
   function formatDateToLocalISO(date) {
     const year = date.getFullYear();
@@ -110,7 +106,6 @@ function PromotionCreate() {
       postData.end_date = formatDateToLocalISO(postData.end_date);
     }
 
-    // Nếu toggle tắt thì không gửi user_ids hoặc gửi rỗng
     if (!showUserList) {
       postData.user_ids = [];
     }
@@ -129,8 +124,6 @@ function PromotionCreate() {
     }
   };
 
-
-  const discountType = watch("discount_type");
   const startDate = watch("start_date");
 
   const handleUserToggle = (userId) => {
@@ -150,7 +143,7 @@ function PromotionCreate() {
 
   const removeUser = (userId) => {
     const currentUserIds = getValues("user_ids") || [];
-    setValue("user_ids", currentUserIds.filter(id => id !== userId));
+    setValue("user_ids", currentUserIds.filter((id) => id !== userId));
   };
 
   return (
@@ -192,7 +185,7 @@ function PromotionCreate() {
                 validate: (value) =>
                   discountType === "percentage"
                     ? (value >= 1 && value <= 80) || "Giá trị phần trăm phải từ 1 đến 80"
-                    : value >= 0 || "Giá trị cố định phải >= 0"
+                    : value >= 0 || "Giá trị cố định phải >= 0",
               })}
               className="w-full border rounded px-3 py-2"
             />
@@ -207,7 +200,7 @@ function PromotionCreate() {
               type="number"
               {...register("quantity", {
                 required: "Vui lòng nhập số lượng",
-                min: { value: 0, message: "Số lượng phải >= 0" }
+                min: { value: 0, message: "Số lượng phải >= 0" },
               })}
               className="w-full border rounded px-3 py-2"
             />
@@ -257,71 +250,68 @@ function PromotionCreate() {
             )}
           </div>
 
-          {/* Phần số tiền giảm giá tối đa */}
-          <div>
-            <label className="block mb-1 font-medium">Số tiền giảm giá tối đa (VNĐ)</label>
-            <Controller
-              control={control}
-              name="max_price"
-              rules={{
-                required: "Vui lòng nhập số tiền giảm tối đa",
-                validate: (value) => {
-                  const num = parseInt(value?.toString().replace(/\D/g, "") || "0");
-                  if (isNaN(num)) return "Phải là số hợp lệ";
-                  if (num < 0) return "Phải lớn hơn hoặc bằng 0";
+          {/* Conditionally render Số tiền giảm giá tối đa */}
+          {discountType === "percentage" && (
+            <div>
+              <label className="block mb-1 font-medium">Số tiền giảm giá tối đa (VNĐ)</label>
+              <Controller
+                control={control}
+                name="max_price"
+                rules={{
+                  required: "Vui lòng nhập số tiền giảm tối đa",
+                  validate: (value) => {
+                    const num = parseInt(value?.toString().replace(/\D/g, "") || "0");
+                    if (isNaN(num)) return "Phải là số hợp lệ";
+                    if (num < 0) return "Phải lớn hơn hoặc bằng 0";
 
-                  // Lấy các giá trị khác trong form để so sánh
-                  const discountType = getValues("discount_type");
-                  const discountValue = Number(getValues("discount_value"));
-                  const minPrice = parseInt(getValues("min_price_threshold")?.toString().replace(/\D/g, "") || "0");
+                    const discountValue = Number(getValues("discount_value"));
+                    const minPrice = parseInt(
+                      getValues("min_price_threshold")?.toString().replace(/\D/g, "") || "0"
+                    );
 
-                  let minDiscountAmount = 0;
-                  if (discountType === "percentage") {
-                    minDiscountAmount = Math.floor((discountValue / 100) * minPrice);
-                  } else if (discountType === "fixed") {
-                    minDiscountAmount = discountValue;
-                  }
+                    const minDiscountAmount = Math.floor((discountValue / 100) * minPrice);
 
-                  if (num < minDiscountAmount) {
-                    return `Số tiền giảm tối đa phải lớn hơn hoặc bằng ${minDiscountAmount.toLocaleString("vi-VN")} (theo giá trị giảm và ngưỡng đơn hàng)`;
-                  }
+                    if (num < minDiscountAmount) {
+                      return `Số tiền giảm tối đa phải lớn hơn hoặc bằng ${minDiscountAmount.toLocaleString(
+                        "vi-VN"
+                      )} (theo giá trị giảm và ngưỡng đơn hàng)`;
+                    }
 
-                  return true;
-                },
-              }}
-              render={({ field }) => {
-                const formatVND = (value) => {
-                  const number = parseInt(value.replace(/\D/g, "") || "0");
-                  return number.toLocaleString("vi-VN");
-                };
-                const handleChange = (e) => {
-                  const formatted = formatVND(e.target.value);
-                  e.target.value = formatted;
-                  const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
-                  field.onChange(rawNumber);
-                };
-                const displayValue =
-                  typeof field.value === "number"
-                    ? field.value.toLocaleString("vi-VN")
-                    : field.value || "";
-                return (
-                  <input
-                    {...field}
-                    value={displayValue}
-                    onChange={handleChange}
-                    placeholder="VD: 50.000"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                );
-              }}
-            />
-            {errors.max_price && (
-              <p className="text-red-500 text-sm mt-1">{errors.max_price.message}</p>
-            )}
-          </div>
-
+                    return true;
+                  },
+                }}
+                render={({ field }) => {
+                  const formatVND = (value) => {
+                    const number = parseInt(value.replace(/\D/g, "") || "0");
+                    return number.toLocaleString("vi-VN");
+                  };
+                  const handleChange = (e) => {
+                    const formatted = formatVND(e.target.value);
+                    e.target.value = formatted;
+                    const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
+                    field.onChange(rawNumber);
+                  };
+                  const displayValue =
+                    typeof field.value === "number"
+                      ? field.value.toLocaleString("vi-VN")
+                      : field.value || "";
+                  return (
+                    <input
+                      {...field}
+                      value={displayValue}
+                      onChange={handleChange}
+                      placeholder="VD: 50.000"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  );
+                }}
+              />
+              {errors.max_price && (
+                <p className="text-red-500 text-sm mt-1">{errors.max_price.message}</p>
+              )}
+            </div>
+          )}
         </div>
-
 
         <div className="flex flex-col gap-4">
           <div>
@@ -356,7 +346,7 @@ function PromotionCreate() {
                 validate: (endDate) => {
                   if (!startDate) return true;
                   return endDate >= startDate || "Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu";
-                }
+                },
               }}
               render={({ field }) => (
                 <DatePicker
@@ -408,17 +398,9 @@ function PromotionCreate() {
                     type="checkbox"
                     className="sr-only peer"
                     checked={showUserList}
-                    onChange={() => setShowUserList(prev => !prev)}
+                    onChange={() => setShowUserList((prev) => !prev)}
                   />
-                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600
-                      peer-focus:ring-4 peer-focus:ring-green-300
-                      dark:peer-focus:ring-green-800
-                      peer-checked:after:translate-x-full
-                      peer-checked:after:border-white
-                      after:content-[''] after:absolute after:top-0.5 after:left-[2px]
-                      after:bg-white after:border-gray-300 after:border after:rounded-full
-                      after:h-5 after:w-5 after:transition-all dark:border-gray-600">
-                  </div>
+                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600"></div>
                 </label>
               </label>
               <Controller
@@ -431,9 +413,9 @@ function PromotionCreate() {
                     isMulti
                     closeMenuOnSelect={false}
                     onChange={(selected) => {
-                      field.onChange(selected ? selected.map(item => item.value) : []);
+                      field.onChange(selected ? selected.map((item) => item.value) : []);
                     }}
-                    value={userOptions.filter(option => field.value.includes(option.value))}
+                    value={userOptions.filter((option) => field.value.includes(option.value))}
                     placeholder="Chọn khách hàng..."
                     isDisabled={!showUserList}
                   />
@@ -443,7 +425,7 @@ function PromotionCreate() {
           )}
         </div>
 
-        <div className="col-span-2" >
+        <div className="col-span-2">
           <label className="block mb-1 font-medium">Mô tả</label>
           <textarea
             {...register("description")}
@@ -453,15 +435,11 @@ function PromotionCreate() {
         </div>
 
         <div className="mt-6">
-          <button
-            type="submit"
-            className="bg-[#073272] text-white px-6 py-2 rounded mt-2"
-          >
+          <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded mt-2">
             Tạo khuyến mãi
           </button>
         </div>
       </form>
-
     </div>
   );
 }
