@@ -14,10 +14,10 @@ export default function Cart({ className, type }) {
   }, []);
 
   const fetchCart = async () => {
-    if (!token) {
-      console.warn("Chưa đăng nhập, không thể tải giỏ hàng");
-      return;
-    }
+    // if (!token) {
+    //   console.warn("Chưa đăng nhập, không thể tải giỏ hàng");
+    //   return;
+    // }
 
     setLoading(true);
     try {
@@ -29,7 +29,7 @@ export default function Cart({ className, type }) {
       setCartItems(res.data.data);
     } catch (error) {
       console.error("Lỗi gọi API:", error.response?.data || error.message);
-      toast.error("Không thể tải giỏ hàng");
+      // toast.error("Không thể tải giỏ hàng");
     } finally {
       setLoading(false);
     }

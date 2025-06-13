@@ -65,6 +65,7 @@ router.delete("/clear-cart", checkJWT, CartController.clearCartByUser);
 //------------------[ ORDERS ]------------------
 router.post("/orders", OrderController.create);
 router.post("/orders-momo", OrderController.createMomoUrl);
+router.post("/payment-notification", OrderController.momoPaymentNotification);
 
 //------------------[ SHIPPING ]------------------
 router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);

@@ -130,11 +130,9 @@ class OrderController {
             }
 
             if (order.status !== "pending") {
-                return res
-                    .status(400)
-                    .json({
-                        message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'",
-                    });
+                return res.status(400).json({
+                    message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'",
+                });
             }
 
             order.status = "cancelled";
@@ -231,6 +229,8 @@ class OrderController {
             await OrderDetail.bulkCreate(orderDetails);
             await OrderController.sendOrderConfirmationEmail(
                 newOrder,
+                { name, phone },
+                products,
                 email,
                 currentDateTime
             );
@@ -264,7 +264,7 @@ class OrderController {
             for (const item of products) {
                 const variant = item.variant;
                 if (!variant) {
-                    return res.status(400).json({ message: `Thông tin biến thể sản phẩm bị thiếu.` });
+                    return res.status(400).json({ message: "Thiếu biến thể sản phẩm." });
                 }
                 totalPrice += variant.price * item.quantity;
             }
@@ -274,46 +274,40 @@ class OrderController {
             const accessKey = "klm05TvNBzhg7h7j";
             const secretKey = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa";
             const amount = totalPrice.toString();
-            const extraData = "";
-            const ipnUrl = "https://abc123.ngrok.io/payment-notification";
             const orderId = `ORD-${Date.now()}`;
-            const orderInfo = "Thanh toán bằng momo";
-            const redirectUrl = `${BACKEND_URL}/cart`;
             const requestId = Date.now().toString();
-            const requestType = "payWithATM";
-            const storeId = "MomoTestStore";
+            const extraData = Buffer.from(JSON.stringify({
+                user_id,
+                name,
+                phone,
+                email,
+                address,
+                note,
+                products
+            })).toString("base64");
 
             const rawSignature =
-                `accessKey=${accessKey}&` +
-                `amount=${amount}&` +
-                `extraData=${extraData}&` +
-                `ipnUrl=${ipnUrl}&` +
-                `orderId=${orderId}&` +
-                `orderInfo=${orderInfo}&` +
-                `partnerCode=${partnerCode}&` +
-                `redirectUrl=${redirectUrl}&` +
-                `requestId=${requestId}&` +
-                `requestType=${requestType}`;
+                `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${BACKEND_URL}/payment-notification&orderId=${orderId}&orderInfo=Thanh toán bằng momo&partnerCode=${partnerCode}&redirectUrl=${BACKEND_URL}/cart&requestId=${requestId}&requestType=payWithATM`;
 
-
-            const signature = crypto.createHmac('sha256', secretKey)
+            const signature = crypto
+                .createHmac("sha256", secretKey)
                 .update(rawSignature)
-                .digest('hex');
+                .digest("hex");
 
             const momoData = {
                 partnerCode,
                 partnerName: "Test",
-                storeId,
+                storeId: "MomoTestStore",
                 requestId,
                 amount,
                 orderId,
-                orderInfo,
-                redirectUrl,
-                ipnUrl,
-                requestType,
-                extraData: "",
+                orderInfo: "Thanh toán bằng momo",
+                redirectUrl: `${BACKEND_URL}/cart`,
+                ipnUrl: `${BACKEND_URL}/payment-notification`,
+                requestType: "payWithATM",
+                extraData,
                 lang: "vi",
-                signature,
+                signature
             };
 
             let response;
@@ -324,74 +318,121 @@ class OrderController {
                     },
                 });
             } catch (err) {
+                const momoError = err.response?.data;
+
                 console.error("LỖI TỪ AXIOS:", {
                     status: err.response?.status,
-                    data: err.response?.data,
+                    data: momoError,
                     message: err.message,
-                    config: {
-                        url: err.config?.url,
-                        data: err.config?.data,
-                    }
                 });
+
+                if (
+                    momoError?.resultCode === 22 &&
+                    momoError?.message?.includes("số tiền giao dịch")
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Số tiền thanh toán không hợp lệ: từ 10.000đ đến 50.000.000đ.",
+                    });
+                }
+
+                if (
+                    momoError?.message?.includes("Giao dịch bị từ chối") &&
+                    momoError?.message?.includes("nhà phát hành")
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Giao dịch bị từ chối bởi ngân hàng. Vui lòng thử lại hoặc chọn phương thức khác.",
+                    });
+                }
+
                 return res.status(400).json({
                     success: false,
-                    message: "Lỗi từ MoMo",
-                    error: err.response?.data || err.message,
+                    message: momoError?.message || "Lỗi khi tạo thanh toán.",
                 });
             }
 
             const result = response.data;
 
             if (result?.payUrl) {
-                const newOrder = await OrderModel.create({
-                    user_id,
-                    promotion_id: req.body.promotion_id || null,
-                    name,
-                    phone,
-                    email,
-                    address,
-                    total_price: totalPrice,
-                    payment_method: "Momo",
-                    order_code: orderId,
-                    shipping_address: address,
-                    note,
-                    shipping_fee: 0,
-                    status: "pending",
-                    cancellation_reason: null,
-                    shipping_code: null,
-                    payment_url: result.payUrl,
-                });
-
-                await OrderController.sendOrderConfirmationEmail(newOrder, email, new Date());
-
                 return res.json({
                     success: true,
                     data: {
                         payUrl: result.payUrl,
-                        order_code: newOrder.order_code,
+                        order_code: orderId,
                     },
                 });
             } else {
                 return res.status(400).json({
-                    error: "Không thể tạo URL thanh toán MoMo",
+                    success: false,
+                    message: "Không thể tạo URL thanh toán MoMo.",
                     detail: result,
                 });
             }
         } catch (error) {
-            console.error("💣 Lỗi tạo thanh toán MoMo:", error.message);
+            console.error("Lỗi:", error.message);
             return res.status(500).json({
                 success: false,
-                message: "Lỗi máy chủ khi tạo thanh toán MoMo.",
-                error: error.message,
+                message: "Lỗi máy chủ khi tạo thanh toán.",
             });
         }
     }
 
-    static async sendOrderConfirmationEmail(
-        order,
-        customerEmail,
-        currentDateTime
-    ) {
+    static async momoPaymentNotification(req, res) {
+        const {
+            resultCode,
+            orderId,
+            amount,
+            extraData
+        } = req.body;
+
+        if (resultCode !== 0) {
+            return res.status(200).json({ message: "Thanh toán thất bại hoặc bị hủy." });
+        }
+
+        try {
+            const orderExists = await OrderModel.findOne({ where: { order_code: orderId } });
+            if (orderExists) {
+                return res.status(200).json({ message: "Đơn hàng đã tồn tại." });
+            }
+
+            const decoded = JSON.parse(Buffer.from(extraData, "base64").toString("utf-8"));
+
+            const newOrder = await OrderModel.create({
+                user_id: decoded.user_id,
+                promotion_id: null,
+                name: decoded.name,
+                phone: decoded.phone,
+                email: decoded.email,
+                address: decoded.address,
+                total_price: amount,
+                payment_method: "Momo",
+                order_code: orderId,
+                shipping_address: decoded.address,
+                note: decoded.note,
+                shipping_fee: 0,
+                status: "pending",
+                cancellation_reason: null,
+                shipping_code: null,
+                payment_url: null,
+            });
+
+            await OrderController.sendOrderConfirmationEmail(
+                newOrder,
+                decoded,
+                decoded.products,
+                decoded.email,
+                new Date()
+            );
+
+            return res.status(200).json({ message: "Đơn hàng đã được tạo sau khi thanh toán thành công." });
+        } catch (err) {
+            console.error("Lỗi xử lý ipn:", err);
+            return res.status(500).json({ message: "Lỗi xử lý thông báo thanh toán." });
+        }
+    }
+
+    static async sendOrderConfirmationEmail(order, user, products, customerEmail, currentDateTime) {
         try {
             let transporter = nodemailer.createTransport({
                 service: "gmail",
@@ -410,22 +451,46 @@ class OrderController {
             const formattedPrice = new Intl.NumberFormat("vi-VN").format(
                 order.total_price
             );
+            const formattedShipping = new Intl.NumberFormat("vi-VN").format(
+                order.shipping_fee || 0
+            );
+
+            let productHTML = "<p>";
+            if (products && products.length > 0) {
+                for (const item of products) {
+                    const variant = item.variant;
+                    const productName = variant?.sku || "Sản phẩm không xác định";
+                    const price = new Intl.NumberFormat("vi-VN").format(variant?.price || 0);
+                    productHTML += `
+                                    <p><strong>Tên sản phẩm:</strong> ${productName} </p>
+                                    <p><strong>Số lượng:</strong> ${item.quantity} </p>
+                                    <p><strong>Đơn giá:</strong> ${price} VND </p>
+        `;
+                }
+                productHTML += "</p>";
+            } else {
+                productHTML = "<p>Không có sản phẩm nào.</p>";
+            }
 
             const emailContent = `
-                <h3>Cảm ơn bạn đã đặt hàng!</h3>
-                <p><strong>Thông tin đơn hàng:</strong></p>
-                <p><strong>Mã đơn hàng:</strong> ${order.id}</p>
-                <p><strong>Ngày tạo:</strong> ${formattedDate}</p>
-                <p><strong>Tổng tiền:</strong> ${formattedPrice} VND</p>
-                <p><strong>Thông tin giao hàng:</strong></p>
-                <p><strong>Họ tên:</strong> ${order.name}</p>
-                <p><strong>Số điện thoại:</strong> ${order.phone}</p>
-                <p><strong>Địa chỉ:</strong> ${order.address}</p>
-                <p>Cảm ơn bạn đã ủng hộ chúng tôi!</p>
-            `;
+            <h3>Cảm ơn bạn đã đặt hàng!</h3>
+            <p><strong>Thông tin đơn hàng:</strong></p>
+            <p><strong>Mã đơn hàng:</strong> ${order.order_code}</p>
+            <p><strong>Ngày tạo:</strong> ${formattedDate}</p>
+            <p><strong>Danh sách sản phẩm:</strong></p>
+            ${productHTML}
+            <p><strong>Tổng tiền:</strong> ${formattedPrice} VND</p>
+            <p><strong>Phí vận chuyển:</strong> ${formattedShipping} VND</p>
+            <p><strong>Phương thức thanh toán:</strong> ${order.payment_method}</p>
+            <p><strong>Thông tin giao hàng:</strong></p>
+            <p><strong>Họ tên:</strong> ${user.name || "Không có thông tin"}</p>
+            <p><strong>Số điện thoại:</strong> ${user.phone || "Không có thông tin"}</p>
+            <p><strong>Địa chỉ:</strong> ${order.shipping_address || order.address}</p>
+            <p>Cảm ơn bạn đã ủng hộ chúng tôi!</p>
+        `;
 
             let mailOptions = {
-                from: `"Cửa hàng của chúng tôi" <${process.env.GMAIL_USER}>`,
+                from: `"Cửa hàng của chúng tôi" <${process.env.EMAIL_USER}>`,
                 to: customerEmail,
                 subject: `Xác nhận đơn hàng #${order.id}`,
                 html: emailContent,
