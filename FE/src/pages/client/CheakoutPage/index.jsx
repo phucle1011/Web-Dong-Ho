@@ -90,14 +90,14 @@ export default function CheakoutPage() {
         setSelectedVoucher(voucher);
 
         if (voucher.discount_type === "fixed") {
-          const total = items.reduce(
+          const total = checkoutItems.reduce(
             (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
             0
           );
           const discount = Math.min(voucher.discount_value, total);
           setVoucherDiscount(discount);
         } else if (voucher.discount_type === "percentage") {
-          const total = items.reduce(
+          const total = checkoutItems.reduce(
             (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
             0
           );
@@ -728,114 +728,118 @@ export default function CheakoutPage() {
   };
 
   const deleteCartItem = async (variantId) => {
-  const token = localStorage.getItem("token");
-  try {
-    await axios.delete(`${Constants.DOMAIN_API}/delete-to-carts/${variantId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  } catch (err) {
-    console.error(`Không thể xóa sản phẩm ID ${variantId} khỏi giỏ hàng`);
-  }
-};
+    const token = localStorage.getItem("token");
+    try {
+      await axios.delete(`${Constants.DOMAIN_API}/delete-to-carts/${variantId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (err) {
+      console.error(`Không thể xóa sản phẩm ID ${variantId} khỏi giỏ hàng`);
+    }
+  };
 
   const handleCheckout = async () => {
-  try {
-    const selectedPaymentMethod = (document.querySelector('input[name="payment_method"]:checked')?.value || "").trim();
-    if (!selectedPaymentMethod) {
-      toast.error("Vui lòng chọn phương thức thanh toán");
-      return;
-    }
-
-    const name = user?.name?.trim();
-    if (!name) {
-      toast.error("Vui lòng nhập họ và tên");
-      return;
-    }
-
-    const email = user?.email?.trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      toast.error("Vui lòng nhập email");
-      return;
-    } else if (!emailRegex.test(email)) {
-      toast.error("Email không đúng định dạng");
-      return;
-    }
-
-    const phone = user?.phone?.trim();
-    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
-    if (!phone) {
-      toast.error("Vui lòng nhập số điện thoại");
-      return;
-    } else if (!phoneRegex.test(phone)) {
-      toast.error("Số điện thoại không hợp lệ");
-      return;
-    }
-
-    if (!defaultAddress || !defaultAddress.address_line) {
-      toast.error("Vui lòng chọn hoặc thêm địa chỉ giao hàng");
-      return;
-    }
-
-    const payload = {
-      products: checkoutItems,
-      user_id: user.id,
-      name: user.name,
-      phone: user.phone,
-      email: user.email,
-      address: defaultAddress?.address_line || "",
-      note: noteValue,
-      payment_method: selectedPaymentMethod
-    };
-
-    let url = `${Constants.DOMAIN_API}/orders`;
-    if (selectedPaymentMethod === "momo") {
-      url = `${Constants.DOMAIN_API}/orders-momo`;
-    }
-
-    const response = await axios.post(url, payload);
-
-    if (response.data.success) {
-      const successfullyOrderedProductIds =
-        response.data.data?.successfullyOrderedProductIds || [];
-
-      // 👇 Gọi xóa từng sản phẩm thành công khỏi giỏ hàng
-      for (const variantId of successfullyOrderedProductIds) {
-        await deleteCartItem(variantId);
+    try {
+      const selectedPaymentMethod = (document.querySelector('input[name="payment_method"]:checked')?.value || "").trim();
+      if (!selectedPaymentMethod) {
+        toast.error("Vui lòng chọn phương thức thanh toán");
+        return;
       }
 
-      // 👉 Cập nhật lại giao diện
-      setCheckoutItems((prev) =>
-        prev.filter((item) => !successfullyOrderedProductIds.includes(item.product_variant_id))
-      );
+      const name = user?.name?.trim();
+      if (!name) {
+        toast.error("Vui lòng nhập họ và tên");
+        return;
+      }
 
-      if (selectedPaymentMethod === "momo" && response.data?.data?.payUrl) {
-        const payUrl = response.data.data.payUrl;
-        if (payUrl.startsWith("https://"))  {
-          window.open(payUrl, "_self");
-        } else {
-          toast.error("Liên kết thanh toán MoMo không hợp lệ.");
+      const email = user?.email?.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email) {
+        toast.error("Vui lòng nhập email");
+        return;
+      } else if (!emailRegex.test(email)) {
+        toast.error("Email không đúng định dạng");
+        return;
+      }
+
+      const phone = user?.phone?.trim();
+      const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+      if (!phone) {
+        toast.error("Vui lòng nhập số điện thoại");
+        return;
+      } else if (!phoneRegex.test(phone)) {
+        toast.error("Số điện thoại không hợp lệ");
+        return;
+      }
+
+      if (!defaultAddress || !defaultAddress.address_line) {
+        toast.error("Vui lòng chọn hoặc thêm địa chỉ giao hàng");
+        return;
+      }
+
+      const payload = {
+        products: checkoutItems,
+        user_id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        address: defaultAddress?.address_line || "",
+        note: noteValue,
+        promotion: selectedVoucher ? selectedVoucher.id : null,
+        payment_method: selectedPaymentMethod
+      };
+
+      console.log("📦 Dữ liệu đặt hàng:", payload);
+
+
+      let url = `${Constants.DOMAIN_API}/orders`;
+      if (selectedPaymentMethod === "momo") {
+        url = `${Constants.DOMAIN_API}/orders-momo`;
+      }
+
+      const response = await axios.post(url, payload);
+
+      if (response.data.success) {
+        const successfullyOrderedProductIds =
+          response.data.data?.successfullyOrderedProductIds || [];
+
+        // 👇 Gọi xóa từng sản phẩm thành công khỏi giỏ hàng
+        for (const variantId of successfullyOrderedProductIds) {
+          await deleteCartItem(variantId);
         }
+
+        // 👉 Cập nhật lại giao diện
+        setCheckoutItems((prev) =>
+          prev.filter((item) => !successfullyOrderedProductIds.includes(item.product_variant_id))
+        );
+
+        if (selectedPaymentMethod === "momo" && response.data?.data?.payUrl) {
+          const payUrl = response.data.data.payUrl;
+          if (payUrl.startsWith("https://")) {
+            window.open(payUrl, "_self");
+          } else {
+            toast.error("Liên kết thanh toán MoMo không hợp lệ.");
+          }
+        } else {
+          toast.success("Đặt hàng thành công!");
+          navigate("/cart");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Lỗi đặt hàng:", error);
+      const serverMessage = error.response?.data?.message;
+
+      if (serverMessage?.includes("Giao dịch bị từ chối")) {
+        toast.error("Giao dịch bị từ chối: Vui lòng kiểm tra tài khoản thanh toán hoặc dùng phương thức khác.");
+      } else if (serverMessage?.includes("Số tiền thanh toán không hợp lệ")) {
+        toast.error("Số tiền thanh toán không hợp lệ: phải từ 10.000đ đến 50.000.000đ.");
       } else {
-        toast.success("Đặt hàng thành công!");
-        navigate("/cart");
+        toast.error(serverMessage || "Có lỗi xảy ra khi đặt hàng.");
       }
     }
-  } catch (error) {
-    console.error("❌ Lỗi đặt hàng:", error);
-    const serverMessage = error.response?.data?.message;
-
-    if (serverMessage?.includes("Giao dịch bị từ chối")) {
-      toast.error("Giao dịch bị từ chối: Vui lòng kiểm tra tài khoản thanh toán hoặc dùng phương thức khác.");
-    } else if (serverMessage?.includes("Số tiền thanh toán không hợp lệ")) {
-      toast.error("Số tiền thanh toán không hợp lệ: phải từ 10.000đ đến 50.000.000đ.");
-    } else {
-      toast.error(serverMessage || "Có lỗi xảy ra khi đặt hàng.");
-    }
-  }
-};
+  };
 
   // const calculateShippingFee = async () => {
   //   if (!defaultAddress) {

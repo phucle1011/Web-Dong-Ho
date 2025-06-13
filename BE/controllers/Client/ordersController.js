@@ -3,6 +3,7 @@ const OrderModel = require("../../models/ordersModel");
 const OrderDetail = require("../../models/orderDetailsModel");
 const UserModel = require("../../models/usersModel");
 const Product = require("../../models/productsModel");
+const PromotionModel = require("../../models/promotionsModel");
 const { Op } = require("sequelize");
 
 require("dotenv").config();
@@ -158,7 +159,7 @@ class OrderController {
                 email,
                 address,
                 payment_method,
-                promotion_id,
+                promotion,
                 note,
             } = req.body;
 
@@ -174,11 +175,9 @@ class OrderController {
                 if (!variant) {
                     return res
                         .status(400)
-                        .json({ message: `Thông tin biến thể sản phẩm bị thiếu.` });
+                        .json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
                 }
-
                 const price = variant.price;
-
                 totalPrice += price * item.quantity;
 
                 detailedCart.push({
@@ -188,6 +187,28 @@ class OrderController {
                     quantity: item.quantity,
                     total: price * item.quantity,
                 });
+            }
+
+            if (req.body.promotion) {
+                let selectedVoucher = null;
+
+                selectedVoucher = await PromotionModel.findByPk(req.body.promotion);
+
+                if (selectedVoucher) {
+                    let discount = 0;
+
+                    if (selectedVoucher.discount_type === "fixed") {
+                        discount = Math.min(selectedVoucher.discount_value, totalPrice);
+                    } else if (selectedVoucher.discount_type === "percentage") {
+                        const maxPrice = selectedVoucher.max_price || Infinity;
+                        discount = Math.min(
+                            (totalPrice * selectedVoucher.discount_value) / 100,
+                            maxPrice
+                        );
+                    }
+
+                    totalPrice -= discount;
+                }
             }
 
             if (!user_id) {
@@ -203,7 +224,7 @@ class OrderController {
 
             const newOrder = await OrderModel.create({
                 user_id,
-                promotion_id: req.body.promotion_id || null,
+                promotion_id: req.body.promotion || null,
                 name,
                 phone,
                 email,
@@ -400,7 +421,7 @@ class OrderController {
 
             const newOrder = await OrderModel.create({
                 user_id: decoded.user_id,
-                promotion_id: null,
+                promotion: null,
                 name: decoded.name,
                 phone: decoded.phone,
                 email: decoded.email,
