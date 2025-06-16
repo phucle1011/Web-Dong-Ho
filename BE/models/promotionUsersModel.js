@@ -21,9 +21,9 @@ const PromotionUserModel = connection.define('promotion_user', {
     defaultValue: false,
   },
   used: {
-    type: DataTypes.BOOLEAN,  // Hoặc DataTypes.TINYINT(1)
+    type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false,      // Mặc định chưa sử dụng
+    defaultValue: false,
   },
 }, {
   tableName: 'promotion_users',

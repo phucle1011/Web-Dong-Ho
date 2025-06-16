@@ -54,7 +54,7 @@ class PromotionUserController {
             },
           },
         ],
-        attributes: ['id', 'created_at', 'email_sent'],
+        attributes: ['id', 'created_at', 'email_sent', 'used'],
       };
 
       const { count, rows } = await UserModel.findAndCountAll({
@@ -82,6 +82,7 @@ class PromotionUserController {
           isSpecialPromotion: Boolean(pu.Promotion?.special_promotion),
           promotionReceivedDate: pu.created_at,
           emailSent: pu.email_sent || false,
+          used: pu.used || false,
           status: pu.Promotion?.status || 'inactive',
         })),
       }));

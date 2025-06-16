@@ -6,7 +6,7 @@ const sequelize = require('../../config/database');
 class PromotionController {
     static async getActivePromotions(req, res) {
         try {
-            const userId = req.userId || req.user?.id; // cách lấy userId từ token/session tùy app bạn
+            const userId = req.userId || req.user?.id;
             if (!userId) {
                 return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để lấy mã giảm giá' });
             }
@@ -23,6 +23,7 @@ class PromotionController {
             const promotions = await PromotionModel.findAll({
                 where: {
                     status: 'active',
+                    special_promotion: false,
                     start_date: { [Op.lte]: now },
                     end_date: { [Op.gte]: now },
                     quantity: { [Op.gt]: 0 },
@@ -64,10 +65,10 @@ class PromotionController {
             code = code.trim().toUpperCase();
             orderTotal = parseFloat(orderTotal);
 
-            if (isNaN(orderTotal) || orderTotal <= 0) {
+            if (isNaN(orderTotal)) {
                 return res.status(400).json({ success: false, message: 'Tổng đơn hàng không hợp lệ' });
             }
-
+            
             const result = await sequelize.transaction(async (t) => {
                 const promotion = await PromotionModel.findOne({
                     where: { code },

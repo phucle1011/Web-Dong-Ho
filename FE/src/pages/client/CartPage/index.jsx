@@ -23,19 +23,29 @@ export default function CardPage({ cart = true }) {
   useEffect(() => {
     const fetchActivePromotions = async () => {
       setIsLoading(true);
+
       try {
         const token = localStorage.getItem("token");
+
         if (!token) {
           setError("Vui lòng đăng nhập để xem mã giảm giá.");
           setActivePromotions([]);
           return;
         }
+
+        if (totalPrice === 0) {
+          setError("Vui lòng chọn sản phẩm trước khi áp dụng mã giảm giá.");
+          setActivePromotions([]);
+          return;
+        }
+
         const response = await axios.get(`${Constants.DOMAIN_API}/promotions/active`, {
           params: { orderTotal: totalPrice },
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+
         setActivePromotions(response.data.data || []);
         setError("");
       } catch (err) {
@@ -44,14 +54,16 @@ export default function CardPage({ cart = true }) {
         if (err.response && err.response.status === 401) {
           setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
         } else {
-          setError("Vui lòng chọn sản phẩm trước khi áp dụng mã giảm giá");
+          setError("Đã xảy ra lỗi khi lấy danh sách mã giảm giá.");
         }
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchActivePromotions();
   }, [totalPrice]);
+
 
   useEffect(() => {
     let voucherDiscount = 0;

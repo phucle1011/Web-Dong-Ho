@@ -256,11 +256,14 @@ class OrderController {
                 currentDateTime
             );
 
+            const successfullyOrderedProductIds = products.map(p => p.variant.id);
+
             return res.status(201).json({
                 success: true,
                 message: "Đặt hàng thành công.",
                 data: {
                     order: newOrder,
+                    successfullyOrderedProductIds
                 },
             });
         } catch (error) {
@@ -282,12 +285,54 @@ class OrderController {
             }
 
             let totalPrice = 0;
+            const detailedCart = [];
+
             for (const item of products) {
                 const variant = item.variant;
                 if (!variant) {
-                    return res.status(400).json({ message: "Thiếu biến thể sản phẩm." });
+                    return res
+                        .status(400)
+                        .json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
                 }
-                totalPrice += variant.price * item.quantity;
+                const price = variant.price;
+                totalPrice += price * item.quantity;
+
+                detailedCart.push({
+                    product_id: variant.id,
+                    name: variant.sku,
+                    price: price,
+                    quantity: item.quantity,
+                    total: price * item.quantity,
+                });
+            }
+
+            if (req.body.promotion) {
+                let selectedVoucher = null;
+
+                selectedVoucher = await PromotionModel.findByPk(req.body.promotion);
+
+                if (selectedVoucher) {
+                    let discount = 0;
+
+                    if (selectedVoucher.discount_type === "fixed") {
+                        discount = Math.min(selectedVoucher.discount_value, totalPrice);
+                    } else if (selectedVoucher.discount_type === "percentage") {
+                        const maxPrice = selectedVoucher.max_price || Infinity;
+                        discount = Math.min(
+                            (totalPrice * selectedVoucher.discount_value) / 100,
+                            maxPrice
+                        );
+                    }
+
+                    totalPrice -= discount;
+                }
+            }
+
+            if (totalPrice < 10000) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Số tiền thanh toán không hợp lệ: từ 10.000đ đến 50.000.000đ."
+                });
             }
 
             const endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
@@ -308,7 +353,7 @@ class OrderController {
             })).toString("base64");
 
             const rawSignature =
-                `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${BACKEND_URL}/payment-notification&orderId=${orderId}&orderInfo=Thanh toán bằng momo&partnerCode=${partnerCode}&redirectUrl=${BACKEND_URL}/cart&requestId=${requestId}&requestType=payWithATM`;
+                `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${BACKEND_URL}/payment-notification&orderId=${orderId}&orderInfo=MoMo&partnerCode=${partnerCode}&redirectUrl=${BACKEND_URL}/cart&requestId=${requestId}&requestType=payWithATM`;
 
             const signature = crypto
                 .createHmac("sha256", secretKey)
@@ -322,7 +367,7 @@ class OrderController {
                 requestId,
                 amount,
                 orderId,
-                orderInfo: "Thanh toán bằng momo",
+                orderInfo: "MoMo",
                 redirectUrl: `${BACKEND_URL}/cart`,
                 ipnUrl: `${BACKEND_URL}/payment-notification`,
                 requestType: "payWithATM",

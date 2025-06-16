@@ -96,7 +96,9 @@ function PromotionList() {
   };
 
   const handleSelectAll = (e) => {
-    const idsOnPage = paginatedCustomers.map((c) => c.id);
+    const idsOnPage = paginatedCustomers
+      .filter((c) => !c.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion))
+      .map((c) => c.id);
     if (e.target.checked) {
       setSelectedCustomerIds((prev) => [...new Set([...prev, ...idsOnPage])]);
     } else {
@@ -110,7 +112,7 @@ function PromotionList() {
     if (useDefault) {
       if (!selectedPromotion) return;
       subject = `Khuyến mãi: ${selectedPromotion.name || "Mã không tên"}`;
-      content = `<p>Bạn nhận được khuyến mãi: <strong>${selectedPromotion.name}</strong></p>`;
+      content = `<p>Bạn nhận được khuyến mãi đặc biệt: <strong>${selectedPromotion.name}</strong></p>`;
     }
 
     if (!subject.trim() || !content.trim()) {
@@ -172,6 +174,12 @@ function PromotionList() {
       return;
     }
 
+    const promotionStatus = customer.promotions.find((p) => p.promotionId === selectedPromotionId);
+    if (promotionStatus?.used) {
+      toast.error("Không thể gửi email vì khách hàng đã sử dụng mã giảm giá này.");
+      return;
+    }
+
     const result = await Swal.fire({
       title: 'Xác nhận gửi mail',
       text: `Gửi mail khuyến mãi tới ${customer.name} (${customer.email})?`,
@@ -188,7 +196,7 @@ function PromotionList() {
       await axios.post(`${Constants.DOMAIN_API}/admin/send-promotion-emails`, {
         customerIds: [customerId],
         subject: `Khuyến mãi: ${selectedPromotion?.name || ""}`,
-        content: `<p>Bạn nhận được khuyến mãi: <strong>${selectedPromotion?.name}</strong></p>`,
+        content: `<p>Bạn nhận được khuyến mãi đặc biệt: <strong>${selectedPromotion?.name}</strong></p>`,
         promotionId: selectedPromotionId,
       });
       toast.success(`Đã gửi mail cho ${customer.email}`);
@@ -289,7 +297,7 @@ function PromotionList() {
           </h3>
           <div className="flex gap-2">
             <button
-              className={`bg-blue-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
+              className={`bg-blue-600 text-white px-3 py-2 rounded-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
                 selectedPromotion?.status === 'expired' ||
                 selectedPromotion?.status === 'inactive'
                 ? "opacity-50 cursor-not-allowed"
@@ -305,7 +313,7 @@ function PromotionList() {
               Gửi Email ({selectedCustomerIds.length})
             </button>
             <button
-              className={`bg-green-600 text-white px-3 py-2 rounded-md shadow-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
+              className={`bg-green-600 text-white px-3 py-2 rounded-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
                 selectedPromotion?.status === 'expired' ||
                 selectedPromotion?.status === 'inactive'
                 ? "opacity-50 cursor-not-allowed"
@@ -342,20 +350,20 @@ function PromotionList() {
         {loadingCustomers ? (
           <div className="text-center text-gray-500 mt-10">Đang tải...</div>
         ) : filteredCustomers.length === 0 ? (
-          <div className="text-center text-gray-400 mt-16">
-            Không tìm thấy khách hàng.
-          </div>
+          <div className="text-center text-gray-400 mt-16">Không tìm thấy khách hàng.</div>
         ) : (
           <>
             <div className="overflow-auto border rounded-lg shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="border p-2">#</th>
+                    <th className="border p-2 w-10">#</th>
                     <th className="p-3 text-center w-12">
                       <input
                         type="checkbox"
-                        checked={paginatedCustomers.every((c) => selectedCustomerIds.includes(c.id))}
+                        checked={paginatedCustomers
+                          .filter((c) => !c.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion))
+                          .every((c) => selectedCustomerIds.includes(c.id))}
                         onChange={handleSelectAll}
                         disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                       />
@@ -363,7 +371,7 @@ function PromotionList() {
                     <th className="border p-2">Tên</th>
                     <th className="border p-2">Email</th>
                     <th className="border p-2">Số điện thoại</th>
-                    <th className="border p-2">Trạng thái</th>
+                    <th className="border p-2 w-32">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -372,37 +380,55 @@ function PromotionList() {
                       key={cus.id}
                       className={`hover:bg-gray-50 ${selectedCustomerIds.includes(cus.id) ? "bg-blue-50" : ""}`}
                     >
-                      <td className="border p-2 text-center">
+                      <td className="border p-1 text-center">
                         {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="p-1 text-center">
                         <input
                           type="checkbox"
                           checked={selectedCustomerIds.includes(cus.id)}
                           onChange={() => handleCheckboxChange(cus.id)}
-                          disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
+                          disabled={
+                            selectedPromotion?.status === 'expired' ||
+                            selectedPromotion?.status === 'inactive' ||
+                            cus.promotions.some(
+                              (p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion
+                            )
+                          }
                         />
                       </td>
                       <td className="border p-2 text-center">{cus.name}</td>
                       <td className="border p-2 text-center">{cus.email}</td>
                       <td className="border p-2 text-center">{cus.phone}</td>
-                      <td className="border p-2 text-center">
+                      <td className="border p-1 text-center">
                         {cus.promotions.some(
+                          (p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion
+                        ) ? (
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                            Đã sử dụng
+                          </span>
+                        ) : cus.promotions.some(
                           (p) => p.promotionId === selectedPromotionId && p.emailSent
                         ) ? (
-                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
                             Đã gửi
                           </span>
                         ) : (
                           <button
                             onClick={() => handleQuickSendEmail(cus.id)}
-                            className={`px-3 py-1 rounded text-sm text-white ${selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'
-                              ? "bg-gray-400 cursor-not-allowed"
-                              : "bg-blue-600 hover:bg-blue-700"
+                            className={`px-3 py-1 rounded text-sm text-white ${selectedPromotion?.status === 'expired' ||
+                              selectedPromotion?.status === 'inactive' ||
+                              cus.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion)
+                              ? "bg-gray-500 cursor-not-allowed"
+                              : "bg-blue-500 hover:bg-blue-600"
                               }`}
-                            disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
+                            disabled={
+                              selectedPromotion?.status === 'expired' ||
+                              selectedPromotion?.status === 'inactive' ||
+                              cus.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion)
+                            }
                           >
-                            Gửi mail
+                            Gửi email
                           </button>
                         )}
                       </td>
@@ -413,18 +439,18 @@ function PromotionList() {
             </div>
 
             <div className="flex justify-center mt-6">
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-2">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(1)}
-                  className="px-2 py-1 border rounded disabled:opacity-50"
+                  className="px-3 py-2 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                 >
                   <FaAngleDoubleLeft />
                 </button>
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage((prev) => prev - 1)}
-                  className="px-2 py-1 border rounded disabled:opacity-50"
+                  className="px-3 py-2 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                 >
                   <FaChevronLeft />
                 </button>
@@ -435,7 +461,10 @@ function PromotionList() {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"}`}
+                        className={`px-4 py-2 border rounded-md ${page === currentPage
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-600 hover:bg-gray-100"
+                          }`}
                       >
                         {page}
                       </button>
@@ -446,14 +475,14 @@ function PromotionList() {
                 <button
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage((prev) => prev + 1)}
-                  className="px-2 py-1 border rounded disabled:opacity-50"
+                  className="px-3 py-2 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                 >
                   <FaChevronRight />
                 </button>
                 <button
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(totalPages)}
-                  className="px-2 py-1 border rounded disabled:opacity-50"
+                  className="px-3 py-2 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                 >
                   <FaAngleDoubleRight />
                 </button>
@@ -463,45 +492,47 @@ function PromotionList() {
         )}
 
         {isEmailModalOpen && (
-          <div className="fixed inset-0 bg-gray-700 bg-opacity-40 flex justify-center items-center z-50">
-            <div className="bg-white rounded-lg shadow-lg w-3/4 max-w-3xl p-6 relative max-h-[90vh] overflow-auto">
-              <h3 className="text-xl font-semibold mb-4">Soạn email {promotionTitle}</h3>
-              <div className="mb-3">
-                <label className="block font-semibold mb-1">Tiêu đề:</label>
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-auto">
+              <h3 className="text-xl font-semibold mb-4 text-gray-800">Soạn email {promotionTitle}</h3>
+              <div className="mb-4">
+                <label className="block font-medium text-gray-700 mb-1">Tiêu đề</label>
                 <input
                   type="text"
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Nhập tiêu đề email"
                   disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                 />
               </div>
-              <div className="mb-3">
-                <label className="block font-semibold mb-1">Nội dung:</label>
+              <div className="mb-4">
+                <label className="block font-medium text-gray-700 mb-1">Nội dung</label>
                 <ReactQuill
                   theme="snow"
                   value={emailContent}
                   onChange={setEmailContent}
-                  className="min-h-[200px]"
+                  className="h-48"
                   readOnly={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                 />
               </div>
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex justify-end gap-3 mt-6">
                 <button
-                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                  className="px-4 py-2 rounded-md bg-gray-300 text-gray-700 hover:bg-gray-400 disabled:opacity-50"
                   onClick={() => setIsEmailModalOpen(false)}
                   disabled={sendingEmail}
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button
-                  className={`px-4 py-2 rounded text-white ${selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail
-                    ? "bg-gray-400 cursor-not-allowed"
+                  className={`px-4 py-2 rounded-md text-white ${selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail
+                    ? "bg-gray-500 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
                     }`}
                   onClick={() => handleSendEmails(false)}
-                  disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail}
+                  disabled={
+                    selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail
+                  }
                 >
                   {sendingEmail ? "Đang gửi..." : "Gửi email"}
                 </button>
