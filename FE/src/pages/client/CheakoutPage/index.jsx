@@ -19,7 +19,11 @@ export default function CheakoutPage() {
   const navigate = useNavigate();
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
-  const [finalData, setFinalData] = useState(null);
+  const [finalData, setFinalData] = useState({
+    total: 0,
+    shippingFee: 0,
+    formattedAmount: "0"
+  });
   const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
   const [defaultAddress, setDefaultAddress] = useState(null);
@@ -186,30 +190,30 @@ export default function CheakoutPage() {
     };
   }, [user?.id]);
 
-  useEffect(() => {
-    const fetchAllAddresses = async () => {
-      if (!user || !user.id) return;
+  const fetchAllAddresses = async () => {
+    if (!user || !user.id) return;
 
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${Constants.DOMAIN_API}/admin/address/user/${user.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${Constants.DOMAIN_API}/admin/address/user/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (response.ok && data.success && Array.isArray(data.data)) {
-          setAllAddresses(data.data);
-        } else {
-          console.error("Không thể lấy danh sách địa chỉ:", data.message);
-        }
-      } catch (error) {
-        console.error("Lỗi kết nối server:", error);
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        setAllAddresses(data.data);
+      } else {
+        console.error("Không thể lấy danh sách địa chỉ:", data.message);
       }
-    };
+    } catch (error) {
+      console.error("Lỗi kết nối server:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchAllAddresses();
   }, [user?.id]);
 
@@ -568,12 +572,11 @@ export default function CheakoutPage() {
     try {
       const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
 
-      const updatedAddresses = [...allAddresses, res.data];
-      setAllAddresses(updatedAddresses);
-
       if (addressData.is_default === 1) {
         setDefaultAddress(res.data);
       }
+
+      fetchAllAddresses();
 
       toast.success("Thêm địa chỉ thành công");
     } catch (error) {
@@ -791,9 +794,6 @@ export default function CheakoutPage() {
         payment_method: selectedPaymentMethod
       };
 
-      console.log("📦 Dữ liệu đặt hàng:", payload);
-
-
       let url = `${Constants.DOMAIN_API}/orders`;
       if (selectedPaymentMethod === "momo") {
         url = `${Constants.DOMAIN_API}/orders-momo`;
@@ -805,12 +805,10 @@ export default function CheakoutPage() {
         const successfullyOrderedProductIds =
           response.data.data?.successfullyOrderedProductIds || [];
 
-        // 👇 Gọi xóa từng sản phẩm thành công khỏi giỏ hàng
         for (const variantId of successfullyOrderedProductIds) {
           await deleteCartItem(variantId);
         }
 
-        // 👉 Cập nhật lại giao diện
         setCheckoutItems((prev) =>
           prev.filter((item) => !successfullyOrderedProductIds.includes(item.product_variant_id))
         );
@@ -841,73 +839,81 @@ export default function CheakoutPage() {
     }
   };
 
-  // const calculateShippingFee = async () => {
-  //   if (!defaultAddress) {
-  //     toast.error("Chưa có địa chỉ mặc định");
-  //     return;
-  //   }
-  //   const { city, district, ward } = defaultAddress;
-  //   try {
-  //     // Lấy ProvinceID
-  //     const provinceId = await getProvinceIdByName(city);
-  //     if (!provinceId) throw new Error("Không tìm thấy mã tỉnh");
-  //     // Lấy DistrictID
-  //     const districtId = await getDistrictIdByProvinceAndName(provinceId, district);
-  //     if (!districtId) throw new Error("Không tìm thấy mã quận");
-  //     // Lấy WardCode
-  //     const wardCode = await getWardCodeByDistrictAndName(districtId, ward);
-  //     if (!wardCode) throw new Error("Không tìm thấy mã phường");
+//   const calculateShippingFee = async () => {
+//     if (!defaultAddress) {
+//       toast.error("Chưa có địa chỉ mặc định");
+//       return;
+//     }
 
-  //     // 📍 Địa chỉ kho hàng (gửi)
-  //     const warehouse = {
-  //       from_district_id: 1449,     // Quận Cái Răng
-  //       from_ward_code: "281113",   // Phường Thường Thạnh
-  //     };
+//     const { city, district, ward } = defaultAddress;
 
-  //     // ✅ Tính phí vận chuyển qua GHN
-  //     const feeRes = await axios.post(
-  //       `${Constants.DOMAIN_API}/shipping/shipping-fee`,
-  //       {
-  //         from_district_id: Number(warehouse.from_district_id),
-  //         from_ward_code: warehouse.from_ward_code,
-  //         to_district_id: Number(districtId),
-  //         to_ward_code: wardCode,
-  //         service_id: 53321,
-  //         weight: 500,
-  //         length: 20,
-  //         width: 20,
-  //         height: 15,
-  //         insurance_value: 0
-  //       }
-  //     );
-  //     if (feeRes.data.success && feeRes.data.data) {
-  //       const shippingFee = feeRes.data.data.total || 0;
-  //       setFinalData(prev => ({
-  //         ...prev,
-  //         shippingFee: shippingFee,
-  //         formattedAmount: ((prev?.total || 0) + shippingFee).toLocaleString("vi-VN")
-  //       }));
-  //       toast.success(`Phí vận chuyển: ${shippingFee.toLocaleString("vi-VN")}₫`);
-  //     } else {
-  //       toast.error("Không thể tính phí vận chuyển");
-  //     }
-  //   } catch (error) {
-  //     console.error("❌ Lỗi khi tính phí vận chuyển:", error);
-  //     if (error.response?.data?.message.includes('route not found')) {
-  //       toast.error("Tuyến đường này không được hỗ trợ bởi GHN.");
-  //     } else if (error.response?.data?.message) {
-  //       toast.error(error.response.data.message);
-  //     } else {
-  //       toast.error("Có lỗi xảy ra khi tính phí vận chuyển");
-  //     }
-  //   }
-  // };
+//     try {
 
-  // useEffect(() => {
-  //   if (defaultAddress) {
-  //     calculateShippingFee();
-  //   }
-  // }, [defaultAddress]);
+//       const provinceId = await getProvinceIdByName(city);
+//       if (!provinceId) throw new Error("Không tìm thấy mã tỉnh");
+
+//       const districtId = await getDistrictIdByProvinceAndName(provinceId, district);
+//       if (!districtId) throw new Error("Không tìm thấy mã quận");
+
+//       const wardCode = await getWardCodeByDistrictAndName(districtId, ward);
+//       if (!wardCode) throw new Error("Không tìm thấy mã phường");
+
+//       const warehouse = {
+//         from_district_id: 1447,
+//         from_ward_code: "281113",
+//       };
+
+//       const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
+//         from_district_id: warehouse.from_district_id,
+//         from_ward_code: warehouse.from_ward_code,
+//         to_district_id: Number(districtId),
+//         to_ward_code: wardCode,
+//         service_id: 53321,
+//         weight: 500,
+//         length: 20,
+//         width: 20,
+//         height: 15,
+//         insurance_value: 0,
+//         to_name: user.name || "Nguyễn Văn A",
+//         to_phone: user.phone || "0912345678",
+//         to_address: defaultAddress?.address_line || "123 đường ABC",
+//         required_note: noteValue,
+//         // items: checkoutItems.map(item => ({
+//         //   name: item.variant.sku,
+//         //   quantity: item.quantity,
+//         //   price: parseFloat(item.variant.price || 0) * item.quantity
+//         // }))
+//       });
+
+//       if (response.data.success && response.data.data) {
+//         const shippingFee = response.data.data.total || 0;
+//         setFinalData(prev => ({
+//           ...prev,
+//           shippingFee: shippingFee,
+//           formattedAmount: ((prev?.total || 0) + shippingFee).toLocaleString("vi-VN")
+//         }));
+//         toast.success(`Phí vận chuyển: ${shippingFee.toLocaleString("vi-VN")}₫`);
+//       } else {
+//         toast.error("Không thể tính phí vận chuyển");
+//       }
+// } catch (error) {
+//   console.error("❌ Lỗi khi tính phí vận chuyển:", error);
+
+//   if (error.response?.data?.message?.includes('route not found')) {
+//     toast.error("Tuyến đường này không được GHN hỗ trợ. Vui lòng chọn phương thức vận chuyển khác.");
+//   } else if (error.response?.data?.message) {
+//     toast.error(error.response.data.message); // Hiển thị lỗi từ API nếu có
+//   } else {
+//     toast.error("Có lỗi xảy ra khi tính phí vận chuyển");
+//   }
+// }
+//   };
+
+//   useEffect(() => {
+//     if (defaultAddress) {
+//       calculateShippingFee();
+//     }
+//   }, [defaultAddress]);
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -1196,13 +1202,14 @@ export default function CheakoutPage() {
                     </div>
                   )}
 
-                  {/* <button
-                    type="button"
-                    onClick={calculateShippingFee}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-                  >
-                    Tính phí vận chuyển
-                  </button> */}
+                  {/* Hiển thị phí vận chuyển nếu đã có dữ liệu */}
+                  {finalData?.shippingFee > 0 && (
+                    <div className="mt-4 p-3 bg-gray-100 rounded-md text-center">
+                      <span className="text-lg font-semibold text-qred">
+                        Phí vận chuyển: {finalData.shippingFee.toLocaleString("vi-VN") || 0}₫
+                      </span>
+                    </div>
+                  )}
 
                   {checkoutItems.length > 0 && (
                     <div className="mt-6 pt-4 border-t flex justify-between items-center">
