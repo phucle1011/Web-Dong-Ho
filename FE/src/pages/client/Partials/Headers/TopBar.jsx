@@ -5,13 +5,13 @@ import { decodeToken } from "../../Helpers/jwtDecode";
 import { useState } from "react";
 import ConfirmLogoutModal from "../../../../components/client/Confirm/ConfirmLogoutModal";
 
-
 export default function TopBar({ className }) {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const decoded = token ? decodeToken(token) : null;
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -27,11 +27,15 @@ export default function TopBar({ className }) {
   const cancelLogout = () => {
     setShowLogoutModal(false);
   };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
   return (
     <>
       <div
-        className={`w-full bg-white h-10 border-b border-qgray-border ${className || ""
-          }`}
+        className={`w-full bg-white h-10 border-b border-qgray-border ${className || ""}`}
       >
         <div className="container-x mx-auto h-full">
           <div className="flex justify-between items-center h-full">
@@ -39,30 +43,52 @@ export default function TopBar({ className }) {
               <ul className="flex space-x-6">
                 {!decoded ? (
                   <li>
-                    <Link to="/login">
-                      <span className="text-xs leading-6 text-qblack font-500 inline-flex items-center">
+                    <Link to="/signup">
+                      <span className="text-xs leading-6 text-qblack font-500 inline-flex items-center hover:text-qgray transition-colors">
                         Tài khoản
                       </span>
                     </Link>
                   </li>
                 ) : (
-                  <li className="relative group text-xs leading-6">
-                    <button className="text-xs leading-6 text-qblack font-500 flex items-center space-x-1 text-xs text-qblack font-500 focus:outline-none">
+                  <li className="relative text-xs leading-6">
+                    <button
+                      onClick={toggleDropdown}
+                      className="text-xs leading-6 text-qblack font-500 flex items-center space-x-1 focus:outline-none hover:text-qgray transition-colors"
+                    >
                       <span>Xin chào, {decoded.name}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                        <path fillRule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        fill="currentColor"
+                        viewBox="0 0 16 16"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"
+                        />
                       </svg>
                     </button>
 
                     {/* Dropdown menu */}
-                    <ul className="absolute right-0 mt-1 w-32 bg-white border rounded shadow-md z-10 hidden group-hover:block">
+                    <ul
+                      className={`absolute left-0 mt-1 w-48 bg-white border rounded-lg shadow-lg z-50 ${
+                        isDropdownOpen ? "block" : "hidden"
+                      }`}
+                    >
                       <li>
-                        <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Thông tin</Link>
+                        <Link
+                          to="/profile"
+                          className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          Thông tin
+                        </Link>
                       </li>
                       <li>
                         <button
                           onClick={handleLogout}
-                          className="w-full text-left block px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                          className="w-full text-left block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
                           Đăng xuất
                         </button>
@@ -70,19 +96,24 @@ export default function TopBar({ className }) {
                     </ul>
 
                     {/* Hiển thị modal nếu showLogoutModal === true */}
-                    {showLogoutModal && <ConfirmLogoutModal onConfirm={confirmLogout} onCancel={cancelLogout} />}
+                    {showLogoutModal && (
+                      <ConfirmLogoutModal
+                        onConfirm={confirmLogout}
+                        onCancel={cancelLogout}
+                      />
+                    )}
                   </li>
                 )}
                 <li>
                   <Link to="/tracking-order">
-                    <span className="text-xs leading-6 text-qblack font-500">
+                    <span className="text-xs leading-6 text-qblack font-500 hover:text-qgray transition-colors">
                       Theo dõi đơn hàng
                     </span>
                   </Link>
                 </li>
                 <li>
                   <Link to="/faq">
-                    <span className="text-xs leading-6 text-qblack font-500">
+                    <span className="text-xs leading-6 text-qblack font-500 hover:text-qgray transition-colors">
                       Câu hỏi thường gặp
                     </span>
                   </Link>
@@ -114,7 +145,7 @@ export default function TopBar({ className }) {
                   <Arrow className="fill-current qblack" />
                 </div>
                 <div className="language-select flex space-x-1 items-center">
-                  <Selectbox className="w-fit" datas={["Bangla", "english"]} />
+                  <Selectbox className="w-fit" datas={["Bangla", "English"]} />
                   <Arrow className="fill-current qblack" />
                 </div>
               </div>

@@ -66,7 +66,10 @@ import NotificationList from "./pages/admin/notification/getAll";
 import NotificationSendAll from "./pages/admin/notification/Create";
 import LoginAdmin from "./pages/admin/login";
 
+//------------Auth-------------
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
+import VerifyEmail from "./pages/client/Auth/VerifyEmail/index.jsx";
+import ResetPassword from "./pages/client/Auth/ResetPassword";
 
 const AppRoutes = () => {
   return (
@@ -95,10 +98,12 @@ const AppRoutes = () => {
         <Route path="/terms-condition" element={<TermsCondition />} />
         <Route path="/tracking-order" element={<TrackingOrder />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/auth/verify-email" element={<VerifyEmail />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
 
-     
+
 
       {/* <Route
         path="/admin"
@@ -113,8 +118,8 @@ const AppRoutes = () => {
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail />} />
         </Route> */}
-        {/* các route con khác */}
-        {/* <Route path="user">
+      {/* các route con khác */}
+      {/* <Route path="user">
           <Route path="getAll" element={<UserList />} />
           <Route path="detail/:id" element={<UserDetail />} />
         </Route>
@@ -246,7 +251,7 @@ const AppRoutes = () => {
           <Route path="getAll" element={<PromotionList />} />
         </Route>
       </Route>
-      
+
       <Route path="/*" element={<FourZeroFour />} />
     </Routes>
   );

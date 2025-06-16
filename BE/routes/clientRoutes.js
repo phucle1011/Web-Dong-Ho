@@ -74,6 +74,9 @@ router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);
 router.post('/auth/register', AuthController.register);
 router.get('/auth/verify-email', AuthController.verifyEmail);
 router.post('/auth/login', AuthController.login);
+router.post('/auth/update-verification', AuthController.updateVerification);
+router.post('/auth/reset-password', AuthController.resetPassword);
+router.post('/auth/update-password/:token', AuthController.updatePassword);
 
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
