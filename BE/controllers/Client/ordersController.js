@@ -15,13 +15,7 @@ const crypto = require("crypto");
 
 class OrderController {
     static async get(req, res) {
-        const userId = req.query.userId;
-
-        if (!userId) {
-            return res
-                .status(401)
-                .json({ success: false, message: "Chưa đăng nhập" });
-        }
+        const userId = req.user.id;
 
         const { page = 1, limit = 10, status, startDate, endDate } = req.query;
 
@@ -60,6 +54,28 @@ class OrderController {
                 limit: perPage,
             });
 
+            const filteredOrders = await OrderModel.findAll({
+                where: whereClause,
+                include: [{ model: UserModel, as: "user" }],
+                order: [["created_at", "DESC"]],
+            });
+
+            const statusCounts = {
+                all: filteredOrders.length,
+                pending: 0,
+                confirmed: 0,
+                shipping: 0,
+                completed: 0,
+                delivered: 0,
+                cancelled: 0
+            };
+
+            filteredOrders.forEach(order => {
+                if (statusCounts.hasOwnProperty(order.status)) {
+                    statusCounts[order.status]++;
+                }
+            });
+
             res.status(200).json({
                 status: 200,
                 message: "Lấy danh sách thành công",
@@ -69,6 +85,7 @@ class OrderController {
                     currentPage,
                     totalPages: Math.ceil(count / perPage),
                 },
+                statusCounts
             });
         } catch (error) {
             console.error(
@@ -122,11 +139,13 @@ class OrderController {
         }
     }
 
-    static async delete(req, res) {
+    static async cancelOrder(req, res) {
         try {
             const { id } = req.params;
+            const { cancellation_reason } = req.body;
 
             const order = await OrderModel.findByPk(id);
+
             if (!order) {
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
@@ -138,11 +157,40 @@ class OrderController {
             }
 
             order.status = "cancelled";
+            order.cancellation_reason = cancellation_reason || null;
             await order.save();
 
             res.status(200).json({
                 status: 200,
                 message: "Hủy đơn hàng thành công",
+                data: order,
+            });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    static async confirmDelivered(req, res) {
+        try {
+            const { id } = req.params;
+
+            const order = await OrderModel.findByPk(id);
+            if (!order) {
+                return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+            }
+
+            if (order.status !== "completed") {
+                return res.status(400).json({
+                    message: "Chỉ được xác nhận giao hàng cho đơn hàng có trạng thái 'Hoàn thành'",
+                });
+            }
+
+            order.status = "delivered";
+            await order.save();
+
+            res.status(200).json({
+                status: 200,
+                message: "Xác nhận giao hàng thành công",
                 data: order,
             });
         } catch (error) {
@@ -195,7 +243,7 @@ class OrderController {
                 });
             }
 
-            let selectedVoucher = null;
+           let selectedVoucher = null;
             let discount = 0;
             let discountAmount = 0;
 
@@ -247,7 +295,6 @@ class OrderController {
                     await selectedVoucher.save({ transaction: t });
                 }
             }
-
             const order_code = `ORD-${Date.now()}`;
             const currentDateTime = new Date(Date.now() + 7 * 60 * 60 * 1000);
 
@@ -280,6 +327,14 @@ class OrderController {
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
             await t.commit();
+
+            await OrderController.sendOrderConfirmationEmail(
+                newOrder,
+                { name, phone },
+                products,
+                email,
+                currentDateTime
+            );
 
             const successfullyOrderedProductIds = products.map(p => p.variant.id);
 

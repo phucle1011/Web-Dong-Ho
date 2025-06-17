@@ -11,6 +11,33 @@ const apiRoutes = require('./routes/apiRoutes');
 const app = express();
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
+const cron = require('node-cron');
+const { Sequelize, Op } = require('sequelize');
+const OrderModel = require('./models/ordersModel');
+
+cron.schedule('* * * * *', async () => {
+  try {
+    // 2h: - 2 * 60 * 1000
+    const twoMinutesAgo = new Date(Date.now() - 72 * 60 * 60 * 1000); 
+
+    const ordersToUpdate = await OrderModel.findAll({
+      where: {
+        status: 'completed',
+        updated_at: {
+          [Op.lte]: twoMinutesAgo, 
+        },
+      },
+    });
+
+    for (const order of ordersToUpdate) {
+      order.status = 'delivered';
+      await order.save();
+    }
+
+  } catch (error) {
+    console.error("Lỗi khi kiểm tra và cập nhật trạng thái đơn hàng:", error);
+  }
+});
 
 app.use(cors());
 

@@ -171,48 +171,64 @@ function OrderDetail() {
           </thead>
           <tbody>
             {orderDetails.length > 0 ? (
-              orderDetails.map((item, index) => (
-                <tr key={index}>
-                  <td className="border p-2">
-                    {translateStatus(order.status)}
-                  </td>
-                  <td className="border p-2">
-                    {item.productVariant?.variantProduct?.name ||
-                      "Không có tên sản phẩm"}
-                  </td>
-                  <td className="border p-2">{item.quantity}</td>
-                  <td className="border p-2">
-                    {Number(item.price).toLocaleString("vi-VN", {
+              <>
+                {orderDetails.map((item, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="p-2">
+                      {translateStatus(order.status)}
+                    </td>
+                    <td className="p-2">
+                      {item.productVariant?.variantProduct?.name || "Không có tên sản phẩm"}
+                    </td>
+                    <td className="p-2 text-center">{item.quantity}</td>
+                    <td className="p-2 text-right">
+                      {Number(item.price).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </td>
+                    <td className="p-2 text-right">
+                      {(item.quantity * parseFloat(item.price)).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+
+                {Number(order.discount_amount) > 0 && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={4} className="text-right font-medium p-2 border-t">
+                      Số tiền giảm giá (nếu có):
+                    </td>
+                    <td className="text-right p-2 border-t text-red-600 font-medium">
+                      -{Number(order.discount_amount).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </td>
+                  </tr>
+                )}
+
+                <tr className="bg-gray-100 font-semibold">
+                  <td colSpan={4} className="text-right p-2 border-t border-b">Tổng tiền:</td>
+                  <td className="text-right p-2 border-t border-b text-blue-600">
+                    {Number(order.total_price).toLocaleString("vi-VN", {
                       style: "currency",
                       currency: "VND",
                     })}
                   </td>
-                  <td className="border p-2">
-                    {(item.quantity * parseFloat(item.price)).toLocaleString(
-                      "vi-VN",
-                      { style: "currency", currency: "VND" }
-                    )}
-                  </td>
                 </tr>
-              ))
+              </>
             ) : (
               <tr>
-                <td colSpan={5} className="border p-2 text-center">
+                <td colSpan={5} className="border p-2 text-center text-gray-500">
                   Không có sản phẩm nào
                 </td>
               </tr>
             )}
           </tbody>
-          <tfoot>
-            <tr>
-              <th colSpan={4} className="text-end p-2 border">
-                Tổng cộng:
-              </th>
-              <th className="p-2 border">
-                {totalAmount.toLocaleString("vi-VN")} đ
-              </th>
-            </tr>
-          </tfoot>
+
         </table>
       </div>
 

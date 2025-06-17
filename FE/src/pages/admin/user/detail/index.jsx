@@ -25,8 +25,6 @@ function UserDetail() {
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
-  const [isEdit, setIsEdit] = useState("");
-  const [addressData, setAddressData] = useState("");
 
   useEffect(() => {
     fetchUserDetail();
@@ -138,21 +136,6 @@ function UserDetail() {
 
 
   // Phần address
-  const getProvinceName = (list, id) => {
-    const item = list.find(i => i.ProvinceID == id);
-    return item?.ProvinceName || '';
-  };
-
-  const getDistrictName = (list, id) => {
-    const item = list.find(i => i.DistrictID == id);
-    return item?.DistrictName || '';
-  };
-
-  const getWardName = (list, id) => {
-    const item = list.find(i => i.WardCode == id);
-    return item?.WardName || '';
-  };
-
   useEffect(() => {
     const fetchProvinces = async () => {
       try {

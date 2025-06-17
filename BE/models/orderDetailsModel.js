@@ -20,7 +20,7 @@ const OrderDetailModel = connection.define('order_details', {
         allowNull: true
     },
     price: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: true
     }
 }, {

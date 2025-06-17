@@ -3,7 +3,8 @@ const OrderDetailsModel = require('../../models/orderDetailsModel');
 const ProductVariantsModel = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
 const UserModel = require('../../models/usersModel');
-const PromotionModel = require("../../models/promotionsModel");
+const PromotionModel = require('../../models/promotionsModel');
+
 const { Op } = require('sequelize');
 const axios = require('axios');
 const ExcelJS = require('exceljs');
@@ -140,6 +141,11 @@ class OrderController {
                         model: UserModel,
                         as: 'user',
                         attributes: ['id', 'name', 'email', 'phone']
+                    },
+                    {
+                        model: PromotionModel,
+                        as: 'promotion',
+                        attributes: ['name', 'code', 'min_price_threshold', 'max_price']
                     }
                 ],
             });
@@ -191,7 +197,7 @@ class OrderController {
             if (total_price !== undefined) order.total_price = total_price;
             if (payment_method_id !== undefined) order.payment_method_id = payment_method_id;
 
-            await order.save({ transaction: t });
+           await order.save({ transaction: t });
 
             if (status === "cancelled" && oldStatus !== "cancelled" && order.promotion_id) {
                 const promotion = await PromotionModel.findByPk(order.promotion_id, { transaction: t });

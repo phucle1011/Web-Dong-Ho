@@ -7,145 +7,321 @@ import {
   FaChevronRight,
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
-  FaEye,
-  FaMapMarkerAlt,
-  FaTrashAlt,
 } from "react-icons/fa";
 import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
-import FormDelete from "../../../../../components/formDelete";
-import { Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 export default function OrderTab() {
-  // const [orders, setOrders] = useState([]);
-  // const [currentPage, setCurrentPage] = useState(1);
-  // const [totalPages, setTotalPages] = useState(1);
-  // const [selectedOrder, setSelectedOrder] = useState(null);
-  // const recordsPerPage = 10;
-  // const [startDate, setStartDate] = useState(null);
-  // const [endDate, setEndDate] = useState(null);
-  // const [statusFilter, setStatusFilter] = useState("all");
-  // const [statusCounts, setStatusCounts] = useState({
-  //   all: 0,
-  //   pending: 0,
-  //   confirmed: 0,
-  //   shipping: 0,
-  //   completed: 0,
-  //   delivered: 0,
-  //   cancelled: 0,
-  // });
+
+  const token = localStorage.getItem("token");
+  const [orders, setOrders] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const recordsPerPage = 10;
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [activeStatus, setActiveStatus] = useState('');
+  const [statusCounts, setStatusCounts] = useState({
+    all: 0,
+    pending: 0,
+    confirmed: 0,
+    shipping: 0,
+    completed: 0,
+    delivered: 0,
+    cancelled: 0,
+  });
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+  const [orderDetailsMap, setOrderDetailsMap] = useState({});
+  const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState(null);
 
   const translateStatus = (status) => {
-    // switch (status) {
-    //   case "pending":
-    //     return "Chờ xác nhận";
-    //   case "confirmed":
-    //     return "Đã xác nhận";
-    //   case "shipping":
-    //     return "Đang giao";
-    //   case "completed":
-    //     return "Hoàn thành";
-    //   case "delivered":
-    //     return "Đã giao hàng thành công";
-    //   case "cancelled":
-    //     return "Đã hủy";
-    //   default:
-    //     return status;
-    // }
+    switch (status) {
+      case "pending":
+        return "Chờ xác nhận";
+      case "confirmed":
+        return "Đã xác nhận";
+      case "shipping":
+        return "Đang giao";
+      case "completed":
+        return "Hoàn thành";
+      case "delivered":
+        return "Đã giao hàng thành công";
+      case "cancelled":
+        return "Đã hủy";
+      default:
+        return status;
+    }
   };
 
   function formatDateLocal(date) {
-    // const year = date.getFullYear();
-    // const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    // const day = date.getDate().toString().padStart(2, '0');
-    // return `${year}-${month}-${day}`;
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
-  const fetchOrders = async (page = 1) => {
-    // try {
-    //   const user = localStorage.getItem("user");
-    //   const userId = user ? JSON.parse(user).id : null;
-
-    //   if (!userId) {
-    //     toast.error("Vui lòng đăng nhập để thực hiện hành động này");
-    //     return;
-    //   }
-    //   const params = {
-    //     page,
-    //     limit: recordsPerPage,
-    //   };
-
-    //   if (statusFilter && statusFilter !== "all") {
-    //     params.status = statusFilter;
-    //   }
-
-    //   if (startDate) {
-    //     params.startDate = formatDateLocal(startDate);
-    //   }
-    //   if (endDate) {
-    //     params.endDate = formatDateLocal(endDate);
-    //   }
-
-    //   const res = await axios.get(`${Constants.DOMAIN_API}/orders`, {
-    //     params: { userId },
-    //   });
-
-    //   setOrders(res.data.data || []);
-    //   setTotalPages(res.data.pagination?.totalPages || 1);
-    //   setStatusCounts(res.data.statusCounts || statusCounts);
-
-    //   if (!res.data.data.length) {
-    //     if (!toast.isActive("no-orders")) {
-    //       toast.info("Không tìm thấy đơn hàng nào.", { toastId: "no-orders" });
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error("Lỗi khi tải đơn hàng:", error);
-    //   toast.error("Lỗi tải dữ liệu từ máy chủ.");
-    // }
+  const fetchStatusCounts = async () => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/orders`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setStatusCounts(res.data.statusCounts || statusCounts);
+    } catch (error) {
+      console.error("Lỗi khi tải statusCounts:", error);
+      toast.error("Lỗi tải số lượng trạng thái.");
+    }
   };
 
   useEffect(() => {
-    // fetchOrders(currentPage);
+    fetchStatusCounts();
+  }, []);
+
+  const fetchOrders = async (page = 1) => {
+    try {
+      const params = {
+        page,
+        limit: recordsPerPage,
+      };
+
+      if (statusFilter && statusFilter !== "all") {
+        params.status = statusFilter;
+      }
+
+      if (searchTerm.trim()) {
+        params.searchTerm = searchTerm;
+      }
+
+      if (startDate) {
+        params.startDate = formatDateLocal(startDate);
+      }
+      if (endDate) {
+        params.endDate = formatDateLocal(endDate);
+      }
+
+      const res = await axios.get(`${Constants.DOMAIN_API}/orders`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params,
+      });
+
+      setOrders(res.data.data || []);
+      setTotalPages(res.data.pagination?.totalPages || 1);
+      if (!res.data.data.length) {
+        toast.info("Không tìm thấy đơn hàng nào.");
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải đơn hàng:", error);
+      toast.error("Lỗi tải dữ liệu từ máy chủ.");
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders(currentPage);
   }, [currentPage, statusFilter]);
 
-  const deleteOrder = async () => {
+  const deleteOrder = async (reason) => {
     if (!selectedOrder) return;
-    // try {
-    //   await axios.delete(
-    //     `${Constants.DOMAIN_API}/admin/orders/delete/${selectedOrder.id}`
-    //   );
-    //   toast.success("Hủy đơn hàng thành công");
-    //   setSelectedOrder(null);
-    // } catch (error) {
-    //   const message = error.response?.data?.message || "";
-    //   if (
-    //     message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
-    //   ) {
-    //     toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
-    //   } else if (message === "Id không tồn tại") {
-    //     toast.error("Đơn hàng không tồn tại");
-    //   } else {
-    //     toast.error("Không thể hủy đơn hàng");
-    //   }
-    // } finally {
-    //   setSelectedOrder(null);
-    // }
+    try {
+      await axios.put(
+        `${Constants.DOMAIN_API}/orders/cancel/${selectedOrder.id}`,
+        { cancellation_reason: reason }
+      );
+      toast.success("Hủy đơn hàng thành công");
+      setSelectedOrder(null);
+      fetchOrders(currentPage);
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Không thể hủy đơn hàng";
+
+      if (
+        message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
+      ) {
+        toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
+      } else if (message === "Id không tồn tại") {
+        toast.error("Đơn hàng không tồn tại");
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setSelectedOrder(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      fetchOrders(1);
+    }
+  }, [searchTerm]);
+
+  const handleFilterClick = (status) => {
+    setStatusFilter(status);
+    setActiveStatus(status);
+  };
+
+  const fetchOrderDetails = async (orderId) => {
+    if (!orderId) return;
+
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.data?.data) {
+        setOrderDetailsMap((prev) => ({
+          ...prev,
+          [orderId]: res.data.data.orderDetails || [],
+        }));
+      } else {
+        setOrderDetailsMap((prev) => ({
+          ...prev,
+          [orderId]: [],
+        }));
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải chi tiết đơn hàng:", error);
+      toast.error("Không thể tải chi tiết đơn hàng");
+      setOrderDetailsMap((prev) => ({
+        ...prev,
+        [orderId]: [],
+      }));
+    }
+  };
+
+  const FormDelete = ({ isOpen, onClose, onConfirm, message = "Bạn có chắc chắn muốn xóa?" }) => {
+    const [reason, setReason] = useState("");
+    const [customReason, setCustomReason] = useState("");
+
+    if (!isOpen) return null;
+
+    const handleConfirm = () => {
+      const finalReason = reason === "Khác" ? customReason : reason;
+      onConfirm(finalReason); // Truyền lý do hủy ra ngoài
+    };
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+        <div className="bg-white p-6 rounded-md shadow-lg w-[400px]">
+          <h3 className="text-lg font-semibold mb-4">{message}</h3>
+
+          <label className="block mb-2">Lý do hủy:</label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full border rounded p-2 mb-4"
+          >
+            <option value="">-- Chọn lý do --</option>
+            <option value="Không cần nữa">Không cần nữa</option>
+            <option value="Thay đổi ý định">Thay đổi ý định</option>
+            <option value="Giá quá cao">Giá quá cao</option>
+            <option value="Giao hàng chậm">Giao hàng chậm</option>
+            <option value="Khác">Khác</option>
+          </select>
+
+          {reason === "Khác" && (
+            <>
+              <label className="block mb-2 mt-4">Vui lòng nhập lý do khác:</label>
+              <input
+                type="text"
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="Nhập lý do hủy..."
+                className="w-full border rounded p-2"
+              />
+            </>
+          )}
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={reason === "" || (reason === "Khác" && customReason.trim() === "")}
+              className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ${(reason === "Khác" && !customReason.trim()) ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+            >
+              Đồng ý
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleConfirmDelivery = async () => {
+    const order = confirmDeliveryOrder;
+    if (!order) return;
+
+    try {
+      await axios.put(`${Constants.DOMAIN_API}/orders/confirm-delivered/${order.id}`);
+      toast.success("Xác nhận giao hàng thành công");
+      fetchOrders(currentPage);
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Không thể xác nhận giao hàng";
+      toast.error(message);
+    } finally {
+      setConfirmDeliveryOrder(null);
+    }
+  };
+
+  const FormConfirmDelivery = ({ isOpen, onClose, onConfirm, orderCode }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+        <div className="bg-white p-6 rounded-md shadow-lg w-[400px]">
+          <h3 className="text-lg font-semibold mb-4">
+            Bạn có chắc chắn muốn xác nhận đã giao hàng thành công cho đơn hàng có mã "{orderCode}"?
+          </h3>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={onConfirm}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Đồng ý
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="container mx-auto p-2">
+    <div className="w-full p-2">
       <div className="bg-white p-4 shadow rounded-md">
         <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
           <h2 className="text-xl font-semibold whitespace-nowrap">Danh sách đơn hàng</h2>
-
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <DatePicker
                 selected={startDate}
                 onChange={(date) => setStartDate(date)}
                 dateFormat="yyyy-MM-dd"
-                className="border px-3 py-2 rounded w-40"
+                className="border px-3 py-1.5 rounded w-40"
                 placeholderText="Chọn ngày bắt đầu"
               />
             </div>
@@ -154,12 +330,12 @@ export default function OrderTab() {
                 selected={endDate}
                 onChange={(date) => setEndDate(date)}
                 dateFormat="yyyy-MM-dd"
-                className="border px-3 py-2 rounded w-40"
+                className="border px-3 py-1.5 rounded w-40"
                 placeholderText="Chọn ngày kết thúc"
               />
             </div>
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded"
               onClick={() => fetchOrders(1)}
             >
               Lọc theo ngày
@@ -168,59 +344,271 @@ export default function OrderTab() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[700px] w-full text-sm text-left text-gray-500">
-            <thead>
-              <tr>
-                <th className="text-center py-3">STT</th>
-                <th className="text-center py-3">Mã đơn</th>
-                <th className="text-center py-3">Tên khách hàng</th>
-                <th className="text-center py-3">Ngày tạo</th>
-                <th className="text-center py-3">Trạng thái</th>
-                <th className="text-center py-3">Tổng tiền</th>
-                <th className="text-center py-3">Thanh toán</th>
-                <th className="text-center py-3">Xem chi tiết</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length > 0 ? (
-                orders.map((order) => (
-                  <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
-                    <td className="text-center py-4">{`${order.id}`}</td>
-                    <td className="text-center py-4">{`#${order.order_code}`}</td>
-                    <td className="text-center py-4">{`${order.user?.name || "N/A"}`}</td>
-                    <td className="text-center py-4 px-2 whitespace-nowrap">
-                      {new Date(order.created_at).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="text-center py-4 px-2">
-                      {translateStatus(order.status)}
-                    </td>
-                    <td className="text-center py-4 px-2 whitespace-nowrap">
-                      {Number(order.total_price).toLocaleString("vi-VN", {
-                        style: "currency",
-                        currency: "VND",
-                      })}
-                    </td>
-                    <td className="text-center py-4 px-2 whitespace-nowrap">{order.payment_method}</td>
-                    <td className="text-center py-4">
-                      <Link
-                        to={`/admin/orders/detail/${order.id}`}
-                        className="w-[116px] h-[46px] bg-yellow-400 text-black font-bold inline-flex items-center justify-center rounded"
-                      >
-                        Xem chi tiết
-                      </Link>
+          <div className="w-full">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent mb-4">
+              <div className="flex gap-2 text-sm text-left text-gray-500 whitespace-nowrap ms-2" style={{ maxWidth: '100%', overflowX: 'auto' }}>
+                {[
+                  { key: "", label: "Tất cả", color: "bg-gray-800", textColor: "text-white", count: statusCounts.all },
+                  { key: "pending", label: "Chờ xác nhận", color: "bg-amber-300", textColor: "text-amber-800", count: statusCounts.pending },
+                  { key: "confirmed", label: "Đã xác nhận", color: "bg-yellow-300", textColor: "text-yellow-900", count: statusCounts.confirmed },
+                  { key: "shipping", label: "Đang giao", color: "bg-blue-300", textColor: "text-blue-900", count: statusCounts.shipping },
+                  { key: "completed", label: "Hoàn thành", color: "bg-emerald-300", textColor: "text-emerald-800", count: statusCounts.completed },
+                  { key: "delivered", label: "Đã giao", color: "bg-green-300", textColor: "text-green-800", count: statusCounts.delivered },
+                  { key: "cancelled", label: "Đã hủy", color: "bg-rose-300", textColor: "text-rose-800", count: statusCounts.cancelled },
+                ].map(({ key, label, color, textColor, count }) => {
+                  const isActive = activeStatus === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handleFilterClick(key)}
+                      className={`border px-2 py-1 text-xs whitespace-nowrap ${isActive ? 'bg-[#073272] text-white' : 'bg-white text-gray-700'}`}
+                    >
+                      <span>{label}</span>
+                      <span className={`${color} ${textColor} rounded-full px-1 py-0.5 ms-1`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <table className="w-full text-sm text-left text-gray-500">
+              <thead>
+                <tr>
+                  <th className="text-center py-3">STT</th>
+                  <th className="text-center py-3">Mã đơn</th>
+                  <th className="text-center py-3">Tên khách hàng</th>
+                  <th className="text-center py-3">Ngày tạo</th>
+                  <th className="text-center py-3">Trạng thái</th>
+                  <th className="text-center py-3">Tổng tiền</th>
+                  <th className="text-center py-3">Thanh toán</th>
+                  <th className="text-center py-3">Xem chi tiết</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <React.Fragment key={order.id}>
+                    <tr className="bg-white border-b hover:bg-gray-50">
+                      <td className="text-center py-4">{order.id}</td>
+                      <td className="text-center py-4">#{order.order_code}</td>
+                      <td className="text-center py-4">{order.user?.name || "N/A"}</td>
+                      <td className="text-center py-4 px-2 whitespace-nowrap">
+                        {new Date(order.created_at).toLocaleDateString("vi-VN")}
+                      </td>
+                      <td className="text-center py-4 px-2">
+                        {order.status === "completed" ? (
+                          <button
+                            onClick={() => setConfirmDeliveryOrder(order)}
+                            className="inline-block whitespace-nowrap h-[32px] bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm px-2"
+                            type="button"
+                          >
+                            Xác nhận hoàn thành
+                          </button>
+                        ) : (
+                          translateStatus(order.status)
+                        )}
+                      </td>
+                      <td className="text-center py-4 px-2 whitespace-nowrap">
+                        {Number(order.total_price).toLocaleString("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        })}
+                      </td>
+                      <td className="text-center py-4 px-2 whitespace-nowrap">{order.payment_method}</td>
+                      <td className="text-center py-4 flex flex-row items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            const isOpeningNew = expandedOrderId !== order.id;
+                            if (isOpeningNew) {
+                              fetchOrderDetails(order.id);
+                            }
+                            setExpandedOrderId(isOpeningNew ? order.id : null);
+                          }}
+                          className="w-[40px] h-[36px] bg-yellow-400 text-black font-bold flex items-center justify-center rounded text-sm"
+                          type="button"
+                        >
+                          {expandedOrderId === order.id ? "Ẩn" : "Xem"}
+                        </button>
+
+                        {order.status === "pending" && (
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="w-[40px] h-[32px] bg-red-500 hover:bg-red-600 text-white font-medium rounded text-sm"
+                            type="button"
+                          >
+                            Hủy
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+
+                    {expandedOrderId === order.id && (
+                      <tr>
+                        <td colSpan="8" className="p-0">
+                          <div className="bg-gray-50 p-4 border-t border-gray-200">
+                            <h3 className="font-semibold mb-4 text-lg">Chi tiết đơn hàng</h3>
+
+                            <div className="bg-white shadow-md rounded-md p-4 mb-6">
+                              <h4 className="text-xl font-semibold mb-3">Thông tin khách hàng</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Mã đơn</label>
+                                  <input
+                                    type="text"
+                                    value={order.order_code || ""}
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Họ tên</label>
+                                  <input
+                                    type="text"
+                                    value={order.user?.name || ""}
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Số điện thoại</label>
+                                  <input
+                                    type="text"
+                                    value={order.user?.phone || ""}
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Email</label>
+                                  <input
+                                    type="text"
+                                    value={order.user?.email || ""}
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Địa chỉ</label>
+                                  <input
+                                    type="text"
+                                    value={order.shipping_address || ""}
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Phương thức thanh toán</label>
+                                  <input
+                                    type="text"
+                                    value={order.payment_method || ""}
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Ngày đặt hàng</label>
+                                  <input
+                                    type="text"
+                                    value={
+                                      order.created_at
+                                        ? new Date(order.created_at).toLocaleDateString()
+                                        : ""
+                                    }
+                                    readOnly
+                                    className="w-full border rounded p-2 bg-gray-100"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-white shadow-md rounded-md p-4">
+                              <h4 className="text-xl font-semibold mb-3">Sản phẩm</h4>
+                              <table className="w-full border-collapse border text-center">
+                                <thead>
+                                  <tr className="bg-gray-200">
+                                    <th className="border p-2">Trạng thái</th>
+                                    <th className="border p-2">Tên sản phẩm</th>
+                                    <th className="border p-2">Số lượng</th>
+                                    <th className="border p-2">Đơn giá</th>
+                                    <th className="border p-2">Thành tiền</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(orderDetailsMap[order.id] || []).length > 0 ? (
+                                    <>
+                                      {orderDetailsMap[order.id].map((item, idx) => (
+                                        <tr key={idx} className="border-b">
+                                          <td className="p-2">{translateStatus(order.status)}</td>
+                                          <td className="p-2">{item.variant?.product?.name || "Không xác định"}</td>
+                                          <td className="p-2 text-center">{item.quantity}</td>
+                                          <td className="p-2 text-right">
+                                            {Number(item.price).toLocaleString("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            })}
+                                          </td>
+                                          <td className="p-2 text-right">
+                                            {(item.quantity * item.price).toLocaleString("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            })}
+                                          </td>
+                                        </tr>
+                                      ))}
+
+                                      {Number(order.discount_amount) > 0 && (
+                                        <tr className="bg-gray-50">
+                                          <td colSpan={4} className="text-right font-medium p-2 border-t">
+                                            Số tiền giảm giá (nếu có):
+                                          </td>
+                                          <td className="text-right p-2 border-t text-red-600 font-medium">
+                                            -{Number(order.discount_amount).toLocaleString("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            })}
+                                          </td>
+                                        </tr>
+                                      )}
+
+                                      <tr className="bg-gray-100 font-semibold">
+                                        <td colSpan={4} className="text-right p-2 border-t border-b">Tổng tiền:</td>
+                                        <td className="text-right p-2 border-t border-b text-blue-600">
+                                          {Number(order.total_price).toLocaleString("vi-VN", {
+                                            style: "currency",
+                                            currency: "VND",
+                                          })}
+                                        </td>
+                                      </tr>
+                                    </>
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={5} className="border p-2 text-center text-gray-400">
+                                        Không có sản phẩm nào trong đơn này.
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan="8" className="text-center py-4">
+                      Không có đơn hàng nào
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="text-center py-4 text-gray-500">
-                    Không có đơn hàng nào.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
         <div className="flex justify-center mt-6">
           <div className="flex items-center space-x-1">
             <button
@@ -282,6 +670,16 @@ export default function OrderTab() {
             onClose={() => setSelectedOrder(null)}
             onConfirm={deleteOrder}
             message={`Bạn có chắc chắn muốn hủy đơn hàng "${selectedOrder.order_code}"?`}
+          />
+        )}
+
+        {/* Modal xác nhận giao hàng */}
+        {confirmDeliveryOrder && (
+          <FormConfirmDelivery
+            isOpen={true}
+            onClose={() => setConfirmDeliveryOrder(null)}
+            onConfirm={handleConfirmDelivery}
+            orderCode={confirmDeliveryOrder.order_code}
           />
         )}
       </div>

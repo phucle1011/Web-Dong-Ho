@@ -135,6 +135,9 @@ ProductVariantsModel.hasMany(PromotionProductModel, { foreignKey: 'product_varia
 // ✅ FIXED: PromotionProduct - Promotion
 PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' }); // CHUẨN
 PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 'promotionProducts' });
+
+OrderModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
+
 module.exports = {
   UserModel,
   AddressesModel,
