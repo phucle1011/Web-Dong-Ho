@@ -3,9 +3,12 @@ const OrderDetailsModel = require('../../models/orderDetailsModel');
 const ProductVariantsModel = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
 const UserModel = require('../../models/usersModel');
+const PromotionModel = require("../../models/promotionsModel");
 const { Op } = require('sequelize');
 const axios = require('axios');
 const ExcelJS = require('exceljs');
+const sequelize = require('../../config/database');
+
 
 class OrderController {
 
@@ -159,6 +162,7 @@ class OrderController {
     }
 
     static async update(req, res) {
+        const t = await sequelize.transaction();
         try {
             const { id } = req.params;
             const {
@@ -168,13 +172,16 @@ class OrderController {
                 phone,
                 email,
                 total_price,
-                payment_method_id
+                payment_method_id,
             } = req.body;
 
-            const order = await OrderModel.findByPk(id);
+            const order = await OrderModel.findByPk(id, { transaction: t });
             if (!order) {
+                await t.rollback();
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
+
+            const oldStatus = order.status;
 
             if (name !== undefined) order.name = name;
             if (status !== undefined) order.status = status;
@@ -184,17 +191,45 @@ class OrderController {
             if (total_price !== undefined) order.total_price = total_price;
             if (payment_method_id !== undefined) order.payment_method_id = payment_method_id;
 
-            await order.save();
+            await order.save({ transaction: t });
 
-            res.status(200).json({
+            if (status === "cancelled" && oldStatus !== "cancelled" && order.promotion_id) {
+                const promotion = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
+
+                if (promotion) {
+                    if (promotion.special_promotion) {
+                        // console.log("Mã đặc biệt → Cập nhật 'used' = false");
+                        await PromotionUserModel.update(
+                            { used: false },
+                            {
+                                where: {
+                                    promotion_id: promotion.id,
+                                    user_id: order.user_id,
+                                },
+                                transaction: t,
+                            }
+                        );
+                    } else {
+                        // console.log("Mã thường → Tăng lại số lượng");
+                        await promotion.increment('quantity', { by: 1, transaction: t });
+                    }
+                }
+            }
+
+            await t.commit();
+            return res.status(200).json({
                 status: 200,
-                message: "Cập nhật thành công",
-                data: order
+                message: "Cập nhật đơn hàng thành công.",
+                data: order,
             });
+
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            await t.rollback();
+            console.error("Lỗi cập nhật đơn hàng:", error);
+            return res.status(500).json({ error: error.message });
         }
     }
+
 
     static async delete(req, res) {
         try {

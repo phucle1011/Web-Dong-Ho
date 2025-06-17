@@ -16,7 +16,7 @@ const OrderModel = connection.define('orders', {
         allowNull: true
     },
     total_price: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: true
     },
     status: {
@@ -47,7 +47,11 @@ const OrderModel = connection.define('orders', {
     note: {
         type: DataTypes.TEXT,
         allowNull: false 
-    } 
+    },
+    discount_amount: {
+        type: DataTypes.DECIMAL(20, 2),
+        allowNull: true
+    },
 }, {
     tableName: 'orders',
     timestamps: true,

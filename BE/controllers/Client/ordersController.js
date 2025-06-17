@@ -5,6 +5,7 @@ const UserModel = require("../../models/usersModel");
 const Product = require("../../models/productsModel");
 const PromotionModel = require("../../models/promotionsModel");
 const { Op } = require("sequelize");
+const sequelize = require('../../config/database');
 
 require("dotenv").config();
 const nodemailer = require("nodemailer");
@@ -150,34 +151,39 @@ class OrderController {
     }
 
     static async create(req, res) {
+        const {
+            products,
+            user_id,
+            name,
+            phone,
+            email,
+            address,
+            payment_method,
+            promotion,
+            note,
+        } = req.body;
+
+        if (!products || products.length === 0) {
+            return res.status(400).json({ message: "Giỏ hàng trống." });
+        }
+
+        if (!user_id) {
+            return res.status(400).json({ message: "Thiếu user_id trong yêu cầu." });
+        }
+
+        const t = await sequelize.transaction();
         try {
-            const {
-                products,
-                user_id,
-                name,
-                phone,
-                email,
-                address,
-                payment_method,
-                promotion,
-                note,
-            } = req.body;
-
-            if (!products || products.length === 0) {
-                return res.status(400).json({ message: "Giỏ hàng trống." });
-            }
-
             let totalPrice = 0;
             const detailedCart = [];
 
             for (const item of products) {
                 const variant = item.variant;
                 if (!variant) {
-                    return res
-                        .status(400)
-                        .json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
+                    await t.rollback();
+                    return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
                 }
-                const price = variant.price;
+
+                const price = parseFloat(variant.price);
                 totalPrice += price * item.quantity;
 
                 detailedCart.push({
@@ -189,42 +195,65 @@ class OrderController {
                 });
             }
 
-            if (req.body.promotion) {
-                let selectedVoucher = null;
+            let selectedVoucher = null;
+            let discount = 0;
+            let discountAmount = 0;
 
-                selectedVoucher = await PromotionModel.findByPk(req.body.promotion);
-
+            if (promotion) {
+                selectedVoucher = await PromotionModel.findByPk(promotion, { transaction: t, lock: t.LOCK.UPDATE });
                 if (selectedVoucher) {
-                    let discount = 0;
+                    const now = new Date();
+                    if (
+                        selectedVoucher.status !== 'active' ||
+                        now < selectedVoucher.start_date ||
+                        now > selectedVoucher.end_date ||
+                        selectedVoucher.quantity <= 0 ||
+                        totalPrice < selectedVoucher.min_price_threshold
+                    ) {
+                        await t.rollback();
+                        return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
+                    }
 
-                    if (selectedVoucher.discount_type === "fixed") {
+                    if (selectedVoucher.special_promotion) {
+                        const promoUser = await PromotionUserModel.findOne({
+                            where: {
+                                promotion_id: selectedVoucher.id,
+                                user_id,
+                                email_sent: true,
+                                used: { [Op.not]: true },
+                            },
+                            transaction: t,
+                            lock: t.LOCK.UPDATE,
+                        });
+
+                        if (!promoUser) {
+                            await t.rollback();
+                            return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
+                        }
+
+                        promoUser.used = true;
+                        await promoUser.save({ transaction: t });
+                    }
+
+                    if (selectedVoucher.discount_type === 'fixed') {
                         discount = Math.min(selectedVoucher.discount_value, totalPrice);
-                    } else if (selectedVoucher.discount_type === "percentage") {
+                    } else if (selectedVoucher.discount_type === 'percentage') {
                         const maxPrice = selectedVoucher.max_price || Infinity;
-                        discount = Math.min(
-                            (totalPrice * selectedVoucher.discount_value) / 100,
-                            maxPrice
-                        );
+                        discount = Math.min((totalPrice * selectedVoucher.discount_value) / 100, maxPrice);
                     }
 
                     totalPrice -= discount;
+                    selectedVoucher.quantity -= 1;
+                    await selectedVoucher.save({ transaction: t });
                 }
             }
 
-            if (!user_id) {
-                return res
-                    .status(400)
-                    .json({ message: "Thiếu user_id trong yêu cầu." });
-            }
-
-            const currentDateTime = new Date(
-                new Date().getTime() + 7 * 60 * 60 * 1000
-            );
             const order_code = `ORD-${Date.now()}`;
+            const currentDateTime = new Date(Date.now() + 7 * 60 * 60 * 1000);
 
             const newOrder = await OrderModel.create({
                 user_id,
-                promotion_id: req.body.promotion || null,
+                promotion_id: promotion || null,
                 name,
                 phone,
                 email,
@@ -238,7 +267,8 @@ class OrderController {
                 status: "pending",
                 cancellation_reason: null,
                 shipping_code: null,
-            });
+                discount_amount: discountAmount,
+            }, { transaction: t });
 
             const orderDetails = detailedCart.map((item) => ({
                 order_id: newOrder.id,
@@ -247,14 +277,9 @@ class OrderController {
                 price: item.price,
             }));
 
-            await OrderDetail.bulkCreate(orderDetails);
-            await OrderController.sendOrderConfirmationEmail(
-                newOrder,
-                { name, phone },
-                products,
-                email,
-                currentDateTime
-            );
+            await OrderDetail.bulkCreate(orderDetails, { transaction: t });
+
+            await t.commit();
 
             const successfullyOrderedProductIds = products.map(p => p.variant.id);
 
@@ -267,6 +292,7 @@ class OrderController {
                 },
             });
         } catch (error) {
+            await t.rollback();
             console.error("Lỗi khi tạo đơn hàng:", error.message);
             return res.status(500).json({
                 success: false,
