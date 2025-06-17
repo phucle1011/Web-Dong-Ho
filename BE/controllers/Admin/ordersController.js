@@ -197,7 +197,7 @@ class OrderController {
             if (total_price !== undefined) order.total_price = total_price;
             if (payment_method_id !== undefined) order.payment_method_id = payment_method_id;
 
-           await order.save({ transaction: t });
+            await order.save({ transaction: t });
 
             if (status === "cancelled" && oldStatus !== "cancelled" && order.promotion_id) {
                 const promotion = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
@@ -238,27 +238,55 @@ class OrderController {
 
 
     static async delete(req, res) {
+        const t = await sequelize.transaction();
         try {
             const { id } = req.params;
 
-            const order = await OrderModel.findByPk(id);
+            const order = await OrderModel.findByPk(id, { transaction: t });
             if (!order) {
+                await t.rollback();
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
 
             if (order.status !== "pending") {
+                await t.rollback();
                 return res.status(400).json({ message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'" });
             }
 
-            order.status = "cancelled";
-            await order.save();
+            const oldStatus = order.status;
 
+            order.status = "cancelled";
+            await order.save({ transaction: t });
+
+            if (order.status === "cancelled" && oldStatus !== "cancelled" && order.promotion_id) {
+                const promotion = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
+
+                if (promotion) {
+                    if (promotion.special_promotion) {
+                        await PromotionUserModel.update(
+                            { used: false },
+                            {
+                                where: {
+                                    promotion_id: promotion.id,
+                                    user_id: order.user_id,
+                                },
+                                transaction: t,
+                            }
+                        );
+                    } else {
+                        await promotion.increment('quantity', { by: 1, transaction: t });
+                    }
+                }
+            }
+
+            await t.commit();
             res.status(200).json({
                 status: 200,
                 message: "Hủy đơn hàng thành công",
                 data: order
             });
         } catch (error) {
+            await t.rollback();
             res.status(500).json({ error: error.message });
         }
     }
