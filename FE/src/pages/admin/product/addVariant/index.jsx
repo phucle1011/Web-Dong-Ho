@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 import { toast } from "react-toastify";
 import { useNavigate, Link } from "react-router-dom";
+import Constants from "../../../../Constants.jsx";
 
 function AddVariantForm() {
   const { productId } = useParams();
@@ -22,7 +23,7 @@ function AddVariantForm() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/admin/product-attributes")
+      .get(`${Constants.DOMAIN_API}/admin/product-attributes`)
       .then((res) => setAllAttributes(res.data.data || []))
       .catch((err) => console.error("Lỗi lấy thuộc tính:", err));
   }, []);
@@ -63,18 +64,21 @@ function AddVariantForm() {
     }
 
     try {
-      const imageUrls = images.map(img => img.url);
+      const imageUrls = images.map((img) => img.url);
 
-const data = { sku, price, stock, attributes, images: imageUrls };
+      const data = { sku, price, stock, attributes, images: imageUrls };
       await axios.post(
-        `http://localhost:5000/admin/products/${productId}/variants`,
+        `${Constants.DOMAIN_API}/admin/products/${productId}/variants`,
         data
       );
       toast.success("Tạo biến thể thành công!");
       navigate("/admin/products/getAll");
     } catch (err) {
       console.error("Lỗi tạo biến thể:", err);
-      toast.error(err.response?.data?.error || "Đã có lỗi xảy ra");
+      toast.error(
+        err.response?.data?.error ||
+          "Đã có lỗi xảy ra"
+      );
     }
   };
   const removeAttributeRow = (index) => {
@@ -83,23 +87,23 @@ const data = { sku, price, stock, attributes, images: imageUrls };
     setAttributes(updated);
   };
   const deleteCloudImage = async (public_id) => {
-  try {
-    await axios.post("http://localhost:5000/admin/products/imagesClauding", { public_id });
-  } catch (err) {
-    console.error("Lỗi xóa ảnh Cloudinary:", err);
-  }
-};
-const handleCancel = async () => {
-  // Xóa từng ảnh đã upload lên Cloudinary
-  for (const img of images) {
-    console.log("imgid",img.public_id);
-    
-    await deleteCloudImage(img.public_id);
-  }
+    try {
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id,
+      });
+    } catch (err) {
+      console.error("Lỗi xóa ảnh Cloudinary:", err);
+    }
+  };
+  const handleCancel = async () => {
+    // Xóa từng ảnh đã upload lên Cloudinary
+    for (const img of images) {
 
-  navigate("/admin/products/getAll");
-};
+      await deleteCloudImage(img.public_id);
+    }
 
+    navigate("/admin/products/getAll");
+  };
 
   return (
     <div className="max-w-screen-xl mx-auto bg-white p-10 md:p-16 rounded shadow mt-2 mb-2">
@@ -329,13 +333,12 @@ const handleCancel = async () => {
           </button>
 
           <button
-  type="button"
-  onClick={handleCancel}
-  className="bg-gray-200 text-gray-800 px-6 py-3 rounded hover:bg-gray-300 transition flex items-center justify-center"
->
-  Quay lại
-</button>
-
+            type="button"
+            onClick={handleCancel}
+            className="bg-gray-200 text-gray-800 px-6 py-3 rounded hover:bg-gray-300 transition flex items-center justify-center"
+          >
+            Quay lại
+          </button>
         </div>
       </form>
     </div>

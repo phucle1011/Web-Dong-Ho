@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Constants from "../../../../Constants.jsx";
 
 const EditVariantForm = () => {
   const { id } = useParams();
@@ -22,12 +23,12 @@ const EditVariantForm = () => {
     const fetchData = async () => {
       try {
         const attrRes = await axios.get(
-          "http://localhost:5000/admin/product-attributes"
+          `${Constants.DOMAIN_API}/admin/product-attributes`
         );
         setAttributesList(attrRes.data.data);
 
         const res = await axios.get(
-          `http://localhost:5000/admin/variants/${id}`
+          `${Constants.DOMAIN_API}/admin/variants/${id}`
         );
         const data = res.data.data;
 
@@ -57,7 +58,6 @@ const EditVariantForm = () => {
     fetchData();
   }, [id]);
 
-  console.log(formData);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +101,7 @@ const EditVariantForm = () => {
     if (id) {
       try {
         await axios.delete(
-          `http://localhost:5000/admin/product-variants/deleteAttributeValueById/${id}`
+          `${Constants.DOMAIN_API}/admin/product-variants/deleteAttributeValueById/${id}`
         );
       } catch (error) {
         console.error("Lỗi khi xóa thuộc tính:", error);
@@ -121,7 +121,7 @@ const EditVariantForm = () => {
     if (image.id) {
       try {
         await axios.delete(
-          `http://localhost:5000/admin/variant-images/${image.id}`
+          `${Constants.DOMAIN_API}/admin/variant-images/${image.id}`
         );
       } catch (error) {
         console.error("Lỗi khi xóa ảnh:", error);
@@ -154,7 +154,7 @@ const EditVariantForm = () => {
 
     try {
       await axios.put(
-        `http://localhost:5000/admin/variants/${id}`,
+        `${Constants.DOMAIN_API}/admin/variants/${id}`,
         preparedData
       );
       toast.success("Cập nhật biến thể thành công!");

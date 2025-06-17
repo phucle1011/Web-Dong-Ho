@@ -135,7 +135,6 @@ const AdminProductList = () => {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/products`, {
         params,
       });
-      console.log(res.data);
 
       setProducts(res.data.data);
       setTotalPages(res.data.pagination.totalPages);

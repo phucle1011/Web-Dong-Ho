@@ -3,9 +3,9 @@ import Selectbox from "../Helpers/Selectbox";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react"; // hoặc icon bạn dùng
-import { decodeToken } from '../Helpers/jwtDecode'; 
-
-
+import { decodeToken } from "../Helpers/jwtDecode";
+import { toast } from "react-toastify";
+import Constants from "../../../Constants";
 
 export default function ProductView({ className, reportHandler }) {
   const [productData, setProductData] = useState(null);
@@ -14,175 +14,86 @@ export default function ProductView({ className, reportHandler }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
-const [selectedVariant, setSelectedVariant] = useState(null);
-const [variantImages, setVariantImages] = useState([]);
-const [allVariants, setAllVariants] = useState([]);
-const [filteredVariants, setFilteredVariants] = useState([]);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [variantImages, setVariantImages] = useState([]);
+  const [allVariants, setAllVariants] = useState([]);
+  const [filteredVariants, setFilteredVariants] = useState([]);
 
   // Gom state chọn thuộc tính
-  const [selectedFilters, setSelectedFilters] = useState({
-    dialSize: null,
-    waterResistance: null,
-    strapMaterial: null,
-    movementType: null,
-  });
-
-  // Dữ liệu filter (các lựa chọn)
-  const [filterOptions, setFilterOptions] = useState({
-    dialSizes: [],
-    waterResistances: [],
-    strapMaterials: [],
-    movementTypes: [],
-    colors: [],
-  });
 
   const [selectedImage, setSelectedImage] = useState("");
-  const { id: productId } = useParams(); 
-useEffect(() => {
-  async function fetchProduct() {
-    try {
-      setLoading(true);
-      
+  const { id: productId } = useParams();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    async function fetchProduct() {
+      try {
+        setLoading(true);
 
-      const res = await axios.get(
-        `http://localhost:5000/products/${productId}/variants`
-      );
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/products/${productId}/variants`
+        );
 
-      const { product } = res.data;
-      setProductData(product);
-      setVariants(product.variants);
-      setImages(product.variantImages);
-      setAllVariants(product.variants);
-      console.log(product.variants);
-      
-      // Trích xuất các loại thuộc tính
-      const extractAttributeValues = (attrName, keyName) => {
-        const seen = new Set();
+        const { product } = res.data;
+        setProductData(product);
+        setVariants(product.variants);
+        setImages(product.variantImages);
+        setAllVariants(product.variants);
+        if (product.variants.length > 0) {
+          const firstVariant = product.variants[0];
+          setSelectedVariant(firstVariant);
+          setFilteredVariants([firstVariant]);
 
-        return product.variants
-          .map((variant) => {
-            const attr = variant.attributeValues.find(
-              (a) => a.attribute.name === attrName
-            );
-            return {
-              id: variant.id,
-              [keyName]: attr ? attr.value : null,
-              image: variant.images[0]?.image_url || "",
-            };
-          })
-          .filter((item) => {
-            const value = item[keyName];
-            if (!value || seen.has(value)) return false;
-            seen.add(value);
-            return true;
-          });
-      };
+          const firstImages = firstVariant.images || [];
+          setVariantImages(firstImages);
+          if (firstImages.length > 0) {
+            setSelectedImage(firstImages[0].image_url);
+          } else if (product.thumbnail) {
+            setSelectedImage(product.thumbnail);
+          }
+        }
 
-      setFilterOptions({
-        dialSizes: extractAttributeValues("Dial Size", "dialSize"),
-        waterResistances: extractAttributeValues(
-          "Water Resistance",
-          "waterResistance"
-        ),
-        strapMaterials: extractAttributeValues(
-          "Strap Material",
-          "strapMaterial"
-        ),
-        movementTypes: extractAttributeValues("Movement Type", "movementType"),
-        colors: extractAttributeValues("Color", "color"),
-      });
+        // Trích xuất các loại thuộc tính
+        const extractAttributeValues = (attrName, keyName) => {
+          const seen = new Set();
 
-      // Ảnh mặc định
-      const firstImage = product.thumbnail;
-      if (firstImage) setSelectedImage(firstImage);
-    } catch (err) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
+          return product.variants
+            .map((variant) => {
+              const attr = variant.attributeValues.find(
+                (a) => a.attribute.name === attrName
+              );
+              return {
+                id: variant.id,
+                [keyName]: attr ? attr.value : null,
+                image: variant.images[0]?.image_url || "",
+              };
+            })
+            .filter((item) => {
+              const value = item[keyName];
+              if (!value || seen.has(value)) return false;
+              seen.add(value);
+              return true;
+            });
+        };
 
-  fetchProduct();
-}, []);
-
-
- const updateFilter = (type, value) => {
-  setSelectedFilters((prev) => {
-    // Toggle filter
-    const newFilters = {
-      ...prev,
-      [type]: prev[type] === value ? null : value,
-    };
-
-    // Lọc các biến thể phù hợp theo tất cả filter hiện tại
-    const newFiltered = variants.filter((variant) => {
-      return (
-        (!newFilters.dialSize || getAttrValue(variant, "Dial Size") === newFilters.dialSize) &&
-        (!newFilters.waterResistance || getAttrValue(variant, "Water Resistance") === newFilters.waterResistance) &&
-        (!newFilters.strapMaterial || getAttrValue(variant, "Strap Material") === newFilters.strapMaterial) &&
-        (!newFilters.movementType || getAttrValue(variant, "Movement Type") === newFilters.movementType) &&
-        (!newFilters.color || variant.attributeValues.some(
-          (a) => a.attribute.name === "Color" && a.value === newFilters.color
-        ))
-      );
-    });
-
-    setFilteredVariants(newFiltered);
-
-    // Cập nhật ảnh
-    const newImages = newFiltered.flatMap((v) => v.images || []);
-    setVariantImages(newImages);
-
-    if (!newFilters[type]) {
-      const allImages = variants.flatMap((v) => v.images || []);
-      setVariantImages(allImages);
-      if (allImages.length > 0) {
-        setSelectedImage(allImages[0].image_url);
-      }
-    } else {
-      if (newImages.length > 0) {
-        setSelectedImage(newImages[0].image_url);
+        // Ảnh mặc định
+        const firstImage = product.thumbnail;
+        if (firstImage) setSelectedImage(firstImage);
+      } catch (err) {
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
       }
     }
 
-    // Chỉ tự động chọn khi chỉ 1 biến thể phù hợp
-    if (newFiltered.length === 1) {
-      setSelectedVariant(newFiltered[0]);
-    } else {
-      setSelectedVariant(null);
-    }
-
-    return newFilters;
-  });
-};
-
-
+    fetchProduct();
+  }, [productId]);
 
   const getAttrValue = (variant, attrName) => {
-  const attr = variant.attributeValues.find(
-    (a) => a.attribute.name === attrName
-  );
-  return attr ? attr.value : null;
-};
-
-
-  const filteredBySelection = variants.filter((variant) => {
-  return (
-    (!selectedFilters.dialSize ||
-      getAttrValue(variant, "Dial Size") === selectedFilters.dialSize) &&
-    (!selectedFilters.waterResistance ||
-      getAttrValue(variant, "Water Resistance") === selectedFilters.waterResistance) &&
-    (!selectedFilters.strapMaterial ||
-      getAttrValue(variant, "Strap Material") === selectedFilters.strapMaterial) &&
-    (!selectedFilters.movementType ||
-      getAttrValue(variant, "Movement Type") === selectedFilters.movementType) &&
-    (!selectedFilters.color ||
-      variant.attributeValues.some(
-        (a) => a.attribute.name === "Color" && a.value === selectedFilters.color
-      ))
-  );
-});
-
+    const attr = variant.attributeValues.find(
+      (a) => a.attribute.name === attrName
+    );
+    return attr ? attr.value : null;
+  };
 
   const increment = () => setQuantity((q) => q + 1);
   const decrement = () => setQuantity((q) => Math.max(1, q - 1));
@@ -194,148 +105,86 @@ useEffect(() => {
     setSelectedImage(url);
   };
 
-  const validDialSizes = new Set(
-    filteredBySelection .map((v) => getAttrValue(v, "Dial Size"))
-  );
-  const validWaterResistances = new Set(
-    filteredBySelection .map((v) => getAttrValue(v, "Water Resistance"))
-  );
-  const validStrapMaterials = new Set(
-    filteredBySelection .map((v) => getAttrValue(v, "Strap Material"))
-  );
-  const validMovementTypes = new Set(
-    filteredBySelection .map((v) => getAttrValue(v, "Movement Type"))
-  );
-  const validColors = new Set(
-    filteredBySelection .flatMap((v) =>
-      v.attributeValues
-        .filter((a) => a.attribute.name === "Color")
-        .map((a) => a.value)
-    )
-  );
- const handleVariantSelect = (variant) => {
-  // Nếu đã chọn variant này rồi, thì bỏ chọn
-  if (selectedVariant && selectedVariant.id === variant.id) {
-    setSelectedVariant(null);
-    setSelectedFilters({
-      dialSize: null,
-      waterResistance: null,
-      strapMaterial: null,
-      movementType: null,
-      color: null,
-    });
-    setFilteredVariants(variants);
-    setVariantImages([]);
-    setSelectedImage(""); // hoặc ảnh mặc định
-    return;
-  }
+  const handleVariantSelect = (variant) => {
+    if (!variant || selectedVariant?.id === variant.id) {
+      // Nếu đã chọn rồi thì không làm gì cả
+      return;
+    }
 
-  // Nếu chọn variant mới
-  const dialSize = getAttrValue(variant, "Dial Size");
-  const waterResistance = getAttrValue(variant, "Water Resistance");
-  const strapMaterial = getAttrValue(variant, "Strap Material");
-  const movementType = getAttrValue(variant, "Movement Type");
-  const color = getAttrValue(variant, "Color");
+    const newFiltered = variants.filter((v) => v.id === variant.id);
+    setFilteredVariants(newFiltered);
 
-  const newFilters = {
-    dialSize: dialSize || null,
-    waterResistance: waterResistance || null,
-    strapMaterial: strapMaterial || null,
-    movementType: movementType || null,
-    color: color || null,
+    const newImages = newFiltered.flatMap((v) => v.images || []);
+    setVariantImages(newImages);
+
+    if (newImages.length > 0) {
+      setSelectedImage(newImages[0].image_url);
+    }
+
+    setSelectedVariant(variant);
   };
 
-  setSelectedFilters(newFilters);
-
-  const newFiltered = variants.filter((v) =>
-    (!newFilters.dialSize || getAttrValue(v, "Dial Size") === newFilters.dialSize) &&
-    (!newFilters.waterResistance || getAttrValue(v, "Water Resistance") === newFilters.waterResistance) &&
-    (!newFilters.strapMaterial || getAttrValue(v, "Strap Material") === newFilters.strapMaterial) &&
-    (!newFilters.movementType || getAttrValue(v, "Movement Type") === newFilters.movementType) &&
-    (!newFilters.color || getAttrValue(v, "Color") === newFilters.color)
-  );
-
-  setFilteredVariants(newFiltered);
-
-  const newImages = newFiltered.flatMap((v) => v.images || []);
-  setVariantImages(newImages);
-  if (newImages.length > 0) {
-    setSelectedImage(newImages[0].image_url);
-  }
-
-  setSelectedVariant(variant);
-};
-
-
-
-
-
-
   const handleAddToCart = async (variantId, quantity) => {
-  if (!variantId) {
-    alert("Bạn chưa chọn biến thể sản phẩm.");
-    return;
-  }
-  
-const token = localStorage.getItem('token');
-const decoded = decodeToken(token);
+    if (!variantId) {
+      toast.error("Bạn chưa chọn biến thể sản phẩm.");
+      return;
+    }
 
-console.log("👤 User ID trong token:", decoded?.id);  // hoặc decoded.name, decoded.email, v.v.
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
 
-  const userId = decoded?.id;
+    const userId = decoded?.id;
 
-  if (!token || !userId) {
-    alert("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
-    return;
-  }
+    if (!token || !userId) {
+      toast.error("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      return;
+    }
 
-  try {
-    const response = await axios.post('http://localhost:5000/add-to-carts', {
-      userId,      // Gửi thêm userId
-      productVariantId : variantId,
-      quantity,
-    }, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await axios.post(
+        "${Constants.DOMAIN_API}/add-to-carts",
+        {
+          userId, // Gửi thêm userId
+          productVariantId: variantId,
+          quantity,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    console.log("🛒 Đã thêm vào giỏ hàng:", response.data);
-    alert("Đã thêm vào giỏ hàng thành công!");
+      toast.success("Đã thêm vào giỏ hàng thành công!");
+    } catch (error) {
+      toast.success("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+    }
+  };
 
-  } catch (error) {
-    console.error("❌ Lỗi khi thêm vào giỏ hàng:", error);
-    alert("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
-  }
-};
+  const avgRating = productData.averageRating; // trung bình từ API
+  const ratingCount = productData.ratingCount; // tổng số lượt đánh giá
 
+  const renderStars = (avgRating) => {
+    const fullStars = Math.floor(avgRating);
+    const hasHalfStar = avgRating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
-const avgRating = productData.averageRating ; // trung bình từ API
-const ratingCount = productData.ratingCount; // tổng số lượt đánh giá
-
-const renderStars = (avgRating) => {
-  const fullStars = Math.floor(avgRating);
-  const hasHalfStar = avgRating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
-  return (
-    <>
-      {Array(fullStars)
-        .fill()
-        .map((_, i) => (
-          <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" />
-        ))}
-      {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
-      {Array(emptyStars)
-        .fill()
-        .map((_, i) => (
-          <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
-        ))}
-    </>
-  );
-};
-
-
+    return (
+      <>
+        {Array(fullStars)
+          .fill()
+          .map((_, i) => (
+            <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" />
+          ))}
+        {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
+        {Array(emptyStars)
+          .fill()
+          .map((_, i) => (
+            <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
+          ))}
+      </>
+    );
+  };
 
   return (
     <div
@@ -348,32 +197,33 @@ const renderStars = (avgRating) => {
           <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
             <img src={selectedImage} alt="" className="object-contain" />
 
-              {allVariants.some(variant => variant.promotionProducts && variant.promotionProducts.length > 0) && (
-  <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
-    <span>sale</span>
-  </div>
-)}
-
-            
+            {allVariants.some(
+              (variant) =>
+                variant.promotionProducts &&
+                variant.promotionProducts.length > 0
+            ) && (
+              <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
+                <span>sale</span>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap">
-  {(selectedVariant ? variantImages : images).map((img) => (
-    <div
-      onClick={() => changeImgHandler(img.image_url)}
-      key={img.id}
-      className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer"
-    >
-      <img
-        src={img.image_url}
-        alt=""
-        className={`w-full h-full object-contain ${
-          selectedImage !== img.image_url ? "opacity-50" : ""
-        }`}
-      />
-    </div>
-  ))}
-</div>
-
+            {(selectedVariant ? variantImages : images).map((img) => (
+              <div
+                onClick={() => changeImgHandler(img.image_url)}
+                key={img.id}
+                className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer"
+              >
+                <img
+                  src={img.image_url}
+                  alt=""
+                  className={`w-full h-full object-contain ${
+                    selectedImage !== img.image_url ? "opacity-50" : ""
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -383,7 +233,6 @@ const renderStars = (avgRating) => {
             data-aos="fade-up"
             className="text-qgray text-xs font-normal uppercase tracking-wider mb-2 inline-block"
           >
-          
             Mobile Phones
           </span>
           <p
@@ -397,18 +246,16 @@ const renderStars = (avgRating) => {
             data-aos="fade-up"
             className="flex space-x-[10px] items-center mb-6"
           >
-            <div data-aos="fade-up" className="flex space-x-[10px] items-center mb-6">
-  <div className="flex">
-    {renderStars(avgRating)}
-  </div>
-  <span className="text-[13px] font-normal text-qblack">
-    {ratingCount} Reviews
-  </span>
-</div>
-
+            <div
+              data-aos="fade-up"
+              className="flex space-x-[10px] items-center mb-6"
+            >
+              <div className="flex">{renderStars(avgRating)}</div>
+              <span className="text-[13px] font-normal text-qblack">
+                {ratingCount} Reviews
+              </span>
+            </div>
           </div>
-
-          
 
           <p
             data-aos="fade-up"
@@ -428,267 +275,91 @@ const renderStars = (avgRating) => {
               width: "100%",
             }}
           >
-            {filteredBySelection .length === 0 && (
-              <p className="col-span-full text-center text-gray-500">
-                Không có biến thể phù hợp
-              </p>
-            )}
+            {variants.map((variant) => {
+              const name = variant.name || variant.sku || "Unnamed";
+              const originalPrice = Number(variant.price || 0);
+              const salePrice = Number(variant.final_price || 0);
+              const inStock = variant.stock > 0;
+              const isSelected = selectedVariant?.id === variant.id;
 
-            {allVariants
-  .filter((variant) => variant.attributeValues.length > 0)
-  .map((variant) => {
-    const name = variant.name || variant.sku || "Unnamed";
-    const originalPrice = Number(variant.price || 0);
-    const salePrice = Number(variant.final_price || 0);
-    const isValid = filteredBySelection.some(v => v.id === variant.id);
-
-    return (
-      <div
-        key={variant.id}
-        className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition
-          ${isValid ? "cursor-pointer hover:shadow" : "opacity-50 cursor-not-allowed"}
-          ${variant.stock === 0 ? "opacity-50 cursor-not-allowed" : ""}
-        `}
-        onClick={() => {
-          if (isValid && variant.stock > 0) {
-            handleVariantSelect(variant);
-            changeImgHandler(variant.images?.[0]?.image_url || "");
-          }
-        }}
-      >
-        <p className="font-semibold uppercase">{name}</p>
-
-        {salePrice > 0 && salePrice < originalPrice ? (
-          <div className="text-red-600 font-bold text-lg">
-            <span>{salePrice.toLocaleString("vi-VN")}₫</span>
-            <span className="text-gray-500 line-through ml-2 text-sm font-normal">
-              {originalPrice.toLocaleString("vi-VN")}₫
-            </span>
-          </div>
-        ) : (
-          <p className="text-red-600 font-bold text-lg">
-            {originalPrice.toLocaleString("vi-VN")}₫
-          </p>
-        )}
-
-        <p>
-          {variant.stock === 0 ? (
-            <span className="text-gray-500 font-semibold">Hết hàng</span>
-          ) : (
-            <>Còn lại: {variant.stock}</>
-          )}
-        </p>
-      </div>
-    );
-  })}
-
-
-
-          </div>
-          {filterOptions.colors.length > 0 && (
-          <div data-aos="fade-up" className="colors mb-[30px]">
-            <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
-              COLOR
-            </span>
-
-            <div>
-              <div className="flex space-x-4 items-center">
-                {filterOptions.colors.map(({ id, color, image }) => {
-                  const isValid = validColors.has(color);
-                  const isSelected = selectedFilters.color === color;
-
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => {
-                        if (!isValid) return;
-                        if (isSelected) {
-                          updateFilter("color", null); // bỏ chọn màu
-                          changeImgHandler(""); // reset ảnh nếu muốn
-                        } else {
-                          updateFilter("color", color);
-                          changeImgHandler(image); // đổi ảnh theo màu được chọn
-                        }
-                      }}
-                      type="button"
-                      style={{ "--tw-ring-color": color }}
-                      disabled={!isValid}
-                      className={`w-[20px] h-[20px] rounded-full focus:ring-2 ring-offset-2 flex justify-center items-center
-        ${isSelected ? "ring-4 ring-offset-2" : ""}
-        ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-      `}
-                    >
-                      <span
-                        style={{ background: color }}
-                        className="w-[20px] h-[20px] block rounded-full border"
-                      ></span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          )}
-
-          {/* Dial Size */}
-          {filterOptions.dialSizes.length > 0 && (
-  <div>
-    <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
-      dialSize
-    </span>
-    <div
-      className="owl-stage flex gap-2 overflow-x-auto py-2"
-      style={{ width: "100%" }}
-    >
-      {filterOptions.dialSizes.map(({ id, dialSize }) => {
-        const isValid = validDialSizes.has(dialSize);
-        const isSelected = selectedFilters.dialSize === dialSize;
-
-        return (
-          <button
-            key={id}
-            onClick={() =>
-              isValid && updateFilter("dialSize", dialSize)
-            }
-            disabled={!isValid}
-            className={`px-3 py-1 rounded-md border transition
-              ${
-                isSelected
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-              }
-              ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-            `}
-          >
-            {dialSize}
-          </button>
-        );
-      })}
-    </div>
-  </div>
-)}
-
-
-          {/* Water Resistance */}
-           {filterOptions.waterResistances.length > 0 && (
-          <div>
-            
-            <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
-              waterResistance
-            </span>
-            <div
-              className="owl-stage flex gap-2 overflow-x-auto py-2"
-              style={{ width: "100%" }}
-            >
-              {filterOptions.waterResistances.map(({ id, waterResistance }) => {
-                const isValid = validWaterResistances.has(waterResistance);
-                const isSelected =
-                  selectedFilters.waterResistance === waterResistance;
-
-                return (
-                  <button
-                    key={id}
-                    onClick={() =>
-                      isValid &&
-                      updateFilter("waterResistance", waterResistance)
-                    }
-                    disabled={!isValid}
-                    className={`px-3 py-1 rounded-md border transition
+              return (
+                <div
+                  key={variant.id}
+                  className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition
         ${
-          isSelected
-            ? "bg-blue-600 text-white border-blue-600"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+          inStock
+            ? "cursor-pointer hover:shadow"
+            : "opacity-50 cursor-not-allowed"
         }
-        ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+        ${isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""}
       `}
-                  >
-                    {waterResistance}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-           )}
-
-          {/* Strap Material */}
-           {filterOptions.strapMaterials.length > 0 && (
-          <div>
-            <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
-              strapMaterial
-            </span>
-            <div
-              className="owl-stage flex gap-2 overflow-x-auto py-2"
-              style={{ width: "100%" }}
-            >
-              {filterOptions.strapMaterials.map(({ id, strapMaterial }) => {
-                const isValid = validStrapMaterials.has(strapMaterial);
-                const isSelected =
-                  selectedFilters.strapMaterial === strapMaterial;
-
-                return (
-                  <button
-                    key={id}
-                    onClick={() =>
-                      isValid && updateFilter("strapMaterial", strapMaterial)
+                  onClick={() => {
+                    if (inStock) {
+                      handleVariantSelect(variant);
+                      changeImgHandler(variant.images?.[0]?.image_url || "");
                     }
-                    disabled={!isValid}
-                    className={`px-3 py-1 rounded-md border transition
-        ${
-          isSelected
-            ? "bg-blue-600 text-white border-blue-600"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-        }
-        ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-      `}
-                  >
-                    {strapMaterial}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                  }}
+                >
+                  <p className="font-semibold uppercase">{name}</p>
 
-          {/* Movement Type */}
-          {filterOptions.movementTypes.length > 0 && (
-          <div>
-            <span className="text-sm font-normal uppercase text-qgray mb-[14px] inline-block">
-              movementType
-            </span>
-            <div
-              className="owl-stage flex gap-2 overflow-x-auto py-2"
-              style={{ width: "100%" }}
-            >
-              {filterOptions.movementTypes.map(({ id, movementType }) => {
-                const isValid = validMovementTypes.has(movementType);
-                const isSelected =
-                  selectedFilters.movementType === movementType;
+                  {salePrice > 0 && salePrice < originalPrice ? (
+                    <div className="text-red-600 font-bold text-lg">
+                      <span>{salePrice.toLocaleString("vi-VN")}₫</span>
+                      <span className="text-gray-500 line-through ml-2 text-sm font-normal">
+                        {originalPrice.toLocaleString("vi-VN")}₫
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-red-600 font-bold text-lg">
+                      {originalPrice.toLocaleString("vi-VN")}₫
+                    </p>
+                  )}
 
-                return (
-                  <button
-                    key={id}
-                    onClick={() =>
-                      isValid && updateFilter("movementType", movementType)
-                    }
-                    disabled={!isValid}
-                    className={`px-3 py-1 rounded-md border transition
-        ${
-          isSelected
-            ? "bg-blue-600 text-white border-blue-600"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-        }
-        ${!isValid ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-      `}
-                  >
-                    {movementType}
-                  </button>
-                );
-              })}
-            </div>
+                  <p>{inStock ? `Còn lại: ${variant.stock}` : "Hết hàng"}</p>
+                </div>
+              );
+            })}
           </div>
+
+          {selectedVariant && (
+            <div className="mt-4">
+              <h4 className="font-semibold mb-2">Thuộc tính của biến thể:</h4>
+              <table className="w-full text-left border border-gray-300 rounded overflow-hidden text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-2 border border-gray-300">
+                      Tên thuộc tính
+                    </th>
+                    <th className="p-2 border border-gray-300 w-1/2">
+                      Giá trị
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedVariant.attributeValues.map((attr, index) => (
+                    <tr key={index}>
+                      <td className="p-2 border border-gray-300">
+                        {attr.attribute?.name}
+                      </td>
+                      <td className="p-2 border border-gray-300">
+                        {attr.attribute?.name.toLowerCase() === "color" ? (
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-6 h-6 rounded border border-gray-400"
+                              style={{ backgroundColor: attr.value }}
+                              title={attr.value}
+                            ></div>
+                          </div>
+                        ) : (
+                          attr.value
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-
-          
 
           <div data-aos="fade-up" className="product-size mb-[30px]"></div>
 
@@ -736,40 +407,41 @@ const renderStars = (avgRating) => {
                 </span>
               </button>
             </div>
+
             <div className="flex-1 h-full">
               <button
-  type="button"
-  onClick={() => {
-    if (!selectedVariant) {
-      alert("Vui lòng chọn biến thể trước khi thêm vào giỏ hàng");
-      return;
-    }
+                type="button"
+                onClick={() => {
+                  if (!selectedVariant) {
+                    toast.error(
+                      "Vui lòng chọn biến thể trước khi thêm vào giỏ hàng"
+                    );
+                    return;
+                  }
 
-    if (quantity > selectedVariant.stock) {
-      alert(`Chỉ còn ${selectedVariant.stock} sản phẩm trong kho`);
-      return;
-    }
+                  if (quantity > selectedVariant.stock) {
+                    toast.error(
+                      `Chỉ còn ${selectedVariant.stock} sản phẩm trong kho`
+                    );
+                    return;
+                  }
 
-    handleAddToCart(selectedVariant.id, quantity);
-  }}
-  className="black-btn text-sm font-semibold w-full h-full"
->
-  Add To Cart
-</button>
-
-
-
-
+                  handleAddToCart(selectedVariant.id, quantity);
+                }}
+                className="black-btn text-sm font-semibold w-full h-full"
+              >
+                THÊM GIỎ HÀNG{" "}
+              </button>
             </div>
           </div>
 
           <div data-aos="fade-up" className="mb-[20px]">
             <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">Category :</span> {productData.category}
+              <span className="text-qblack">Category :</span>{" "}
+              {productData.category}
             </p>
             <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">Brand :</span>  {productData.brand}
-
+              <span className="text-qblack">Brand :</span> {productData.brand}
             </p>
             {/* <p className="text-[13px] text-qgray leading-7">
               <span className="text-qblack">SKU:</span> KE-91039

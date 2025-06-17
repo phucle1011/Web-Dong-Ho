@@ -19,7 +19,6 @@ const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
-const importProducts = require('../controllers/Admin/productImportController');
 
 
 // router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
@@ -91,7 +90,7 @@ router.get('/product-variants', ProductController.getAllVariants);
 router.delete('/product-variants/deleteAttributeValueById/:id', ProductController.deleteAttributeValueById);
 router.post('/products/imagesClauding', ProductController.deleteImagesClauding);
 
-router.post('/products/import', upload.single("file"), importProducts.importProducts);
+
 
 
 //------------------[ ADDRESS ]------------------\

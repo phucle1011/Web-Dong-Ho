@@ -39,9 +39,8 @@ const limit = 5;
 const fetchVariants = async (page = 1) => {
   try {
     const res = await axios.get(
-      `http://localhost:5000/admin/products/${id}?page=${page}&limit=${limit}`
+      `${Constants.DOMAIN_API}/admin/products/${id}?page=${page}&limit=${limit}`
     );
-    console.log("2",res.data.data);
     
    setVariants(res.data.data.variants); // cập nhật biến thể theo trang
     setCurrentPage(res.data.data.pagination.page); // đồng bộ trang hiện tại với backend
@@ -60,10 +59,9 @@ useEffect(() => {
  
   const fetchProduct = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/admin/products/${id}`);
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/products/${id}`);
       setProduct(res.data.data);
       setFormData(res.data.data);
-      console.log("setProduct", res.data.data);
     } catch (error) {
       console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
     }
@@ -94,7 +92,7 @@ useEffect(() => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`http://localhost:5000/admin/products/${id}`, formData);
+      await axios.put(`${Constants.DOMAIN_API}/admin/products/${id}`, formData);
       toast.success("Cập nhật sản phẩm thành công!");
       fetchProduct(); // Cập nhật lại dữ liệu
     } catch (error) {
@@ -132,7 +130,6 @@ useEffect(() => {
   try {
     // Gọi hàm upload từ file riêng của bạn
     const imageUrl = await uploadToCloudinary(file); // Đảm bảo đã import hoặc dùng đúng hàm
-console.log(imageUrl);
 
     // Cập nhật lại thumbnail cho form
     setFormData((prev) => ({

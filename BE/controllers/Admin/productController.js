@@ -7,7 +7,7 @@ const BrandModel = require("../../models/brandsModel");
 const CategoryModel = require("../../models/categoriesModel");
 const cloudinary = require("../../config/cloudinaryConfig");
 
-const { Op } = require("sequelize");
+const { Op,Sequelize } = require("sequelize");
 
 class ProductController {
   // Lấy tất cả thuộc tính sản phẩm
@@ -181,49 +181,46 @@ static async getAllAttributes(req, res) {
 
   // Tạo mới sản phẩm + biến thể
   static async createProduct(req, res) {
-    console.log(req.body);
-    
-    try {
-      const {
-        name,
-        slug,
-        description,
-        brand_id,
-        category_id,
-        thumbnail,
-        status,
-      } = req.body;
+  try {
+    const {
+      name,
+      slug,
+      description,
+      brand_id,
+      category_id,
+      thumbnail,
+      status,
+    } = req.body;
 
-      console.log("Data to insert:", {
-        name,
-        slug,
-        description,
-        brand_id,
-        category_id,
-        thumbnail,
-        status,
+    const product = await Product.create({
+      name,
+      slug,
+      description,
+      brand_id,
+      category_id,
+      thumbnail: thumbnail.url,
+      status,
+    });
+
+    res.status(201).json({ message: "Tạo sản phẩm thành công", product });
+
+  } catch (error) {
+    console.error(error);
+
+    // Nếu là lỗi unique
+    if (error instanceof Sequelize.UniqueConstraintError) {
+      return res.status(400).json({
+        error: "Tên hoặc slug sản phẩm đã tồn tại.",
+        fields: error.errors.map(e => e.path)
       });
-
-      const product = await Product.create({
-        name,
-        slug,
-        description,
-        brand_id,
-        category_id,
-        thumbnail: thumbnail.url,
-        status,
-      });
-
-      res.status(201).json({ message: "Tạo sản phẩm thành công", product });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: error.message });
     }
+
+    res.status(500).json({ error: error.message });
   }
+}
 
   static async addVariant(req, res) {
 
-    console.log("JJ",req.body);
     
     const t = await ProductVariant.sequelize.transaction();
     try {
@@ -279,8 +276,15 @@ static async getAllAttributes(req, res) {
       res.status(201).json({ message: "Tạo biến thể thành công", variant });
     } catch (error) {
       await t.rollback();
-      console.error("Lỗi khi thêm biến thể:", error); // <-- thêm log này
-      res.status(500).json({ error: error.message });
+      if (error instanceof Sequelize.UniqueConstraintError) {
+  return res.status(400).json({
+    message: "SKU đã tồn tại.",
+    fields: error.errors.map(e => e.path)
+  });
+}
+
+res.status(500).json({ error: error.message });
+
     }
   }
   // Cập nhật biến thể sản phẩm
@@ -454,8 +458,7 @@ static async searchProducts(req, res) {
       [Op.and]: whereConditions,
     };
 
-    console.log("Query received:", req.query);
-    console.log("Where condition:", where);
+
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -703,7 +706,6 @@ static async getAllVariants(req, res) {
 
 static async deleteImagesClauding(req, res) {
   const { public_id } = req.body;
-  console.log('Cloudinary:', req.body);
 
   try {
     await cloudinary.uploader.destroy(public_id);
