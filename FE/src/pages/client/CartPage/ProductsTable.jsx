@@ -158,7 +158,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
         }
       );
       setCartItems([]);
-      toast.success("Cập nhật số lượng thành công");
       await fetchCart();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");

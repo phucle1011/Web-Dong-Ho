@@ -243,7 +243,7 @@ class OrderController {
                 });
             }
 
-           let selectedVoucher = null;
+            let selectedVoucher = null;
             let discount = 0;
             let discountAmount = 0;
 
@@ -284,13 +284,13 @@ class OrderController {
                     }
 
                     if (selectedVoucher.discount_type === 'fixed') {
-                        discount = Math.min(selectedVoucher.discount_value, totalPrice);
+                        discountAmount = Math.min(selectedVoucher.discount_value, totalPrice);
                     } else if (selectedVoucher.discount_type === 'percentage') {
                         const maxPrice = selectedVoucher.max_price || Infinity;
-                        discount = Math.min((totalPrice * selectedVoucher.discount_value) / 100, maxPrice);
+                        discountAmount = Math.min((totalPrice * selectedVoucher.discount_value) / 100, maxPrice);
                     }
 
-                    totalPrice -= discount;
+                    totalPrice -= discountAmount;
                     selectedVoucher.quantity -= 1;
                     await selectedVoucher.save({ transaction: t });
                 }
