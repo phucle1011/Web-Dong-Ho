@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, useNavigate } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import "./index.css";
@@ -11,29 +11,39 @@ import "react-toastify/dist/ReactToastify.css";
 import App from "./App";
 import { registerSW } from "virtual:pwa-register";
 import setupAxiosInterceptors from "./utils/axiosInterceptor";
-import AuthProvider from "./components/Auth/AuthContext";
+import AuthProvider from "./components/Auth/AuthContext/index";
 
 function AppWrapper() {
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    setupAxiosInterceptors(navigate);
-  }, [navigate]);
-
   return <App />;
 }
 
-if (import.meta.env.MODE === "production") {
-  registerSW();
-}
+// Function để truyền navigate vào interceptor
+const setupInterceptorsWithNavigate = (navigate) => {
+  setupAxiosInterceptors(navigate);
+};
 
-AOS.init();
+const RootComponent = () => {
+  const navigateRef = useRef();
+
+  useEffect(() => {
+    AOS.init();
+    if (import.meta.env.MODE === "production") {
+      registerSW();
+    }
+    // Gọi interceptor với navigate từ ref
+    if (navigateRef.current) {
+      setupInterceptorsWithNavigate(navigateRef.current);
+    }
+  }, []);
+
+  return <AppWrapper ref={navigateRef} />;
+};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <AppWrapper />
+        <RootComponent />
         <ToastContainer />
       </AuthProvider>
     </BrowserRouter>

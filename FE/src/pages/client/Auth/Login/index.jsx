@@ -153,11 +153,17 @@ export default function Login() {
   };
 
   useEffect(() => {
-    if (localStorage.getItem("token") && !isTokenValid()) {
+    const handleTokenExpired = () => {
       localStorage.removeItem("token");
-      toast.info("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-    }
-  }, []);
+      navigate("/login", { replace: true });
+    };
+
+    window.addEventListener("tokenExpired", handleTokenExpired);
+
+    return () => {
+      window.removeEventListener("tokenExpired", handleTokenExpired);
+    };
+  }, [navigate]);
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -207,9 +213,8 @@ export default function Login() {
                         placeholder="example@gmail.com"
                         value={formData.email}
                         onChange={handleChange}
-                        className={`w-full px-4 py-2 border ${
-                          errors.email ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:border-indigo-500`}
+                        className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"
+                          } rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.email && (
                         <p className="text-red-500 text-sm mt-1">{errors.email}</p>
@@ -231,9 +236,8 @@ export default function Login() {
                         placeholder="● ● ● ● ● ●"
                         value={formData.password}
                         onChange={handleChange}
-                        className={`w-full px-4 py-2 border ${
-                          errors.password ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:border-indigo-500`}
+                        className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"
+                          } rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.password && (
                         <p className="text-red-500 text-sm mt-1">{errors.password}</p>
@@ -286,9 +290,8 @@ export default function Login() {
                           type="button"
                           onClick={handleSubmit}
                           disabled={loading}
-                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${
-                            loading ? "opacity-70 cursor-not-allowed" : ""
-                          }`}
+                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""
+                            }`}
                         >
                           <span>{loading ? "Đang xử lý..." : "Đăng nhập"}</span>
                         </button>
@@ -329,9 +332,8 @@ export default function Login() {
                           type="button"
                           onClick={handleForgotPassword}
                           disabled={loading}
-                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${
-                            loading ? "opacity-70 cursor-not-allowed" : ""
-                          }`}
+                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""
+                            }`}
                         >
                           <span>{loading ? "Đang xử lý..." : "Gửi liên kết"}</span>
                         </button>

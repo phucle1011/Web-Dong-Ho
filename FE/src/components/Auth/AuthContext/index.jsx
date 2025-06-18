@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
@@ -19,7 +18,6 @@ export const isTokenValid = (token) => {
 
 function AuthProviderWrapper({ children }) {
   const navigate = useNavigate();
-
   const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [user, setUser] = useState(() => {
     try {
@@ -34,52 +32,23 @@ function AuthProviderWrapper({ children }) {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
-    if (!silent) toast.success("Đã đăng xuất!");
-    navigate("/");
+    if (!silent) navigate("/login", { replace: true });
   };
 
-  // Kiểm tra token định kỳ mỗi 30 giây
   useEffect(() => {
-    const checkTokenValidity = () => {
-      const storedToken = localStorage.getItem("token");
-
-      if (!storedToken) return;
-
-      try {
-        const decoded = jwtDecode(storedToken);
-
-        if (!decoded || !decoded.exp || Date.now() >= decoded.exp * 1000) {
-          console.log("Token hết hạn hoặc không hợp lệ");
-          localStorage.removeItem("token");
-          setToken(null);
-          setUser(null);
-
-          // Gửi sự kiện toàn cục
-          window.dispatchEvent(new Event("tokenExpired"));
-
-          // Hiển thị thông báo
-          toast.warn("Phiên đăng nhập đã hết hạn.");
-        }
-      } catch (error) {
-        console.error("Token không hợp lệ:", error);
-        localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
-
-        // Gửi sự kiện toàn cục
-        window.dispatchEvent(new Event("tokenExpired"));
-
-        // Hiển thị thông báo
-        toast.error("Token không hợp lệ. Vui lòng đăng nhập lại.");
-      }
+    const handleTokenExpired = () => {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+      navigate("/", { replace: true });
     };
 
-    // Kiểm tra mỗi 30 giây
-    const intervalId = setInterval(checkTokenValidity, 30 * 1000);
+    window.addEventListener("tokenExpired", handleTokenExpired);
 
-    return () => clearInterval(intervalId);
-  }, []);
-
+    return () => {
+      window.removeEventListener("tokenExpired", handleTokenExpired);
+    };
+  }, [navigate]);
   return (
     <AuthContext.Provider value={{ token, user, logout }}>
       {children}

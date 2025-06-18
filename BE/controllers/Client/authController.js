@@ -105,7 +105,6 @@ class AuthController {
         }
     }
 
-    //------------------[ LOGIN ]------------------
     static async login(req, res) {
         try {
             const { email, password, rememberMe } = req.body;
@@ -128,7 +127,7 @@ class AuthController {
                 return errorResponse(res, "Mật khẩu không chính xác!", 400);
             }
 
-            const expiresIn = rememberMe ? "30d" : "2h";
+            const expiresIn = rememberMe ? "30d" : "10s";
 
             const token = jwt.sign(
                 {
@@ -159,6 +158,39 @@ class AuthController {
         } catch (error) {
             console.error("Lỗi server:", error);
             return errorResponse(res, "Đăng nhập thất bại!", 500);
+        }
+    }
+
+    static async checkToken(req, res) {
+        try {
+            const token = req.headers.authorization?.split("Bearer ")[1];
+            if (!token) {
+                return errorResponse(res, "Token không được cung cấp!", 401);
+            }
+
+            const decoded = jwt.verify(token, JWT_SECRET);
+            const user = await UserModel.findOne({ where: { id: decoded.id } });
+
+            if (!user) {
+                return errorResponse(res, "Người dùng không tồn tại!", 404);
+            }
+
+            return successResponse(res, "Token hợp lệ!", {
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                },
+            }, 200);
+        } catch (error) {
+            if (error.name === "TokenExpiredError") {
+                return errorResponse(res, "Phiên đăng nhập đã hết hạn!", 401);
+            }
+            if (error.name === "JsonWebTokenError") {
+                return errorResponse(res, "Token không hợp lệ!", 401);
+            }
+            return errorResponse(res, "Lỗi server!", 500);
         }
     }
 

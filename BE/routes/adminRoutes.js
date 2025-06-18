@@ -19,6 +19,8 @@ const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
+const AuthController = require('../controllers/Admin/authController');
+const importProducts = require('../controllers/Admin/productImportController');
 
 
 // router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
@@ -143,5 +145,8 @@ router.post('/notification', NotificationController.createNotification);
 router.delete('/notification/:id', NotificationController.deleteNotification);
 router.patch('/notification/:id/read', NotificationController.markAsRead);
 router.patch('/notification/mark-all-read', NotificationController.markAllAsRead);
+
+//------------------[ AUTH ]------------------\
+router.post('/login', AuthController.loginAdmin);
 
 module.exports = router;
