@@ -19,121 +19,26 @@ export default function ProductCardStyleOne({ datas, type }) {
 
   const variants = Array.isArray(product.variants) ? product.variants : [];
 
-  // Gom state chọn thuộc tính
-  const [selectedFilters, setSelectedFilters] = useState({
-    dialSize: null,
-    waterResistance: null,
-    strapMaterial: null,
-    movementType: null,
-    color: null,
-  });
-
-  // Dữ liệu filter (các lựa chọn)
-  const [filterOptions, setFilterOptions] = useState({
-    dialSizes: [],
-    waterResistances: [],
-    strapMaterials: [],
-    movementTypes: [],
-    colors: [],
-  });
-
-  // Trích xuất các loại thuộc tính khi dữ liệu sản phẩm thay đổi
+  // Trích xuất ảnh biến thể và thiết lập biến thể mặc định
   useEffect(() => {
-    const extractAttributeValues = (attrName, keyName) => {
-      const seen = new Set();
-      return variants
-        .map((variant) => {
-          const attr = variant.attributeValues?.find(
-            (a) => a.attribute?.name === attrName
-          );
-          return {
-            id: variant.id,
-            [keyName]: attr ? attr.value : null,
-            image: variant.images?.[0]?.image_url || product.thumbnail || "",
-          };
-        })
-        .filter((item) => {
-          const value = item[keyName];
-          if (!value || seen.has(value)) return false;
-          seen.add(value);
-          return true;
-        });
-    };
-
-    setFilterOptions({
-      dialSizes: extractAttributeValues("Dial Size", "dialSize"),
-      waterResistances: extractAttributeValues("Water Resistance", "waterResistance"),
-      strapMaterials: extractAttributeValues("Strap Material", "strapMaterial"),
-      movementTypes: extractAttributeValues("Movement Type", "movementType"),
-      colors: extractAttributeValues("Color", "color"),
-    });
-
-    // Ảnh mặc định
+    // Ảnh mặc định (iCloud URL hoặc fallback)
     const firstImage = product.thumbnail || "/images/no-image.jpg";
     setSelectedImage(firstImage);
     setVariantImages(variants.flatMap((v) => v.images || []));
-  }, [product.thumbnail, variants]);
 
-  // Lấy giá trị thuộc tính
-  const getAttrValue = (variant, attrName) => {
-    const attr = variant.attributeValues?.find(
-      (a) => a.attribute?.name === attrName
+    // Chọn biến thể đầu tiên có stock làm mặc định
+    const validVariants = variants.filter(
+      (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
     );
-    return attr ? attr.value : null;
-  };
-
-  // Cập nhật filter
-  const updateFilter = (type, value) => {
-    setSelectedFilters((prev) => {
-      // Toggle filter
-      const newFilters = {
-        ...prev,
-        [type]: prev[type] === value ? null : value,
-      };
-
-      // Lọc các biến thể phù hợp
-      const newFiltered = variants.filter((variant) => {
-        return (
-          (!newFilters.dialSize || getAttrValue(variant, "Dial Size") === newFilters.dialSize) &&
-          (!newFilters.waterResistance ||
-            getAttrValue(variant, "Water Resistance") === newFilters.waterResistance) &&
-          (!newFilters.strapMaterial ||
-            getAttrValue(variant, "Strap Material") === newFilters.strapMaterial) &&
-          (!newFilters.movementType ||
-            getAttrValue(variant, "Movement Type") === newFilters.movementType) &&
-          (!newFilters.color ||
-            variant.attributeValues?.some(
-              (a) => a.attribute?.name === "Color" && a.value === newFilters.color
-            ))
-        );
-      });
-
-      // Cập nhật ảnh
-      const newImages = newFiltered.flatMap((v) => v.images || []);
-      setVariantImages(newImages);
-
-      if (!newFilters[type]) {
-        const allImages = variants.flatMap((v) => v.images || []);
-        setVariantImages(allImages);
-        if (allImages.length > 0) {
-          setSelectedImage(allImages[0].image_url || product.thumbnail);
-        }
-      } else {
-        if (newImages.length > 0) {
-          setSelectedImage(newImages[0].image_url);
-        }
+    if (validVariants.length > 0 && !selectedVariant) {
+      setSelectedVariant(validVariants[0]);
+      const firstVariantImages = validVariants[0].images || [];
+      setVariantImages(firstVariantImages);
+      if (firstVariantImages.length > 0) {
+        setSelectedImage(firstVariantImages[0].image_url || firstImage);
       }
-
-      // Tự động chọn nếu chỉ có 1 biến thể phù hợp
-      if (newFiltered.length === 1) {
-        setSelectedVariant(newFiltered[0]);
-      } else {
-        setSelectedVariant(null);
-      }
-
-      return newFilters;
-    });
-  };
+    }
+  }, [product.thumbnail, variants, selectedVariant]);
 
   // Tính tổng stock từ variants
   const totalStock =
@@ -158,7 +63,6 @@ export default function ProductCardStyleOne({ datas, type }) {
     );
 
     if (validVariants.length > 0) {
-      // Chọn biến thể đầu tiên có stock làm mặc định nếu chưa có selectedVariant
       const initialVariant = selectedVariant || validVariants[0];
       displayOriginalPrice = parseFloat(initialVariant.price) || 0;
       displayPrice = initialVariant.promotion?.discounted_price
@@ -169,15 +73,13 @@ export default function ProductCardStyleOne({ datas, type }) {
       if (initialVariant.promotion?.discount_percent) {
         discountPercent = parseFloat(initialVariant.promotion.discount_percent);
       } else if (displayOriginalPrice > displayPrice && displayOriginalPrice > 0) {
-        // Fallback: Tính % từ giá gốc và giá giảm
         discountPercent = ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100;
       }
 
-      // Validate and round discountPercent
       if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
         discountPercent = 0;
       } else {
-        discountPercent = Math.round(discountPercent); // Làm tròn để tránh số thập phân
+        discountPercent = Math.round(discountPercent);
       }
     } else {
       hasStock = false;
@@ -189,7 +91,6 @@ export default function ProductCardStyleOne({ datas, type }) {
     displayPrice = parseFloat(product.price) || 0;
     displayOriginalPrice = parseFloat(product.price) || 0;
     hasStock = parseInt(product.stock) > 0;
-    // Kiểm tra khuyến mãi cấp sản phẩm
     if (product.promotion?.discounted_price) {
       displayPrice = parseFloat(product.promotion.discounted_price);
       if (displayOriginalPrice > displayPrice && displayOriginalPrice > 0) {
@@ -211,17 +112,14 @@ export default function ProductCardStyleOne({ datas, type }) {
 
   // Hàm thêm vào giỏ hàng
   const addToCart = () => {
-    // Trong QuickView dialog, yêu cầu chọn biến thể
     if (isQuickViewOpen && variants.length > 0 && !selectedVariant) {
       alert("Vui lòng chọn biến thể trước khi thêm vào giỏ hàng");
       return;
     }
-    // Kiểm tra số lượng
     if (quantity > (selectedVariant?.stock || totalStock)) {
       alert(`Chỉ còn ${selectedVariant?.stock || totalStock} sản phẩm trong kho`);
       return;
     }
-    // Nếu không có selectedVariant (từ hover button), chọn biến thể đầu tiên có stock
     const variantToAdd = selectedVariant || (variants.length > 0 ? variants.find(v => parseInt(v.stock) > 0) : null);
     console.log("Thêm vào giỏ hàng:", {
       productId: product.id,
@@ -241,6 +139,21 @@ export default function ProductCardStyleOne({ datas, type }) {
     ? description.slice(0, maxLength) + "..."
     : description;
 
+  // Hàm chọn biến thể
+  const handleVariantSelect = (variant) => {
+    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0) {
+      return;
+    }
+    setSelectedVariant(variant);
+    const newImages = variant.images || [];
+    setVariantImages(newImages);
+    if (newImages.length > 0) {
+      setSelectedImage(newImages[0].image_url || thumbnail);
+    } else {
+      setSelectedImage(thumbnail);
+    }
+  };
+
   // Dialog component using Portal
   const QuickViewDialog = () =>
     isQuickViewOpen &&
@@ -250,7 +163,7 @@ export default function ProductCardStyleOne({ datas, type }) {
         onClick={() => setIsQuickViewOpen(false)}
       >
         <div
-          className="bg-white p-6 rounded-lg max-w-[600px] w-full max-h-[400px] h-auto relative flex shadow-2xl border border-gray-200 overflow-y-auto"
+          className="bg-white p-6 rounded-lg max-w-[600px] w-full max-h-[500px] h-auto relative flex shadow-2xl border border-gray-200 overflow-y-auto"
           style={{
             position: "fixed",
             top: "50%",
@@ -305,9 +218,9 @@ export default function ProductCardStyleOne({ datas, type }) {
               ))}
             </div>
           </div>
-          <div className="w-1/2 p-4 flex flex-col justify-between">
+          <div className="w-1/2 p-4 flex flex-col">
             <h2 className="text-xl font-bold mb-2">{productName}</h2>
-            <p className="text-gray-600 text-sm mt-2">
+            <p className="text-gray-600 text-sm mb-4">
               <b>description</b>: {truncatedDescription}
               {isLongDescription && (
                 <button
@@ -319,102 +232,89 @@ export default function ProductCardStyleOne({ datas, type }) {
               )}
             </p>
 
-            {/* Variant Filters */}
-            {filterOptions.colors.length > 0 && (
+            {/* Variant Cards */}
+            {variants.length > 0 && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Màu sắc:</label>
-                <div className="flex space-x-2 mt-1">
-                  {filterOptions.colors.map(({ id, color }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateFilter("color", color)}
-                      style={{ background: color }}
-                      className={`w-6 h-6 rounded-full border ${
-                        selectedFilters.color === color ? "ring-2 ring-offset-2 ring-blue-500" : ""
-                      }`}
-                    />
-                  ))}
+                <span className="block text-sm font-semibold uppercase text-gray-600 mb-2">
+                  Biến thể
+                </span>
+                <div className="flex flex-wrap gap-4 overflow-x-auto pb-2">
+                  {variants.map((variant) => {
+                    const name = variant.name || variant.sku || "Unnamed";
+                    const originalPrice = Number(variant.price || 0);
+                    const salePrice = Number(variant.final_price || variant.promotion?.discounted_price || originalPrice);
+                    const inStock = variant.stock > 0;
+                    const isSelected = selectedVariant?.id === variant.id;
+
+                    return (
+                      <div
+                        key={variant.id}
+                        className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition ${
+                          inStock
+                            ? "cursor-pointer hover:shadow"
+                            : "opacity-50 cursor-not-allowed"
+                        } ${isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""}`}
+                        onClick={() => {
+                          if (inStock) {
+                            handleVariantSelect(variant);
+                          }
+                        }}
+                      >
+                        <p className="font-semibold uppercase text-sm">{name}</p>
+                        {salePrice > 0 && salePrice < originalPrice ? (
+                          <div className="text-red-600 font-bold text-lg">
+                            <span>{salePrice.toLocaleString("vi-VN")}₫</span>
+                            <span className="text-gray-500 line-through ml-2 text-sm font-normal">
+                              {originalPrice.toLocaleString("vi-VN")}₫
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-red-600 font-bold text-lg">
+                            {originalPrice.toLocaleString("vi-VN")}₫
+                          </p>
+                        )}
+                        <p className="text-sm">
+                          {inStock ? `Còn lại: ${variant.stock}` : "Hết hàng"}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
-            {filterOptions.dialSizes.length > 0 && (
+
+            {/* Variant Attributes Table */}
+            {selectedVariant && selectedVariant.attributeValues?.length > 0 && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Kích thước mặt:</label>
-                <div className="flex space-x-2 mt-1">
-                  {filterOptions.dialSizes.map(({ id, dialSize }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateFilter("dialSize", dialSize)}
-                      className={`px-2 py-1 rounded-md border ${
-                        selectedFilters.dialSize === dialSize
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700"
-                      }`}
-                    >
-                      {dialSize}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {filterOptions.waterResistances.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Chống nước:</label>
-                <div className="flex space-x-2 mt-1">
-                  {filterOptions.waterResistances.map(({ id, waterResistance }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateFilter("waterResistance", waterResistance)}
-                      className={`px-2 py-1 rounded-md border ${
-                        selectedFilters.waterResistance === waterResistance
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700"
-                      }`}
-                    >
-                      {waterResistance}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {filterOptions.strapMaterials.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Chất liệu dây:</label>
-                <div className="flex space-x-2 mt-1">
-                  {filterOptions.strapMaterials.map(({ id, strapMaterial }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateFilter("strapMaterial", strapMaterial)}
-                      className={`px-2 py-1 rounded-md border ${
-                        selectedFilters.strapMaterial === strapMaterial
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700"
-                      }`}
-                    >
-                      {strapMaterial}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {filterOptions.movementTypes.length > 0 && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">Loại máy:</label>
-                <div className="flex space-x-2 mt-1">
-                  {filterOptions.movementTypes.map(({ id, movementType }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateFilter("movementType", movementType)}
-                      className={`px-2 py-1 rounded-md border ${
-                        selectedFilters.movementType === movementType
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700"
-                      }`}
-                    >
-                      {movementType}
-                    </button>
-                  ))}
-                </div>
+                <h4 className="font-semibold mb-2 text-sm">Thuộc tính của biến thể:</h4>
+                <table className="w-full text-left border border-gray-300 rounded overflow-hidden text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 border border-gray-300">Tên thuộc tính</th>
+                      <th className="p-2 border border-gray-300 w-1/2">Giá trị</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedVariant.attributeValues.map((attr, index) => (
+                      <tr key={index}>
+                        <td className="p-2 border border-gray-300">
+                          {attr.attribute?.name || "N/A"}
+                        </td>
+                        <td className="p-2 border border-gray-300">
+                          {attr.attribute?.name.toLowerCase() === "color" ? (
+                            <div
+                              className="w-6 h-6 rounded border border-gray-400"
+                              style={{ backgroundColor: attr.value }}
+                              title={attr.value}
+                            />
+                          ) : (
+                            attr.value || "N/A"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
@@ -472,7 +372,7 @@ export default function ProductCardStyleOne({ datas, type }) {
               onClick={addToCart}
               disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             >
-             Thêm vào giỏ hàng
+              Thêm vào giỏ hàng
             </button>
           </div>
         </div>
@@ -486,14 +386,12 @@ export default function ProductCardStyleOne({ datas, type }) {
       style={{ boxShadow: "0px 15px 64px 0px rgba(0, 0, 0, 0.05)" }}
     >
       {/* Product image */}
-      <div
-        className="product-card-img w-full h-[300px] hover:scale-105 transition-transform duration-300"
-        style={{
-          background: `url(${thumbnail}) no-repeat center`,
-          backgroundSize: "cover",
-        }}
-      >
-        <div className="px-[30px] absolute left-0 top-3 w-full"></div>
+      <div className="product-card-img w-full h-[300px] overflow-hidden">
+        <img
+          src={thumbnail}
+          alt={productName}
+          className="w-full h-full object-contain"
+        />
       </div>
 
       {/* Product details */}
