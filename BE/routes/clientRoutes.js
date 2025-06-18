@@ -84,8 +84,9 @@ router.post('/auth/update-password/:token', AuthController.updatePassword);
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
 
-router.get('/:id', ProductVariantController.getProductVariantDetail);
+router.get('/stock', ProductClientController.countStockGroupByProductId);
 
+router.get('/:id', ProductVariantController.getProductVariantDetail);
 
 router.get('/product-variants/:id', ProductVariantController.getProductVariantDetail);
 router.get('/products/discounted', ProductVariantController.getDiscountedProducts);

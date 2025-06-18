@@ -1,12 +1,149 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Compair from "../icons/Compair";
 import QuickViewIco from "../icons/QuickViewIco";
 import Star from "../icons/Star";
 import ThinLove from "../icons/ThinLove";
+import ReactDOM from "react-dom";
 
 export default function ProductCardStyleOne({ datas, type }) {
+  console.log("Product data:", datas); // Kiểm tra dữ liệu đầu vào
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false); // Trạng thái modal
+  const [quantity, setQuantity] = useState(1); // Số lượng
+  const [selectedVariant, setSelectedVariant] = useState(null); // Biến thể được chọn
+  const [selectedImage, setSelectedImage] = useState(""); // Ảnh được chọn
+  const [variantImages, setVariantImages] = useState([]); // Ảnh của các biến thể
+  const [isExpanded, setIsExpanded] = useState(false); // Trạng thái mở rộng mô tả
   const product = datas || {};
+  console.log("Processed product:", product); // Kiểm tra sau khi xử lý
+
   const variants = Array.isArray(product.variants) ? product.variants : [];
+
+  // Gom state chọn thuộc tính
+  const [selectedFilters, setSelectedFilters] = useState({
+    dialSize: null,
+    waterResistance: null,
+    strapMaterial: null,
+    movementType: null,
+    color: null,
+  });
+
+  // Dữ liệu filter (các lựa chọn)
+  const [filterOptions, setFilterOptions] = useState({
+    dialSizes: [],
+    waterResistances: [],
+    strapMaterials: [],
+    movementTypes: [],
+    colors: [],
+  });
+
+  // Trích xuất các loại thuộc tính khi dữ liệu sản phẩm thay đổi
+  useEffect(() => {
+    const extractAttributeValues = (attrName, keyName) => {
+      const seen = new Set();
+      return variants
+        .map((variant) => {
+          const attr = variant.attributeValues?.find(
+            (a) => a.attribute?.name === attrName
+          );
+          return {
+            id: variant.id,
+            [keyName]: attr ? attr.value : null,
+            image: variant.images?.[0]?.image_url || product.thumbnail || "",
+          };
+        })
+        .filter((item) => {
+          const value = item[keyName];
+          if (!value || seen.has(value)) return false;
+          seen.add(value);
+          return true;
+        });
+    };
+
+    setFilterOptions({
+      dialSizes: extractAttributeValues("Dial Size", "dialSize"),
+      waterResistances: extractAttributeValues("Water Resistance", "waterResistance"),
+      strapMaterials: extractAttributeValues("Strap Material", "strapMaterial"),
+      movementTypes: extractAttributeValues("Movement Type", "movementType"),
+      colors: extractAttributeValues("Color", "color"),
+    });
+
+    // Ảnh mặc định
+    const firstImage = product.thumbnail || "/images/no-image.jpg";
+    setSelectedImage(firstImage);
+    setVariantImages(variants.flatMap((v) => v.images || []));
+  }, [product.thumbnail, variants]);
+
+  // Lấy giá trị thuộc tính
+  const getAttrValue = (variant, attrName) => {
+    const attr = variant.attributeValues?.find(
+      (a) => a.attribute?.name === attrName
+    );
+    return attr ? attr.value : null;
+  };
+
+  // Cập nhật filter
+  const updateFilter = (type, value) => {
+    setSelectedFilters((prev) => {
+      // Toggle filter
+      const newFilters = {
+        ...prev,
+        [type]: prev[type] === value ? null : value,
+      };
+
+      // Lọc các biến thể phù hợp
+      const newFiltered = variants.filter((variant) => {
+        return (
+          (!newFilters.dialSize || getAttrValue(variant, "Dial Size") === newFilters.dialSize) &&
+          (!newFilters.waterResistance ||
+            getAttrValue(variant, "Water Resistance") === newFilters.waterResistance) &&
+          (!newFilters.strapMaterial ||
+            getAttrValue(variant, "Strap Material") === newFilters.strapMaterial) &&
+          (!newFilters.movementType ||
+            getAttrValue(variant, "Movement Type") === newFilters.movementType) &&
+          (!newFilters.color ||
+            variant.attributeValues?.some(
+              (a) => a.attribute?.name === "Color" && a.value === newFilters.color
+            ))
+        );
+      });
+
+      // Cập nhật ảnh
+      const newImages = newFiltered.flatMap((v) => v.images || []);
+      setVariantImages(newImages);
+
+      if (!newFilters[type]) {
+        const allImages = variants.flatMap((v) => v.images || []);
+        setVariantImages(allImages);
+        if (allImages.length > 0) {
+          setSelectedImage(allImages[0].image_url || product.thumbnail);
+        }
+      } else {
+        if (newImages.length > 0) {
+          setSelectedImage(newImages[0].image_url);
+        }
+      }
+
+      // Tự động chọn nếu chỉ có 1 biến thể phù hợp
+      if (newFiltered.length === 1) {
+        setSelectedVariant(newFiltered[0]);
+      } else {
+        setSelectedVariant(null);
+      }
+
+      return newFilters;
+    });
+  };
+
+  // Tính tổng stock từ variants
+  const totalStock =
+    product.total_stock ||
+    variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0);
+  const availablePercent = product.cam_product_available
+    ? (product.cam_product_available /
+        (product.cam_product_available + (product.cam_product_sale || 0))) *
+      100
+    : 0;
 
   // Initialize prices
   let displayPrice = 0;
@@ -16,63 +153,332 @@ export default function ProductCardStyleOne({ datas, type }) {
 
   // Handle variants if they exist
   if (variants.length > 0) {
-    // Filter valid variants (in stock and valid price)
     const validVariants = variants.filter(
       (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
     );
 
     if (validVariants.length > 0) {
-      // Find the variant with the lowest price (prefer discounted price if available)
-      const cheapestVariant = validVariants.reduce((prev, current) => {
-        const prevPrice = current.promotion?.discounted_price
-          ? parseFloat(current.promotion.discounted_price)
-          : parseFloat(current.price);
-        const currentPrice = current.promotion?.discounted_price
-          ? parseFloat(current.promotion.discounted_price)
-          : parseFloat(current.price);
-        return currentPrice < prevPrice ? current : prev;
-      }, validVariants[0]);
-console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
+      // Chọn biến thể đầu tiên có stock làm mặc định nếu chưa có selectedVariant
+      const initialVariant = selectedVariant || validVariants[0];
+      displayOriginalPrice = parseFloat(initialVariant.price) || 0;
+      displayPrice = initialVariant.promotion?.discounted_price
+        ? parseFloat(initialVariant.promotion.discounted_price)
+        : parseFloat(initialVariant.price) || 0;
 
-      displayOriginalPrice = parseFloat(cheapestVariant.price) || 0;
-      displayPrice = cheapestVariant.promotion?.discounted_price
-        ? parseFloat(cheapestVariant.promotion.discounted_price)
-        : parseFloat(cheapestVariant.price) || 0;
-      discountPercent = cheapestVariant.promotion?.discount_percent
-        ? parseFloat(cheapestVariant.promotion.discount_percent)
-        : 0;
+      // Tính phần trăm khuyến mãi
+      if (initialVariant.promotion?.discount_percent) {
+        discountPercent = parseFloat(initialVariant.promotion.discount_percent);
+      } else if (displayOriginalPrice > displayPrice && displayOriginalPrice > 0) {
+        // Fallback: Tính % từ giá gốc và giá giảm
+        discountPercent = ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100;
+      }
 
-      // Ensure discountPercent is reasonable (0-100%)
-      if (discountPercent > 100 || discountPercent < 0) {
+      // Validate and round discountPercent
+      if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
         discountPercent = 0;
+      } else {
+        discountPercent = Math.round(discountPercent); // Làm tròn để tránh số thập phân
       }
     } else {
       hasStock = false;
       displayPrice = 0;
       displayOriginalPrice = 0;
+      discountPercent = 0;
     }
   } else {
-    // Fallback to product price if no variants
     displayPrice = parseFloat(product.price) || 0;
     displayOriginalPrice = parseFloat(product.price) || 0;
     hasStock = parseInt(product.stock) > 0;
+    // Kiểm tra khuyến mãi cấp sản phẩm
+    if (product.promotion?.discounted_price) {
+      displayPrice = parseFloat(product.promotion.discounted_price);
+      if (displayOriginalPrice > displayPrice && displayOriginalPrice > 0) {
+        discountPercent = ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100;
+        discountPercent = Math.round(discountPercent);
+        if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+          discountPercent = 0;
+        }
+      }
+    }
   }
 
   // Fallback for product image
-  const thumbnail = product.thumbnail?.trim() || "/images/no-image.jpg";
+  const thumbnail = selectedImage || product.thumbnail?.trim() || "/images/no-image.jpg";
 
   // Fallback for product name
-  const productName = product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
+  const productName =
+    product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
 
-  // Calculate campaign progress if applicable
-  const available =
-    product.campaingn_product &&
-    typeof product.cam_product_sale === "number" &&
-    typeof product.cam_product_available === "number"
-      ? (product.cam_product_sale /
-          (product.cam_product_available + product.cam_product_sale)) *
-        100
-      : 0;
+  // Hàm thêm vào giỏ hàng
+  const addToCart = () => {
+    // Trong QuickView dialog, yêu cầu chọn biến thể
+    if (isQuickViewOpen && variants.length > 0 && !selectedVariant) {
+      alert("Vui lòng chọn biến thể trước khi thêm vào giỏ hàng");
+      return;
+    }
+    // Kiểm tra số lượng
+    if (quantity > (selectedVariant?.stock || totalStock)) {
+      alert(`Chỉ còn ${selectedVariant?.stock || totalStock} sản phẩm trong kho`);
+      return;
+    }
+    // Nếu không có selectedVariant (từ hover button), chọn biến thể đầu tiên có stock
+    const variantToAdd = selectedVariant || (variants.length > 0 ? variants.find(v => parseInt(v.stock) > 0) : null);
+    console.log("Thêm vào giỏ hàng:", {
+      productId: product.id,
+      name: productName,
+      price: displayPrice,
+      quantity,
+      variant: variantToAdd,
+    });
+    alert("Đã thêm sản phẩm vào giỏ hàng!");
+  };
+
+  // Xử lý mô tả
+  const description = product.description?.trim() || "Không có mô tả";
+  const maxLength = 100;
+  const isLongDescription = description.length > maxLength;
+  const truncatedDescription = isLongDescription && !isExpanded
+    ? description.slice(0, maxLength) + "..."
+    : description;
+
+  // Dialog component using Portal
+  const QuickViewDialog = () =>
+    isQuickViewOpen &&
+    ReactDOM.createPortal(
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center min-h-screen z-50"
+        onClick={() => setIsQuickViewOpen(false)}
+      >
+        <div
+          className="bg-white p-6 rounded-lg max-w-[600px] w-full max-h-[400px] h-auto relative flex shadow-2xl border border-gray-200 overflow-y-auto"
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "linear-gradient(135deg, #fff 0%, #f9f9f9 100%)",
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setIsQuickViewOpen(false)}
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+          <div className="w-1/2 h-full overflow-hidden">
+            <img
+              src={thumbnail}
+              alt={productName}
+              className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+            />
+            {/* Thumbnail images */}
+            <div className="flex gap-2 flex-wrap mt-2">
+              {(variantImages.length > 0 ? variantImages : product.variantImages || []).map((img) => (
+                <div
+                  key={img.id || img.image_url}
+                  onClick={() => setSelectedImage(img.image_url)}
+                  className="w-[60px] h-[60px] p-1 border border-gray-200 cursor-pointer"
+                >
+                  <img
+                    src={img.image_url}
+                    alt=""
+                    className={`w-full h-full object-contain ${
+                      selectedImage === img.image_url ? "" : "opacity-50"
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="w-1/2 p-4 flex flex-col justify-between">
+            <h2 className="text-xl font-bold mb-2">{productName}</h2>
+            <p className="text-gray-600 text-sm mt-2">
+              <b>description</b>: {truncatedDescription}
+              {isLongDescription && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-blue-600 hover:underline ml-1 text-sm"
+                >
+                  {isExpanded ? "Thu gọn" : "Xem thêm"}
+                </button>
+              )}
+            </p>
+
+            {/* Variant Filters */}
+            {filterOptions.colors.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Màu sắc:</label>
+                <div className="flex space-x-2 mt-1">
+                  {filterOptions.colors.map(({ id, color }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateFilter("color", color)}
+                      style={{ background: color }}
+                      className={`w-6 h-6 rounded-full border ${
+                        selectedFilters.color === color ? "ring-2 ring-offset-2 ring-blue-500" : ""
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {filterOptions.dialSizes.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Kích thước mặt:</label>
+                <div className="flex space-x-2 mt-1">
+                  {filterOptions.dialSizes.map(({ id, dialSize }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateFilter("dialSize", dialSize)}
+                      className={`px-2 py-1 rounded-md border ${
+                        selectedFilters.dialSize === dialSize
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700"
+                      }`}
+                    >
+                      {dialSize}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {filterOptions.waterResistances.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Chống nước:</label>
+                <div className="flex space-x-2 mt-1">
+                  {filterOptions.waterResistances.map(({ id, waterResistance }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateFilter("waterResistance", waterResistance)}
+                      className={`px-2 py-1 rounded-md border ${
+                        selectedFilters.waterResistance === waterResistance
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700"
+                      }`}
+                    >
+                      {waterResistance}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {filterOptions.strapMaterials.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Chất liệu dây:</label>
+                <div className="flex space-x-2 mt-1">
+                  {filterOptions.strapMaterials.map(({ id, strapMaterial }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateFilter("strapMaterial", strapMaterial)}
+                      className={`px-2 py-1 rounded-md border ${
+                        selectedFilters.strapMaterial === strapMaterial
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700"
+                      }`}
+                    >
+                      {strapMaterial}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {filterOptions.movementTypes.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Loại máy:</label>
+                <div className="flex space-x-2 mt-1">
+                  {filterOptions.movementTypes.map(({ id, movementType }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateFilter("movementType", movementType)}
+                      className={`px-2 py-1 rounded-md border ${
+                        selectedFilters.movementType === movementType
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700"
+                      }`}
+                    >
+                      {movementType}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-gray-700">Giá:</span>
+              <span className="text-qred font-semibold">
+                {Number(displayPrice).toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
+              </span>
+              {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+                <>
+                  <span className="text-qgray line-through ml-2">
+                    {Number(displayOriginalPrice).toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })}
+                  </span>
+                  <span className="text-white text-xs font-semibold bg-qred px-2 py-0.5 rounded ml-2">
+                    -{discountPercent.toFixed(0)}%
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center space-x-2 mb-4">
+              <button
+                className="px-2 py-1 bg-gray-200 rounded"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={quantity <= 1}
+              >
+                -
+              </button>
+              <input
+                type="number"
+                value={quantity}
+                onChange={(e) =>
+                  setQuantity(Math.max(1, Math.min(totalStock, Number(e.target.value))))
+                }
+                className="w-16 text-center border border-gray-300 rounded"
+                min="1"
+                max={totalStock}
+              />
+              <button
+                className="px-2 py-1 bg-gray-200 rounded"
+                onClick={() => setQuantity(Math.min(totalStock, quantity + 1))}
+                disabled={quantity >= totalStock}
+              >
+                +
+              </button>
+            </div>
+            <button
+              type="button"
+              className="w-full py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors duration-200"
+              onClick={addToCart}
+              disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
+            >
+             Thêm vào giỏ hàng
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
 
   return (
     <div
@@ -81,53 +487,13 @@ console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
     >
       {/* Product image */}
       <div
-        className="product-card-img w-full h-[300px]"
+        className="product-card-img w-full h-[300px] hover:scale-105 transition-transform duration-300"
         style={{
           background: `url(${thumbnail}) no-repeat center`,
           backgroundSize: "cover",
         }}
       >
-        {/* Product available progress */}
-        {product.campaingn_product && (
-          <div className="px-[30px] absolute left-0 top-3 w-full">
-            <div className="progress-title flex justify-between">
-              <p className="text-xs text-qblack font-400 leading-6">
-                Sản phẩm còn lại
-              </p>
-              <span className="text-sm text-qblack font-600 leading-6">
-                {product.cam_product_available || 0}
-              </span>
-            </div>
-            <div className="progress w-full h-[5px] rounded-[22px] bg-primarygray relative overflow-hidden">
-              <div
-                style={{ width: `${100 - available}%` }}
-                className={`h-full absolute left-0 top-0 ${
-                  type === 3 ? "bg-qh3-blue" : "bg-qyellow"
-                }`}
-              ></div>
-            </div>
-          </div>
-        )}
-        {/* Product type */}
-        {product.product_type && !product.campaingn_product && (
-          <div className="product-type absolute right-[14px] top-[17px]">
-            <span
-              className={`text-[9px] font-700 leading-none py-[6px] px-3 uppercase text-white rounded-full tracking-wider ${
-                product.product_type === "popular" ? "bg-[#19CC40]" : "bg-qyellow"
-              }`}
-            >
-              {product.product_type}
-            </span>
-          </div>
-        )}
-        {/* Discount badge */}
-        {discountPercent > 0 && (
-          <div className="discount-badge absolute left-[14px] top-[17px]">
-            <span className="text-[9px] font-700 leading-none py-[6px] px-3 uppercase text-white bg-qred rounded-full tracking-wider">
-              -{discountPercent.toFixed(0)}%
-            </span>
-          </div>
-        )}
+        <div className="px-[30px] absolute left-0 top-3 w-full"></div>
       </div>
 
       {/* Product details */}
@@ -136,10 +502,13 @@ console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
         <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
           <button
             type="button"
-            className={`w-full py-2.5 rounded-lg text-white font-medium transition-colors duration-200 ${
-              type === 3 ? "bg-blue-600 hover:bg-blue-700" : "bg-yellow-500 hover:bg-yellow-600"
+            className={`w-full py-2.5 rounded-none text-white font-medium transition-colors duration-200 ${
+              type === 3
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-yellow-500 hover:bg-yellow-600"
             } ${!hasStock ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={!hasStock}
+            onClick={addToCart}
           >
             <div className="flex items-center justify-center space-x-3">
               <span>
@@ -159,12 +528,25 @@ console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
           </button>
         </div>
         {/* Reviews */}
-        <div className="reviews flex space-x-[1px] mb-3">
+        <div className="reviews flex space-x-[1px] mb-3 mt-[10px]">
           {Array.from({ length: product.review || 5 }).map((_, i) => (
             <span key={i}>
               <Star className="w-4 h-4 text-yellow-400" />
             </span>
           ))}
+        </div>
+        <div className="mt-2 text-[11px] text-qblack flex justify-between">
+          <span>
+            Tổng Số Lượng Sản Phẩm :{" "}
+            <strong>
+              {Array.isArray(datas.variants)
+                ? datas.variants.reduce(
+                    (total, v) => total + (parseInt(v.stock) || 0),
+                    0
+                  )
+                : 0}
+            </strong>
+          </span>
         </div>
         {/* Product name */}
         <Link to={`/product/${product.id || "unknown"}`}>
@@ -174,33 +556,35 @@ console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
         </Link>
         {/* Price */}
         {displayPrice > 0 ? (
-          <p className="price flex items-center space-x-2">
-            <span
-              className={`offer-price ${
-                discountPercent > 0 ? "text-qred" : "text-qblack"
-              } font-600 text-[18px]`}
-            >
-              {Number(displayPrice).toLocaleString("vi-VN", {
-                style: "currency",
-                currency: "VND",
-              })}
-            </span>
-            {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-              <>
-                <span className="main-price text-qgray line-through font-600 text-[16px]">
-                  {Number(displayOriginalPrice).toLocaleString("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  })}
-                </span>
-                <span className="discount-percent text-white text-xs font-semibold bg-qred px-2 py-0.5 rounded">
-                  -{discountPercent.toFixed(0)}%
-                </span>
-              </>
-            )}
-          </p>
+          <div className="price-container group-hover:hidden">
+            <p className="price flex items-center space-x-2">
+              <span
+                className={`offer-price ${
+                  discountPercent > 0 ? "text-qred" : "text-qblack"
+                } font-600 text-[18px]`}
+              >
+                {Number(displayPrice).toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
+              </span>
+              {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+                <>
+                  <span className="main-price text-qgray line-through font-600 text-[16px] ml-2">
+                    {Number(displayOriginalPrice).toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })}
+                  </span>
+                  <span className="discount-percent text-white text-xs font-semibold bg-qred px-2 py-0.5 rounded ml-2">
+                    -{discountPercent.toFixed(0)}%
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
         ) : (
-          <p className="price text-qgray font-600 text-[16px]">
+          <p className="price text-qgray font-600 text-[16px] group-hover:hidden">
             Giá không khả dụng
           </p>
         )}
@@ -208,7 +592,13 @@ console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
 
       {/* Quick access buttons */}
       <div className="quick-access-btns flex flex-col space-y-2 absolute group-hover:right-4 -right-10 top-20 transition-all duration-300 ease-in-out">
-        <a href="#">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            setIsQuickViewOpen(true);
+          }}
+        >
           <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
             <QuickViewIco className="w-5 h-5" />
           </span>
@@ -224,6 +614,9 @@ console.log("Cheapest Variant Promotion:", cheapestVariant?.promotion);
           </span>
         </a>
       </div>
+
+      {/* Render QuickViewDialog */}
+      <QuickViewDialog />
     </div>
   );
 }

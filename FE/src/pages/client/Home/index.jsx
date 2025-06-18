@@ -73,7 +73,7 @@ export default function HomeThree() {
           brands={brands}
           categoryTitle="Electronics"
           sectionTitle="Popular Sales"
-          seeMoreUrl="/all-products"
+          seeMoreUrl="/all-productss"
           className="category-products mb-[60px]"
         />
         <CampaignCountDown
@@ -81,7 +81,7 @@ export default function HomeThree() {
           lastDate="2025-10-04 4:00:00"
         />
         <SectionStyleFour
-          products={products}
+          products={products} 
           sectionTitle="Popular Sales"
           seeMoreUrl="/all-products"
           className="category-products mb-[60px]"
