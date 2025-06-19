@@ -1,124 +1,113 @@
-// const CommentModel = require('../../models/commentsModel');
-// const CommentImageModel = require('../../models/commentImagesModel');
-// const OrderDetailModel = require('../../models/orderDetailsModel');
-// const ProductVariantModel = require('../../models/productVariantsModel');
-// const UserModel = require('../../models/usersModel');
-// const cloudinary = require('../../utils/cloudinary'); // Đã cấu hình sẵn Cloudinary
-// const Filter = require('bad-words');
-// const nsfw = require('nsfwjs');
-// const tf = require('@tensorflow/tfjs-node');
-// const streamifier = require('streamifier');
-// const fetch = require('node-fetch'); // nếu đang dùng Node <18
+const CommentModel = require('../../models/commentsModel');
+const CommentImageModel = require('../../models/commentImagesModel');
+const OrderDetailModel = require('../../models/orderDetailsModel');
+const ProductVariantModel = require('../../models/productVariantsModel');
+const ProductModel = require('../../models/productsModel');
+const UserModel = require('../../models/usersModel');
 
-// let nsfwModel;
-// (async () => {
-//   nsfwModel = await nsfw.load();
-// })();
+class ClientCommentController {
+  // ===== 1. Gửi bình luận =====
+static async addComment(req, res) {
+  const t = await CommentModel.sequelize.transaction();
+  try {
+    const {
+      user_id,
+      order_detail_id,
+      rating,
+      comment_text,
+      parent_id = null,
+      images = []
+    } = req.body;
 
-// // Hàm upload Buffer lên Cloudinary
-// function uploadToCloudinary(buffer) {
-//   return new Promise((resolve, reject) => {
-//     const stream = cloudinary.uploader.upload_stream(
-//       { folder: 'comments' },
-//       (error, result) => {
-//         if (result) resolve(result);
-//         else reject(error);
-//       }
-//     );
-//     streamifier.createReadStream(buffer).pipe(stream);
-//   });
-// }
+    // 1. Tạo bình luận
+    const newComment = await CommentModel.create({
+      user_id,
+      order_detail_id,
+      parent_id,
+      rating,
+      comment_text
+    }, { transaction: t });
 
-// class ClientCommentController {
-//   static async addComment(req, res) {
-//     try {
-//       const {
-//         user_id,
-//         order_detail_id,
-//         rating,
-//         comment_text,
-//         parent_id = null
-//       } = req.body;
+    // 2. Nếu có ảnh thì lưu vào bảng comment_images
+    if (images.length > 0) {
+      const commentImages = images.map(url => ({
+        comment_id: newComment.id,
+        image_url: url
+      }));
 
-//       const images = req.files; // Dữ liệu từ multer.memoryStorage()
+      await CommentImageModel.bulkCreate(commentImages, { transaction: t });
+    }
 
-//       // Lọc từ ngữ không phù hợp
-//       const filter = new Filter();
-//       const cleanedComment = filter.clean(comment_text);
-//       if (cleanedComment !== comment_text) {
-//         return res.status(400).json({ success: false, message: 'Bình luận chứa từ ngữ không phù hợp.' });
-//       }
+    await t.commit();
 
-//       // Tạo bình luận mới
-//       const newComment = await CommentModel.create({
-//         user_id,
-//         order_detail_id,
-//         parent_id,
-//         rating,
-//         comment_text: cleanedComment
-//       });
+    return res.status(201).json({
+      success: true,
+      message: 'Gửi bình luận thành công',
+      data: newComment
+    });
 
-//       // Xử lý ảnh nếu có
-//       if (images && images.length > 0) {
-//         for (const img of images) {
-//           const result = await uploadToCloudinary(img.buffer);
+  } catch (error) {
+    await t.rollback();
+    console.error('Error in addComment:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi gửi bình luận'
+    });
+  }
+}
 
-//           // Phân tích NSFW
-//           const imageBuffer = await fetch(result.secure_url).then(r => r.arrayBuffer());
-//           const imageTensor = tf.node.decodeImage(new Uint8Array(imageBuffer), 3);
-//           const predictions = await nsfwModel.classify(imageTensor);
-//           imageTensor.dispose();
 
-//           const isUnsafe = predictions.some(p => ['Porn', 'Hentai', 'Sexy'].includes(p.className) && p.probability > 0.6);
+  // ===== 2. Lấy bình luận theo product_id =====
+static async getCommentsByProductId(req, res) {
+  try {
+    const { id } = req.params; 
+    const comments = await CommentModel.findAll({
+      attributes: [
+        'id',
+        'user_id',
+        'order_detail_id',
+        'parent_id',
+        'rating',
+        'comment_text',
+        'created_at',
+        'updated_at'
+      ],
+      include: [
+        {
+          model: OrderDetailModel,
+          as: 'orderDetail',
+          attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
+          required: true,
+          include: [
+            {
+              model: ProductVariantModel,
+              as: 'variant',
+              attributes: ['id', 'sku', 'price', 'product_id'],
+              where: { product_id: id }, // chỉ lấy variant có product_id đúng
+              required: true
+            }
+          ]
+        },
+        {
+          model: UserModel,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        },
+        {
+          model: CommentImageModel,
+          as: 'commentImages',
+          attributes: ['id', 'image_url']
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
 
-//           if (isUnsafe) {
-//             // Xóa ảnh khỏi Cloudinary nếu vi phạm
-//             await cloudinary.uploader.destroy(result.public_id);
-//             continue;
-//           }
+    return res.status(200).json({ success: true, data: comments });
+  } catch (error) {
+    console.error('Error in getCommentsByProductId:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi lấy bình luận theo sản phẩm' });
+  }
+}
+}
 
-//           // Lưu ảnh hợp lệ
-//           await CommentImageModel.create({
-//             comment_id: newComment.id,
-//             image_url: result.secure_url
-//           });
-//         }
-//       }
-
-//       // Trả về toàn bộ bình luận liên quan
-//       const productComments = await CommentModel.findAll({
-//         attributes: ['id', 'user_id', 'order_detail_id', 'parent_id', 'rating', 'comment_text', 'created_at'],
-//         include: [
-//           {
-//             model: OrderDetailModel,
-//             as: 'orderDetail',
-//             attributes: ['product_variant_id'],
-//             include: [{
-//               model: ProductVariantModel,
-//               as: 'variant',
-//               attributes: ['product_id']
-//             }]
-//           },
-//           {
-//             model: UserModel,
-//             as: 'user',
-//             attributes: ['id', 'name']
-//           },
-//           {
-//             model: CommentImageModel,
-//             as: 'commentImages',
-//             attributes: ['id', 'image_url']
-//           }
-//         ],
-//         order: [['created_at', 'DESC']]
-//       });
-
-//       return res.status(201).json({ success: true, message: 'Bình luận đã được gửi', data: productComments });
-//     } catch (error) {
-//       console.error('Error in addComment:', error);
-//       return res.status(500).json({ success: false, message: 'Lỗi server khi gửi bình luận' });
-//     }
-//   }
-// }
-
-// module.exports = ClientCommentController;
+module.exports = ClientCommentController;

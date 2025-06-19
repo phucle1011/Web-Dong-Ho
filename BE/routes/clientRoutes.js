@@ -12,7 +12,7 @@ const AuthController = require('../controllers/Client/authController');
 const ProductClientController = require('../controllers/Client/productClientController');
 const ProductVariantController = require('../controllers/Client/productVariantController');
 const OrderController = require('../controllers/Client/ordersController');
-// const ClientCommentController = require('../controllers/Client/commentsController');
+const ClientCommentController = require('../controllers/Client/commentsController');
 const  chatWithBot  = require('../controllers/Client/chatboxController');
 const ShippingController = require('../controllers/Client/shippingController');
 const { checkJWT } = require('../services/authCheck');
@@ -92,7 +92,10 @@ router.get('/:id', ProductVariantController.getProductVariantDetail);
 router.get('/product-variants/:id', ProductVariantController.getProductVariantDetail);
 router.get('/products/discounted', ProductVariantController.getDiscountedProducts);
 
-//------------------[ Comment ]------------------//
-// router.post('/add', upload.array('images'), ClientCommentController.addComment);
+// ------------------[ Comment ]------------------//
+
+router.post('/comments', ClientCommentController.addComment);
+router.get('/comment/product/:id', ClientCommentController.getCommentsByProductId);
+
 
 module.exports = router;

@@ -17,7 +17,7 @@ const CommentImagesModel = connection.define('comment_images', {
     }
 }, {
     tableName: 'comment_images',
-    timestamps: true
+    timestamps: false 
 });
 
 module.exports = CommentImagesModel;

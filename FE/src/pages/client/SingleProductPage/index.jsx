@@ -6,7 +6,7 @@ import DataIteration from "../Helpers/DataIteration";
 import InputCom from "../Helpers/InputCom";
 import Layout from "../Partials/LayoutHomeThree";
 import ProductView from "./ProductView";
-import Reviews from "./Reviews";
+import ProductReviewSection from "./Reviews";
 import SallerInfo from "./SallerInfo";
 import axios from "axios";
 import { useParams } from "react-router-dom";
@@ -198,23 +198,7 @@ useEffect(() => {
                     </h6>
                     {/* review-comments */}
                     <div className="w-full">
-                      <Reviews
-                        reviewLoading={reviewLoading}
-                        reviewAction={reviewAction}
-                        comments={commnets.slice(0, 2)}
-                        name={name}
-                        nameHandler={(e) => setName(e.target.value)}
-                        email={email}
-                        emailHandler={(e) => setEmail(e.target.value)}
-                        phone={phone}
-                        phoneHandler={(e) => setPhone(e.target.value)}
-                        message={message}
-                        messageHandler={(e) => setMessage(e.target.value)}
-                        rating={rating}
-                        ratingHandler={setRating}
-                        hoverRating={hover}
-                        hoverHandler={setHover}
-                      />
+                     <ProductReviewSection productId={id} />
                     </div>
                   </div>
                 )}
