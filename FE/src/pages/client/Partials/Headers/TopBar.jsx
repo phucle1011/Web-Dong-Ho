@@ -85,6 +85,17 @@ export default function TopBar({ className }) {
                           Thông tin
                         </Link>
                       </li>
+                      {decoded.role === "admin" && (
+                        <li>
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            onClick={() => setIsDropdownOpen(false)}
+                          >
+                           Trang quản lý
+                          </Link>
+                        </li>
+                      )}
                       <li>
                         <button
                           onClick={handleLogout}
