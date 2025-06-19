@@ -186,6 +186,7 @@ class PromotionController {
       const now = new Date();
       const start = new Date(start_date);
       const end = new Date(end_date);
+      end.setHours(23, 59, 59, 999);
 
       let promoStatus;
       if (status === 'inactive') {
@@ -204,8 +205,8 @@ class PromotionController {
         discount_type,
         discount_value: Number(discount_value),
         quantity: Number(quantity),
-        start_date,
-        end_date,
+        start_date: start,
+        end_date: end,
         status: promoStatus,
         applicable_to,
         min_price_threshold: Number(min_price_threshold),
@@ -304,6 +305,7 @@ class PromotionController {
       const now = new Date();
       const start = new Date(start_date);
       const end = new Date(end_date);
+      end.setHours(23, 59, 59, 999);
       let promoStatus = (status === 'inactive')
         ? 'inactive'
         : (now < start ? 'upcoming' : (now <= end ? 'active' : 'expired'));
@@ -313,8 +315,8 @@ class PromotionController {
         discount_type,
         discount_value: discount_value !== undefined ? Number(discount_value) : promotion.discount_value,
         quantity: quantity !== undefined ? Number(quantity) : promotion.quantity,
-        start_date: start_date || promotion.start_date,
-        end_date: end_date || promotion.end_date,
+        start_date: start_date ? start : promotion.start_date,
+        end_date: end_date ? end : promotion.end_date,
         status: promoStatus,
         applicable_to,
         min_price_threshold: min_price_threshold !== undefined ? Number(min_price_threshold) : promotion.min_price_threshold,

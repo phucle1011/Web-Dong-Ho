@@ -15,7 +15,7 @@ export default function Footer({ type }) {
                 <img
                   width="152"
                   height="36"
-                  src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logo-3.svg`}
+                  src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logos/logo.png`}
                   alt="logo"
                 />
               </Link>
@@ -24,7 +24,7 @@ export default function Footer({ type }) {
                 <img
                   width="152"
                   height="36"
-                  src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logo.svg`}
+                  src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logos/logo.png`}
                   alt="logo"
                 />
               </Link>

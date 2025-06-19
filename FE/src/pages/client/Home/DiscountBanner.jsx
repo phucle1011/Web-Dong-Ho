@@ -5,13 +5,13 @@ export default function DiscountBanner({ className, type }) {
         className || ""
       }`}
       style={{
-        background: `url(${process.env.REACT_APP_PUBLIC_URL}/assets/images/discount-banner-1.jpg) no-repeat`,
+        background: `url(${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannerdongho1.png) no-repeat`,
         backgroundSize: "cover",
       }}
     >
       {type === 3 ? (
         <div className="container-x mx-auto">
-          <div className="best-services w-full  flex flex-col space-y-10 lg:space-y-0 lg:flex-row lg:justify-between lg:items-center lg:h-[110px] px-10 lg:py-0 py-10">
+          {/* <div className="best-services w-full  flex flex-col space-y-10 lg:space-y-0 lg:flex-row lg:justify-between lg:items-center lg:h-[110px] px-10 lg:py-0 py-10">
             <div className="item">
               <div className="flex space-x-5 items-center">
                 <div>
@@ -207,7 +207,7 @@ export default function DiscountBanner({ className, type }) {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       ) : (
         <div>
