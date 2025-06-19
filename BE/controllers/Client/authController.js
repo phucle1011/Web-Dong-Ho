@@ -127,7 +127,7 @@ class AuthController {
                 return errorResponse(res, "Mật khẩu không chính xác!", 400);
             }
 
-            const expiresIn = rememberMe ? "30d" : "10s";
+            const expiresIn = rememberMe ? "30d" : "2h";
 
             const token = jwt.sign(
                 {

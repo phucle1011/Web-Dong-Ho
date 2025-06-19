@@ -826,7 +826,7 @@ export default function CheakoutPage() {
         }
       }
     } catch (error) {
-      console.error("❌ Lỗi đặt hàng:", error);
+      console.error("Lỗi đặt hàng:", error);
       const serverMessage = error.response?.data?.message;
 
       if (serverMessage?.includes("Giao dịch bị từ chối")) {

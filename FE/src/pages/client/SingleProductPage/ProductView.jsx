@@ -142,7 +142,7 @@ export default function ProductView({ className, reportHandler }) {
 
     try {
       const response = await axios.post(
-        "${Constants.DOMAIN_API}/add-to-carts",
+        `${Constants.DOMAIN_API}/add-to-carts`,
         {
           userId, // Gửi thêm userId
           productVariantId: variantId,
@@ -157,7 +157,7 @@ export default function ProductView({ className, reportHandler }) {
 
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
-      toast.success("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+      toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
     }
   };
 
