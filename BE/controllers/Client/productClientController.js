@@ -71,90 +71,99 @@ class ProductClientController {
         }, 0);
 
         if (productJson.variants && productJson.variants.length > 0) {
-          for (let variant of productJson.variants) {
-            const promotions = await PromotionProductModel.findAll({
-              where: { product_variant_id: variant.id },
-              include: [
-                {
-                  model: PromotionModel,
-                  as: "promotion",
-                  where: {
-                    status: "active",
-                    start_date: { [Op.lte]: currentDate },
-                    end_date: { [Op.gte]: currentDate },
-                  },
-                  required: true,
-                },
-              ],
-            });
+  for (let variant of productJson.variants) {
+    const promotions = await PromotionProductModel.findAll({
+      where: { product_variant_id: variant.id },
+      include: [
+        {
+          model: PromotionModel,
+          as: "promotion",
+          where: {
+            status: "active",
+            start_date: { [Op.lte]: currentDate },
+            end_date: { [Op.gte]: currentDate },
+          },
+          required: true,
+        },
+      ],
+    });
 
-            let bestPromotion = null;
-            let lowestPrice = parseFloat(variant.price) || 0;
-            let discountPercent = 0;
+    let bestPromotion = null;
+    let lowestPrice = parseFloat(variant.price) || 0;
+    let discountPercent = 0;
 
-            if (promotions.length > 0) {
-              bestPromotion = promotions.reduce((best, promoProduct) => {
-                const promo = promoProduct.promotion;
-                const variantPrice = parseFloat(variant.price) || 0;
+    if (promotions.length > 0) {
+      bestPromotion = promotions.reduce((best, promoProduct) => {
+        const promo = promoProduct.promotion;
+        const variantPrice = parseFloat(variant.price) || 0;
 
-                let meetsConditions = true;
-                const minPrice = parseFloat(promo.min_price_threshold) || 0;
-                const maxPrice = parseFloat(promo.max_price) || Infinity;
-                if (variantPrice < minPrice || variantPrice > maxPrice) {
-                  meetsConditions = true;
-                }
+        let meetsConditions = true;
+        // Bỏ kiểm tra minPrice/maxPrice để áp dụng khuyến mãi bất kể giá
+        // const minPrice = parseFloat(promo.min_price_threshold) || 0;
+        // const maxPrice = parseFloat(promo.max_price) || Infinity;
+        // if (variantPrice < minPrice || variantPrice > maxPrice) {
+        //   console.warn(`❌ Variant ${variant.id} price ${variantPrice} không nằm trong khoảng [${minPrice}, ${maxPrice}]`);
+        //   meetsConditions = false;
+        // }
 
-                let finalPrice = variantPrice;
-                let currentDiscountPercent = 0;
-
-                if (meetsConditions) {
-                  if (promo.discount_type === "percentage") {
-                    finalPrice -=
-                      (finalPrice * parseFloat(promo.discount_value)) / 100;
-                    currentDiscountPercent = parseFloat(promo.discount_value);
-                  } else if (promo.discount_type === "fixed") {
-                    finalPrice -= parseFloat(promo.discount_value);
-                    currentDiscountPercent =
-                      ((variantPrice - finalPrice) / variantPrice) * 100;
-                  }
-
-                  finalPrice = Math.max(0, finalPrice);
-                }
-
-                const newPromo = {
-                  id: promo.id,
-                  code: promo.code,
-                  discount_type: promo.discount_type,
-                  discount_value: parseFloat(promo.discount_value),
-                  discounted_price: parseFloat(finalPrice.toFixed(2)),
-                  discount_percent: parseFloat(currentDiscountPercent.toFixed(2)),
-                  meets_conditions: meetsConditions && promo.quantity > 0,
-                };
-
-                if (
-                  !best ||
-                  (newPromo.meets_conditions &&
-                    newPromo.discounted_price < best.discounted_price)
-                ) {
-                  return newPromo;
-                }
-
-                return best;
-              }, null);
-
-              if (bestPromotion && bestPromotion.meets_conditions) {
-                lowestPrice = bestPromotion.discounted_price;
-                discountPercent = bestPromotion.discount_percent;
-              }
-            }
-
-            variant.promotion = bestPromotion || {
-              discounted_price: lowestPrice,
-              discount_percent: 0,
-              meets_conditions: true,
-            };
-          }
+        if (isNaN(promo.discount_value) || parseFloat(promo.discount_value) <= 0) {
+          console.warn(`Invalid discount_value ${promo.discount_value} for promotion ${promo.id}`);
+          meetsConditions = false;
         }
+
+        let finalPrice = variantPrice;
+        let currentDiscountPercent = 0;
+
+        if (meetsConditions) {
+          if (promo.discount_type === "percentage") {
+            finalPrice -= (finalPrice * parseFloat(promo.discount_value)) / 100;
+            currentDiscountPercent = parseFloat(promo.discount_value);
+          } else if (promo.discount_type === "fixed") {
+            finalPrice -= parseFloat(promo.discount_value);
+            currentDiscountPercent = ((variantPrice - finalPrice) / variantPrice) * 100;
+          }
+          finalPrice = Math.max(0, finalPrice);
+        }
+
+        const newPromo = {
+          id: promo.id,
+          code: promo.code,
+          discount_type: promo.discount_type,
+          discount_value: parseFloat(promo.discount_value),
+          discounted_price: parseFloat(finalPrice.toFixed(2)),
+          discount_percent: parseFloat(currentDiscountPercent.toFixed(2)),
+          meets_conditions: meetsConditions && (promo.quantity == null || promo.quantity > 0),
+        };
+
+        if (!meetsConditions) {
+          console.log(`Promotion not applied for variant ${variant.id}:`, newPromo);
+        }
+
+        if (
+          !best ||
+          (newPromo.meets_conditions && newPromo.discounted_price < best.discounted_price)
+        ) {
+          return newPromo;
+        }
+        return best;
+      }, null);
+
+      if (bestPromotion && bestPromotion.meets_conditions) {
+        lowestPrice = bestPromotion.discounted_price;
+        discountPercent = bestPromotion.discount_percent;
+        console.log(`Best promotion for variant ${variant.id}:`, bestPromotion);
+      }
+    } else {
+      console.log(`No promotions found for variant ${variant.id}`);
+    }
+
+    variant.promotion = bestPromotion || {
+      discounted_price: lowestPrice,
+      discount_percent: 0,
+      meets_conditions: true,
+    };
+  }
+}
 
         return productJson;
       })
