@@ -428,7 +428,6 @@ export default function CheakoutPage() {
           }
         };
 
-        // Hàm cập nhật địa chỉ đầy đủ vào ô input
         const updateFullAddress = () => {
           const provinceName = provinceSelect.options[provinceSelect.selectedIndex]?.text || "";
           const districtName = districtSelect.options[districtSelect.selectedIndex]?.text || "";
@@ -447,7 +446,6 @@ export default function CheakoutPage() {
           addressInput.value = fullAddress;
         };
 
-        // Load dữ liệu cũ nếu là edit
         if (isEdit && address) {
           const province = provinces.find(p => p.ProvinceName === address.city);
           if (province) {
@@ -464,7 +462,6 @@ export default function CheakoutPage() {
               districtSelect.appendChild(option);
             });
 
-            // Lấy DistrictID từ dropdown quận đã chọn
             const selectedDistrictOption = districtSelect.options[districtSelect.selectedIndex];
             const districtId = selectedDistrictOption?.value;
 
@@ -485,7 +482,6 @@ export default function CheakoutPage() {
           updateFullAddress();
         }
 
-        // Sự kiện chọn tỉnh
         provinceSelect.addEventListener("change", async (e) => {
           const provinceId = e.target.value;
           districtSelect.disabled = !provinceId;
@@ -506,7 +502,6 @@ export default function CheakoutPage() {
           updateFullAddress();
         });
 
-        // Sự kiện chọn quận
         districtSelect.addEventListener("change", async (e) => {
           const districtId = e.target.value;
           wardSelect.disabled = !districtId;
@@ -525,7 +520,6 @@ export default function CheakoutPage() {
           updateFullAddress();
         });
 
-        // Sự kiện chọn phường
         wardSelect.addEventListener("change", () => {
           updateFullAddress();
         });
@@ -839,81 +833,81 @@ export default function CheakoutPage() {
     }
   };
 
-//   const calculateShippingFee = async () => {
-//     if (!defaultAddress) {
-//       toast.error("Chưa có địa chỉ mặc định");
-//       return;
-//     }
+  //   const calculateShippingFee = async () => {
+  //     if (!defaultAddress) {
+  //       toast.error("Chưa có địa chỉ mặc định");
+  //       return;
+  //     }
 
-//     const { city, district, ward } = defaultAddress;
+  //     const { city, district, ward } = defaultAddress;
 
-//     try {
+  //     try {
 
-//       const provinceId = await getProvinceIdByName(city);
-//       if (!provinceId) throw new Error("Không tìm thấy mã tỉnh");
+  //       const provinceId = await getProvinceIdByName(city);
+  //       if (!provinceId) throw new Error("Không tìm thấy mã tỉnh");
 
-//       const districtId = await getDistrictIdByProvinceAndName(provinceId, district);
-//       if (!districtId) throw new Error("Không tìm thấy mã quận");
+  //       const districtId = await getDistrictIdByProvinceAndName(provinceId, district);
+  //       if (!districtId) throw new Error("Không tìm thấy mã quận");
 
-//       const wardCode = await getWardCodeByDistrictAndName(districtId, ward);
-//       if (!wardCode) throw new Error("Không tìm thấy mã phường");
+  //       const wardCode = await getWardCodeByDistrictAndName(districtId, ward);
+  //       if (!wardCode) throw new Error("Không tìm thấy mã phường");
 
-//       const warehouse = {
-//         from_district_id: 1447,
-//         from_ward_code: "281113",
-//       };
+  //       const warehouse = {
+  //         from_district_id: 1447,
+  //         from_ward_code: "281113",
+  //       };
 
-//       const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
-//         from_district_id: warehouse.from_district_id,
-//         from_ward_code: warehouse.from_ward_code,
-//         to_district_id: Number(districtId),
-//         to_ward_code: wardCode,
-//         service_id: 53321,
-//         weight: 500,
-//         length: 20,
-//         width: 20,
-//         height: 15,
-//         insurance_value: 0,
-//         to_name: user.name || "Nguyễn Văn A",
-//         to_phone: user.phone || "0912345678",
-//         to_address: defaultAddress?.address_line || "123 đường ABC",
-//         required_note: noteValue,
-//         // items: checkoutItems.map(item => ({
-//         //   name: item.variant.sku,
-//         //   quantity: item.quantity,
-//         //   price: parseFloat(item.variant.price || 0) * item.quantity
-//         // }))
-//       });
+  //       const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
+  //         from_district_id: warehouse.from_district_id,
+  //         from_ward_code: warehouse.from_ward_code,
+  //         to_district_id: Number(districtId),
+  //         to_ward_code: wardCode,
+  //         service_id: 53321,
+  //         weight: 500,
+  //         length: 20,
+  //         width: 20,
+  //         height: 15,
+  //         insurance_value: 0,
+  //         to_name: user.name || "Nguyễn Văn A",
+  //         to_phone: user.phone || "0912345678",
+  //         to_address: defaultAddress?.address_line || "123 đường ABC",
+  //         required_note: noteValue,
+  //         // items: checkoutItems.map(item => ({
+  //         //   name: item.variant.sku,
+  //         //   quantity: item.quantity,
+  //         //   price: parseFloat(item.variant.price || 0) * item.quantity
+  //         // }))
+  //       });
 
-//       if (response.data.success && response.data.data) {
-//         const shippingFee = response.data.data.total || 0;
-//         setFinalData(prev => ({
-//           ...prev,
-//           shippingFee: shippingFee,
-//           formattedAmount: ((prev?.total || 0) + shippingFee).toLocaleString("vi-VN")
-//         }));
-//         toast.success(`Phí vận chuyển: ${shippingFee.toLocaleString("vi-VN")}₫`);
-//       } else {
-//         toast.error("Không thể tính phí vận chuyển");
-//       }
-// } catch (error) {
-//   console.error("❌ Lỗi khi tính phí vận chuyển:", error);
+  //       if (response.data.success && response.data.data) {
+  //         const shippingFee = response.data.data.total || 0;
+  //         setFinalData(prev => ({
+  //           ...prev,
+  //           shippingFee: shippingFee,
+  //           formattedAmount: ((prev?.total || 0) + shippingFee).toLocaleString("vi-VN")
+  //         }));
+  //         toast.success(`Phí vận chuyển: ${shippingFee.toLocaleString("vi-VN")}₫`);
+  //       } else {
+  //         toast.error("Không thể tính phí vận chuyển");
+  //       }
+  // } catch (error) {
+  //   console.error("❌ Lỗi khi tính phí vận chuyển:", error);
 
-//   if (error.response?.data?.message?.includes('route not found')) {
-//     toast.error("Tuyến đường này không được GHN hỗ trợ. Vui lòng chọn phương thức vận chuyển khác.");
-//   } else if (error.response?.data?.message) {
-//     toast.error(error.response.data.message); // Hiển thị lỗi từ API nếu có
-//   } else {
-//     toast.error("Có lỗi xảy ra khi tính phí vận chuyển");
-//   }
-// }
-//   };
+  //   if (error.response?.data?.message?.includes('route not found')) {
+  //     toast.error("Tuyến đường này không được GHN hỗ trợ. Vui lòng chọn phương thức vận chuyển khác.");
+  //   } else if (error.response?.data?.message) {
+  //     toast.error(error.response.data.message); // Hiển thị lỗi từ API nếu có
+  //   } else {
+  //     toast.error("Có lỗi xảy ra khi tính phí vận chuyển");
+  //   }
+  // }
+  //   };
 
-//   useEffect(() => {
-//     if (defaultAddress) {
-//       calculateShippingFee();
-//     }
-//   }, [defaultAddress]);
+  //   useEffect(() => {
+  //     if (defaultAddress) {
+  //       calculateShippingFee();
+  //     }
+  //   }, [defaultAddress]);
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -1244,15 +1238,11 @@ export default function CheakoutPage() {
                           <div className="input-radio">
                             <input
                               type="radio"
-                              name="price"
-                              className="accent-pink-500"
-                              id="bank"
+                              name="payment_method"
+                              value="VNPay"
                             />
                           </div>
-                          <label
-                            htmlFor="bank"
-                            className="text-[18px] text-normal text-qblack"
-                          >
+                          <label htmlFor="vnpay" className="text-[18px] text-normal text-qblack">
                             VNPay
                           </label>
                         </div>

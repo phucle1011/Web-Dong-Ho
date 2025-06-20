@@ -4,6 +4,11 @@ const OrderDetail = require("../../models/orderDetailsModel");
 const UserModel = require("../../models/usersModel");
 const CartModel = require("../../models/cartDetailsModel");
 const PromotionModel = require("../../models/promotionsModel");
+
+const querystring = require("querystring");
+const moment = require('moment');
+const dateFormat = require('dateformat');
+const now = new Date();
 const { Op } = require("sequelize");
 const sequelize = require('../../config/database');
 
@@ -666,7 +671,6 @@ class OrderController {
                 message: "Đơn hàng đã được tạo sau khi thanh toán thành công.",
                 data: {
                     order: newOrder,
-                    discountApplied: parseFloat(discountAmount) > 0,
                     successfullyOrderedProductIds
                 }
             });
@@ -691,6 +695,120 @@ class OrderController {
         }
     }
 
+    static sortObject(obj) {
+        const sorted = {};
+        const keys = Object.keys(obj).sort();
+        for (const key of keys) {
+            sorted[key] = obj[key];
+        }
+        return sorted;
+    }
+
+    static async createVNPayUrl(req, res) {
+        var ipAddr = req.headers['x-forwarded-for'] ||
+            req.connection.remoteAddress ||
+            req.socket.remoteAddress ||
+            req.connection.socket.remoteAddress;
+
+        const tmnCode = process.env.VNPAY_TMN_CODE;
+        const secretKey = process.env.VNPAY_HASH_SECRET;
+        let vnpUrl = process.env.VNPAY_PAYMENT_URL;
+        const returnUrl = process.env.VNPAY_RETURN_URL;
+
+        const date = new Date();
+        const createDate = moment(date).format("YYYYMMDDHHmmss");
+        const orderId = moment(date).format("HHmmssDDMMYY");
+
+        const amount = parseInt(req.body.amount);
+        if (isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ error: 'Số tiền không hợp lệ' });
+        }
+
+        const bankCode = req.body.bankCode || '';
+        const orderInfo = req.body.orderDescription || '';
+        const orderType = req.body.orderType || 'other';
+        const locale = req.body.language || 'vn';
+
+        const vnp_Params = {
+            'vnp_Version': '2.1.0',
+            'vnp_Command': 'pay',
+            'vnp_TmnCode': tmnCode,
+            'vnp_Locale': locale,
+            'vnp_CurrCode': 'VND',
+            'vnp_TxnRef': orderId,
+            'vnp_OrderInfo': orderInfo,
+            'vnp_OrderType': orderType,
+            'vnp_Amount': amount * 100,
+            'vnp_ReturnUrl': returnUrl,
+            'vnp_IpAddr': ipAddr,
+            'vnp_CreateDate': createDate
+        };
+
+        if (bankCode) {
+            vnp_Params['vnp_BankCode'] = bankCode;
+        }
+
+        const sortedVnpParams = OrderController.sortObject(vnp_Params);
+
+        const qs = require('qs');
+        const signData = qs.stringify(sortedVnpParams, { encode: false });
+
+        const crypto = require("crypto");
+        if (!secretKey) {
+            return res.status(500).json({ error: "Thiếu VNPAY_HASH_SECRET" });
+        }
+
+        const hmac = crypto.createHmac("sha512", secretKey);
+        const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+
+        // Tạo URL mà không chứa chữ ký để tránh lặp lại
+        const finalParams = { ...vnp_Params };
+        finalParams['vnp_SecureHash'] = signed;
+
+        const paymentUrl = vnpUrl + '?' + qs.stringify(finalParams, { encode: false });
+        res.redirect(paymentUrl);
+    }
+
+    static async handleVNPayCallback(req, res) {
+        const vnp_Params = req.query;
+        const secureHash = vnp_Params['vnp_SecureHash'];
+
+        delete vnp_Params['vnp_SecureHash'];
+        delete vnp_Params['vnp_SecureHashType'];
+
+        const sortedVnpParams = OrderController.sortObject(vnp_Params);
+
+        const qs = require('qs');
+        const signData = qs.stringify(sortedVnpParams, { encode: false });
+
+        const crypto = require("crypto");
+        const secretKey = process.env.VNPAY_HASH_SECRET;
+
+        const hmac = crypto.createHmac("sha512", secretKey);
+        const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+
+        if (secureHash && secureHash.toLowerCase() === signed.toLowerCase()) {
+            const rspCode = vnp_Params['vnp_ResponseCode'];
+            const orderId = vnp_Params['vnp_TxnRef'];
+
+            if (rspCode === '00') {
+                return res.status(200).json({
+                    RspCode: '00',
+                    Message: 'success'
+                });
+            } else {
+                return res.status(200).json({
+                    RspCode: '97',
+                    Message: 'Transaction failed'
+                });
+            }
+        } else {
+            return res.status(200).json({
+                RspCode: '97',
+                Message: 'Fail checksum'
+            });
+        }
+    }
 
     static async sendOrderConfirmationEmail(order, user, products, customerEmail, currentDateTime) {
         try {

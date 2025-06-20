@@ -69,6 +69,8 @@ router.get("/orders", checkJWT, OrderController.get);
 router.post("/orders", OrderController.create);
 router.post("/orders-momo", OrderController.createMomoUrl);
 router.post("/payment-notification", OrderController.momoPaymentNotification);
+router.post("/orders-vnpay", OrderController.createVNPayUrl);
+router.get("/vnpay_return", OrderController.handleVNPayCallback);
 router.put("/orders/cancel/:id", OrderController.cancelOrder);
 router.put("/orders/confirm-delivered/:id", OrderController.confirmDelivered);
 
