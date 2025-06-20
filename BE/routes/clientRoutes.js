@@ -19,6 +19,8 @@ const { checkJWT } = require('../services/authCheck');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
+const { changePassword } = require('../controllers/Client/PasswordOldController');
+const authenticate = require('../services/Middleware'); // Middleware để gán req.user
 //------------------[ CLIENT ROUTES ]------------------
 
 //------------------[ CHATBOX ]------------------//
@@ -97,5 +99,6 @@ router.get('/products/discounted', ProductVariantController.getDiscountedProduct
 router.post('/comments', ClientCommentController.addComment);
 router.get('/comment/product/:id', ClientCommentController.getCommentsByProductId);
 
-
+// ------------------[ PasswordOld ]------------------//
+router.post('/change-password', authenticate, changePassword);
 module.exports = router;

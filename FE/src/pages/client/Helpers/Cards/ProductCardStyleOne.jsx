@@ -23,11 +23,11 @@ export default function ProductCardStyleOne({ datas, type }) {
   const product = useMemo(() => datas || {}, [datas]);
   const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
 
-  // Log for debugging
-  useEffect(() => {
-    console.log("ProductCardStyleOne mounted with product.id:", product.id, "variants length:", variants.length);
-    return () => console.log("ProductCardStyleOne unmounted for product.id:", product.id);
-  }, [product.id]);
+  // // Log for debugging
+  // useEffect(() => {
+  //   console.log("ProductCardStyleOne mounted with product.id:", product.id, "variants length:", variants.length);
+  //   return () => console.log("ProductCardStyleOne unmounted for product.id:", product.id);
+  // }, [product.id]);
 
   // Initialize state only once
   useEffect(() => {
@@ -82,9 +82,9 @@ export default function ProductCardStyleOne({ datas, type }) {
         ) {
           displayPrice = parseFloat(initialVariant.promotion.discounted_price);
           discountPercent = parseFloat(initialVariant.promotion.discount_percent) || 0;
-          console.log(
-            `Price calculation for product ${product.id} variant ${initialVariant.id}: discountPercent=${discountPercent}, discountedPrice=${displayPrice}`
-          );
+          // console.log(
+          //   `Price calculation for product ${product.id} variant ${initialVariant.id}: discountPercent=${discountPercent}, discountedPrice=${displayPrice}`
+          // );
         }
 
         discountPercent = Math.round(discountPercent);
@@ -105,9 +105,9 @@ export default function ProductCardStyleOne({ datas, type }) {
       ) {
         displayPrice = parseFloat(product.promotion.discounted_price);
         discountPercent = parseFloat(product.promotion.discount_percent) || 0;
-        console.log(
-          `Price calculation for product ${product.id}: discountPercent=${discountPercent}, discountedPrice=${displayPrice}`
-        );
+        // console.log(
+        //   `Price calculation for product ${product.id}: discountPercent=${discountPercent}, discountedPrice=${displayPrice}`
+        // );
       }
 
       discountPercent = Math.round(discountPercent);
@@ -384,11 +384,11 @@ export default function ProductCardStyleOne({ datas, type }) {
   const handleNavigate = (e) => {
     if (!product.id || product.id === "unknown") {
       e.preventDefault();
-      console.warn("Invalid product ID, preventing navigation:", product.id);
+      // console.warn("Invalid product ID, preventing navigation:", product.id);
       toast.error("Sản phẩm không hợp lệ!");
       return;
     }
-    console.log("Navigating to product:", `/product/${product.id}`);
+    // console.log("Navigating to product:", `/product/${product.id}`);
     navigate(`/product/${product.id}`);
   };
 
