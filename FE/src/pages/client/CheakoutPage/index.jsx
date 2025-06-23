@@ -562,49 +562,53 @@ export default function CheakoutPage() {
     });
   };
 
-  const handleAddAddress = async (addressData) => {
-    try {
-      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+const handleAddAddress = async (addressData) => {
+  try {
+    const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
 
-      if (addressData.is_default === 1) {
-        setDefaultAddress(res.data);
-      }
-
-      fetchAllAddresses();
-
-      toast.success("Thêm địa chỉ thành công");
-    } catch (error) {
-      console.error("Lỗi khi thêm địa chỉ:", error);
-      toast.error("Thêm địa chỉ thất bại");
+    if (addressData.is_default === 1) {
+      setDefaultAddress(res.data);
     }
-  };
 
-  const handleUpdateAddress = async (addressId, addressData) => {
-    const hasOtherDefault = allAddresses.some(
-      (addr) => addr.is_default === 1 && addr.id !== addressId
+    fetchAllAddresses();
+    toast.success("Thêm địa chỉ thành công");
+  } catch (error) {
+    console.error("Lỗi khi thêm địa chỉ:", error);
+    toast.error("Thêm địa chỉ thất bại");
+  }
+};
+
+const handleUpdateAddress = async (addressId, addressData) => {
+  const hasOtherDefault = allAddresses.some(
+    (addr) => addr.is_default === 1 && addr.id !== addressId
+  );
+
+  if (addressData.is_default === 1 && hasOtherDefault) {
+    toast.error("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
+    return;
+  }
+
+  try {
+    const res = await axios.put(
+      `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
+      addressData
     );
+    toast.success("Cập nhật địa chỉ thành công");
 
-    if (addressData.is_default === 1 && hasOtherDefault) {
-      toast.error("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
-      return;
+    const updatedAddresses = allAddresses.map(addr =>
+      addr.id === addressId ? { ...addr, ...addressData } : addr
+    );
+    setAllAddresses(updatedAddresses);
+
+    // Nếu đây là địa chỉ mặc định, cập nhật lại defaultAddress
+    if (addressData.is_default === 1) {
+      setDefaultAddress(updatedAddresses.find(addr => addr.id === addressId));
     }
-
-    try {
-      const res = await axios.put(
-        `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
-        addressData
-      );
-      toast.success("Cập nhật địa chỉ thành công");
-
-      const updatedAddresses = allAddresses.map(addr =>
-        addr.id === addressId ? { ...addr, ...addressData } : addr
-      );
-      setAllAddresses(updatedAddresses);
-    } catch (error) {
-      console.error("Lỗi khi cập nhật địa chỉ:", error);
-      toast.error("Lỗi khi cập nhật địa chỉ");
-    }
-  };
+  } catch (error) {
+    console.error("Lỗi khi cập nhật địa chỉ:", error);
+    toast.error("Lỗi khi cập nhật địa chỉ");
+  }
+};
 
   useEffect(() => {
     return () => {
@@ -644,22 +648,25 @@ export default function CheakoutPage() {
     }
   };
 
-  const confirmSetDefaultAddress = (addressId) => {
-    const address = allAddresses.find(addr => addr.id === addressId);
+const confirmSetDefaultAddress = (addressId) => {
+  const address = allAddresses.find(addr => addr.id === addressId);
 
-    Swal.fire({
-      title: "Xác nhận",
-      text: "Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Đồng ý",
-      cancelButtonText: "Hủy"
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        await handleSetDefaultAddress(addressId);
-      }
-    });
-  };
+  Swal.fire({
+    title: "Xác nhận",
+    text: "Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy"
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      await handleSetDefaultAddress(addressId);
+      // Sau khi đặt làm mặc định, tính lại phí vận chuyển
+      const newDefault = allAddresses.find(addr => addr.id === addressId);
+      setDefaultAddress(newDefault);
+    }
+  });
+};
 
   const getProvinceIdByName = async (provinceName) => {
     try {
@@ -785,8 +792,22 @@ export default function CheakoutPage() {
         address: defaultAddress?.address_line || "",
         note: noteValue,
         promotion: selectedVoucher ? selectedVoucher.id : null,
-        payment_method: selectedPaymentMethod
+        payment_method: selectedPaymentMethod,
+        shipping_fee: finalData.shippingFee || 0,
+        amount: finalData.total
       };
+      
+if (selectedPaymentMethod === "VNPay") {
+  const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
+
+  if (response.data.success && response.data.data?.paymentUrl) {
+    window.location.href = response.data.data.paymentUrl; // Chuyển hướng sang VNPay
+    return;
+  }
+
+  // Chỉ ném lỗi nếu không thành công
+  throw new Error(response.data.message || "Không thể tạo URL thanh toán VNPay");
+}
 
       let url = `${Constants.DOMAIN_API}/orders`;
       if (selectedPaymentMethod === "momo") {
@@ -833,81 +854,134 @@ export default function CheakoutPage() {
     }
   };
 
-  //   const calculateShippingFee = async () => {
-  //     if (!defaultAddress) {
-  //       toast.error("Chưa có địa chỉ mặc định");
-  //       return;
-  //     }
+const calculateShippingFee = async () => {
+  if (!defaultAddress) {
+    setFinalData(prev => ({
+      ...prev,
+      shippingFee: 0,
+      shippingService: "Chưa có địa chỉ",
+      formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+    }));
+    return;
+  }
 
-  //     const { city, district, ward } = defaultAddress;
+  try {
+    // Lấy thông tin địa chỉ
+    const toProvinceId = await getProvinceIdByName(defaultAddress.city);
+    if (!toProvinceId) throw new Error("Không tìm thấy mã tỉnh");
+    
+    const toDistrictId = await getDistrictIdByProvinceAndName(toProvinceId, defaultAddress.district);
+    if (!toDistrictId) throw new Error("Không tìm thấy mã quận");
+    
+    const toWardCode = await getWardCodeByDistrictAndName(toDistrictId, defaultAddress.ward);
+    if (!toWardCode) throw new Error("Không tìm thấy mã phường");
 
-  //     try {
+    const warehouse = {
+      from_province_id: 220,
+      from_district_id: 1574, 
+      from_ward_code: "550110"
+    };
 
-  //       const provinceId = await getProvinceIdByName(city);
-  //       if (!provinceId) throw new Error("Không tìm thấy mã tỉnh");
+    const servicePriority = [
+      { id: 53320, name: "Giao hàng tiêu chuẩn" },
+      { id: 53322, name: "Giao hàng hỏa tốc" }
+    ];
 
-  //       const districtId = await getDistrictIdByProvinceAndName(provinceId, district);
-  //       if (!districtId) throw new Error("Không tìm thấy mã quận");
+    for (const service of servicePriority) {
+      try {
+        const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
+          from_district_id: warehouse.from_district_id,
+          from_ward_code: warehouse.from_ward_code,
+          to_district_id: Number(toDistrictId),
+          to_ward_code: toWardCode,
+          service_id: service.id,
+          weight: 500,
+          length: 20,
+          width: 20,
+          height: 15
+        });
 
-  //       const wardCode = await getWardCodeByDistrictAndName(districtId, ward);
-  //       if (!wardCode) throw new Error("Không tìm thấy mã phường");
+        if (response.data.success) {
+          const shippingFee = response.data.data.total;
+          const total = checkoutItems.reduce(
+            (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
+            0
+          ) - voucherDiscount + shippingFee;
 
-  //       const warehouse = {
-  //         from_district_id: 1447,
-  //         from_ward_code: "281113",
-  //       };
+          setFinalData({
+            total: total,
+            shippingFee: shippingFee,
+            shippingService: service.name,
+            formattedAmount: total.toLocaleString("vi-VN")
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn(`Dịch vụ ${service.name} không khả dụng:`, error.message);
+      }
+    }
 
-  //       const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
-  //         from_district_id: warehouse.from_district_id,
-  //         from_ward_code: warehouse.from_ward_code,
-  //         to_district_id: Number(districtId),
-  //         to_ward_code: wardCode,
-  //         service_id: 53321,
-  //         weight: 500,
-  //         length: 20,
-  //         width: 20,
-  //         height: 15,
-  //         insurance_value: 0,
-  //         to_name: user.name || "Nguyễn Văn A",
-  //         to_phone: user.phone || "0912345678",
-  //         to_address: defaultAddress?.address_line || "123 đường ABC",
-  //         required_note: noteValue,
-  //         // items: checkoutItems.map(item => ({
-  //         //   name: item.variant.sku,
-  //         //   quantity: item.quantity,
-  //         //   price: parseFloat(item.variant.price || 0) * item.quantity
-  //         // }))
-  //       });
+    // Nếu không có dịch vụ nào khả dụng
+    setFinalData(prev => ({
+      ...prev,
+      shippingFee: 0,
+      shippingService: "Không hỗ trợ giao hàng tới khu vực này",
+      formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+    }));
 
-  //       if (response.data.success && response.data.data) {
-  //         const shippingFee = response.data.data.total || 0;
-  //         setFinalData(prev => ({
-  //           ...prev,
-  //           shippingFee: shippingFee,
-  //           formattedAmount: ((prev?.total || 0) + shippingFee).toLocaleString("vi-VN")
-  //         }));
-  //         toast.success(`Phí vận chuyển: ${shippingFee.toLocaleString("vi-VN")}₫`);
-  //       } else {
-  //         toast.error("Không thể tính phí vận chuyển");
-  //       }
-  // } catch (error) {
-  //   console.error("❌ Lỗi khi tính phí vận chuyển:", error);
+  } catch (error) {
+    console.error("Lỗi tính phí vận chuyển:", error);
+    setFinalData(prev => ({
+      ...prev,
+      shippingFee: 0,
+      shippingService: "Lỗi tính phí",
+      formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+    }));
+  }
+};
 
-  //   if (error.response?.data?.message?.includes('route not found')) {
-  //     toast.error("Tuyến đường này không được GHN hỗ trợ. Vui lòng chọn phương thức vận chuyển khác.");
-  //   } else if (error.response?.data?.message) {
-  //     toast.error(error.response.data.message); // Hiển thị lỗi từ API nếu có
-  //   } else {
-  //     toast.error("Có lỗi xảy ra khi tính phí vận chuyển");
-  //   }
-  // }
-  //   };
+  // Hàm phụ trợ chuyển đổi service_id thành tên dịch vụ
+  const getServiceName = (serviceId) => {
+    const services = {
+      53320: "Tiêu chuẩn",
+      53321: "Tiết kiệm",
+      53322: "Hỏa tốc"
+    };
+    return services[serviceId] || `Dịch vụ ${serviceId}`;
+  };
 
-  //   useEffect(() => {
-  //     if (defaultAddress) {
-  //       calculateShippingFee();
-  //     }
-  //   }, [defaultAddress]);
+  useEffect(() => {
+    if (defaultAddress) {
+      calculateShippingFee();
+    }
+  }, [defaultAddress]);
+
+  useEffect(() => {
+  // Tính tổng tiền hàng
+  const subTotal = checkoutItems.reduce(
+    (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
+    0
+  );
+  
+  // Cập nhật tổng (chưa bao gồm phí vận chuyển)
+  setFinalData(prev => ({
+    ...prev,
+    total: subTotal - voucherDiscount,
+    formattedAmount: (subTotal - voucherDiscount + prev.shippingFee).toLocaleString("vi-VN")
+  }));
+  
+  // Tính phí vận chuyển nếu có địa chỉ
+  if (defaultAddress) {
+    calculateShippingFee();
+  }
+}, [checkoutItems, voucherDiscount, defaultAddress]);
+
+useEffect(() => {
+  // Tự động tính phí vận chuyển khi địa chỉ mặc định thay đổi
+  if (defaultAddress) {
+    calculateShippingFee();
+  }
+}, [defaultAddress]); // Thêm dependency là defaultAddress
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -1196,25 +1270,33 @@ export default function CheakoutPage() {
                     </div>
                   )}
 
-                  {/* Hiển thị phí vận chuyển nếu đã có dữ liệu */}
-                  {finalData?.shippingFee > 0 && (
-                    <div className="mt-4 p-3 bg-gray-100 rounded-md text-center">
-                      <span className="text-lg font-semibold text-qred">
-                        Phí vận chuyển: {finalData.shippingFee.toLocaleString("vi-VN") || 0}₫
-                      </span>
-                    </div>
-                  )}
-
-                  {checkoutItems.length > 0 && (
-                    <div className="mt-6 pt-4 border-t flex justify-between items-center">
-                      <span className="text-xl font-bold">Tổng cộng:</span>
-                      <span className="text-xl font-bold text-qred">
-                        <p className="text-[18px] font-bold text-qred">
-                          {finalData.formattedAmount}₫
-                        </p>
-                      </span>
-                    </div>
-                  )}
+<div className="mt-4 border-t pt-4">
+  <div className="flex justify-between items-center mb-2">
+    <span className="text-gray-600">Phí vận chuyển:</span>
+    <div className="text-right">
+      {finalData.shippingService === "Đang tính..." ? (
+        <span className="text-gray-500 text-sm">Đang tính phí...</span>
+      ) : (
+        <>
+          <span className="font-semibold">
+            {finalData.shippingFee ? `${finalData.shippingFee.toLocaleString("vi-VN")}₫` : 'Không hỗ trợ'}
+          </span>
+          {finalData.shippingService && (
+            <span className="text-xs text-gray-500 block">({finalData.shippingService})</span>
+          )}
+        </>
+      )}
+    </div>
+  </div>
+  
+  {/* Hiển thị tổng cộng */}
+  <div className="flex justify-between items-center pt-2 border-t mt-2">
+    <span className="text-lg font-bold">Tổng cộng:</span>
+    <span className="text-xl font-bold text-qred">
+      {finalData.formattedAmount || "0"}₫
+    </span>
+  </div>
+</div>
 
                   <div className="shipping mt-[30px]">
                     <ul className="flex flex-col space-y-1">
