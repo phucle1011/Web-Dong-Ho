@@ -23,11 +23,7 @@ export default function ProductCardStyleOne({ datas, type }) {
   const product = useMemo(() => datas || {}, [datas]);
   const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
 
-  // // Log for debugging
-  // useEffect(() => {
-  //   console.log("ProductCardStyleOne mounted with product.id:", product.id, "variants length:", variants.length);
-  //   return () => console.log("ProductCardStyleOne unmounted for product.id:", product.id);
-  // }, [product.id]);
+ 
 
   // Initialize state only once
   useEffect(() => {
@@ -143,7 +139,7 @@ export default function ProductCardStyleOne({ datas, type }) {
       );
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
-      console.error("Add to cart error:", error);
+      // console.error("Add to cart error:", error);
       toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
     }
   };
@@ -376,7 +372,7 @@ export default function ProductCardStyleOne({ datas, type }) {
 
   // Skip render if product is invalid
   if (!product.id) {
-    console.warn("Skipping render for product with invalid ID:", product);
+    // console.warn("Skipping render for product with invalid ID:", product);
     return null;
   }
 

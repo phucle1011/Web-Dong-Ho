@@ -1,10 +1,65 @@
 import React from "react";
 import InputQuantityCom from "../Helpers/InputQuantityCom";
 import { FaTrashAlt } from "react-icons/fa";
+import axios from "axios";
+import Constants from "../../../Constants";
+import { decodeToken } from "../Helpers/jwtDecode";
+import { toast } from "react-toastify";
+import Swal from "sweetalert2";
 
-export default function ProductsTable({ products = [], onRemove }) {
+export default function ProductsTable({ products = [], onWishlistChange }) {
+  const token = localStorage.getItem("token");
+  let userId = null;
+
+  if (token) {
+    const decoded = decodeToken(token);
+    if (decoded && decoded.id) {
+      userId = decoded.id;
+    }
+  }
+
+  const handleRemove = async (wishlistItemId, productVariantId) => {
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
+      return;
+    }
+
+    // Hiển thị dialog xác nhận với SweetAlert2
+    const result = await Swal.fire({
+      title: "Xác nhận xóa",
+      text: "Bạn có chắc muốn xóa sản phẩm này khỏi danh sách yêu thích?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      const response = await axios.delete(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist/${productVariantId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success(response.data.message || "Đã xóa sản phẩm khỏi danh sách yêu thích!");
+      // Gọi callback để làm mới danh sách
+      if (onWishlistChange) {
+        onWishlistChange();
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi xóa sản phẩm khỏi danh sách yêu thích.";
+      toast.error(errorMessage);
+    }
+  };
+
   return (
-
     <div className={`w-full ${products.length === 0 ? "text-center" : ""}`}>
       {products.length === 0 ? (
         <p className="py-10 text-gray-500">Không có sản phẩm nào trong wishlist.</p>
@@ -23,15 +78,25 @@ export default function ProductsTable({ products = [], onRemove }) {
             </thead>
             <tbody>
               {products.map((item) => {
+                const product = item.variant?.product || {};
+                const price = item.variant?.price
+                  ? parseFloat(item.variant.price).toLocaleString("vi-VN") + " ₫"
+                  : "N/A";
+                const attributes =
+                  item.variant?.attributeValues?.map(
+                    (av) => `${av.attribute?.name || "Thuộc tính"}: ${av.value}`
+                  ).join(", ") || "Chưa có thuộc tính";
+                const imageUrl =
+                  item.variant?.images?.[0]?.image_url ||
+                  product.thumbnail ||
+                  "/default-image.jpg";
 
-                const product = item.variant.product;
-                const price = parseFloat(item.variant.price).toLocaleString("vi-VN") + " ₫";
-                const attributes = item.variant.attributeValues?.map(
-                  (av) => `${av.attribute.name}: ${av.value}`
-                ).join(", ") || "Chưa có thuộc tính";
-                const imageUrl = item.variant.images?.[0]?.image_url || product.thumbnail || "/default-image.jpg";
-
-                console.log("Ảnh sản phẩm:", product.thumbnail, product.image, product.imageUrl);
+                // Sửa console log để tránh undefined
+                console.log("Ảnh sản phẩm:", {
+                  thumbnail: product.thumbnail || "Không có",
+                  image: product.image || "Không có",
+                  imageUrl: imageUrl,
+                });
 
                 return (
                   <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
@@ -40,13 +105,14 @@ export default function ProductsTable({ products = [], onRemove }) {
                         <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">
                           <img
                             src={imageUrl}
-                            alt={product.name}
+                            alt={product.name || "Sản phẩm"}
                             className="w-full h-full object-contain"
                           />
                         </div>
-
                         <div className="flex-1 flex flex-col">
-                          <p className="font-medium text-[15px] text-qblack">{product.name}</p>
+                          <p className="font-medium text-[15px] text-qblack">
+                            {product.name || "Sản phẩm không xác định"}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -54,19 +120,20 @@ export default function ProductsTable({ products = [], onRemove }) {
                     <td className="py-4 text-center">{price}</td>
                     <td className="py-4">
                       <div className="flex justify-center items-center">
-                        <InputQuantityCom />
+                        <InputQuantityCom initialValue={1} disabled={true} />
                       </div>
                     </td>
-                    <td className="text-right py-4">
+                    <td className="text-center py-4">
                       <div className="flex space-x-1 items-center justify-center">
                         <span className="text-[15px] font-normal">{price}</span>
                       </div>
                     </td>
                     <td className="py-4 text-right pr-10">
                       <button
-                        onClick={() => onRemove && onRemove(item.id)}
+                        onClick={() => handleRemove(item.id, item.product_variant_id)}
                         type="button"
                         className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                        title="Xóa khỏi danh sách yêu thích"
                       >
                         <FaTrashAlt size={18} />
                       </button>

@@ -8,10 +8,14 @@ import { FaTrashAlt } from "react-icons/fa";
 import { decodeToken } from "../Helpers/jwtDecode";
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 export default function Wishlist({ wishlist = true }) {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const token = localStorage.getItem("token");
   let userId = null;
 
@@ -24,16 +28,19 @@ export default function Wishlist({ wishlist = true }) {
 
   const fetchWishlist = async () => {
     if (!userId) {
-      console.error("Người dùng chưa xác thực");
+      setError("Vui lòng đăng nhập để xem danh sách yêu thích.");
       setLoading(false);
       return;
     }
 
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/${userId}/wishlist`);
+      const res = await axios.get(`${Constants.DOMAIN_API}/users/${userId}/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setWishlistItems(res.data.data || []);
     } catch (error) {
       console.error('Lỗi khi lấy wishlist:', error);
+      setError("Không thể tải danh sách yêu thích. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -41,35 +48,118 @@ export default function Wishlist({ wishlist = true }) {
 
   useEffect(() => {
     fetchWishlist();
-  }, []);
+  }, [userId]);
 
-  const handleAddAllToCart = () => {
-    // Logic thêm toàn bộ sản phẩm vào giỏ hàng
-    // Ví dụ: Gọi API `/cart/add-multiple` hoặc loop qua từng sản phẩm
-    wishlistItems.forEach(item => {
-      // Gọi API thêm từng sản phẩm vào giỏ
-    });
-  };
+  const handleAddAllToCart = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
 
-  const handleClearWishlist = async () => {
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      setIsProcessing(false);
+      return;
+    }
+
+    if (wishlistItems.length === 0) {
+      toast.info("Danh sách yêu thích trống!");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
-      await axios.delete(`${Constants.DOMAIN_API}/users/${userId}/wishlist/${productVariantId}`);
-      setWishlistItems([]); // Làm trống wishlist local
+      const response = await axios.post(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist/add-to-cart`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(response.data.message || "Đã thêm tất cả sản phẩm vào giỏ hàng!");
     } catch (error) {
-      alert('Không thể làm trống wishlist');
-      console.error('Lỗi khi clear wishlist:', error);
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi thêm sản phẩm vào giỏ hàng.";
+      toast.error(errorMessage);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
+  const handleClearWishlist = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để xóa danh sách yêu thích.");
+      setIsProcessing(false);
+      return;
+    }
+
+    if (wishlistItems.length === 0) {
+      toast.info("Danh sách yêu thích đã trống!");
+      setIsProcessing(false);
+      return;
+    }
+
+    // Hiển thị dialog xác nhận với SweetAlert2
+    const result = await Swal.fire({
+      title: "Xác nhận xóa",
+      text: "Bạn có chắc muốn xóa toàn bộ danh sách yêu thích?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+    });
+
+    if (!result.isConfirmed) {
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      const response = await axios.delete(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setWishlistItems([]);
+      toast.success(response.data.message || "Đã xóa toàn bộ danh sách yêu thích!");
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi xóa danh sách yêu thích.";
+      toast.error(errorMessage);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout childrenClasses="pt-0 pb-0">
+        <div className="w-full text-center py-10">
+          <p>Đang tải danh sách yêu thích...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout childrenClasses="pt-0 pb-0">
+        <div className="w-full text-center py-10 text-red-500">
+          <p>{error}</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout childrenClasses={wishlist ? "pt-0 pb-0" : ""}>
-      {wishlist === false ? (
+      {wishlistItems.length === 0 ? (
         <div className="wishlist-page-wrapper w-full">
           <div className="container-x mx-auto">
             <BreadcrumbCom
               paths={[
-                { name: "home", path: "/" },
-                { name: "wishlist", path: "/wishlist" },
+                { name: "Trang chủ", path: "/" },
+                { name: "Danh sách yêu thích", path: "/wishlist" },
               ]}
             />
             <EmptyWishlistError />
@@ -88,20 +178,32 @@ export default function Wishlist({ wishlist = true }) {
           </div>
           <div className="w-full mt-[23px]">
             <div className="container-x mx-auto">
-              <ProductsTable className="mb-[30px]"
+              <ProductsTable
+                className="mb-[30px]"
                 products={wishlistItems}
+                onWishlistChange={fetchWishlist}
               />
               <div className="w-full mt-[30px] flex sm:justify-end justify-start">
                 <div className="sm:flex sm:space-x-[30px] items-center">
-                  <button type="button" onClick={handleClearWishlist}>
-                    <div className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200">
+                  <button
+                    type="button"
+                    onClick={handleClearWishlist}
+                    title="Xóa toàn bộ danh sách yêu thích"
+                    disabled={isProcessing}
+                  >
+                    <div className={`p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       <FaTrashAlt size={18} />
                     </div>
                   </button>
                   <div className="w-[180px] h-[50px]">
-                    <button type="button" className="yellow-btn">
+                    <button
+                      type="button"
+                      onClick={handleAddAllToCart}
+                      className={`yellow-btn text-sm font-semibold w-full h-full ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isProcessing}
+                    >
                       <div className="w-full text-sm font-semibold">
-                        Thêm tất cả vào giỏ hàng
+                        {isProcessing ? 'Đang xử lý...' : 'Thêm tất cả vào giỏ hàng'}
                       </div>
                     </button>
                   </div>

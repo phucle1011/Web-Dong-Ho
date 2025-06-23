@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Selectbox from "../Helpers/Selectbox";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import { Star, StarHalf, Star as StarOutline } from "lucide-react"; // hoặc icon bạn dùng
+import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 import { decodeToken } from "../Helpers/jwtDecode";
 import { toast } from "react-toastify";
 import Constants from "../../../Constants";
@@ -18,21 +18,18 @@ export default function ProductView({ className, reportHandler }) {
   const [variantImages, setVariantImages] = useState([]);
   const [allVariants, setAllVariants] = useState([]);
   const [filteredVariants, setFilteredVariants] = useState([]);
-
-  // Gom state chọn thuộc tính
-
   const [selectedImage, setSelectedImage] = useState("");
+  const [isInWishlist, setIsInWishlist] = useState(false);
   const { id: productId } = useParams();
+
   useEffect(() => {
     window.scrollTo(0, 0);
     async function fetchProduct() {
       try {
         setLoading(true);
-
         const res = await axios.get(
           `${Constants.DOMAIN_API}/products/${productId}/variants`
         );
-
         const { product } = res.data;
         setProductData(product);
         setVariants(product.variants);
@@ -42,7 +39,6 @@ export default function ProductView({ className, reportHandler }) {
           const firstVariant = product.variants[0];
           setSelectedVariant(firstVariant);
           setFilteredVariants([firstVariant]);
-
           const firstImages = firstVariant.images || [];
           setVariantImages(firstImages);
           if (firstImages.length > 0) {
@@ -50,32 +46,8 @@ export default function ProductView({ className, reportHandler }) {
           } else if (product.thumbnail) {
             setSelectedImage(product.thumbnail);
           }
+          await checkWishlistStatus(firstVariant.id);
         }
-
-        // Trích xuất các loại thuộc tính
-        const extractAttributeValues = (attrName, keyName) => {
-          const seen = new Set();
-
-          return product.variants
-            .map((variant) => {
-              const attr = variant.attributeValues.find(
-                (a) => a.attribute.name === attrName
-              );
-              return {
-                id: variant.id,
-                [keyName]: attr ? attr.value : null,
-                image: variant.images[0]?.image_url || "",
-              };
-            })
-            .filter((item) => {
-              const value = item[keyName];
-              if (!value || seen.has(value)) return false;
-              seen.add(value);
-              return true;
-            });
-        };
-
-        // Ảnh mặc định
         const firstImage = product.thumbnail;
         if (firstImage) setSelectedImage(firstImage);
       } catch (err) {
@@ -84,9 +56,42 @@ export default function ProductView({ className, reportHandler }) {
         setLoading(false);
       }
     }
-
     fetchProduct();
   }, [productId]);
+
+  useEffect(() => {
+    if (selectedVariant) {
+      checkWishlistStatus(selectedVariant.id);
+    }
+  }, [selectedVariant]);
+
+  const checkWishlistStatus = async (variantId) => {
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!token || !userId) {
+      setIsInWishlist(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );f
+      // Check if the variantId exists in the wishlist data
+      const isInWishlist = response.data.data.some(
+        (item) => item.product_variant_id === variantId
+      );
+      setIsInWishlist(isInWishlist);
+    } catch (error) {
+      setIsInWishlist(false);
+      console.error("Error checking wishlist status:", error);
+    }
+  };
 
   const getAttrValue = (variant, attrName) => {
     const attr = variant.attributeValues.find(
@@ -98,30 +103,64 @@ export default function ProductView({ className, reportHandler }) {
   const increment = () => setQuantity((q) => q + 1);
   const decrement = () => setQuantity((q) => Math.max(1, q - 1));
 
-  if (loading) return <div>Loading product...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!productData) return null;
-  const changeImgHandler = (url) => {
-    setSelectedImage(url);
-  };
-
-  const handleVariantSelect = (variant) => {
-    if (!variant || selectedVariant?.id === variant.id) {
-      // Nếu đã chọn rồi thì không làm gì cả
+  const handleAddToWishlist = async () => {
+    if (!selectedVariant) {
+      toast.error("Vui lòng chọn biến thể sản phẩm.");
       return;
     }
 
-    const newFiltered = variants.filter((v) => v.id === variant.id);
-    setFilteredVariants(newFiltered);
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
 
-    const newImages = newFiltered.flatMap((v) => v.images || []);
-    setVariantImages(newImages);
-
-    if (newImages.length > 0) {
-      setSelectedImage(newImages[0].image_url);
+    if (!token || !userId) {
+      toast.error("Bạn cần đăng nhập để thêm sản phẩm vào danh sách yêu thích.");
+      return;
     }
 
-    setSelectedVariant(variant);
+    try {
+      const response = await axios.post(`${Constants.DOMAIN_API}/wishlist`, {
+        userId,
+        productVariantId: selectedVariant.id,
+      });
+      toast.success(response.data.message);
+      setIsInWishlist(true);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi thêm vào danh sách yêu thích.";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleRemoveFromWishlist = async () => {
+    if (!selectedVariant) {
+      toast.error("Vui lòng chọn biến thể sản phẩm.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!token || !userId) {
+      toast.error("Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
+      return;
+    }
+
+    try {
+      const response = await axios.delete(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist/${selectedVariant.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success(response.data.message);
+      setIsInWishlist(false);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi xóa khỏi danh sách yêu thích.";
+      toast.error(errorMessage);
+    }
   };
 
   const handleAddToCart = async (variantId, quantity) => {
@@ -132,7 +171,6 @@ export default function ProductView({ className, reportHandler }) {
 
     const token = localStorage.getItem("token");
     const decoded = decodeToken(token);
-
     const userId = decoded?.id;
 
     if (!token || !userId) {
@@ -144,7 +182,7 @@ export default function ProductView({ className, reportHandler }) {
       const response = await axios.post(
         `${Constants.DOMAIN_API}/add-to-carts`,
         {
-          userId, // Gửi thêm userId
+          userId,
           productVariantId: variantId,
           quantity,
         },
@@ -154,32 +192,53 @@ export default function ProductView({ className, reportHandler }) {
           },
         }
       );
-
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
     }
   };
 
-  const avgRating = productData.averageRating; // trung bình từ API
-  const ratingCount = productData.ratingCount; // tổng số lượt đánh giá
+  if (loading) return <div>Loading product...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!productData) return null;
+
+  const changeImgHandler = (url) => {
+    setSelectedImage(url);
+  };
+
+  const handleVariantSelect = (variant) => {
+    if (!variant || selectedVariant?.id === variant.id) {
+      return;
+    }
+    const newFiltered = variants.filter((v) => v.id === variant.id);
+    setFilteredVariants(newFiltered);
+    const newImages = newFiltered.flatMap((v) => v.images || []);
+    setVariantImages(newImages);
+    if (newImages.length > 0) {
+      setSelectedImage(newImages[0].image_url);
+    }
+    setSelectedVariant(variant);
+  };
+
+  const avgRating = productData?.averageRating || 0;
+  const ratingCount = productData?.ratingCount || 0;
 
   const renderStars = (avgRating) => {
-    const fullStars = Math.floor(avgRating);
-    const hasHalfStar = avgRating % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
+    const fullStars = parseInt(avgRating);
+    const hasHalfStar = avgRating % 0.5 >= 1;
+    const emptyStars = 5;
+    fullStars - (hasHalfStar ? 1 : 0);
     return (
       <>
         {Array(fullStars)
           .fill()
-          .map((_, i) => (
+          .fill((_, i) => (
             <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" />
           ))}
         {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
         {Array(emptyStars)
           .fill()
-          .map((_, i) => (
+          .fill((_, i) => (
             <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
           ))}
       </>
@@ -196,7 +255,6 @@ export default function ProductView({ className, reportHandler }) {
         <div className="w-full">
           <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
             <img src={selectedImage} alt="" className="object-contain" />
-
             {allVariants.some(
               (variant) =>
                 variant.promotionProducts &&
@@ -226,7 +284,6 @@ export default function ProductView({ className, reportHandler }) {
           </div>
         </div>
       </div>
-
       <div className="flex-1">
         <div className="product-details w-full mt-10 lg:mt-0">
           <span
@@ -241,29 +298,21 @@ export default function ProductView({ className, reportHandler }) {
           >
             {productData.name}
           </p>
-
           <div
             data-aos="fade-up"
             className="flex space-x-[10px] items-center mb-6"
           >
-            <div
-              data-aos="fade-up"
-              className="flex space-x-[10px] items-center mb-6"
-            >
-              <div className="flex">{renderStars(avgRating)}</div>
-              <span className="text-[13px] font-normal text-qblack">
-                {ratingCount} Reviews
-              </span>
-            </div>
+            <div className="flex">{renderStars(avgRating)}</div>
+            <span className="text-[13px] font-normal text-qblack">
+              {ratingCount} Reviews
+            </span>
           </div>
-
           <p
             data-aos="fade-up"
             className="text-qgray text-sm text-normal mb-[30px] leading-7"
           >
             {productData.description}
           </p>
-
           <span className="block text-sm font-semibold uppercase text-gray-600 mb-4 mt-8">
             Biến thể
           </span>
@@ -281,18 +330,16 @@ export default function ProductView({ className, reportHandler }) {
               const salePrice = Number(variant.final_price || 0);
               const inStock = variant.stock > 0;
               const isSelected = selectedVariant?.id === variant.id;
-
               return (
                 <div
                   key={variant.id}
                   className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition
-        ${
-          inStock
-            ? "cursor-pointer hover:shadow"
-            : "opacity-50 cursor-not-allowed"
-        }
-        ${isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""}
-      `}
+                    ${
+                      inStock
+                        ? "cursor-pointer hover:shadow"
+                        : "opacity-50 cursor-not-allowed"
+                    }
+                    ${isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""}`}
                   onClick={() => {
                     if (inStock) {
                       handleVariantSelect(variant);
@@ -301,7 +348,6 @@ export default function ProductView({ className, reportHandler }) {
                   }}
                 >
                   <p className="font-semibold uppercase">{name}</p>
-
                   {salePrice > 0 && salePrice < originalPrice ? (
                     <div className="text-red-600 font-bold text-lg">
                       <span>{salePrice.toLocaleString("vi-VN")}₫</span>
@@ -314,13 +360,11 @@ export default function ProductView({ className, reportHandler }) {
                       {originalPrice.toLocaleString("vi-VN")}₫
                     </p>
                   )}
-
                   <p>{inStock ? `Còn lại: ${variant.stock}` : "Hết hàng"}</p>
                 </div>
               );
             })}
           </div>
-
           {selectedVariant && (
             <div className="mt-4">
               <h4 className="font-semibold mb-2">Thuộc tính của biến thể:</h4>
@@ -360,9 +404,7 @@ export default function ProductView({ className, reportHandler }) {
               </table>
             </div>
           )}
-
           <div data-aos="fade-up" className="product-size mb-[30px]"></div>
-
           <div
             data-aos="fade-up"
             className="quantity-card-wrapper w-full flex items-center h-[50px] space-x-[10px] mb-[30px]"
@@ -387,18 +429,21 @@ export default function ProductView({ className, reportHandler }) {
               </div>
             </div>
             <div className="w-[60px] h-full flex justify-center items-center border border-qgray-border">
-              <button type="button">
+              <button
+                type="button"
+                onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+              >
                 <span>
                   <svg
                     width="24"
                     height="24"
                     viewBox="0 0 24 24"
-                    fill="none"
+                    fill={isInWishlist ? "#FF0000" : "none"}
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
                       d="M17 1C14.9 1 13.1 2.1 12 3.7C10.9 2.1 9.1 1 7 1C3.7 1 1 3.7 1 7C1 13 12 22 12 22C12 22 23 13 23 7C23 3.7 20.3 1 17 1Z"
-                      stroke="#D5D5D5"
+                      stroke={isInWishlist ? "#FF0000" : "#D5D5D5"}
                       strokeWidth="2"
                       strokeMiterlimit="10"
                       strokeLinecap="square"
@@ -407,7 +452,6 @@ export default function ProductView({ className, reportHandler }) {
                 </span>
               </button>
             </div>
-
             <div className="flex-1 h-full">
               <button
                 type="button"
@@ -418,23 +462,20 @@ export default function ProductView({ className, reportHandler }) {
                     );
                     return;
                   }
-
                   if (quantity > selectedVariant.stock) {
                     toast.error(
                       `Chỉ còn ${selectedVariant.stock} sản phẩm trong kho`
                     );
                     return;
                   }
-
                   handleAddToCart(selectedVariant.id, quantity);
                 }}
                 className="black-btn text-sm font-semibold w-full h-full"
               >
-                THÊM GIỎ HÀNG{" "}
+                THÊM GIỎ HÀNG
               </button>
             </div>
           </div>
-
           <div data-aos="fade-up" className="mb-[20px]">
             <p className="text-[13px] text-qgray leading-7">
               <span className="text-qblack">Category :</span>{" "}
@@ -443,11 +484,7 @@ export default function ProductView({ className, reportHandler }) {
             <p className="text-[13px] text-qgray leading-7">
               <span className="text-qblack">Brand :</span> {productData.brand}
             </p>
-            {/* <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">SKU:</span> KE-91039
-            </p> */}
           </div>
-
           <div
             data-aos="fade-up"
             className="flex space-x-2 items-center mb-[20px]"
@@ -466,7 +503,6 @@ export default function ProductView({ className, reportHandler }) {
                 />
               </svg>
             </span>
-
             <button
               type="button"
               onClick={reportHandler}
@@ -475,15 +511,13 @@ export default function ProductView({ className, reportHandler }) {
               Report This Item
             </button>
           </div>
-
           <div
             data-aos="fade-up"
-            className="social-share flex  items-center w-full"
+            className="social-share flex items-center w-full"
           >
             <span className="text-qblack text-[13px] mr-[17px] inline-block">
               Share This
             </span>
-
             <div className="flex space-x-5 items-center">
               <span>
                 <svg
