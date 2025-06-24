@@ -4,7 +4,7 @@ const ProductVariantsModel = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
 const UserModel = require('../../models/usersModel');
 const PromotionModel = require('../../models/promotionsModel');
-
+const CommentModel = require('../../models/commentsModel');
 const { Op } = require('sequelize');
 const axios = require('axios');
 const ExcelJS = require('exceljs');
@@ -121,7 +121,7 @@ class OrderController {
                     {
                         model: OrderDetailsModel,
                         as: 'orderDetails',
-                        attributes: ['quantity', 'price'],
+                        attributes: ['id','quantity', 'price'],
                         include: [
                             {
                                 model: ProductVariantsModel,
@@ -131,10 +131,16 @@ class OrderController {
                                     {
                                         model: ProductModel,
                                         as: 'product',
-                                        attributes: ['name']
+                                        attributes: ['id','name']
                                     }
                                 ]
-                            }
+                            },
+                                                 {
+    model: CommentModel,
+    as: 'comments',
+    attributes: ['id', 'rating', 'comment_text'],
+    required: false,
+  },
                         ]
                     },
                     {

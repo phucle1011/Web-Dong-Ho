@@ -4,14 +4,41 @@ const OrderDetailModel = require('../../models/orderDetailsModel');
 const ProductVariantModel = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
 const UserModel = require('../../models/usersModel');
+const axios = require("axios");
+const checkImageModeration = async (imageUrl) => {
+  try {
+    const response = await axios.get("https://api.sightengine.com/1.0/check.json", {
+      params: {
+        url: imageUrl,
+        models: "nudity,wad,offensive",
+        api_user: process.env.SIGHTENGINE_USER,     // 👈 bạn cần set trong .env
+        api_secret: process.env.SIGHTENGINE_SECRET, // 👈 bạn cần set trong .env
+      },
+    });
 
+    const result = response.data;
+
+    const isNude = result.nudity?.safe < 0.85;
+    const isWeapon = result.weapon > 0.5;
+    const isOffensive = result.offensive?.prob > 0.5;
+
+    if (isNude || isWeapon || isOffensive) {
+      return { valid: false, reason: result };
+    }
+
+    return { valid: true, reason: result };
+  } catch (err) {
+    console.error("Lỗi kiểm duyệt ảnh:", err.message);
+    return { valid: false, reason: "Lỗi kiểm duyệt ảnh" };
+  }
+};
 class ClientCommentController {
   // ===== 1. Gửi bình luận =====
 static async addComment(req, res) {
   const t = await CommentModel.sequelize.transaction();
   try {
     const {
-      user_id,
+      user_id, // 👈 Lấy trực tiếp từ FE
       order_detail_id,
       rating,
       comment_text,
@@ -19,7 +46,43 @@ static async addComment(req, res) {
       images = []
     } = req.body;
 
-    // 1. Tạo bình luận
+    if (!user_id) {
+      await t.rollback();
+      return res.status(401).json({ success: false, message: "Thiếu user_id" });
+    }
+
+    const [results] = await CommentModel.sequelize.query(
+      'SELECT id FROM comments WHERE user_id = ? AND order_detail_id = ? LIMIT 1',
+      {
+        replacements: [user_id, order_detail_id],
+        type: CommentModel.sequelize.QueryTypes.SELECT,
+        transaction: t
+      }
+    );
+
+    if (results && results.id) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Bạn đã đánh giá sản phẩm này rồi."
+      });
+    }
+
+    // ✅ Kiểm duyệt ảnh bằng Sightengine
+    if (images.length > 0) {
+      for (const imageUrl of images) {
+        const result = await checkImageModeration(imageUrl);
+        if (!result.valid) {
+          await t.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Ảnh không phù hợp. Vui lòng chọn ảnh khác.",
+            reason: result.reason,
+          });
+        }
+      }
+    }
+
     const newComment = await CommentModel.create({
       user_id,
       order_detail_id,
@@ -28,13 +91,11 @@ static async addComment(req, res) {
       comment_text
     }, { transaction: t });
 
-    // 2. Nếu có ảnh thì lưu vào bảng comment_images
     if (images.length > 0) {
       const commentImages = images.map(url => ({
         comment_id: newComment.id,
         image_url: url
       }));
-
       await CommentImageModel.bulkCreate(commentImages, { transaction: t });
     }
 
@@ -55,6 +116,9 @@ static async addComment(req, res) {
     });
   }
 }
+
+
+
 
 
   // ===== 2. Lấy bình luận theo product_id =====

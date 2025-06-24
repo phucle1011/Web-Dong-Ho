@@ -21,7 +21,7 @@ const CommentModel = connection.define('comments', {
     },
     rating: {
         type: DataTypes.INTEGER,
-        allowNull: false 
+        allowNull: true 
     },
     comment_text: {
         type: DataTypes.TEXT,

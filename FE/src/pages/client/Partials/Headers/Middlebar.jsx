@@ -1,3 +1,4 @@
+// 📁 src/components/Middlebar.jsx
 import Cart from "../../Cart";
 import Compair from "../../Helpers/icons/Compair";
 import ThinBag from "../../Helpers/icons/ThinBag";
@@ -10,8 +11,8 @@ import axios from "axios";
 import Constants from "../../../../Constants";
 
 export default function Middlebar({ className, type }) {
-
-    const [count, setCount] = useState(0);
+  const [count, setCount] = useState(0);
+  const [compareCount, setCompareCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -25,7 +26,6 @@ export default function Middlebar({ className, type }) {
         });
 
         const count = res.data?.count ?? 0;
-
         setCount(count);
       } catch (err) {
         console.error("Không lấy được số lượng giỏ hàng", err);
@@ -33,6 +33,20 @@ export default function Middlebar({ className, type }) {
     };
 
     fetchCount();
+  }, []);
+
+  useEffect(() => {
+    const updateCompareCount = () => {
+      const list = JSON.parse(localStorage.getItem("compareVariants") || "[]");
+      const count = list.filter(Boolean).length;
+      setCompareCount(count);
+    };
+
+    updateCompareCount();
+    const handleStorageChange = () => updateCompareCount();
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   return (
@@ -80,12 +94,15 @@ export default function Middlebar({ className, type }) {
                     <Compair />
                   </span>
                 </Link>
-                <span
-                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                {compareCount > 0 && (
+                  <span
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
+                      type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
                     }`}
-                >
-                  2
-                </span>
+                  >
+                    {compareCount}
+                  </span>
+                )}
               </div>
               <div className="favorite relative">
                 <Link to="/wishlist">
@@ -94,8 +111,7 @@ export default function Middlebar({ className, type }) {
                   </span>
                 </Link>
                 <span
-                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                    }`}
+                  className={`w-[18px] h-[18px] rounded-full  absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"}`}
                 >
                   1
                 </span>
@@ -108,8 +124,7 @@ export default function Middlebar({ className, type }) {
                     </span>
                   </Link>
                   <span
-                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                      }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"}`}
                   >
                     {count}
                   </span>

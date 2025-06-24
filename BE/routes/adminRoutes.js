@@ -115,6 +115,7 @@ router.delete('/blog/:id', BlogController.delete);
 //------------------[ COMMENT ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
 router.get('/comment/product/:id', CommentController.getCommentsByProductId);
+router.post('/comment/reply',CommentController.replyComment);
 
 //------------------[ BRAND ]------------------\
 router.get('/brand/list', BrandController.get);

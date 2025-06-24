@@ -159,7 +159,7 @@ useEffect(() => {
                           : "border-transparent text-qgray"
                       }`}
                     >
-                      Reviews
+                      Đánh Giá
                     </span>
                   </li>
                   <li>
@@ -171,7 +171,7 @@ useEffect(() => {
                           : "border-transparent text-qgray"
                       }`}
                     >
-                      Seller Info
+                      Thông Tin Người Bán
                     </span>
                   </li>
                 </ul>
@@ -194,7 +194,7 @@ useEffect(() => {
                 {tab === "review" && (
                   <div data-aos="fade-up" className="w-full tab-content-item">
                     <h6 className="text-[18px] font-medium text-qblack mb-2">
-                      Reviews
+                      ĐÁNH GIÁ SẢN PHẨM
                     </h6>
                     {/* review-comments */}
                     <div className="w-full">

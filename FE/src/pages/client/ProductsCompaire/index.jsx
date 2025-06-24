@@ -14,6 +14,7 @@ export default function ProductsCompare() {
   const [selectedVariants, setSelectedVariants] = useState(Array(MAX_COMPARE).fill(null));
   const [filteredLists, setFilteredLists] = useState(Array(MAX_COMPARE).fill([]));
   const [allAttributes, setAllAttributes] = useState([]);
+  const [bestChoice, setBestChoice] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:5000/products/compare")
@@ -43,7 +44,6 @@ export default function ProductsCompare() {
         setVariants(variantList);
         setFilteredLists(Array(MAX_COMPARE).fill(variantList));
 
-        // Tập hợp tất cả tên thuộc tính (dynamic)
         const attrSet = new Set();
         variantList.forEach((v) => {
           v.attributeValues?.forEach((av) => {
@@ -73,7 +73,6 @@ export default function ProductsCompare() {
   };
 
   const handleSelectVariant = (index, variant) => {
-    // Kiểm tra trùng variant ở cột khác
     if (selectedVariants.some((v, idx) => v?.variantId === variant.variantId && idx !== index)) {
       Swal.fire({
         icon: "warning",
@@ -127,7 +126,15 @@ export default function ProductsCompare() {
     return variant.images?.[0]?.image_url || null;
   };
 
-  // Hàm xử lý khi nhấn nút So sánh
+  const calculateScore = (variant) => {
+    let score = 0;
+    if (variant.average_rating) score += variant.average_rating * 10;
+    if (variant.price) score += 10000 / variant.price;
+    if (variant.stock > 0) score += 5;
+    if (variant.brand && variant.brand !== "-") score += 2;
+    return score;
+  };
+
   const handleCompareClick = () => {
     if (!canCompare) {
       Swal.fire({
@@ -137,11 +144,30 @@ export default function ProductsCompare() {
       });
       return;
     }
-    // Ở đây bạn có thể thêm logic so sánh hoặc điều hướng nếu cần
+
+    const scoredVariants = selectedVariants
+      .filter(Boolean)
+      .map((v) => ({ ...v, score: calculateScore(v) }));
+
+    const bestVariant = scoredVariants.reduce((prev, current) =>
+      prev.score > current.score ? prev : current
+    );
+
+    setBestChoice(bestVariant);
+
     Swal.fire({
       icon: "success",
-      title: "Sẵn sàng so sánh!",
-      text: `Bạn đã chọn ${selectedVariants.filter(Boolean).length} biến thể.`,
+      title: "Kết quả so sánh",
+      html: `
+        <p>Sản phẩm đáng mua nhất là:</p>
+        <p><strong>${bestVariant.productName}</strong></p>
+        <p>Giá: ${Number(bestVariant.price).toLocaleString("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        })}</p>
+        <p>Đánh giá: ${bestVariant.average_rating || "Không có"}</p>
+        <img src="${bestVariant.productThumbnail}" alt="Hình ảnh" style="max-width: 150px; margin-top: 10px;" />
+      `,
     });
   };
 
@@ -162,6 +188,7 @@ export default function ProductsCompare() {
           <div className="w-full border border-qgray-border">
             <table className="table-wrapper min-w-[900px] border-collapse border border-gray-300">
               <tbody>
+                {/* Dòng tìm kiếm + sản phẩm */}
                 <tr>
                   <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA] font-semibold">
                     So sánh sản phẩm
@@ -169,62 +196,60 @@ export default function ProductsCompare() {
                       Tìm kiếm và chọn biến thể để so sánh
                     </p>
                   </td>
-                  {Array(MAX_COMPARE)
-                    .fill(0)
-                    .map((_, i) => (
-                      <td key={i} className="w-[235px] bg-white p-4 border border-gray-300">
-                        <InputForm
-                          placeholder="Tìm sản phẩm hoặc biến thể..."
-                          value={searchInputs[i]}
-                          inputHandler={(e) => handleSearchInputChange(i, e.target.value)}
-                        />
-                        {!selectedVariants[i] && searchInputs[i] && (
-                          <ul className="bg-white border border-qgray-border max-h-40 overflow-y-auto mt-1 rounded shadow-md">
-                            {filteredLists[i].slice(0, 5).map((v) => (
-                              <li
-                                key={v.variantId}
-                                className="p-2 cursor-pointer hover:bg-gray-200"
-                                onClick={() => handleSelectVariant(i, v)}
-                              >
-                                {v.productName} - {v.sku}
-                              </li>
-                            ))}
-                            {filteredLists[i].length === 0 && (
-                              <li className="p-2 text-center text-gray-500">Không có kết quả</li>
-                            )}
-                          </ul>
-                        )}
-
-                        {selectedVariants[i] && (
-                          <div className="mt-4">
-                            <div className="flex justify-center mb-3">
-                              <img
-                                src={selectedVariants[i].productThumbnail}
-                                alt={selectedVariants[i].productName}
-                                className="w-[161px] h-[161px] object-contain"
-                              />
-                            </div>
-                            <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-1">
-                              {selectedVariants[i].productName}
-                            </p>
-                            <p className="text-center text-[15px] font-medium text-qred leading-[24px] mb-1">
-                              {Number(selectedVariants[i].price).toLocaleString("vi-VN", {
-                                style: "currency",
-                                currency: "VND",
-                              })}
-                            </p>
-                            <button
-                              className="block mx-auto text-xs text-blue-500 underline"
-                              onClick={() => handleClearVariant(i)}
+                  {Array(MAX_COMPARE).fill(0).map((_, i) => (
+                    <td key={i} className="w-[235px] bg-white p-4 border border-gray-300">
+                      <InputForm
+                        placeholder="Tìm sản phẩm hoặc biến thể..."
+                        value={searchInputs[i]}
+                        inputHandler={(e) => handleSearchInputChange(i, e.target.value)}
+                      />
+                      {!selectedVariants[i] && searchInputs[i] && (
+                        <ul className="bg-white border border-qgray-border max-h-40 overflow-y-auto mt-1 rounded shadow-md">
+                          {filteredLists[i].slice(0, 5).map((v) => (
+                            <li
+                              key={v.variantId}
+                              className="p-2 cursor-pointer hover:bg-gray-200"
+                              onClick={() => handleSelectVariant(i, v)}
                             >
-                              Xóa
-                            </button>
+                              {v.productName} - {v.sku}
+                            </li>
+                          ))}
+                          {filteredLists[i].length === 0 && (
+                            <li className="p-2 text-center text-gray-500">Không có kết quả</li>
+                          )}
+                        </ul>
+                      )}
+                      {selectedVariants[i] && (
+                        <div className="mt-4">
+                          <div className="flex justify-center mb-3">
+                            <img
+                              src={selectedVariants[i].productThumbnail}
+                              alt={selectedVariants[i].productName}
+                              className="w-[161px] h-[161px] object-contain"
+                            />
                           </div>
-                        )}
-                      </td>
-                    ))}
+                          <p className="text-center text-[15px] font-medium text-qblack leading-[24px] mb-1">
+                            {selectedVariants[i].productName}
+                          </p>
+                          <p className="text-center text-[15px] font-medium text-qred leading-[24px] mb-1">
+                            {Number(selectedVariants[i].price).toLocaleString("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            })}
+                          </p>
+                          <button
+                            className="block mx-auto text-xs text-blue-500 underline"
+                            onClick={() => handleClearVariant(i)}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  ))}
                 </tr>
 
+                {/* Các dòng thông tin cơ bản */}
                 {[
                   { label: "Tên sản phẩm", value: (v) => v?.productName || "-" },
                   {
@@ -233,9 +258,7 @@ export default function ProductsCompare() {
                       const url = getImageUrl(v);
                       return url ? (
                         <img src={url} className="w-20 h-20 mx-auto object-contain" alt="" />
-                      ) : (
-                        "-"
-                      );
+                      ) : "-";
                     },
                   },
                   { label: "Mô tả", value: (v) => v?.productDescription || "-" },
@@ -269,12 +292,13 @@ export default function ProductsCompare() {
                     ))}
                   </tr>
                 ))}
+
+                {/* Dòng thuộc tính động */}
                 {allAttributes.map((attr) => (
                   <tr key={attr} className="border-t border-gray-300">
                     <td className="text-sm bg-[#FAFAFA] font-semibold px-[26px] py-[20px]">{attr}</td>
                     {selectedVariants.map((v, i) => {
                       const value = v ? getAttributeValue(v, attr) : "-";
-
                       return (
                         <td key={i} className="text-center text-sm px-[26px] py-[20px]">
                           {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
@@ -284,9 +308,7 @@ export default function ProductsCompare() {
                                 style={{ backgroundColor: value }}
                                 title={value}
                               />
-                            ) : (
-                              "-"
-                            )
+                            ) : "-"
                           ) : (
                             value
                           )}
@@ -295,7 +317,6 @@ export default function ProductsCompare() {
                     })}
                   </tr>
                 ))}
-
               </tbody>
             </table>
           </div>
@@ -303,8 +324,7 @@ export default function ProductsCompare() {
           <div className="text-center mt-6">
             <button
               onClick={handleCompareClick}
-              className={`px-6 py-2 rounded text-white ${canCompare ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
-                }`}
+              className={`px-6 py-2 rounded text-white ${canCompare ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
               disabled={!canCompare}
             >
               So sánh
@@ -315,6 +335,28 @@ export default function ProductsCompare() {
             <p className="text-center mt-6 text-red-600 font-semibold">
               Vui lòng chọn ít nhất {MIN_COMPARE} sản phẩm để so sánh
             </p>
+          )}
+
+          {/* Kết quả sản phẩm tốt nhất */}
+          {bestChoice && (
+            <div className="mt-8 text-center">
+              <h2 className="text-xl font-bold text-green-600 mb-4">🎉 Sản phẩm đáng mua nhất</h2>
+              <div className="inline-block p-4 border border-green-400 rounded shadow">
+                <img
+                  src={bestChoice.productThumbnail}
+                  alt={bestChoice.productName}
+                  className="w-32 h-32 mx-auto object-contain mb-2"
+                />
+                <h3 className="text-lg font-semibold">{bestChoice.productName}</h3>
+                <p className="text-qred font-medium">
+                  {Number(bestChoice.price).toLocaleString("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  })}
+                </p>
+                <p>Đánh giá: {bestChoice.average_rating || "Không có"}</p>
+              </div>
+            </div>
           )}
         </div>
       </div>

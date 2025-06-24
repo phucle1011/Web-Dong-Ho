@@ -192,6 +192,94 @@ class CommentController {
         return res.status(500).json({ success: false, message: 'Lỗi server khi lấy bình luận theo sản phẩm' });
     }
 }
+static async replyComment(req, res) {
+  try {
+    const { parent_id, comment_text } = req.body;
+
+    if (!parent_id || !comment_text) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu parent_id hoặc nội dung trả lời.",
+      });
+    }
+
+    // Lấy comment gốc kèm theo các quan hệ liên quan
+    const parentComment = await CommentModel.findByPk(parent_id, {
+      attributes: [
+        'id',
+        'user_id',
+        'order_detail_id',
+        'parent_id',
+        'rating',
+        'comment_text',
+        'created_at',
+        'updated_at'
+      ],
+      include: [
+        {
+          model: OrderDetailModel,
+          as: 'orderDetail',
+          attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
+          required: true,
+          include: [
+            {
+              model: ProductVariantModel,
+              as: 'variant',
+              attributes: ['id', 'sku', 'price', 'product_id'],
+              required: true,
+            }
+          ]
+        },
+        {
+          model: UserModel,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        },
+        {
+          model: CommentImageModel,
+          as: 'commentImages',
+          attributes: ['id', 'image_url']
+        }
+      ]
+    });
+
+    if (!parentComment) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy bình luận gốc.",
+      });
+    }
+
+    // Dùng user_id đại diện cho admin, hoặc bạn có thể để null nếu cần
+    const adminUserId = 1;
+
+    // Tạo bình luận trả lời
+    const reply = await CommentModel.create({
+      user_id: adminUserId,
+      order_detail_id: parentComment.order_detail_id,
+      parent_id,
+      rating: 0,
+      comment_text,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Trả lời bình luận thành công.",
+      data: reply,
+    });
+
+  } catch (error) {
+    console.error("Lỗi trả lời bình luận:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server khi trả lời bình luận.",
+    });
+  }
 }
+
+
+  }
+
+
 
 module.exports = CommentController;

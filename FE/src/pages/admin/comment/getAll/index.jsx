@@ -1,3 +1,4 @@
+// CommentPage.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants";
@@ -10,84 +11,51 @@ import {
 } from "react-icons/fa";
 
 function CommentPage() {
-  const [allProducts, setAllProducts] = useState([]); // Tất cả sản phẩm có bình luận
+  const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(5);
-
-  const [statusFilter, setStatusFilter] = useState("all"); // filter hiện tại
+  const [statusFilter, setStatusFilter] = useState("all");
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [unrepliedComments, setUnrepliedComments] = useState([]);
+  const [expandedCommentId, setExpandedCommentId] = useState(null);
+  const [replyText, setReplyText] = useState("");
 
-  // Lấy dữ liệu từ API khi load trang
   useEffect(() => {
     fetchComments();
   }, []);
 
-  // Khi allProducts hoặc statusFilter thay đổi thì áp dụng filter
   useEffect(() => {
     applyFilter();
   }, [allProducts, statusFilter]);
 
-  // Khi searchTerm thay đổi, reset trang về 1
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // Tính số lượng theo từng filter
-  const countAll = allProducts.length;
-
-  const countMostComments = allProducts.filter((p) => p.total_comments > 0).length;
-
-  const countHighestRating = allProducts.filter(
-    (p) => parseFloat(p.average_rating) >= 4
-  ).length;
-
-  const countLowestRating = allProducts.filter(
-    (p) => parseFloat(p.average_rating) <= 2
-  ).length;
-
-  // Debug log để kiểm tra sản phẩm có rating thấp
-  useEffect(() => {
-    console.log("Sản phẩm có rating thấp (<=2):", allProducts.filter(
-      (p) => parseFloat(p.average_rating) <= 2
-    ));
-  }, [allProducts]);
-
-  // Hàm áp dụng filter theo statusFilter
   const applyFilter = () => {
+    if (statusFilter === "reply") return;
     let data = [...allProducts];
-
     switch (statusFilter) {
       case "most_comments":
         data = data.filter((p) => p.total_comments > 0);
         data.sort((a, b) => b.total_comments - a.total_comments);
         break;
-
       case "highest_rating":
-        data = data.filter((p) => parseFloat(p.average_rating) >= 4);
-        data.sort(
-          (a, b) => parseFloat(b.average_rating) - parseFloat(a.average_rating)
-        );
+        data = data.filter((p) => p.total_comments > 0);
+        data.sort((a, b) => parseFloat(b.average_rating) - parseFloat(a.average_rating));
         break;
-
       case "lowest_rating":
         data = data.filter((p) => parseFloat(p.average_rating) <= 2);
-        data.sort(
-          (a, b) => parseFloat(a.average_rating) - parseFloat(b.average_rating)
-        );
+        data.sort((a, b) => parseFloat(a.average_rating) - parseFloat(b.average_rating));
         break;
-
-      case "all":
       default:
         data.sort((a, b) => a.product_sku.localeCompare(b.product_sku));
-        break;
     }
-
     setFilteredProducts(data);
     setCurrentPage(1);
   };
 
-  // Lọc theo searchTerm trên filteredProducts
   const filteredAndSearched = filteredProducts.filter((product) =>
     product.product_sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -98,20 +66,18 @@ function CommentPage() {
     currentPage * limit
   );
 
-  // Hàm lấy dữ liệu bình luận từ API
   const fetchComments = async () => {
     try {
-      const response = await axios.get(
-        `${Constants.DOMAIN_API}/admin/comment/list`
-      );
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/list`);
       const comments = response.data.data || [];
-
       const productMap = {};
+      const unrepliedList = [];
 
       comments.forEach((comment) => {
         const productId = comment?.orderDetail?.product_variant_id;
         const sku = comment?.orderDetail?.variant?.sku;
         const rating = comment?.rating;
+        const parentId = comment?.parent_id;
 
         if (!productId || !sku) return;
 
@@ -121,11 +87,20 @@ function CommentPage() {
             product_sku: sku,
             total_comments: 0,
             total_rating: 0,
+            unreplied_comments: 0,
           };
         }
 
         productMap[productId].total_comments += 1;
         productMap[productId].total_rating += rating || 0;
+
+        if (parentId === null) {
+          const hasReply = comments.some((c) => c.parent_id === comment.id);
+          if (!hasReply) {
+            productMap[productId].unreplied_comments += 1;
+            unrepliedList.push(comment);
+          }
+        }
       });
 
       const result = Object.values(productMap).map((item) => ({
@@ -137,16 +112,24 @@ function CommentPage() {
       }));
 
       setAllProducts(result);
-      setCurrentPage(1);
-      setSearchTerm("");
+      setUnrepliedComments(unrepliedList);
     } catch (error) {
       console.error("Lỗi lấy danh sách bình luận:", error);
     }
   };
 
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages && page !== currentPage) {
-      setCurrentPage(page);
+  const handleReplySubmit = async (parentId) => {
+    if (!replyText.trim()) return;
+    try {
+      await axios.post(`${Constants.DOMAIN_API}/admin/comment/reply`, {
+        parent_id: parentId,
+        comment_text: replyText,
+      });
+      setReplyText("");
+      setExpandedCommentId(null);
+      fetchComments();
+    } catch (error) {
+      console.error("Lỗi gửi trả lời:", error);
     }
   };
 
@@ -156,170 +139,116 @@ function CommentPage() {
         <div className="col-12 d-flex align-items-stretch">
           <div className="card w-100">
             <div className="card-body p-4">
-              <h5 className="card-title fw-semibold mb-4">
-                Bình luận theo sản phẩm
-              </h5>
+              <h5 className="card-title fw-semibold mb-4">Bình luận theo sản phẩm</h5>
 
               <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4 mb-4">
-                {[
-                  {
-                    key: "all",
-                    label: "Tất cả sản phẩm",
-                    color: "bg-gray-800",
-                    textColor: "text-white",
-                    count: countAll,
-                  },
-                  {
-                    key: "most_comments",
-                    label: "Nhiều bình luận nhất",
-                    color: "bg-amber-300",
-                    textColor: "text-amber-800",
-                    count: countMostComments,
-                  },
-                  {
-                    key: "highest_rating",
-                    label: "Đánh giá cao nhất",
-                    color: "bg-emerald-300",
-                    textColor: "text-emerald-800",
-                    count: countHighestRating,
-                  },
-                  {
-                    key: "lowest_rating",
-                    label: "Đánh giá thấp nhất",
-                    color: "bg-rose-300",
-                    textColor: "text-rose-800",
-                    count: countLowestRating,
-                  },
-                ].map(({ key, label, color, textColor, count }) => (
+                {[{
+                  key: "all", label: "Tất cả sản phẩm"
+                }, {
+                  key: "most_comments", label: "Nhiều bình luận nhất"
+                }, {
+                  key: "highest_rating", label: "Đánh giá cao nhất"
+                }, {
+                  key: "lowest_rating", label: "Đánh giá thấp nhất"
+                }, {
+                  key: "reply", label: "Trả lời bình luận", count: unrepliedComments.length, color: "bg-blue-300", textColor: "text-blue-800"
+                }].map(({ key, label, count, color, textColor }) => (
                   <button
                     key={key}
                     onClick={() => setStatusFilter(key)}
                     className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${
-                      statusFilter === key
-                        ? "bg-blue-900 text-white"
-                        : "bg-white text-gray-700"
+                      statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"
                     }`}
                   >
                     <span>{label}</span>
-                    <span
-                      className={`inline-block ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${
-                        statusFilter === key
-                          ? "bg-white text-blue-900"
-                          : `${color} ${textColor}`
-                      }`}
-                    >
-                      {count}
-                    </span>
+                    {key === "reply" && (
+                      <span className={`inline-block ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${statusFilter === key ? "bg-white text-blue-900" : `${color} ${textColor}`}`}>{count}</span>
+                    )}
                   </button>
                 ))}
               </div>
 
               {/* Tìm kiếm */}
-              <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
-                <input
-                  type="text"
-                  className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Tìm sản phẩm ..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+              {statusFilter !== "reply" && (
+                <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
+                  <input
+                    type="text"
+                    className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Tìm sản phẩm ..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              )}
 
-              {/* Bảng dữ liệu */}
-              <div className="table-responsive">
-                <table className="table text-nowrap mb-0 align-middle">
-                  <thead className="text-dark fs-4">
-                    <tr>
-                      <th>STT</th>
-                      <th>Sản phẩm</th>
-                      <th>Tổng bình luận</th>
-                      <th>Trung bình đánh giá</th>
-                      <th>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentData.length > 0 ? (
-                      currentData.map((product, index) => (
+              {/* Hiển thị bảng */}
+              {statusFilter !== "reply" ? (
+                <div className="table-responsive">
+                  <table className="table text-nowrap mb-0 align-middle">
+                    <thead className="text-dark fs-4">
+                      <tr>
+                        <th>STT</th>
+                        <th>Sản phẩm</th>
+                        <th>Tổng bình luận</th>
+                        <th>Chưa trả lời</th>
+                        <th>Trung bình đánh giá</th>
+                        <th>Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentData.map((product, index) => (
                         <tr key={product.product_id}>
                           <td>{(currentPage - 1) * limit + index + 1}</td>
                           <td>{product.product_sku}</td>
                           <td>{product.total_comments}</td>
+                          <td>{product.unreplied_comments || 0}</td>
                           <td>{product.average_rating}</td>
                           <td>
-                            <Link
-                              to={`/admin/comments/detail/${product.product_id}`}
-                              className="btn btn-info btn-sm"
-                            >
-                              Xem bình luận
-                            </Link>
+                            <Link to={`/admin/comments/detail/${product.product_id}`} className="btn btn-info btn-sm">Xem bình luận</Link>
                           </td>
                         </tr>
-                      ))
-                    ) : (
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table text-nowrap mb-0 align-middle">
+                    <thead className="text-dark fs-4">
                       <tr>
-                        <td colSpan="5" className="text-center">
-                          Không có sản phẩm nào có bình luận
-                        </td>
+                        <th>STT</th>
+                        <th>Người dùng</th>
+                        <th>Nội dung</th>
+                        <th>Số sao</th>
+                        <th>Ngày</th>
+                        <th>Hành động</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Phân trang */}
-              {totalPages > 0 && (
-                <div className="flex justify-center mt-4 items-center">
-                  <div className="flex items-center space-x-1">
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => handlePageChange(1)}
-                      className="px-2 py-1 border rounded disabled:opacity-50"
-                    >
-                      <FaAngleDoubleLeft />
-                    </button>
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      className="px-2 py-1 border rounded disabled:opacity-50"
-                    >
-                      <FaChevronLeft />
-                    </button>
-
-                    {[...Array(totalPages)].map((_, i) => {
-                      const page = i + 1;
-                      if (page >= currentPage - 1 && page <= currentPage + 1) {
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            className={`px-3 py-1 border rounded ${
-                              currentPage === page
-                                ? "bg-primary text-white"
-                                : "bg-light text-dark"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      }
-                      return null;
-                    })}
-
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      className="px-2 py-1 border rounded disabled:opacity-50"
-                    >
-                      <FaChevronRight />
-                    </button>
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => handlePageChange(totalPages)}
-                      className="px-2 py-1 border rounded disabled:opacity-50"
-                    >
-                      <FaAngleDoubleRight />
-                    </button>
-                  </div>
+                    </thead>
+                    <tbody>
+                      {unrepliedComments.map((comment, index) => (
+                        <>
+                          <tr key={comment.id}>
+                            <td>{index + 1}</td>
+                            <td>{comment.user?.full_name || 'Ẩn danh'}</td>
+                            <td>{comment.comment_text}</td>
+                            <td>{comment.rating}</td>
+                            <td>{new Date(comment.created_at).toLocaleDateString()}</td>
+                            <td>
+                              <button onClick={() => setExpandedCommentId(expandedCommentId === comment.id ? null : comment.id)} className="btn btn-sm btn-primary">Trả lời</button>
+                            </td>
+                          </tr>
+                          {expandedCommentId === comment.id && (
+                            <tr>
+                              <td colSpan="6">
+                                <textarea className="form-control mb-2" rows="3" value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Nhập nội dung trả lời..."></textarea>
+                                <button className="btn btn-success btn-sm" onClick={() => handleReplySubmit(comment.id)}>Gửi trả lời</button>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

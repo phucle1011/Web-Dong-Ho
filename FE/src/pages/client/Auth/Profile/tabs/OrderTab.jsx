@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import { useParams, useNavigate } from "react-router-dom";
 
 export default function OrderTab() {
-
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -167,36 +167,44 @@ export default function OrderTab() {
     setActiveStatus(status);
   };
 
-  const fetchOrderDetails = async (orderId) => {
-    if (!orderId) return;
+ const fetchOrderDetails = async (orderId) => {
+  if (!orderId) return;
 
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  try {
+    const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      if (res.data?.data) {
-        setOrderDetailsMap((prev) => ({
-          ...prev,
-          [orderId]: res.data.data.orderDetails || [],
-        }));
-      } else {
-        setOrderDetailsMap((prev) => ({
-          ...prev,
-          [orderId]: [],
-        }));
-      }
-    } catch (error) {
-      console.error("Lỗi khi tải chi tiết đơn hàng:", error);
-      toast.error("Không thể tải chi tiết đơn hàng");
+    if (res.data?.data) {
+      const orderDetails = res.data.data.orderDetails || [];
+
+      // 👉 Gắn comment đầu tiên (nếu có) vào từng item để dùng cho nút "Xem đánh giá"
+      const processedDetails = orderDetails.map((detail) => ({
+        ...detail,
+        comment: detail.comments?.[0] || null,
+      }));
+
+      setOrderDetailsMap((prev) => ({
+        ...prev,
+        [orderId]: processedDetails,
+      }));
+    } else {
       setOrderDetailsMap((prev) => ({
         ...prev,
         [orderId]: [],
       }));
     }
-  };
+  } catch (error) {
+    console.error("Lỗi khi tải chi tiết đơn hàng:", error);
+    toast.error("Không thể tải chi tiết đơn hàng");
+    setOrderDetailsMap((prev) => ({
+      ...prev,
+      [orderId]: [],
+    }));
+  }
+};
 
   const FormDelete = ({ isOpen, onClose, onConfirm, message = "Bạn có chắc chắn muốn xóa?" }) => {
     const [reason, setReason] = useState("");
@@ -532,6 +540,7 @@ export default function OrderTab() {
                                     <th className="border p-2">Số lượng</th>
                                     <th className="border p-2">Đơn giá</th>
                                     <th className="border p-2">Thành tiền</th>
+                                    <th className="border p-2">Đánh giá</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -554,12 +563,39 @@ export default function OrderTab() {
                                               currency: "VND",
                                             })}
                                           </td>
+                                          <td className="p-2">
+                                            
+<button
+  className={`text-blue-600 hover:underline`}
+  onClick={() => {
+    const orderDetailId = item.id;
+    const product = item.variant?.product;
+    const productId = product?.id;
+
+    if (item.comment) {
+      // ✅ Có đánh giá rồi thì cho phép xem lại
+      navigate(`/product/${productId}#review`);
+      return;
+    }
+
+    if (orderDetailId && productId) {
+      localStorage.setItem("pendingReviewOrderDetailId", orderDetailId);
+      navigate(`/product/${productId}`);
+    } else {
+      toast.error("Không thể xác định sản phẩm để đánh giá.");
+    }
+  }}
+>
+  {item.comment ? "Xem đánh giá" : "Đánh giá"}
+</button>
+
+                                          </td>
                                         </tr>
                                       ))}
 
                                       {Number(order.discount_amount) > 0 && (
                                         <tr className="bg-gray-50">
-                                          <td colSpan={4} className="text-right font-medium p-2 border-t">
+                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
                                             Số tiền giảm giá (nếu có):
                                           </td>
                                           <td className="text-right p-2 border-t text-red-600 font-medium">
@@ -572,7 +608,7 @@ export default function OrderTab() {
                                       )}
 
                                       <tr className="bg-gray-100 font-semibold">
-                                        <td colSpan={4} className="text-right p-2 border-t border-b">Tổng tiền:</td>
+                                        <td colSpan={5} className="text-right p-2 border-t border-b">Tổng tiền:</td>
                                         <td className="text-right p-2 border-t border-b text-blue-600">
                                           {Number(order.total_price).toLocaleString("vi-VN", {
                                             style: "currency",
@@ -583,13 +619,14 @@ export default function OrderTab() {
                                     </>
                                   ) : (
                                     <tr>
-                                      <td colSpan={5} className="border p-2 text-center text-gray-400">
+                                      <td colSpan={6} className="border p-2 text-center text-gray-400">
                                         Không có sản phẩm nào trong đơn này.
                                       </td>
                                     </tr>
                                   )}
                                 </tbody>
                               </table>
+
                             </div>
                           </div>
                         </td>
