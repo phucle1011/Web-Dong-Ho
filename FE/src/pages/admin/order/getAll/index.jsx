@@ -387,7 +387,7 @@ function OrderGetAll() {
                 orders.map((order, index) => (
                   <React.Fragment key={order.id}>
                     <tr>
-                      <td className="p-2 border border-gray-300">{order.id}</td>
+                      <td className="p-2 border border-gray-300">{index + 1}</td>
                       <td className="p-2 border border-gray-300">{order.order_code}</td>
                       <td className="p-2 border border-gray-300">{order.user?.name || "N/A"}</td>
                       <td className="p-2 border border-gray-300">

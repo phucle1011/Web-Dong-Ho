@@ -34,8 +34,8 @@ ProductModel.hasMany(CommentModel, { foreignKey: 'product_id', as: 'comments' })
 CommentModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'commentedProduct' });
 
  // OrderDetails - Product
-OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' });
-ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
+// OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' });
+// ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
 
 // User - Comment
 CommentModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
@@ -86,8 +86,6 @@ ProductModel.belongsTo(BrandModel, { foreignKey: 'brand_id', as: 'brand' });
 // Orders - OrderDetails
 OrderModel.hasMany(OrderDetailModel, { foreignKey: 'order_id', as: 'orderDetails' });
 OrderDetailModel.belongsTo(OrderModel, { foreignKey: 'order_id', as: 'order' });
-
-
 
 // ProductVariant - ProductVariantAttributeValue
 ProductVariantsModel.hasMany(ProductVariantAttributeValueModel, { foreignKey: 'product_variant_id', as: 'attributeValues' });

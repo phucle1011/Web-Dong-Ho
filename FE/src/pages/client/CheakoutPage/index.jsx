@@ -55,7 +55,7 @@ export default function CheakoutPage() {
   const [addressToSetDefault, setAddressToSetDefault] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [noteValue, setNoteValue] = useState("");
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const decoded = decodeToken(token);
   const id = decoded?.id;
 
@@ -562,53 +562,53 @@ export default function CheakoutPage() {
     });
   };
 
-const handleAddAddress = async (addressData) => {
-  try {
-    const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+  const handleAddAddress = async (addressData) => {
+    try {
+      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
 
-    if (addressData.is_default === 1) {
-      setDefaultAddress(res.data);
+      if (addressData.is_default === 1) {
+        setDefaultAddress(res.data);
+      }
+
+      fetchAllAddresses();
+      toast.success("Thêm địa chỉ thành công");
+    } catch (error) {
+      console.error("Lỗi khi thêm địa chỉ:", error);
+      toast.error("Thêm địa chỉ thất bại");
+    }
+  };
+
+  const handleUpdateAddress = async (addressId, addressData) => {
+    const hasOtherDefault = allAddresses.some(
+      (addr) => addr.is_default === 1 && addr.id !== addressId
+    );
+
+    if (addressData.is_default === 1 && hasOtherDefault) {
+      toast.error("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
+      return;
     }
 
-    fetchAllAddresses();
-    toast.success("Thêm địa chỉ thành công");
-  } catch (error) {
-    console.error("Lỗi khi thêm địa chỉ:", error);
-    toast.error("Thêm địa chỉ thất bại");
-  }
-};
+    try {
+      const res = await axios.put(
+        `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
+        addressData
+      );
+      toast.success("Cập nhật địa chỉ thành công");
 
-const handleUpdateAddress = async (addressId, addressData) => {
-  const hasOtherDefault = allAddresses.some(
-    (addr) => addr.is_default === 1 && addr.id !== addressId
-  );
+      const updatedAddresses = allAddresses.map(addr =>
+        addr.id === addressId ? { ...addr, ...addressData } : addr
+      );
+      setAllAddresses(updatedAddresses);
 
-  if (addressData.is_default === 1 && hasOtherDefault) {
-    toast.error("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
-    return;
-  }
-
-  try {
-    const res = await axios.put(
-      `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
-      addressData
-    );
-    toast.success("Cập nhật địa chỉ thành công");
-
-    const updatedAddresses = allAddresses.map(addr =>
-      addr.id === addressId ? { ...addr, ...addressData } : addr
-    );
-    setAllAddresses(updatedAddresses);
-
-    // Nếu đây là địa chỉ mặc định, cập nhật lại defaultAddress
-    if (addressData.is_default === 1) {
-      setDefaultAddress(updatedAddresses.find(addr => addr.id === addressId));
+      // Nếu đây là địa chỉ mặc định, cập nhật lại defaultAddress
+      if (addressData.is_default === 1) {
+        setDefaultAddress(updatedAddresses.find(addr => addr.id === addressId));
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật địa chỉ:", error);
+      toast.error("Lỗi khi cập nhật địa chỉ");
     }
-  } catch (error) {
-    console.error("Lỗi khi cập nhật địa chỉ:", error);
-    toast.error("Lỗi khi cập nhật địa chỉ");
-  }
-};
+  };
 
   useEffect(() => {
     return () => {
@@ -648,25 +648,25 @@ const handleUpdateAddress = async (addressId, addressData) => {
     }
   };
 
-const confirmSetDefaultAddress = (addressId) => {
-  const address = allAddresses.find(addr => addr.id === addressId);
+  const confirmSetDefaultAddress = (addressId) => {
+    const address = allAddresses.find(addr => addr.id === addressId);
 
-  Swal.fire({
-    title: "Xác nhận",
-    text: "Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?",
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonText: "Đồng ý",
-    cancelButtonText: "Hủy"
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      await handleSetDefaultAddress(addressId);
-      // Sau khi đặt làm mặc định, tính lại phí vận chuyển
-      const newDefault = allAddresses.find(addr => addr.id === addressId);
-      setDefaultAddress(newDefault);
-    }
-  });
-};
+    Swal.fire({
+      title: "Xác nhận",
+      text: "Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đồng ý",
+      cancelButtonText: "Hủy"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await handleSetDefaultAddress(addressId);
+        // Sau khi đặt làm mặc định, tính lại phí vận chuyển
+        const newDefault = allAddresses.find(addr => addr.id === addressId);
+        setDefaultAddress(newDefault);
+      }
+    });
+  };
 
   const getProvinceIdByName = async (provinceName) => {
     try {
@@ -745,7 +745,11 @@ const confirmSetDefaultAddress = (addressId) => {
   };
 
   const handleCheckout = async () => {
+    if (isSubmitting) return;
+
     try {
+      setIsSubmitting(true);
+
       const selectedPaymentMethod = (document.querySelector('input[name="payment_method"]:checked')?.value || "").trim();
       if (!selectedPaymentMethod) {
         toast.error("Vui lòng chọn phương thức thanh toán");
@@ -796,18 +800,20 @@ const confirmSetDefaultAddress = (addressId) => {
         shipping_fee: finalData.shippingFee || 0,
         amount: finalData.total
       };
-      
-if (selectedPaymentMethod === "VNPay") {
-  const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
 
-  if (response.data.success && response.data.data?.paymentUrl) {
-    window.location.href = response.data.data.paymentUrl; // Chuyển hướng sang VNPay
-    return;
-  }
+      payload.submitTimestamp = Date.now();
 
-  // Chỉ ném lỗi nếu không thành công
-  throw new Error(response.data.message || "Không thể tạo URL thanh toán VNPay");
-}
+      if (selectedPaymentMethod === "VNPay") {
+        const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
+
+        if (response.data.success && response.data.data?.paymentUrl) {
+          window.location.href = response.data.data.paymentUrl; // Chuyển hướng sang VNPay
+          return;
+        }
+
+        // Chỉ ném lỗi nếu không thành công
+        throw new Error(response.data.message || "Không thể tạo URL thanh toán VNPay");
+      }
 
       let url = `${Constants.DOMAIN_API}/orders`;
       if (selectedPaymentMethod === "momo") {
@@ -851,96 +857,95 @@ if (selectedPaymentMethod === "VNPay") {
       } else {
         toast.error(serverMessage || "Có lỗi xảy ra khi đặt hàng.");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-const calculateShippingFee = async () => {
-  if (!defaultAddress) {
-    setFinalData(prev => ({
-      ...prev,
-      shippingFee: 0,
-      shippingService: "Chưa có địa chỉ",
-      formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
-    }));
-    return;
-  }
-
-  try {
-    // Lấy thông tin địa chỉ
-    const toProvinceId = await getProvinceIdByName(defaultAddress.city);
-    if (!toProvinceId) throw new Error("Không tìm thấy mã tỉnh");
-    
-    const toDistrictId = await getDistrictIdByProvinceAndName(toProvinceId, defaultAddress.district);
-    if (!toDistrictId) throw new Error("Không tìm thấy mã quận");
-    
-    const toWardCode = await getWardCodeByDistrictAndName(toDistrictId, defaultAddress.ward);
-    if (!toWardCode) throw new Error("Không tìm thấy mã phường");
-
-    const warehouse = {
-      from_province_id: 220,
-      from_district_id: 1574, 
-      from_ward_code: "550110"
-    };
-
-    const servicePriority = [
-      { id: 53320, name: "Giao hàng tiêu chuẩn" },
-      { id: 53322, name: "Giao hàng hỏa tốc" }
-    ];
-
-    for (const service of servicePriority) {
-      try {
-        const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
-          from_district_id: warehouse.from_district_id,
-          from_ward_code: warehouse.from_ward_code,
-          to_district_id: Number(toDistrictId),
-          to_ward_code: toWardCode,
-          service_id: service.id,
-          weight: 500,
-          length: 20,
-          width: 20,
-          height: 15
-        });
-
-        if (response.data.success) {
-          const shippingFee = response.data.data.total;
-          const total = checkoutItems.reduce(
-            (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
-            0
-          ) - voucherDiscount + shippingFee;
-
-          setFinalData({
-            total: total,
-            shippingFee: shippingFee,
-            shippingService: service.name,
-            formattedAmount: total.toLocaleString("vi-VN")
-          });
-          return;
-        }
-      } catch (error) {
-        console.warn(`Dịch vụ ${service.name} không khả dụng:`, error.message);
-      }
+  const calculateShippingFee = async () => {
+    if (!defaultAddress) {
+      setFinalData(prev => ({
+        ...prev,
+        shippingFee: 0,
+        shippingService: "Chưa có địa chỉ",
+        formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+      }));
+      return;
     }
 
-    // Nếu không có dịch vụ nào khả dụng
-    setFinalData(prev => ({
-      ...prev,
-      shippingFee: 0,
-      shippingService: "Không hỗ trợ giao hàng tới khu vực này",
-      formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
-    }));
+    try {
+      const toProvinceId = await getProvinceIdByName(defaultAddress.city);
+      if (!toProvinceId) throw new Error("Không tìm thấy mã tỉnh");
 
-  } catch (error) {
-    console.error("Lỗi tính phí vận chuyển:", error);
-    setFinalData(prev => ({
-      ...prev,
-      shippingFee: 0,
-      shippingService: "Lỗi tính phí",
-      formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
-    }));
-  }
-};
+      const toDistrictId = await getDistrictIdByProvinceAndName(toProvinceId, defaultAddress.district);
+      if (!toDistrictId) throw new Error("Không tìm thấy mã quận");
 
-  // Hàm phụ trợ chuyển đổi service_id thành tên dịch vụ
+      const toWardCode = await getWardCodeByDistrictAndName(toDistrictId, defaultAddress.ward);
+      if (!toWardCode) throw new Error("Không tìm thấy mã phường");
+
+      const warehouse = {
+        from_province_id: 220,
+        from_district_id: 1574,
+        from_ward_code: "550110"
+      };
+
+      const servicePriority = [
+        { id: 53320, name: "Giao hàng tiêu chuẩn" },
+        { id: 53322, name: "Giao hàng hỏa tốc" }
+      ];
+
+      for (const service of servicePriority) {
+        try {
+          const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
+            from_district_id: warehouse.from_district_id,
+            from_ward_code: warehouse.from_ward_code,
+            to_district_id: Number(toDistrictId),
+            to_ward_code: toWardCode,
+            service_id: service.id,
+            weight: 500,
+            length: 20,
+            width: 20,
+            height: 15
+          });
+
+          if (response.data.success) {
+            const shippingFee = response.data.data.total;
+            const total = checkoutItems.reduce(
+              (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
+              0
+            ) - voucherDiscount + shippingFee;
+
+            setFinalData({
+              total: total,
+              shippingFee: shippingFee,
+              shippingService: service.name,
+              formattedAmount: total.toLocaleString("vi-VN")
+            });
+            return;
+          }
+        } catch (error) {
+          console.warn(`Dịch vụ ${service.name} không khả dụng:`, error.message);
+        }
+      }
+
+      setFinalData(prev => ({
+        ...prev,
+        shippingFee: 0,
+        shippingService: "Không hỗ trợ giao hàng tới khu vực này",
+        formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+      }));
+
+    } catch (error) {
+      console.error("Lỗi tính phí vận chuyển:", error);
+      setFinalData(prev => ({
+        ...prev,
+        shippingFee: 0,
+        shippingService: "Lỗi tính phí",
+        formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+      }));
+    }
+  };
+
   const getServiceName = (serviceId) => {
     const services = {
       53320: "Tiêu chuẩn",
@@ -957,31 +962,27 @@ const calculateShippingFee = async () => {
   }, [defaultAddress]);
 
   useEffect(() => {
-  // Tính tổng tiền hàng
-  const subTotal = checkoutItems.reduce(
-    (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
-    0
-  );
-  
-  // Cập nhật tổng (chưa bao gồm phí vận chuyển)
-  setFinalData(prev => ({
-    ...prev,
-    total: subTotal - voucherDiscount,
-    formattedAmount: (subTotal - voucherDiscount + prev.shippingFee).toLocaleString("vi-VN")
-  }));
-  
-  // Tính phí vận chuyển nếu có địa chỉ
-  if (defaultAddress) {
-    calculateShippingFee();
-  }
-}, [checkoutItems, voucherDiscount, defaultAddress]);
+    const subTotal = checkoutItems.reduce(
+      (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
+      0
+    );
 
-useEffect(() => {
-  // Tự động tính phí vận chuyển khi địa chỉ mặc định thay đổi
-  if (defaultAddress) {
-    calculateShippingFee();
-  }
-}, [defaultAddress]); // Thêm dependency là defaultAddress
+    setFinalData(prev => ({
+      ...prev,
+      total: subTotal - voucherDiscount,
+      formattedAmount: (subTotal - voucherDiscount + prev.shippingFee).toLocaleString("vi-VN")
+    }));
+
+    if (defaultAddress) {
+      calculateShippingFee();
+    }
+  }, [checkoutItems, voucherDiscount, defaultAddress]);
+
+  useEffect(() => {
+    if (defaultAddress) {
+      calculateShippingFee();
+    }
+  }, [defaultAddress]); 
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -1270,33 +1271,33 @@ useEffect(() => {
                     </div>
                   )}
 
-<div className="mt-4 border-t pt-4">
-  <div className="flex justify-between items-center mb-2">
-    <span className="text-gray-600">Phí vận chuyển:</span>
-    <div className="text-right">
-      {finalData.shippingService === "Đang tính..." ? (
-        <span className="text-gray-500 text-sm">Đang tính phí...</span>
-      ) : (
-        <>
-          <span className="font-semibold">
-            {finalData.shippingFee ? `${finalData.shippingFee.toLocaleString("vi-VN")}₫` : 'Không hỗ trợ'}
-          </span>
-          {finalData.shippingService && (
-            <span className="text-xs text-gray-500 block">({finalData.shippingService})</span>
-          )}
-        </>
-      )}
-    </div>
-  </div>
-  
-  {/* Hiển thị tổng cộng */}
-  <div className="flex justify-between items-center pt-2 border-t mt-2">
-    <span className="text-lg font-bold">Tổng cộng:</span>
-    <span className="text-xl font-bold text-qred">
-      {finalData.formattedAmount || "0"}₫
-    </span>
-  </div>
-</div>
+                  <div className="mt-4 border-t pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">Phí vận chuyển:</span>
+                      <div className="text-right">
+                        {finalData.shippingService === "Đang tính..." ? (
+                          <span className="text-gray-500 text-sm">Đang tính phí...</span>
+                        ) : (
+                          <>
+                            <span className="font-semibold">
+                              {finalData.shippingFee ? `${finalData.shippingFee.toLocaleString("vi-VN")}₫` : 'Không hỗ trợ'}
+                            </span>
+                            {finalData.shippingService && (
+                              <span className="text-xs text-gray-500 block">({finalData.shippingService})</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Hiển thị tổng cộng */}
+                    <div className="flex justify-between items-center pt-2 border-t mt-2">
+                      <span className="text-lg font-bold">Tổng cộng:</span>
+                      <span className="text-xl font-bold text-qred">
+                        {finalData.formattedAmount || "0"}₫
+                      </span>
+                    </div>
+                  </div>
 
                   <div className="shipping mt-[30px]">
                     <ul className="flex flex-col space-y-1">

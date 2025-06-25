@@ -42,8 +42,8 @@ export default function Profile() {
           <div className="w-full my-10">
             <BreadcrumbCom
               paths={[
-                { name: "home", path: "/" },
-                { name: "profile", path: "/profile" },
+                { name: "Trang chủ", path: "/" },
+                { name: "hồ sơ", path: "/profile" },
               ]}
             />
             <div className="w-full bg-white px-10 py-9">

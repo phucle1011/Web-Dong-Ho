@@ -395,10 +395,10 @@ export default function OrderTab() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {orders.map((order, index) => (
                   <React.Fragment key={order.id}>
                     <tr className="bg-white border-b hover:bg-gray-50">
-                      <td className="text-center py-4">{order.id}</td>
+                      <td className="text-center py-4">{index + 1}</td>
                       <td className="text-center py-4">#{order.order_code}</td>
                       <td className="text-center py-4">{order.user?.name || "N/A"}</td>
                       <td className="text-center py-4 px-2 whitespace-nowrap">
