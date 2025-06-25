@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 import { decodeToken } from "../Helpers/jwtDecode";
 import { toast } from "react-toastify";
+import Swal from "sweetalert2";
 import Constants from "../../../Constants";
 
 export default function ProductView({ className, reportHandler }) {
@@ -51,7 +52,7 @@ export default function ProductView({ className, reportHandler }) {
         const firstImage = product.thumbnail;
         if (firstImage) setSelectedImage(firstImage);
       } catch (err) {
-        setError(err.message || "Something went wrong");
+        setError(err.message || "Không thể tải thông tin sản phẩm");
       } finally {
         setLoading(false);
       }
@@ -81,15 +82,15 @@ export default function ProductView({ className, reportHandler }) {
         {
           headers: { Authorization: `Bearer ${token}` },
         }
-      );f
-      // Check if the variantId exists in the wishlist data
+      );
       const isInWishlist = response.data.data.some(
         (item) => item.product_variant_id === variantId
       );
       setIsInWishlist(isInWishlist);
     } catch (error) {
       setIsInWishlist(false);
-      console.error("Error checking wishlist status:", error);
+      console.error("Lỗi khi kiểm tra trạng thái wishlist:", error);
+      toast.error("Không thể kiểm tra trạng thái danh sách yêu thích.");
     }
   };
 
@@ -123,8 +124,9 @@ export default function ProductView({ className, reportHandler }) {
         userId,
         productVariantId: selectedVariant.id,
       });
-      toast.success(response.data.message);
-      setIsInWishlist(true);
+      toast.success(response.data.message || "Đã thêm vào danh sách yêu thích!");
+      setIsInWishlist(true); // Cập nhật ngay lập tức
+      await checkWishlistStatus(selectedVariant.id); // Xác nhận lại từ API
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi thêm vào danh sách yêu thích.";
@@ -147,6 +149,22 @@ export default function ProductView({ className, reportHandler }) {
       return;
     }
 
+    // Hiển thị dialog xác nhận với SweetAlert2
+    const result = await Swal.fire({
+      title: "Xác nhận xóa",
+      text: "Bạn có chắc muốn xóa sản phẩm này khỏi danh sách yêu thích?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
     try {
       const response = await axios.delete(
         `${Constants.DOMAIN_API}/users/${userId}/wishlist/${selectedVariant.id}`,
@@ -154,8 +172,9 @@ export default function ProductView({ className, reportHandler }) {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      toast.success(response.data.message);
-      setIsInWishlist(false);
+      toast.success(response.data.message || "Đã xóa khỏi danh sách yêu thích!");
+      setIsInWishlist(false); // Cập nhật ngay lập tức
+      await checkWishlistStatus(selectedVariant.id); // Xác nhận lại từ API
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi xóa khỏi danh sách yêu thích.";
@@ -198,8 +217,8 @@ export default function ProductView({ className, reportHandler }) {
     }
   };
 
-  if (loading) return <div>Loading product...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div>Đang tải sản phẩm...</div>;
+  if (error) return <div>Lỗi: {error}</div>;
   if (!productData) return null;
 
   const changeImgHandler = (url) => {
@@ -224,21 +243,20 @@ export default function ProductView({ className, reportHandler }) {
   const ratingCount = productData?.ratingCount || 0;
 
   const renderStars = (avgRating) => {
-    const fullStars = parseInt(avgRating);
-    const hasHalfStar = avgRating % 0.5 >= 1;
-    const emptyStars = 5;
-    fullStars - (hasHalfStar ? 1 : 0);
+    const fullStars = Math.floor(avgRating);
+    const hasHalfStar = avgRating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
     return (
       <>
         {Array(fullStars)
           .fill()
-          .fill((_, i) => (
+          .map((_, i) => (
             <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" />
           ))}
         {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
         {Array(emptyStars)
           .fill()
-          .fill((_, i) => (
+          .map((_, i) => (
             <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
           ))}
       </>
@@ -290,7 +308,7 @@ export default function ProductView({ className, reportHandler }) {
             data-aos="fade-up"
             className="text-qgray text-xs font-normal uppercase tracking-wider mb-2 inline-block"
           >
-            Mobile Phones
+            Điện thoại
           </span>
           <p
             data-aos="fade-up"
@@ -304,7 +322,7 @@ export default function ProductView({ className, reportHandler }) {
           >
             <div className="flex">{renderStars(avgRating)}</div>
             <span className="text-[13px] font-normal text-qblack">
-              {ratingCount} Reviews
+              {ratingCount} Đánh giá
             </span>
           </div>
           <p
@@ -325,7 +343,7 @@ export default function ProductView({ className, reportHandler }) {
             }}
           >
             {variants.map((variant) => {
-              const name = variant.name || variant.sku || "Unnamed";
+              const name = variant.name || variant.sku || "Không tên";
               const originalPrice = Number(variant.price || 0);
               const salePrice = Number(variant.final_price || 0);
               const inStock = variant.stock > 0;
@@ -383,7 +401,7 @@ export default function ProductView({ className, reportHandler }) {
                   {selectedVariant.attributeValues.map((attr, index) => (
                     <tr key={index}>
                       <td className="p-2 border border-gray-300">
-                        {attr.attribute?.name}
+                        {attr.attribute?.name || "Không xác định"}
                       </td>
                       <td className="p-2 border border-gray-300">
                         {attr.attribute?.name.toLowerCase() === "color" ? (
@@ -395,7 +413,7 @@ export default function ProductView({ className, reportHandler }) {
                             ></div>
                           </div>
                         ) : (
-                          attr.value
+                          attr.value || "N/A"
                         )}
                       </td>
                     </tr>
@@ -432,6 +450,7 @@ export default function ProductView({ className, reportHandler }) {
               <button
                 type="button"
                 onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+                title={isInWishlist ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
               >
                 <span>
                   <svg
@@ -478,11 +497,11 @@ export default function ProductView({ className, reportHandler }) {
           </div>
           <div data-aos="fade-up" className="mb-[20px]">
             <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">Category :</span>{" "}
+              <span className="text-qblack">Danh mục :</span>{" "}
               {productData.category}
             </p>
             <p className="text-[13px] text-qgray leading-7">
-              <span className="text-qblack">Brand :</span> {productData.brand}
+              <span className="text-qblack">Thương hiệu :</span> {productData.brand}
             </p>
           </div>
           <div
@@ -508,7 +527,7 @@ export default function ProductView({ className, reportHandler }) {
               onClick={reportHandler}
               className="text-qred font-semibold text-[13px]"
             >
-              Report This Item
+              Báo cáo sản phẩm này
             </button>
           </div>
           <div
@@ -516,7 +535,7 @@ export default function ProductView({ className, reportHandler }) {
             className="social-share flex items-center w-full"
           >
             <span className="text-qblack text-[13px] mr-[17px] inline-block">
-              Share This
+              Chia sẻ
             </span>
             <div className="flex space-x-5 items-center">
               <span>

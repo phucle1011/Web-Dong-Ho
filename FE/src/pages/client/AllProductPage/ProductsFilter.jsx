@@ -16,6 +16,12 @@ export default function ProductsFilter({
 }) {
   const [filters, setFilters] = useState(initialFilters);
   const [categoryList, setCategoryList] = useState([]);
+  const [brandList, setBrandList] = useState([]);
+  const [brandPagination, setBrandPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    limit: 5, // Hiển thị 5 thương hiệu mỗi trang
+  });
 
   const checkboxHandler = (e) => {
     const { name, checked } = e.target;
@@ -41,11 +47,42 @@ export default function ProductsFilter({
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    async function fetchBrands() {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/brands/active`, {
+          params: { page: brandPagination.currentPage, limit: brandPagination.limit },
+        });
+        if (Array.isArray(res.data.data)) {
+          setBrandList(res.data.data);
+          setBrandPagination((prev) => ({
+            ...prev,
+            totalPages: res.data.totalPages || 1,
+            currentPage: res.data.currentPage || 1,
+          }));
+        } else {
+          setBrandList([]);
+          setBrandPagination((prev) => ({ ...prev, totalPages: 1 }));
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách thương hiệu:", error);
+        setBrandList([]);
+        setBrandPagination((prev) => ({ ...prev, totalPages: 1 }));
+      }
+    }
+    fetchBrands();
+  }, [brandPagination.currentPage, brandPagination.limit]);
+
+  const handleBrandPageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= brandPagination.totalPages) {
+      setBrandPagination((prev) => ({ ...prev, currentPage: newPage }));
+    }
+  };
+
   return (
     <>
       <div
-        className={`filter-widget w-full fixed lg:relative left-0 top-0 h-screen z-10 lg:h-auto overflow-y-scroll lg:overflow-y-auto bg-white px-[30px] pt-[40px] ${className || ""
-          }  ${filterToggle ? "block" : "hidden lg:block"}`}
+        className={`filter-widget w-full fixed lg:relative left-0 top-0 h-screen z-10 lg:h-auto overflow-y-scroll lg:overflow-y-auto bg-white px-[30px] pt-[40px] ${className || ""} ${filterToggle ? "block" : "hidden lg:block"}`}
       >
         {/* danh mục */}
         <div className="filter-subject-item pb-10 border-b border-qgray-border">
@@ -120,171 +157,56 @@ export default function ProductsFilter({
         </div>
         <div className="filter-subject-item pb-10 border-b border-qgray-border mt-10">
           <div className="subject-title mb-[30px]">
-            <h1 className="text-black text-base font-500">Brands</h1>
+            <h1 className="text-black text-base font-500">Thương hiệu</h1>
           </div>
           <div className="filter-items">
             <ul>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="apple"
-                      name="apple"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.apple}
-                    />
+              {brandList.map((brand) => (
+                <li key={brand.id} className="item flex justify-between items-center mb-5">
+                  <div className="flex space-x-[14px] items-center">
+                    <div>
+                      <Checkbox
+                        id={brand.id}
+                        name={brand.id.toString()}
+                        handleChange={(e) => checkboxHandler(e)}
+                        checked={!!filters[brand.id.toString()]}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={brand.id}
+                        className="text-xs font-black font-400 capitalize"
+                      >
+                        {brand.name}
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label
-                      htmlFor="apple"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      apple
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="samsung"
-                      name="samsung"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.samsung}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="samsung"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      Samsung
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="walton"
-                      name="walton"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.walton}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="walton"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      walton
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="oneplus"
-                      name="oneplus"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.oneplus}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="oneplus"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      oneplus
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="vivo"
-                      name="vivo"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.vivo}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="vivo"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      vivo
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="oppo"
-                      name="oppo"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.oppo}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="oppo"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      oppo
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="xiomi"
-                      name="xiomi"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.xiomi}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="xiomi"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      xiomi
-                    </label>
-                  </div>
-                </div>
-              </li>
-              <li className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id="others"
-                      name="others"
-                      handleChange={(e) => checkboxHandler(e)}
-                      checked={filters.others}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="others"
-                      className="text-xs font-black font-400 capitalize"
-                    >
-                      others
-                    </label>
-                  </div>
-                </div>
-              </li>
+                </li>
+              ))}
             </ul>
+            {brandPagination.totalPages > 1 && (
+              <div className="flex justify-center items-center mt-2">
+                {brandPagination.currentPage > 1 && (
+                  <button
+                    onClick={() => handleBrandPageChange(brandPagination.currentPage - 1)}
+                    className="px-2 py-1 mx-0.5 bg-gray-300 text-gray-600 text-xs rounded hover:bg-gray-400"
+                  >
+                    Trước
+                  </button>
+                )}
+                <span className="px-2 py-1 mx-0.5 bg-gray-300 text-gray-600 text-xs rounded">
+                  {brandPagination.currentPage} / {brandPagination.totalPages}
+                </span>
+                {brandPagination.currentPage < brandPagination.totalPages && (
+                  <button
+                    onClick={() => handleBrandPageChange(brandPagination.currentPage + 1)}
+                    className="px-2 py-1 mx-0.5 bg-gray-300 text-gray-600 text-xs rounded hover:bg-gray-400"
+                  >
+                    Sau
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="filter-subject-item pb-10 border-b border-qgray-border mt-10">

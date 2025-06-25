@@ -47,6 +47,35 @@ export default function AllProductPage() {
   const [filterToggle, setToggle] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [brandList, setBrandList] = useState([]);
+
+  // Fetch brands
+  useEffect(() => {
+    async function fetchBrands() {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/brands/active`, {
+          params: { page: 1, limit: 100 },
+        });
+        if (Array.isArray(res.data.data)) {
+          const brandIds = res.data.data.map(brand => brand.id.toString());
+          const updatedFilters = { ...filters };
+          Object.keys(updatedFilters).forEach(key => {
+            if (["apple", "samsung", "walton", "oneplus", "vivo", "oppo", "xiomi", "others"].includes(key)) {
+              updatedFilters[key] = false; // Reset các thương hiệu cũ
+            }
+          });
+          res.data.data.forEach(brand => {
+            updatedFilters[brand.id.toString()] = filters[brand.name.toLowerCase()] || false;
+          });
+          setFilter(updatedFilters);
+          setBrandList(res.data.data);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách thương hiệu:", error);
+      }
+    }
+    fetchBrands();
+  }, []);
 
   // Checkbox handler
   const checkboxHandler = (e) => {
@@ -95,16 +124,8 @@ export default function AllProductPage() {
           ].includes(key)
         );
         const brandFilters = selectedFilters.filter((key) =>
-          [
-            "apple",
-            "samsung",
-            "walton",
-            "oneplus",
-            "vivo",
-            "oppo",
-            "xiomi",
-            "others",
-          ].includes(key)
+          brandList.some((brand) => brand.id.toString() === key) ||
+          ["apple", "samsung", "walton", "oneplus", "vivo", "oppo", "xiomi", "others"].includes(key)
         );
         const sizeFilters = selectedFilters.filter((key) =>
           ["sizeS", "sizeM", "sizeL", "sizeXL", "sizeXXL", "sizeFit"].includes(
@@ -123,7 +144,9 @@ export default function AllProductPage() {
           params.category_id = categoryFilters.join(",");
         }
         if (brandFilters.length > 0) {
-          params.brand_id = brandFilters.join(",");
+          params.brand_id = brandFilters
+            .map(key => brandList.find(brand => brand.id.toString() === key)?.id || key)
+            .join(",");
         }
         if (sizeFilters.length > 0) {
           params.size = sizeFilters
@@ -159,6 +182,7 @@ export default function AllProductPage() {
     filters,
     volume,
     storage,
+    brandList,
   ]);
 
   // Handle page change

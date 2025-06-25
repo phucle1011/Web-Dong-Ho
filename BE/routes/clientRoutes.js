@@ -15,7 +15,8 @@ const OrderController = require('../controllers/Client/ordersController');
 const ClientCommentController = require('../controllers/Client/commentsController');
 const  chatWithBot  = require('../controllers/Client/chatboxController');
 const ShippingController = require('../controllers/Client/shippingController');
-const WishlistController = require('../controllers/Client/wishlistController')
+const WishlistController = require('../controllers/Client/wishlistController');
+const BrandController = require('../controllers/Client/brandController');
 const { checkJWT } = require('../services/authCheck');
 const multer = require('multer');
 const storage = multer.memoryStorage();
@@ -114,7 +115,9 @@ router.post('/users/:userId/wishlist/add-to-cart', WishlistController.addWishlis
 // ------------------[ PasswordOld ]------------------//
 router.post('/change-password', authenticate, changePassword);
 
-// ------------------[ Brand ]------------------//
+//------------------[ BRANDS ]------------------
+router.get('/brands/active', BrandController.getActiveBrands);
+router.get('/brands/search', BrandController.search);
 router.get('/brand/list', brandClientController.getAll);
 
 module.exports = router;
