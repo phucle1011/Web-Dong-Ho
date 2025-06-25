@@ -109,23 +109,42 @@ function PromotionGetAll() {
                 startDate: start,
                 endDate: end,
             };
+
             if (status === "special") {
                 params.special_promotion = "true";
             } else {
                 params.status = status;
             }
+
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/list`, { params });
-            setPromotions(res.data.data || []);
+
+            let filtered = res.data.data || [];
+
+            if (status === "special") {
+                const now = new Date();
+                filtered = filtered.filter(promo =>
+                    promo.special_promotion &&
+                    promo.status === "active" &&
+                    new Date(promo.start_date) <= now &&
+                    new Date(promo.end_date) >= now &&
+                    promo.quantity > 0
+                );
+            }
+
+            setPromotions(filtered);
             setTotalPages(res.data.pagination?.totalPages || 1);
             setStatusCounts(res.data.statusCounts || {});
-            if (search && (res.data.data || []).length === 0) {
+
+            if (search && filtered.length === 0) {
                 toast.info("Không tìm thấy khuyến mãi nào.");
             }
+
         } catch (error) {
             console.error("Lỗi khi tải khuyến mãi:", error);
             toast.error("Không thể tải danh sách khuyến mãi.");
         }
     };
+
 
     const deletePromotion = async () => {
         if (!selectedPromotion) return;

@@ -110,9 +110,16 @@ class PromotionController {
 
         statusCounts[newStatus] = (statusCounts[newStatus] || 0) + 1;
 
-        if (promo.special_promotion) {
+        if (
+          promo.special_promotion &&
+          promo.status === 'active' &&
+          promo.quantity > 0 &&
+          new Date(promo.start_date) <= now &&
+          new Date(promo.end_date) >= now
+        ) {
           statusCounts.special = (statusCounts.special || 0) + 1;
         }
+
       }
 
       statusCounts.all = allPromotions.length;
