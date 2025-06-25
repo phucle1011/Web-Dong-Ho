@@ -21,9 +21,8 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const { changePassword } = require('../controllers/Client/PasswordOldController');
-const authenticate = require('../services/Middleware'); // Middleware để gán req.user
-
-
+const authenticate = require('../services/Middleware'); 
+const brandClientController = require('../controllers/Client/brandClientController');
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -115,5 +114,8 @@ router.post('/users/:userId/wishlist/add-to-cart', WishlistController.addWishlis
 
 // ------------------[ PasswordOld ]------------------//
 router.post('/change-password', authenticate, changePassword);
+
+// ------------------[ Brand ]------------------//
+router.get('/brand/list', brandClientController.getAll);
 
 module.exports = router;
