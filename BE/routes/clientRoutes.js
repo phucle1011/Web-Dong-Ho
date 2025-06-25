@@ -21,9 +21,8 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const { changePassword } = require('../controllers/Client/PasswordOldController');
-const authenticate = require('../services/Middleware'); 
+const authenticate = require('../services/Middleware'); // Middleware để gán req.user
 const brandClientController = require('../controllers/Client/brandClientController');
-
 //------------------[ CLIENT ROUTES ]------------------
 
 //------------------[ CHATBOX ]------------------//
