@@ -74,7 +74,7 @@ export default function Profile() {
                             <IcoPeople />
                           </span>
                           <span className=" font-normal text-base">
-                            Parsonal Info
+                            Trang Cá Nhân
                           </span>
                         </div>
                       </Link>

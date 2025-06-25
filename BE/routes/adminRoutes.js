@@ -20,6 +20,8 @@ const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
 const AuthController = require('../controllers/Admin/authController');
+const ProductAttributeController = require('../controllers/Admin/product_attributesController');
+
 
 
 // router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
@@ -91,7 +93,13 @@ router.get('/product-variants', ProductController.getAllVariants);
 router.delete('/product-variants/deleteAttributeValueById/:id', ProductController.deleteAttributeValueById);
 router.post('/products/imagesClauding', ProductController.deleteImagesClauding);
 
+//------------------[ ProductAttributeController ]------------------\
 
+router.get('/attribute', ProductAttributeController.getAll);
+router.post('/attribute', ProductAttributeController.create);
+router.get('/attribute/:id', ProductAttributeController.getById);
+router.put('/attribute/:id', ProductAttributeController.update);
+router.delete('/attribute/:id', ProductAttributeController.delete);
 
 
 //------------------[ ADDRESS ]------------------\

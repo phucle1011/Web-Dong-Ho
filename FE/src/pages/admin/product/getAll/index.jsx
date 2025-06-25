@@ -203,6 +203,17 @@ const AdminProductList = () => {
             + Thêm sản phẩm
           </Link>
         </div>
+        <div className="flex justify-end mb-3">
+           <Link
+  to={`/admin/attribute/getall`}
+  className="bg-indigo-500 text-white py-1 px-3 rounded hover:bg-indigo-600 transition"
+  title="Thêm thuộc tính"
+>
+  <i className="fa-solid fa-plus">Danh Sách Thuộc Tính</i>
+</Link>
+        </div>
+       
+
 
         {/* Ô tìm kiếm */}
         <div className="mb-3 flex gap-2">

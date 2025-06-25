@@ -5,6 +5,7 @@ require("dotenv").config();
 const sendVerificationEmail = require("../../mail/verifyEmail/sendMail");
 const { successResponse, errorResponse } = require('../../helpers/response');
 const UserModel = require('../../models/usersModel');
+const AddressModel = require("../../models/addressesModel");
 
 
 
@@ -268,6 +269,82 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
+   static async getById(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return errorResponse(res, "ID không hợp lệ!", 400);
+    }
+
+    const user = await UserModel.findOne({
+      where: { id },
+      attributes: { exclude: ['password'] },
+      include: [
+        {
+          model: AddressModel,
+          as: 'addresses',
+          attributes: ['id', 'address_line', 'ward', 'district', 'city', 'is_default']
+        }
+      ]
+    });
+
+    if (!user) {
+      return errorResponse(res, "Không tìm thấy người dùng!", 404);
+    }
+
+    return successResponse(res, "Lấy thông tin người dùng thành công!", user, 200);
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin người dùng:", error);
+    return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
+  }
+}
+static async update(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, phone, avatar, email } = req.body;
+
+    if (!id || isNaN(id)) {
+      return errorResponse(res, "ID không hợp lệ!", 400);
+    }
+
+    const user = await UserModel.findByPk(id);
+    if (!user) {
+      return errorResponse(res, "Không tìm thấy người dùng!", 404);
+    }
+
+    // Kiểm tra tên hợp lệ
+    if (name) {
+      const trimmedName = name.trim();
+      const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
+      if (trimmedName.length < 2 || trimmedName.length > 50 || !nameRegex.test(trimmedName)) {
+        return errorResponse(res, "Tên không hợp lệ!", 400);
+      }
+    }
+
+    // Kiểm tra email hợp lệ
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return errorResponse(res, "Email không hợp lệ!", 400);
+      }
+    }
+
+    await user.update({
+      name: name || user.name,
+      phone: phone || user.phone,
+      avatar: avatar || user.avatar,
+      email: email || user.email
+    });
+
+    return successResponse(res, "Cập nhật thông tin người dùng thành công!", null, 200);
+  } catch (error) {
+    console.error("Lỗi khi cập nhật người dùng:", error);
+    return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
+  }
+}
+
+
 
 }
 

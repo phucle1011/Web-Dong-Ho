@@ -72,6 +72,12 @@ import BrandCreate from "./pages/admin/brand/Create";
 import NotificationList from "./pages/admin/notification/getAll";
 import NotificationSendAll from "./pages/admin/notification/Create";
 import PromotionList from "./pages/admin/promotionUsers/getAll";
+import Attribute from "./pages/admin/product/attribute/getAll";
+import AttributeEdit from "./pages/admin/product/attribute/detail";
+import AttributeCreate from "./pages/admin/product/attribute/create";
+
+
+
 
 // Protected Route
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
@@ -189,6 +195,12 @@ const AppRoutes = () => {
           <Route path="addVariant/:productId" element={<AddVariant />} />
           <Route path="detail/:id" element={<ProductDetail />} />
           <Route path="editVariant/:id" element={<EditVariant />} />
+        </Route>
+        <Route path="attribute">
+          <Route path="getAll" element={<Attribute />} />
+          <Route path="edit/:id" element={<AttributeEdit />} />
+          <Route path="create" element={<AttributeCreate />} />
+
         </Route>
         <Route path="wishlist">
           <Route path="getAll" element={<WishlistList />} />

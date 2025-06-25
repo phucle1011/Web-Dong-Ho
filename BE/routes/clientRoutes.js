@@ -88,6 +88,8 @@ router.post('/auth/check-token', AuthController.checkToken);
 router.post('/auth/update-verification', AuthController.updateVerification);
 router.post('/auth/reset-password', AuthController.resetPassword);
 router.post('/auth/update-password/:token', AuthController.updatePassword);
+router.get('/users/:id', AuthController.getById);
+router.put('/users/:id', AuthController.update);
 
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
