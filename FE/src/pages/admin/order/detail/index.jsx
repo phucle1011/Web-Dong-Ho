@@ -178,7 +178,7 @@ function OrderDetail() {
                       {translateStatus(order.status)}
                     </td>
                     <td className="p-2">
-                      {item.productVariant?.variantProduct?.name || "Không có tên sản phẩm"}
+                      {item.variant?.product?.name || "Không có tên sản phẩm"} ({item.variant?.sku})
                     </td>
                     <td className="p-2 text-center">{item.quantity}</td>
                     <td className="p-2 text-right">

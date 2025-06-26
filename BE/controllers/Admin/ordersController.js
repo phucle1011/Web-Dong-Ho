@@ -121,26 +121,26 @@ class OrderController {
                     {
                         model: OrderDetailsModel,
                         as: 'orderDetails',
-                        attributes: ['id','quantity', 'price'],
+                        attributes: ['id', 'quantity', 'price'],
                         include: [
                             {
                                 model: ProductVariantsModel,
                                 as: 'variant',
-                                attributes: ['price'],
+                                attributes: ['id', 'price', 'stock', 'sku'],
                                 include: [
                                     {
                                         model: ProductModel,
                                         as: 'product',
-                                        attributes: ['id','name']
+                                        attributes: ['id', 'name']
                                     }
                                 ]
                             },
-                                                 {
-    model: CommentModel,
-    as: 'comments',
-    attributes: ['id', 'rating', 'comment_text'],
-    required: false,
-  },
+                            {
+                                model: CommentModel,
+                                as: 'comments',
+                                attributes: ['id', 'rating', 'comment_text'],
+                                required: false,
+                            },
                         ]
                     },
                     {

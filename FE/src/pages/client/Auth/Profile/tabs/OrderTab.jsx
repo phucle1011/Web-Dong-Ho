@@ -11,6 +11,7 @@ import {
 import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { useParams, useNavigate } from "react-router-dom";
+import { decodeToken } from "../../../Helpers/jwtDecode.jsx";
 
 export default function OrderTab() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function OrderTab() {
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderDetailsMap, setOrderDetailsMap] = useState({});
   const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState(null);
+  const [user, setUser] = useState(null);
 
   const translateStatus = (status) => {
     switch (status) {
@@ -169,58 +171,75 @@ export default function OrderTab() {
 
 const handleReorder = async (orderId) => {
   try {
-    // Lấy chi tiết đơn hàng nếu chưa có
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Bạn chưa đăng nhập.");
+      return;
+    }
+
+    const decoded = decodeToken(token); // 👈 lấy userId từ token
+    const userId = decoded?.id;
+
+    if (!userId) {
+      toast.error("Không xác định được người dùng từ token.");
+      return;
+    }
+
+    let items = [];
+
     if (!orderDetailsMap[orderId.id]) {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ SỬA TẠI ĐÂY: lấy dữ liệu từ res.data.data.orderDetails
       const orderDetails = res.data?.data?.orderDetails || [];
-
-      if (!orderDetails.length) {
-        toast.warning("Đơn hàng này không có sản phẩm nào.");
-        return;
-      }
-
       setOrderDetailsMap((prev) => ({
         ...prev,
         [orderId.id]: orderDetails,
       }));
+
+      items = [...orderDetails];
+    } else {
+      items = [...orderDetailsMap[orderId.id]];
     }
 
-    const items = orderDetailsMap[orderId.id];
-
-    // ✅ Kiểm tra an toàn trước khi dùng .length
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (items.length === 0) {
       toast.warning("Không có sản phẩm nào trong đơn hàng.");
       return;
     }
 
-    // Thêm từng sản phẩm vào giỏ hàng
     for (const item of items) {
-      const variantId = item.variant_id;
+      const variantId = item.variant?.id; // chỉ lấy từ variant vì bạn không có variant_id
       const quantity = item.quantity;
 
-      if (!variantId || quantity <= 0) continue;
+      if (!variantId || quantity <= 0) {
+        console.log("→ Bỏ qua sản phẩm:", { variantId, quantity });
+        continue;
+      }
 
-      // ✅ Gọi đúng endpoint `/add-to-carts`
-      await axios.post(
-        `${Constants.DOMAIN_API}/add-to-carts`,
-        {
-          variant_id: variantId,
-          quantity: quantity,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      try {
+        const res = await axios.post(
+          `${Constants.DOMAIN_API}/add-to-carts`,
+          {
+            userId, // 👈 từ token
+            productVariantId: variantId,
+            quantity,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        console.log("✅ Thêm giỏ hàng thành công:", res.data);
+      } catch (err) {
+        console.error("❌ Lỗi khi thêm vào giỏ:", err);
+      }
     }
 
     toast.success("Đã thêm lại sản phẩm từ đơn hàng bị hủy vào giỏ hàng.");
-    navigate("/cart"); // Chuyển hướng đến trang giỏ hàng
+    navigate("/cart");
   } catch (error) {
-    console.error("Lỗi khi mua lại đơn hàng:", error);
+    console.error("❌ Lỗi khi mua lại đơn hàng:", error);
     toast.error("Không thể mua lại đơn hàng.");
   }
 };
@@ -523,79 +542,36 @@ const handleReorder = async (orderId) => {
                         <td colSpan="8" className="p-0">
                           <div className="bg-gray-50 p-4 border-t border-gray-200">
                             <h3 className="font-semibold mb-4 text-lg">Chi tiết đơn hàng</h3>
-
                             <div className="bg-white shadow-md rounded-md p-4 mb-6">
-                              <h4 className="text-xl font-semibold mb-3">Thông tin khách hàng</h4>
-                              <div className="grid grid-cols-2 gap-4">
+                              <h4 className="text-xl font-semibold mb-4">Thông tin khách hàng</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Mã đơn</label>
-                                  <input
-                                    type="text"
-                                    value={order.order_code || ""}
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                  <span className="font-medium">Mã đơn:</span> {order.order_code || "—"}
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Họ tên</label>
-                                  <input
-                                    type="text"
-                                    value={order.user?.name || ""}
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                  <span className="font-medium">Họ tên:</span> {order.user?.name || "—"}
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Số điện thoại</label>
-                                  <input
-                                    type="text"
-                                    value={order.user?.phone || ""}
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                  <span className="font-medium">Số điện thoại:</span> {order.user?.phone || "—"}
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Email</label>
-                                  <input
-                                    type="text"
-                                    value={order.user?.email || ""}
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                  <span className="font-medium">Email:</span> {order.user?.email || "—"}
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Địa chỉ</label>
-                                  <input
-                                    type="text"
-                                    value={order.shipping_address || ""}
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                  <span className="font-medium">Địa chỉ:</span> {order.shipping_address || "—"}
                                 </div>
                                 <div>
-                                  <label className="block text-sm font-medium mb-1">Phương thức thanh toán</label>
-                                  <input
-                                    type="text"
-                                    value={order.payment_method || ""}
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                  <span className="font-medium">Phương thức thanh toán:</span> {order.payment_method || "—"}
                                 </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">Ngày đặt hàng</label>
-                                  <input
-                                    type="text"
-                                    value={
-                                      order.created_at
-                                        ? new Date(order.created_at).toLocaleDateString()
-                                        : ""
-                                    }
-                                    readOnly
-                                    className="w-full border rounded p-2 bg-gray-100"
-                                  />
+                                <div className="md:col-span-2">
+                                  <span className="font-medium">Ngày đặt hàng:</span>{" "}
+                                  {order.created_at
+                                    ? new Date(order.created_at).toLocaleDateString()
+                                    : "—"}
                                 </div>
                               </div>
                             </div>
+
 
                             <div className="bg-white shadow-md rounded-md p-4">
                               <h4 className="text-xl font-semibold mb-3">Sản phẩm</h4>
@@ -616,7 +592,7 @@ const handleReorder = async (orderId) => {
                                       {orderDetailsMap[order.id].map((item, idx) => (
                                         <tr key={idx} className="border-b">
                                           <td className="p-2">{translateStatus(order.status)}</td>
-                                          <td className="p-2">{item.variant?.product?.name || "Không xác định"}</td>
+                                          <td className="p-2">{item.variant?.product?.name || "Không xác định"} ({item.variant?.sku})</td>
                                           <td className="p-2 text-center">{item.quantity}</td>
                                           <td className="p-2 text-right">
                                             {Number(item.price).toLocaleString("vi-VN", {

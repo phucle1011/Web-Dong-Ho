@@ -290,7 +290,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                           />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-[15px] text-qblack">{name}({variant.sku})</p>
+                          <p className="font-medium text-[15px] text-qblack">{name} ({variant.sku})</p>
                         </div>
                       </div>
                     </td>
