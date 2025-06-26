@@ -167,44 +167,101 @@ export default function OrderTab() {
     setActiveStatus(status);
   };
 
- const fetchOrderDetails = async (orderId) => {
-  if (!orderId) return;
-
+const handleReorder = async (orderId) => {
   try {
-    const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    // Lấy chi tiết đơn hàng nếu chưa có
+    if (!orderDetailsMap[orderId.id]) {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    if (res.data?.data) {
-      const orderDetails = res.data.data.orderDetails || [];
+      // ✅ SỬA TẠI ĐÂY: lấy dữ liệu từ res.data.data.orderDetails
+      const orderDetails = res.data?.data?.orderDetails || [];
 
-      // 👉 Gắn comment đầu tiên (nếu có) vào từng item để dùng cho nút "Xem đánh giá"
-      const processedDetails = orderDetails.map((detail) => ({
-        ...detail,
-        comment: detail.comments?.[0] || null,
-      }));
+      if (!orderDetails.length) {
+        toast.warning("Đơn hàng này không có sản phẩm nào.");
+        return;
+      }
 
       setOrderDetailsMap((prev) => ({
         ...prev,
-        [orderId]: processedDetails,
+        [orderId.id]: orderDetails,
       }));
-    } else {
+    }
+
+    const items = orderDetailsMap[orderId.id];
+
+    // ✅ Kiểm tra an toàn trước khi dùng .length
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      toast.warning("Không có sản phẩm nào trong đơn hàng.");
+      return;
+    }
+
+    // Thêm từng sản phẩm vào giỏ hàng
+    for (const item of items) {
+      const variantId = item.variant_id;
+      const quantity = item.quantity;
+
+      if (!variantId || quantity <= 0) continue;
+
+      // ✅ Gọi đúng endpoint `/add-to-carts`
+      await axios.post(
+        `${Constants.DOMAIN_API}/add-to-carts`,
+        {
+          variant_id: variantId,
+          quantity: quantity,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    }
+
+    toast.success("Đã thêm lại sản phẩm từ đơn hàng bị hủy vào giỏ hàng.");
+    navigate("/cart"); // Chuyển hướng đến trang giỏ hàng
+  } catch (error) {
+    console.error("Lỗi khi mua lại đơn hàng:", error);
+    toast.error("Không thể mua lại đơn hàng.");
+  }
+};
+
+  const fetchOrderDetails = async (orderId) => {
+    if (!orderId) return;
+
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.data?.data) {
+        const orderDetails = res.data.data.orderDetails || [];
+
+        const processedDetails = orderDetails.map((detail) => ({
+          ...detail,
+          comment: detail.comments?.[0] || null,
+        }));
+
+        setOrderDetailsMap((prev) => ({
+          ...prev,
+          [orderId]: processedDetails,
+        }));
+      } else {
+        setOrderDetailsMap((prev) => ({
+          ...prev,
+          [orderId]: [],
+        }));
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải chi tiết đơn hàng:", error);
+      toast.error("Không thể tải chi tiết đơn hàng");
       setOrderDetailsMap((prev) => ({
         ...prev,
         [orderId]: [],
       }));
     }
-  } catch (error) {
-    console.error("Lỗi khi tải chi tiết đơn hàng:", error);
-    toast.error("Không thể tải chi tiết đơn hàng");
-    setOrderDetailsMap((prev) => ({
-      ...prev,
-      [orderId]: [],
-    }));
-  }
-};
+  };
 
   const FormDelete = ({ isOpen, onClose, onConfirm, message = "Bạn có chắc chắn muốn xóa?" }) => {
     const [reason, setReason] = useState("");
@@ -214,7 +271,7 @@ export default function OrderTab() {
 
     const handleConfirm = () => {
       const finalReason = reason === "Khác" ? customReason : reason;
-      onConfirm(finalReason); // Truyền lý do hủy ra ngoài
+      onConfirm(finalReason);
     };
 
     return (
@@ -442,10 +499,20 @@ export default function OrderTab() {
                         {order.status === "pending" && (
                           <button
                             onClick={() => setSelectedOrder(order)}
-                            className="w-[40px] h-[32px] bg-red-500 hover:bg-red-600 text-white font-medium rounded text-sm"
+                            className="w-[60px] h-[32px] bg-red-500 hover:bg-red-600 text-white font-medium rounded text-sm"
                             type="button"
                           >
                             Hủy
+                          </button>
+                        )}
+
+                        {order.status === "cancelled" && (
+                          <button
+                            onClick={() => handleReorder(order)}
+                            className="w-[60px] h-[32px] bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm"
+                            type="button"
+                          >
+                            Mua lại
                           </button>
                         )}
                       </td>
@@ -564,30 +631,29 @@ export default function OrderTab() {
                                             })}
                                           </td>
                                           <td className="p-2">
-                                            
-<button
-  className={`text-blue-600 hover:underline`}
-  onClick={() => {
-    const orderDetailId = item.id;
-    const product = item.variant?.product;
-    const productId = product?.id;
 
-    if (item.comment) {
-      // ✅ Có đánh giá rồi thì cho phép xem lại
-      navigate(`/product/${productId}#review`);
-      return;
-    }
+                                            <button
+                                              className={`text-blue-600 hover:underline`}
+                                              onClick={() => {
+                                                const orderDetailId = item.id;
+                                                const product = item.variant?.product;
+                                                const productId = product?.id;
 
-    if (orderDetailId && productId) {
-      localStorage.setItem("pendingReviewOrderDetailId", orderDetailId);
-      navigate(`/product/${productId}`);
-    } else {
-      toast.error("Không thể xác định sản phẩm để đánh giá.");
-    }
-  }}
->
-  {item.comment ? "Xem đánh giá" : "Đánh giá"}
-</button>
+                                                if (item.comment) {
+                                                  navigate(`/product/${productId}#review`);
+                                                  return;
+                                                }
+
+                                                if (orderDetailId && productId) {
+                                                  localStorage.setItem("pendingReviewOrderDetailId", orderDetailId);
+                                                  navigate(`/product/${productId}`);
+                                                } else {
+                                                  toast.error("Không thể xác định sản phẩm để đánh giá.");
+                                                }
+                                              }}
+                                            >
+                                              {item.comment ? "Xem đánh giá" : "Đánh giá"}
+                                            </button>
 
                                           </td>
                                         </tr>

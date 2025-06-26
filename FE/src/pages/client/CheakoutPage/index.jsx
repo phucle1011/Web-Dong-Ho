@@ -138,11 +138,11 @@ export default function CheakoutPage() {
       if (decoded) {
         setUser(decoded);
       } else {
-        console.warn("Failed to decode token. User data is null.");
+        console.warn("Không thể giải mã token.");
       }
 
     } else {
-      console.warn("No token found in localStorage.");
+      console.warn("Không tìm thấy token trong localStorage.");
     }
   }, []);
 
@@ -983,6 +983,7 @@ export default function CheakoutPage() {
       calculateShippingFee();
     }
   }, [defaultAddress]); 
+
 
   return (
     <Layout childrenClasses="pt-0 pb-0">

@@ -3,6 +3,7 @@ const ProductVariantsModel = require('../../models/productVariantsModel');
 const ProductVariantAttributeValuesModel = require('../../models/productVariantAttributeValuesModel');
 const VariantImageModel = require("../../models/variantImagesModel");
 const ProductAttribute = require("../../models/productAttributesModel");
+const ProductModel = require('../../models/productsModel');
 
 const { Op } = require('sequelize');
 
@@ -19,8 +20,14 @@ class CartController {
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
-                        attributes: ['id', 'price', 'stock', 'sku'],
+                        attributes: ['id', 'product_id', 'price', 'stock', 'sku'],
                         include: [
+                            {
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['id', 'name'],
+                                required: false
+                            },
                             {
                                 model: VariantImageModel,
                                 as: 'images',

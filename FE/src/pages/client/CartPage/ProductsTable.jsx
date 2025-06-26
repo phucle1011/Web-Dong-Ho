@@ -222,13 +222,13 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
           className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
           title="Xóa toàn bộ giỏ hàng"
         >
-          <FaTrashAlt size={18} />
+          <FaTrashAlt size={20} className="font-bold" />
         </button>
       </div>
       <div className="max-h-96 overflow-y-auto w-full">
-        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead>
-            <tr className="text-[13px] font-medium text-black bg-[#F6F6F6] uppercase">
+        <table className="w-full table-fixed text-sm text-left text-gray-500 dark:text-gray-400">
+          <thead className="sticky top-0 bg-[#F6F6F6] z-10">
+            <tr className="text-[13px] font-medium text-black uppercase">
               <th className="py-4 text-center w-[50px]">
                 <input
                   type="checkbox"
@@ -236,17 +236,14 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                   checked={selectedItems.length === cartItems.length && cartItems.length > 0}
                 />
               </th>
-              <th className="py-4 pl-10 min-w-[300px]">Sản phẩm</th>
-              <th className="py-4 text-center">Thuộc tính</th>
-              <th className="py-4 text-center">Giá tiền</th>
-              <th className="py-4 text-center">Số lượng</th>
-              <th className="py-4 text-center">Tổng tiền</th>
-              <th className="py-4 text-right w-[114px]"></th>
+              <th className="py-4 pl-10 w-[320px]">Sản phẩm</th>
+              <th className="py-4 text-center w-[180px]">Thuộc tính</th>
+              <th className="py-4 text-center w-[120px]">Giá tiền</th>
+              <th className="py-4 text-center w-[140px]">Số lượng</th>
+              <th className="py-4 text-center w-[140px]">Tổng tiền</th>
+              <th className="py-4 text-right w-[80px]"></th>
             </tr>
           </thead>
-        </table>
-
-        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
           <tbody>
             {cartItems.length === 0 ? (
               <tr>
@@ -263,6 +260,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                 const quantity = item.quantity;
                 const stock = variant.stock;
                 const total = price * quantity;
+                const name = variant.product.name;
 
                 return (
                   <tr
@@ -292,30 +290,38 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                           />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-[15px] text-qblack">{variant.sku}</p>
+                          <p className="font-medium text-[15px] text-qblack">{name}({variant.sku})</p>
                         </div>
                       </div>
                     </td>
-                    <td className="text-center py-4">
-                      {attributes.map((attr) => {
-                        const attrName = attr.attribute?.name;
-                        const attrValue = attr.value;
-                        const isColor = attrName.toLowerCase() === "color";
+                    <td className="py-4 px-2 w-[180px] align-top">
+                      <div className="flex flex-col gap-1">
+                        {attributes.map((attr) => {
+                          const attrName = attr.attribute?.name;
+                          const attrValue = attr.value;
+                          const isColor = attrName.toLowerCase() === "color";
 
-                        return (
-                          <div key={attr.id} className="flex items-center justify-center gap-2">
-                            <span>{attrName}:</span>
-                            {isColor ? (
-                              <span
-                                className="inline-block w-4 h-4 rounded-full border border-gray-300"
-                                style={{ backgroundColor: attrValue }}
-                              ></span>
-                            ) : (
-                              <span>{attrValue}</span>
-                            )}
-                          </div>
-                        );
-                      })}
+                          return (
+                            <div
+                              key={attr.id}
+                              className="flex items-start gap-2 text-sm leading-snug break-words"
+                            >
+                              <span className="whitespace-nowrap font-semibold text-black">
+                                {attrName}:
+                              </span>
+                              {isColor ? (
+                                <span
+                                  className="inline-block w-4 h-4 rounded-full border border-gray-300 mt-1"
+                                  style={{ backgroundColor: attrValue }}
+                                  title={attrValue}
+                                ></span>
+                              ) : (
+                                <span className="text-gray-700 break-words">{attrValue}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </td>
                     <td className="text-center py-4">
                       {Number(price).toLocaleString("vi-VN", {
@@ -323,20 +329,22 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                         currency: "VND",
                       })}
                     </td>
-                    <td className="py-4 flex flex-col items-center justify-center mt-5">
+                    <td className="py-4 text-center align-middle">
                       {stock === 0 ? (
                         <span className="text-sm text-red-500">Hết hàng</span>
                       ) : (
-                        <>
+                        <div className="flex flex-col items-center justify-center gap-2">
                           <QuantityInput
                             quantity={quantity}
                             stock={stock}
-                            onChange={(newQuantity) => handleQuantityChange(item.product_variant_id, newQuantity)}
+                            onChange={(newQuantity) =>
+                              handleQuantityChange(item.product_variant_id, newQuantity)
+                            }
                           />
-                          <span className="mt-2 text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                          <span className="text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
                             Còn lại: {stock}
                           </span>
-                        </>
+                        </div>
                       )}
                     </td>
                     <td className="text-center py-4">
@@ -348,7 +356,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                         className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                         title="Xóa sản phẩm"
                       >
-                        <FaTrashAlt size={18} />
+                        <FaTrashAlt size={20} className="font-bold" />
                       </button>
                     </td>
                   </tr>
