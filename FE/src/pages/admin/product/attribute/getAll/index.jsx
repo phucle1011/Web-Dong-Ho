@@ -10,6 +10,7 @@ import {
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
   FaTrashAlt,
+  FaEdit
 } from "react-icons/fa";
 
 function AttributeGetAll() {
@@ -145,7 +146,7 @@ function AttributeGetAll() {
       <div className="mb-4 flex gap-2">
         <input
           type="text"
-          className="shadow border rounded w-full py-2 px-3 text-gray-700"
+          className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           placeholder="Nhập tên thuộc tính cần tìm..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -155,19 +156,12 @@ function AttributeGetAll() {
         />
         <button
           onClick={handleSearch}
-          className="bg-[#073272] text-white px-4 py-2 rounded"
+          className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
         >
-          <i className="fa fa-search"></i>
+         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+            </svg>
         </button>
-
-        {searchTerm && (
-          <button
-            onClick={handleClearSearch}
-            className="bg-[#073272] text-white px-4 py-2 text-sm rounded whitespace-nowrap"
-          >
-            Xem tất cả
-          </button>
-        )}
       </div>
 
       <table className="w-full table-auto border border-collapse border-gray-300">
@@ -192,15 +186,15 @@ function AttributeGetAll() {
               <td className="border p-2 text-center space-x-2">
                 <Link
                   to={`/admin/attribute/edit/${attr.id}`}
-                  className="bg-yellow-500 text-white py-1 px-3 rounded"
+                 className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                 >
-                  <i className="fa-solid fa-pen-to-square"></i>
+                  <FaEdit size={20} className="font-bold" />
                 </Link>
                 <button
                   onClick={() => setSelectedAttribute(attr)}
-                  className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition"
+                  className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                 >
-                  <FaTrashAlt />
+                  <FaTrashAlt size={20} className="font-bold" />
                 </button>
               </td>
             </tr>

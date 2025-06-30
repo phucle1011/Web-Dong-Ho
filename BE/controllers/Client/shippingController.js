@@ -67,8 +67,7 @@ class ShippingController {
       });
 
     } catch (error) {
-      console.error('Lỗi API GHN:', error.response?.data || error.message);
-
+      // console.error('Lỗi API GHN:', error.response?.data || error.message);
       if (error.response?.data?.message?.includes('route not found')) {
         return res.status(400).json({
           success: false,

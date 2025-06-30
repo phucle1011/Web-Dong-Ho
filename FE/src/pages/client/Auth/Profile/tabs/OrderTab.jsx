@@ -169,80 +169,80 @@ export default function OrderTab() {
     setActiveStatus(status);
   };
 
-const handleReorder = async (orderId) => {
-  try {
-    const token = localStorage.getItem("token");
+  const handleReorder = async (orderId) => {
+    try {
+      const token = localStorage.getItem("token");
 
-    if (!token) {
-      toast.error("Bạn chưa đăng nhập.");
-      return;
-    }
-
-    const decoded = decodeToken(token); // 👈 lấy userId từ token
-    const userId = decoded?.id;
-
-    if (!userId) {
-      toast.error("Không xác định được người dùng từ token.");
-      return;
-    }
-
-    let items = [];
-
-    if (!orderDetailsMap[orderId.id]) {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const orderDetails = res.data?.data?.orderDetails || [];
-      setOrderDetailsMap((prev) => ({
-        ...prev,
-        [orderId.id]: orderDetails,
-      }));
-
-      items = [...orderDetails];
-    } else {
-      items = [...orderDetailsMap[orderId.id]];
-    }
-
-    if (items.length === 0) {
-      toast.warning("Không có sản phẩm nào trong đơn hàng.");
-      return;
-    }
-
-    for (const item of items) {
-      const variantId = item.variant?.id; // chỉ lấy từ variant vì bạn không có variant_id
-      const quantity = item.quantity;
-
-      if (!variantId || quantity <= 0) {
-        console.log("→ Bỏ qua sản phẩm:", { variantId, quantity });
-        continue;
+      if (!token) {
+        toast.error("Bạn chưa đăng nhập.");
+        return;
       }
 
-      try {
-        const res = await axios.post(
-          `${Constants.DOMAIN_API}/add-to-carts`,
-          {
-            userId, // 👈 từ token
-            productVariantId: variantId,
-            quantity,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        console.log("✅ Thêm giỏ hàng thành công:", res.data);
-      } catch (err) {
-        console.error("❌ Lỗi khi thêm vào giỏ:", err);
-      }
-    }
+      const decoded = decodeToken(token); // 👈 lấy userId từ token
+      const userId = decoded?.id;
 
-    toast.success("Đã thêm lại sản phẩm từ đơn hàng bị hủy vào giỏ hàng.");
-    navigate("/cart");
-  } catch (error) {
-    console.error("❌ Lỗi khi mua lại đơn hàng:", error);
-    toast.error("Không thể mua lại đơn hàng.");
-  }
-};
+      if (!userId) {
+        toast.error("Không xác định được người dùng từ token.");
+        return;
+      }
+
+      let items = [];
+
+      if (!orderDetailsMap[orderId.id]) {
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/orders/${orderId.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const orderDetails = res.data?.data?.orderDetails || [];
+        setOrderDetailsMap((prev) => ({
+          ...prev,
+          [orderId.id]: orderDetails,
+        }));
+
+        items = [...orderDetails];
+      } else {
+        items = [...orderDetailsMap[orderId.id]];
+      }
+
+      if (items.length === 0) {
+        toast.warning("Không có sản phẩm nào trong đơn hàng.");
+        return;
+      }
+
+      for (const item of items) {
+        const variantId = item.variant?.id; // chỉ lấy từ variant vì bạn không có variant_id
+        const quantity = item.quantity;
+
+        if (!variantId || quantity <= 0) {
+          console.log("→ Bỏ qua sản phẩm:", { variantId, quantity });
+          continue;
+        }
+
+        try {
+          const res = await axios.post(
+            `${Constants.DOMAIN_API}/add-to-carts`,
+            {
+              userId, // 👈 từ token
+              productVariantId: variantId,
+              quantity,
+            },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          console.log("✅ Thêm giỏ hàng thành công:", res.data);
+        } catch (err) {
+          console.error("❌ Lỗi khi thêm vào giỏ:", err);
+        }
+      }
+
+      toast.success("Đã thêm lại sản phẩm từ đơn hàng bị hủy vào giỏ hàng.");
+      navigate("/cart");
+    } catch (error) {
+      console.error("❌ Lỗi khi mua lại đơn hàng:", error);
+      toast.error("Không thể mua lại đơn hàng.");
+    }
+  };
 
   const fetchOrderDetails = async (orderId) => {
     if (!orderId) return;
@@ -534,6 +534,16 @@ const handleReorder = async (orderId) => {
                             Mua lại
                           </button>
                         )}
+
+                        {order.status === "delivered" && (
+                          <button
+                            onClick={() => handleReorder(order)}
+                            className="w-[60px] h-[32px] bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm"
+                            type="button"
+                          >
+                            Mua lại
+                          </button>
+                        )}
                       </td>
                     </tr>
 
@@ -635,10 +645,24 @@ const handleReorder = async (orderId) => {
                                         </tr>
                                       ))}
 
+                                      {Number(order.shipping_fee) > 0 && (
+                                        <tr className="bg-gray-50">
+                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                            Phí vận chuyển:
+                                          </td>
+                                          <td className="text-right p-2 border-t font-medium">
+                                            +{Number(order.shipping_fee).toLocaleString("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            })}
+                                          </td>
+                                        </tr>
+                                      )}
+
                                       {Number(order.discount_amount) > 0 && (
                                         <tr className="bg-gray-50">
                                           <td colSpan={5} className="text-right font-medium p-2 border-t">
-                                            Số tiền giảm giá (nếu có):
+                                            Số tiền giảm giá:
                                           </td>
                                           <td className="text-right p-2 border-t text-red-600 font-medium">
                                             -{Number(order.discount_amount).toLocaleString("vi-VN", {

@@ -24,6 +24,8 @@ const upload = multer({ storage });
 const { changePassword } = require('../controllers/Client/PasswordOldController');
 const authenticate = require('../services/Middleware'); // Middleware để gán req.user
 const brandClientController = require('../controllers/Client/brandClientController');
+const UserController = require('../controllers/Client/userControllers');
+
 //------------------[ CLIENT ROUTES ]------------------
 
 //------------------[ CHATBOX ]------------------//
@@ -121,5 +123,8 @@ router.post('/change-password', authenticate, changePassword);
 router.get('/brands/active', BrandController.getActiveBrands);
 router.get('/brands/search', BrandController.search);
 router.get('/brand/list', brandClientController.getAll);
+
+//------------------[ USERS ]------------------
+router.put('/users/:id', UserController.updateUserInfo);
 
 module.exports = router;

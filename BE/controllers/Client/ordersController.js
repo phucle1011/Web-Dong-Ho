@@ -364,6 +364,7 @@ class OrderController {
             }
             const order_code = `ORD-${Date.now()}`;
             const currentDateTime = new Date(Date.now() + 7 * 60 * 60 * 1000);
+            const finalTotal = totalPrice + (shipping_fee || 0);
 
             const newOrder = await OrderModel.create({
                 user_id,
@@ -372,7 +373,7 @@ class OrderController {
                 phone,
                 email,
                 address,
-                total_price: totalPrice,
+                total_price: finalTotal,
                 payment_method,
                 order_code,
                 shipping_address: address,
@@ -780,22 +781,19 @@ class OrderController {
     }
 
     static sortObject(obj) {
-        // Thứ tự chính xác theo yêu cầu VNPay
-        const orderedParams = [
+        const ordered = {};
+        [
             'vnp_Version', 'vnp_Command', 'vnp_TmnCode',
-            'vnp_Amount', 'vnp_BankCode', 'vnp_CreateDate',
-            'vnp_CurrCode', 'vnp_IpAddr', 'vnp_Locale',
-            'vnp_OrderInfo', 'vnp_OrderType', 'vnp_ReturnUrl',
-            'vnp_TxnRef', 'vnp_SecureHash', 'vnp_SecureHashType'
-        ];
-
-        const sorted = {};
-        orderedParams.forEach(key => {
-            if (obj[key] !== undefined) {
-                sorted[key] = obj[key];
+            'vnp_Locale', 'vnp_CurrCode', 'vnp_TxnRef',
+            'vnp_OrderInfo', 'vnp_Amount', 'vnp_ReturnUrl',
+            'vnp_IpAddr', 'vnp_CreateDate', 'vnp_BankCode',
+            'vnp_OrderType'
+        ].forEach(key => {
+            if (obj[key] !== undefined && obj[key] !== '') {
+                ordered[key] = obj[key];
             }
         });
-        return sorted;
+        return ordered;
     }
 
     static async createVNPayUrl(req, res) {
@@ -808,16 +806,14 @@ class OrderController {
                 }
             }
 
-            // Get client IP
-            let ipAddr = req.headers['x-forwarded-for'] ||
-                req.connection.remoteAddress ||
-                req.socket.remoteAddress ||
-                req.connection.socket?.remoteAddress;
-            ipAddr = ipAddr?.replace('::ffff:', '') || '127.0.0.1';
+            let ipAddr = req.headers['x-real-ip'] ||
+                req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                '113.161.210.31';
 
             // Get config
             const tmnCode = process.env.VNPAY_TMN_CODE.trim();
             const secretKey = process.env.VNPAY_HASH_SECRET.trim();
+            console.assert(secretKey.length === 32, "SecretKey phải có 32 ký tự");
             const vnpUrl = process.env.VNPAY_PAYMENT_URL.trim();
             const returnUrl = process.env.VNPAY_RETURN_URL.trim();
 
@@ -839,72 +835,78 @@ class OrderController {
                 .substring(0, 255)
                 .replace(/[^a-zA-Z0-9\s]/g, '');
 
-            // Prepare parameters
             const vnpParams = {
                 vnp_Version: '2.1.0',
                 vnp_Command: 'pay',
                 vnp_TmnCode: tmnCode,
                 vnp_Amount: amount * 100,
-                vnp_BankCode: req.body.bankCode || '',
                 vnp_CreateDate: createDate,
                 vnp_CurrCode: 'VND',
-                vnp_IpAddr: ipAddr,
-                vnp_Locale: req.body.language || 'vn',
+                vnp_IpAddr: ipAddr, // Đã sửa thành IPv4
+                vnp_Locale: 'vn',
                 vnp_OrderInfo: orderInfo,
                 vnp_OrderType: req.body.orderType || 'other',
                 vnp_ReturnUrl: returnUrl,
                 vnp_TxnRef: orderId,
-                vnp_SecureHashType: 'SHA512'
+                vnp_BankCode: req.body.bankCode || ''
             };
 
-            // Remove empty values
-            Object.keys(vnpParams).forEach(key => {
-                if (vnpParams[key] === '' || vnpParams[key] === null || vnpParams[key] === undefined) {
-                    delete vnpParams[key];
-                }
-            });
+            console.log("============== DEBUG VNPAY ==============");
+            console.log("1. Tham số ban đầu:", JSON.stringify(vnpParams, null, 2));
 
-            // Sort params
-            const sortedParams = {};
-            Object.keys(vnpParams).sort().forEach(key => {
-                sortedParams[key] = vnpParams[key];
-            });
+            // Sắp xếp params
+            const sortedParams = OrderController.sortObject(vnpParams);
+            console.log("2. Sau khi sắp xếp:", JSON.stringify(sortedParams, null, 2));
 
-            // Create sign data
+            // Tạo chuỗi ký
             const signData = Object.entries(sortedParams)
+                .filter(([_, val]) => val !== '' && val !== undefined)
                 .map(([key, val]) => `${key}=${val}`)
                 .join('&');
+            console.log("3. Chuỗi dữ liệu ký (RAW):", signData);
+            console.log("SecretKey actual length:", secretKey.length);
+            console.log("SecretKey actual value:", `|${secretKey}|`);
 
-            // Create signature
-            const hmac = crypto.createHmac('sha512', secretKey);
-            hmac.update(signData);
+            // Tạo chữ ký
+            const hmac = crypto.createHmac("sha512", secretKey);
+            hmac.update(Buffer.from(signData, 'utf-8'));
             const signed = hmac.digest('hex');
-            sortedParams.vnp_SecureHash = signed;
+            console.log("4. Chữ ký tạo ra:", signed);
 
-            // Create payment URL
+            // Thêm chữ ký vào params
+            sortedParams.vnp_SecureHash = signed;
+            sortedParams.vnp_SecureHashType = 'SHA512';
+            console.log("5. Params cuối cùng:", JSON.stringify(sortedParams, null, 2));
+
+            // Tạo URL
             const queryString = Object.entries(sortedParams)
                 .map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
                 .join('&');
+            console.log("6. Query string:", queryString);
 
-            const paymentUrl = `${vnpUrl}?${queryString}`;
+            const paymentUrl = new URL(vnpUrl);
+            const finalParams = {
+                ...sortedParams,
+                vnp_SecureHash: signed,
+                vnp_SecureHashType: 'SHA512'
+            };
 
+            // Chỉ append mỗi param 1 lần
+            Object.entries(finalParams).forEach(([key, val]) => {
+                paymentUrl.searchParams.append(key, val);
+            });
+
+            console.log("URL cuối cùng:", paymentUrl.toString());
             return res.json({
                 success: true,
-                message: 'success',
-                data: {
-                    paymentUrl,
-                    orderId,
-                    amount,
-                    returnUrl
-                }
+                paymentUrl: paymentUrl.toString()
             });
 
         } catch (error) {
-            console.error('VNPay Error:', error);
+            console.error('Lỗi VNPay:', error);
             return res.status(500).json({
-                code: '99',
-                message: 'System error',
-                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+                success: false,
+                message: error.message
             });
         }
     }
@@ -1040,45 +1042,160 @@ class OrderController {
                 order.shipping_fee || 0
             );
 
-            let productHTML = "<p>";
-            if (products && products.length > 0) {
-                for (const item of products) {
-                    const variant = item.variant;
-                    const productName = variant?.sku || "Sản phẩm không xác định";
-                    const price = new Intl.NumberFormat("vi-VN").format(variant?.price || 0);
-                    productHTML += `
-                                    <p><strong>Tên sản phẩm:</strong> ${productName} </p>
-                                    <p><strong>Số lượng:</strong> ${item.quantity} </p>
-                                    <p><strong>Đơn giá:</strong> ${price} VND </p>
-        `;
+            const productsHTML = products.map(item => {
+                const variant = item.variant;
+                const productName = variant?.product?.name || "Sản phẩm không xác định";
+                const price = new Intl.NumberFormat("vi-VN").format(variant?.price || 0);
+                const imageUrl = variant?.images?.[0]?.image_url;
+
+                return `
+            <div class="product">
+                <img src="${imageUrl}" alt="${productName}">
+                <div class="product-info">
+                <p style="margin-left: 10px;"><strong>${productName} (${variant.attributeValues.map(attr => attr.value).join(' - ')})</strong></p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-left: 10px; margin-top: 4px;">
+                    <span style="font-size: 14px;">${price}₫</span>
+                <span style="font-size: 13px; color: #555; margin-left: auto;">×${item.quantity}</span>
+                </div>
+                </div>
+            </div>
+            `;
+            }).join('');
+
+            const subtotal = products.reduce((sum, item) => sum + (item.variant.price * item.quantity), 0);
+            const discount = order.discount_amount || 0;
+            const shippingFee = order.shipping_fee || 0;
+            const total = subtotal + shippingFee - discount;
+
+            const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <title>Xác nhận đơn hàng</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f5f5f5;
+                    padding: 20px;
+                    color: #333;
                 }
-                productHTML += "</p>";
-            } else {
-                productHTML = "<p>Không có sản phẩm nào.</p>";
-            }
+                .order-container {
+                    max-width: 400px;
+                    margin: auto;
+                    background: #fff;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    padding: 16px;
+                }
+                .shop-name {
+                    font-weight: bold;
+                    font-size: 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin-bottom: 12px;
+                }
+                .product {
+                    display: flex;
+                    gap: 10px;
+                    margin: 16px 0;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 16px;
+                }
+                .product img {
+                    width: 80px;
+                    height: 80px;
+                    object-fit: cover;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                }
+                .product-info {
+                    flex-grow: 1;
+                    font-size: 13px;
+                }
+                .price {
+                    font-weight: bold;
+                    font-size: 14px;
+                    margin-top: 4px;
+                }
+                .summary {
+                    margin-top: 20px;
+                }
+                .summary-title {
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                    font-size: 15px;
+                }
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 14px;
+                    margin: 6px 0;
+                }
+                .total {
+                    font-weight: bold;
+                    font-size: 15px;
+                    border-top: 1px solid #ddd;
+                    padding-top: 10px;
+                }
+                .discount {
+                    color: #008000;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="order-container">
 
-            const emailContent = `
-            <h3>Cảm ơn bạn đã đặt hàng!</h3>
-            <p><strong>Thông tin đơn hàng:</strong></p>
-            <p><strong>Mã đơn hàng:</strong> ${order.order_code}</p>
-            <p><strong>Ngày tạo:</strong> ${formattedDate}</p>
-            <p><strong>Danh sách sản phẩm:</strong></p>
-            ${productHTML}
-            <p><strong>Tổng tiền:</strong> ${formattedPrice} VND</p>
-            <p><strong>Phí vận chuyển:</strong> ${formattedShipping} VND</p>
-            <p><strong>Phương thức thanh toán:</strong> ${order.payment_method}</p>
-            <p><strong>Thông tin giao hàng:</strong></p>
-            <p><strong>Họ tên:</strong> ${user.name || "Không có thông tin"}</p>
-            <p><strong>Số điện thoại:</strong> ${user.phone || "Không có thông tin"}</p>
-            <p><strong>Địa chỉ:</strong> ${order.shipping_address || order.address}</p>
-            <p>Cảm ơn bạn đã ủng hộ chúng tôi!</p>
+                ${productsHTML}
+
+                <div style="border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                        <span style="color: #666;">Mã đơn hàng:</span>
+                        <span style="font-size: 13px; color: #555; margin-left: auto;"">${order.order_code}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 8px;">
+                        <span style="color: #666;">Ngày đặt hàng:</span>
+                        <span style="font-size: 13px; color: #555; margin-left: auto;"">${formattedDate}</span>
+                    </div>
+                </div>
+
+                <div class="summary">
+                    <div class="summary-title">Tóm tắt kiện hàng</div>
+
+                    <div class="summary-row">
+                        <span>Tổng phụ</span>
+                        <span style="font-size: 13px; color: #555; margin-left: auto;">${new Intl.NumberFormat("vi-VN").format(subtotal)}₫</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Vận chuyển</span>
+                        <span style="font-size: 13px; color: #555; margin-left: auto;">+ ${new Intl.NumberFormat("vi-VN").format(shippingFee)}₫</span>
+                    </div>
+
+                    ${discount > 0 ? `
+                    <div class="summary-row">
+                        <span>Phiếu giảm giá</span>
+                        <span style="font-size: 13px; color: #555; margin-left: auto;">- ${new Intl.NumberFormat("vi-VN").format(discount)}₫</span>
+                    </div>
+                    ` : ''}
+
+                    <div class="summary-row total">
+                        <span>Tổng (${products.length} mặt hàng)</span>
+                        <span style="font-size: 13px; color: #555; margin-left: auto;">${new Intl.NumberFormat("vi-VN").format(total)}₫</span>
+                    </div>
+                    </div>
+            </div>
+        </body>
+        </html>
         `;
 
-            let mailOptions = {
-                from: `"Cửa hàng của chúng tôi" <${process.env.EMAIL_USER}>`,
+            const mailOptions = {
+                from: `"Cửa hàng của bạn" <${process.env.EMAIL_USER}>`,
                 to: customerEmail,
-                subject: `Xác nhận đơn hàng #${order.id}`,
-                html: emailContent,
+                subject: `Xác nhận đơn hàng #${order.order_code}`,
+                html: htmlContent
             };
 
             await transporter.sendMail(mailOptions);

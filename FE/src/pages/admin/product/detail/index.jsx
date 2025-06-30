@@ -9,7 +9,9 @@ import {
   FaAngleDoubleLeft,
   FaChevronLeft,
   FaChevronRight,
-  FaAngleDoubleRight
+  FaAngleDoubleRight,
+  FaTrashAlt,
+  FaEdit
 } from "react-icons/fa";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 
@@ -315,16 +317,15 @@ useEffect(() => {
               <div className="flex gap-2 justify-center">
                 <Link
                   to={`/admin/products/editVariant/${variant.id}`}
-                  className="bg-yellow-500 text-white py-1 px-3 rounded"
+                  className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                 >
-                                    <i className="fa-solid fa-pen-to-square"></i>
-
+                <FaEdit size={20} className="font-bold" />
                 </Link>
                 <button
                   onClick={() => setSelectedProduct(variant)}
-                  className="bg-red-500 text-white py-1 px-3 rounded"
+                  className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                 >
-                  <i className="fa-solid fa-trash"></i>
+                  <FaTrashAlt size={20} className="font-bold" />
                 </button>
               </div>
             </td>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
-import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch } from 'react-icons/fa';
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaEye } from 'react-icons/fa';
 
 function WishlistList() {
   const [groupedWishlistItems, setGroupedWishlistItems] = useState([]); // Lưu trữ dữ liệu đã nhóm
@@ -123,14 +123,16 @@ function WishlistList() {
                 handleClearSearch(); // Tự động load lại toàn bộ danh sách
               }
             }}
-            className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="button"
-            className="bg-blue-900 hover:bg-blue-800 text-white px-4 rounded ml-2"
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2"
             onClick={handleSearchSubmit}
           >
-            <FaSearch className="w-5 h-5" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+            </svg>
           </button>
         </div>
         {loading ? (
@@ -191,9 +193,9 @@ function WishlistList() {
                       <td className="p-2 border text-center">
                         <Link
                           to={`/admin/wishlist/detail/${userGroup.user.id}`}
-                          className="bg-blue-500 text-white py-1 px-3 rounded whitespace-nowrap"
+                          className="bg-blue-500 text-white p-2 rounded w-10 h-10 inline-flex items-center justify-center"
                         >
-                          <i className="fa fa-eye"></i>
+                          <FaEye size={16} className="font-bold" />
                         </Link>
                       </td>
                     </tr>

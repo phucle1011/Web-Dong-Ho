@@ -9,6 +9,10 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaAngleDoubleRight,
+  FaTrashAlt,
+  FaChevronDown,
+  FaChevronUp,
+  FaEdit
 } from "react-icons/fa";
 
 const PromotionProductList = () => {
@@ -200,7 +204,7 @@ const PromotionProductList = () => {
       <div className="mb-4 flex gap-2">
         <input
           type="text"
-          className="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none"
+          className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           placeholder="Nhập tên khuyến mãi cần tìm..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -210,20 +214,13 @@ const PromotionProductList = () => {
         />
         <button
           onClick={handleSearch}
-          className="bg-[#073272] text-white px-4 py-2 rounded"
+          className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
           title="Tìm kiếm"
         >
-          <i className="fa fa-search"></i>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+            </svg>
         </button>
-        {searchTerm && (
-          <button
-            onClick={handleClearSearch}
-            className="bg-[#073272] text-white px-4 py-2 text-sm rounded whitespace-nowrap"
-            title="Xem tất cả"
-          >
-            Xem tất cả
-          </button>
-        )}
       </div>
 
       {loading && <div className="text-center py-4">Đang tải...</div>}
@@ -276,10 +273,10 @@ const PromotionProductList = () => {
                         {promotionId ? (
                           <Link
                             to={`/admin/promotion-products/edit/${promotionId}`}
-                            className="bg-yellow-500 text-white py-1 px-3 rounded"
+                            className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                             title="Sửa"
                           >
-                            <i className="fa-solid fa-pen-to-square"></i>
+                            <FaEdit size={20} className="font-bold" />
                           </Link>
                         ) : (
                           <span
@@ -291,9 +288,9 @@ const PromotionProductList = () => {
                         )}
                         <button
                           onClick={() => toggleExpand(promoName)}
-                          className="bg-blue-500 text-white py-1 px-3 rounded"
+                          className="bg-blue-500 text-white p-2 rounded"
                         >
-                          {isExpanded ? "Thu gọn" : "Xem thêm"}
+                          {isExpanded ? <FaChevronUp size={16} className="font-bold" /> : <FaChevronDown size={16} className="font-bold" />}
                         </button>
                       </td>
                     </tr>
@@ -336,10 +333,10 @@ const PromotionProductList = () => {
                                     <td className="border p-2 text-center">
                                       <button
                                         onClick={() => handleDelete(item.id)}
-                                        className="bg-red-500 text-white py-1 px-3 rounded"
+                                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                         title="Xóa"
                                       >
-                                        <i className="fa-solid fa-trash"></i>
+                                        <FaTrashAlt size={20} className="font-bold" />
                                       </button>
                                     </td>
                                   </tr>

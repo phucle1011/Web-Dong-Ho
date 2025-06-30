@@ -12,6 +12,7 @@ import {
   FaEye,
   FaTrashAlt,
   FaTrash,
+  FaEdit
 } from "react-icons/fa";
 
 const AdminProductList = () => {
@@ -198,7 +199,7 @@ const AdminProductList = () => {
         <div className="flex justify-end mb-3">
           <Link
             to="/admin/products/create"
-            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+            className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
           >
             + Thêm sản phẩm
           </Link>
@@ -222,7 +223,7 @@ const AdminProductList = () => {
             value={searchInput}
             onChange={handleSearchInputChange}
             placeholder="Tìm kiếm theo tên sản phẩm..."
-            className="border p-2 rounded flex-grow"
+            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
           />
           <select
@@ -252,9 +253,11 @@ const AdminProductList = () => {
 
           <button
             onClick={handleSearchSubmit}
-            className="bg-blue-900 hover:bg-blue-800 text-white py-2 px-4 rounded"
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
           >
-            Tìm kiếm
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+            </svg>
           </button>
         </div>
 
@@ -321,19 +324,19 @@ const AdminProductList = () => {
                       {/* Nút xem chi tiết */}
                       <Link
                         to={`/admin/products/detail/${product.id}`}
-                        className="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition flex items-center justify-center"
+                        className="bg-blue-500 text-white p-2 rounded"
                         title="Xem chi tiết"
                       >
-                        <FaEye size={16} />
+                        <FaEye size={16} className="font-bold" />
                       </Link>
 
                       {/* Nút thêm biến thể */}
                       <Link
                         to={`/admin/products/addVariant/${product.id}`}
-                        className="bg-yellow-500 text-white py-1 px-3 rounded"
+                        className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                         title="Thêm biến thể"
                       >
-                        <i class="fa-solid fa-pen-to-square"></i>
+                        <FaEdit size={20} className="font-bold" />
                       </Link>
 
                       {/* Nút xoá */}
@@ -342,7 +345,7 @@ const AdminProductList = () => {
                         className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                         title="Xoá sản phẩm"
                       >
-                        <FaTrashAlt size={16} />
+                        <FaTrashAlt size={20} className="font-bold" />
                       </button>
                     </div>
 

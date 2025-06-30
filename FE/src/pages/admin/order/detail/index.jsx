@@ -196,10 +196,24 @@ function OrderDetail() {
                   </tr>
                 ))}
 
+                {Number(order.shipping_fee) > 0 && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={4} className="text-right font-medium p-2 border-t">
+                      Phí vận chuyển:
+                    </td>
+                    <td className="text-right p-2 border-t font-medium">
+                      +{Number(order.shipping_fee).toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
+                    </td>
+                  </tr>
+                )}
+
                 {Number(order.discount_amount) > 0 && (
                   <tr className="bg-gray-50">
                     <td colSpan={4} className="text-right font-medium p-2 border-t">
-                      Số tiền giảm giá (nếu có):
+                      Số tiền giảm giá:
                     </td>
                     <td className="text-right p-2 border-t text-red-600 font-medium">
                       -{Number(order.discount_amount).toLocaleString("vi-VN", {
@@ -230,16 +244,15 @@ function OrderDetail() {
           </tbody>
 
         </table>
-      </div>
 
-      <div className="mt-4 flex gap-4 no-print">
-
-        <button
-          onClick={() => navigate("/admin/orders/getAll")}
-          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-        >
-          Quay lại
-        </button>
+        <div className="mt-4 flex gap-4 no-print">
+          <button
+            onClick={() => navigate("/admin/orders/getAll")}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Quay lại
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
   FaEdit,
   FaTrash,
   FaPlus,
+  FaTrashAlt
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -104,23 +105,25 @@ function BlogList() {
               <div className="d-flex justify-between items-center mb-4">
                 <h5 className="card-title fw-semibold">Danh sách bài viết</h5>
                 <button
-                  className="btn btn-success d-flex align-items-center gap-2"
+                  className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
                   onClick={() => navigate("/admin/blog/add")}
                 >
-                  <FaPlus /> Thêm bài viết
+                  + Thêm bài viết
                 </button>
               </div>
 
               <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
                 <input
                   type="text"
-                  className="form-control me-2"
+                  className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
                   placeholder="Tìm theo tiêu đề bài viết..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button className="btn btn-primary" onClick={handleSearch}>
-                  <FaSearch />
+                <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2" onClick={handleSearch}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+                  </svg>
                 </button>
               </div>
 
@@ -163,10 +166,10 @@ function BlogList() {
                           <td>
                             <div className="d-flex gap-2">
                               <button
-                                className="btn btn-primary btn-sm"
+                                className="bg-blue-500 text-white p-2 rounded"
                                 onClick={() => navigate(`/admin/blog/detail/${blog.id}`)}
                               >
-                                <FaEye />
+                                <FaEye size={16} className="font-bold" />
                               </button>
                               <button
                                 className="btn btn-warning btn-sm"
@@ -175,10 +178,10 @@ function BlogList() {
                                 <FaEdit />
                               </button>
                               <button
-                                className="btn btn-danger btn-sm"
+                                className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                 onClick={() => handleDelete(blog.id)}
                               >
-                                <FaTrash />
+                                <FaTrashAlt size={20} className="font-bold" />
                               </button>
                             </div>
                           </td>
@@ -220,11 +223,10 @@ function BlogList() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded ${
-                            currentPage === page
+                          className={`px-3 py-1 border rounded ${currentPage === page
                               ? "bg-blue-500 text-white"
                               : "bg-blue-100 text-black hover:bg-blue-200"
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>

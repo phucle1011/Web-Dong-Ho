@@ -41,31 +41,31 @@ function CategoryCreate() {
         setValue("slug", generateSlug(nameValue));
     }
 
- const onSubmit = async (formData) => {
-  setLoading(true);
+    const onSubmit = async (formData) => {
+        setLoading(true);
 
-  const cleanedData = {
-    ...formData,
-    name: formData.name.trim().replace(/\s+/g, " "),
-    slug: generateSlug(formData.name),
-    description: formData.description.trim(),
-  };
+        const cleanedData = {
+            ...formData,
+            name: formData.name.trim().replace(/\s+/g, " "),
+            slug: generateSlug(formData.name),
+            description: formData.description.trim(),
+        };
 
-  try {
-    await axios.post(`${Constants.DOMAIN_API}/admin/category/create`, cleanedData);
-    toast.success("Thêm danh mục thành công!");
-    navigate("/admin/categories/getAll");
-  } catch (error) {
-    if (error.response?.status === 409) {
-      toast.error("Tên danh mục đã tồn tại.");
-    } else {
-      toast.error("Thêm danh mục thất bại.");
-    }
-    console.error(error);
-  } finally {
-    setLoading(false);
-  }
-};
+        try {
+            await axios.post(`${Constants.DOMAIN_API}/admin/category/create`, cleanedData);
+            toast.success("Thêm danh mục thành công!");
+            navigate("/admin/categories/getAll");
+        } catch (error) {
+            if (error.response?.status === 409) {
+                toast.error("Tên danh mục đã tồn tại.");
+            } else {
+                toast.error("Thêm danh mục thất bại.");
+            }
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
 
     return (
@@ -123,13 +123,22 @@ function CategoryCreate() {
                     )}
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
-                >
-                    {loading ? "Đang thêm..." : "Thêm danh mục"}
-                </button>
+                <div className="mt-4 flex gap-4 no-print">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+                    >
+                        {loading ? "Đang thêm..." : "Thêm danh mục"}
+                    </button>
+
+                    <button
+                        onClick={() => navigate("/admin/categories/getAll")}
+                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    >
+                        Quay lại
+                    </button>
+                </div>
             </form>
         </div>
     );

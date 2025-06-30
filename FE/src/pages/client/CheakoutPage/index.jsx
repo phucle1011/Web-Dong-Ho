@@ -1,4 +1,3 @@
-import InputCom from "../Helpers/InputCom";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 import React, { useState, useEffect } from "react";
@@ -6,7 +5,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { decodeToken } from "../Helpers/jwtDecode";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faChevronRight } from '@fortawesome/free-solid-svg-icons';
-import { Link } from "react-router-dom";
 import Constants from "../../../Constants";
 import Swal from "sweetalert2";
 import axios from 'axios';
@@ -27,37 +25,17 @@ export default function CheakoutPage() {
   const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
   const [defaultAddress, setDefaultAddress] = useState(null);
-  const [showAddressModal, setShowAddressModal] = useState(false);
   const [allAddresses, setAllAddresses] = useState([]);
-  const [addressForm, setAddressForm] = useState({
-    address_line: "",
-    city: "",
-    district: "",
-    ward: "",
-  });
-  const [editingAddressId, setEditingAddressId] = useState(null);
   const [provinces, setProvinces] = useState([]);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
-
-  const [addresses, setAddresses] = useState([]);
-  const [showReasonModal, setShowReasonModal] = useState(false);
-  const [selectedNewStatus, setSelectedNewStatus] = useState('');
-  const [reasonOption, setReasonOption] = useState('');
-  const [customReason, setCustomReason] = useState('');
   const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
-  const [selectedWard, setSelectedWard] = useState("");
-  const [isEdit, setIsEdit] = useState("");
-  const [addressData, setAddressData] = useState("");
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [addressToSetDefault, setAddressToSetDefault] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [noteValue, setNoteValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const decoded = decodeToken(token);
   const id = decoded?.id;
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 
   // useEffect(() => {
   //   if (!location.state && !localStorage.getItem("checkoutData")) {
@@ -234,84 +212,6 @@ export default function CheakoutPage() {
 
     fetchProvinces();
   }, []);
-
-  const handleAddNewAddress = () => {
-    setAddressForm({
-      name: user?.name || "",
-      phone: user?.phone || "",
-      address_line: "",
-      city: "",
-      district: "",
-      ward: ""
-    });
-    setEditingAddressId(null);
-    setShowAddressModal(true);
-  };
-
-  const handleEditAddress = (address) => {
-    setAddressForm({
-      name: address.name,
-      phone: address.phone,
-      address_line: address.address_line,
-      city: address.city,
-      district: address.district,
-      ward: address.ward
-    });
-    setDistricts(provinces.find(p => p.id === address.city)?.districts || []);
-    setWards(districts.find(d => d.id === address.district)?.wards || []);
-
-    setEditingAddressId(address.id);
-    setShowAddressModal(true);
-  };
-
-  const handleSubmitAddress = async (e) => {
-    e.preventDefault();
-    const url = editingAddressId
-      ? `${Constants.DOMAIN_API}/admin/address/${editingAddressId}`
-      : `${Constants.DOMAIN_API}/admin/address`;
-    const method = editingAddressId ? "PUT" : "POST";
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...addressForm,
-          is_default: defaultAddress && !editingAddressId ? 1 : 0
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        const updatedAddresses = [...allAddresses];
-
-        if (editingAddressId) {
-          const index = updatedAddresses.findIndex((a) => a.id === editingAddressId);
-          updatedAddresses[index] = { ...updatedAddresses[index], ...addressForm };
-        } else {
-          updatedAddresses.push(data.data);
-        }
-
-        setAllAddresses(updatedAddresses);
-
-        if (!defaultAddress && !editingAddressId) {
-          setDefaultAddress(data.data);
-        }
-
-        setShowAddressModal(false);
-      } else {
-        alert("Lỗi khi lưu địa chỉ.");
-      }
-    } catch (error) {
-      console.error("Lỗi khi gửi yêu cầu:", error);
-      alert("Không thể kết nối với máy chủ.");
-    }
-  };
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -745,7 +645,20 @@ export default function CheakoutPage() {
   };
 
   const handleCheckout = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || isCalculatingShipping) {
+      toast.warning("Vui lòng chờ hệ thống tính toán phí vận chuyển...");
+      return;
+    }
+
+    if (finalData.shippingService === "Đang tính..." || finalData.shippingService === "Chưa có địa chỉ") {
+      toast.error("Vui lòng chờ hệ thống tính toán phí vận chuyển hoàn tất");
+      return;
+    }
+
+    if (finalData.shippingService === "Không hỗ trợ giao hàng tới khu vực này") {
+      toast.error("Rất tiếc, chúng tôi chưa hỗ trợ giao hàng tới địa chỉ của bạn");
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -863,17 +776,19 @@ export default function CheakoutPage() {
   };
 
   const calculateShippingFee = async () => {
-    if (!defaultAddress) {
-      setFinalData(prev => ({
-        ...prev,
-        shippingFee: 0,
-        shippingService: "Chưa có địa chỉ",
-        formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
-      }));
-      return;
-    }
+    setIsCalculatingShipping(true);
 
     try {
+      if (!defaultAddress) {
+        setFinalData(prev => ({
+          ...prev,
+          shippingFee: 0,
+          shippingService: "Chưa có địa chỉ",
+          formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+        }));
+        return;
+      }
+
       const toProvinceId = await getProvinceIdByName(defaultAddress.city);
       if (!toProvinceId) throw new Error("Không tìm thấy mã tỉnh");
 
@@ -943,16 +858,9 @@ export default function CheakoutPage() {
         shippingService: "Lỗi tính phí",
         formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
       }));
+    } finally {
+      setIsCalculatingShipping(false);
     }
-  };
-
-  const getServiceName = (serviceId) => {
-    const services = {
-      53320: "Tiêu chuẩn",
-      53321: "Tiết kiệm",
-      53322: "Hỏa tốc"
-    };
-    return services[serviceId] || `Dịch vụ ${serviceId}`;
   };
 
   useEffect(() => {
@@ -982,8 +890,41 @@ export default function CheakoutPage() {
     if (defaultAddress) {
       calculateShippingFee();
     }
-  }, [defaultAddress]); 
+  }, [defaultAddress]);
 
+  const updateUserInfo = async (userId, updatedData) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${Constants.DOMAIN_API}/users/${userId}`,
+        updatedData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Lỗi khi cập nhật thông tin:", error);
+      return null;
+    }
+  };
+
+  const handleUserInfoChange = async (field, value) => {
+    if (!user || !user.id) return;
+
+    const updatedUser = { ...user, [field]: value };
+    setUser(updatedUser);
+
+    const payload = {
+      [field]: value
+    };
+
+    const updatedUserData = await updateUserInfo(user.id, payload);
+    if (updatedUserData) {
+      setUser(updatedUserData);
+    }
+  };
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -1013,17 +954,10 @@ export default function CheakoutPage() {
                           type="text"
                           placeholder="Nguyễn Văn A"
                           value={user?.name || ""}
-                          onChange={(e) => setUser({ ...user, name: e.target.value })}
+                          onChange={(e) => handleUserInfoChange("name", e.target.value)}
                           className="w-full h-[44px] px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                           required
                         />
-                        {user?.name && (
-                          <span
-                            onClick={() => setUser({ ...user, name: "" })}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer text-sm"
-                          >
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -1034,7 +968,7 @@ export default function CheakoutPage() {
                           type="email"
                           placeholder="example@example.com"
                           value={user?.email || ""}
-                          onChange={(e) => setUser({ ...user, email: e.target.value })}
+                          onChange={(e) => handleUserInfoChange("email", e.target.value)}
                           className="w-full h-[44px] px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                           required
                         />
@@ -1045,7 +979,7 @@ export default function CheakoutPage() {
                           type="tel"
                           placeholder="0909xxxxxx"
                           value={user?.phone || ""}
-                          onChange={(e) => setUser({ ...user, phone: e.target.value })}
+                          onChange={(e) => handleUserInfoChange("phone", e.target.value)}
                           className="w-full h-[44px] px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                           required
                         />
@@ -1276,8 +1210,14 @@ export default function CheakoutPage() {
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-600">Phí vận chuyển:</span>
                       <div className="text-right">
-                        {finalData.shippingService === "Đang tính..." ? (
-                          <span className="text-gray-500 text-sm">Đang tính phí...</span>
+                        {isCalculatingShipping ? (
+                          <div className="flex items-center justify-end">
+                            <span className="text-gray-500 text-sm mr-2">Đang tính phí...</span>
+                            <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          </div>
                         ) : (
                           <>
                             <span className="font-semibold">
@@ -1291,7 +1231,6 @@ export default function CheakoutPage() {
                       </div>
                     </div>
 
-                    {/* Hiển thị tổng cộng */}
                     <div className="flex justify-between items-center pt-2 border-t mt-2">
                       <span className="text-lg font-bold">Tổng cộng:</span>
                       <span className="text-xl font-bold text-qred">
@@ -1351,9 +1290,21 @@ export default function CheakoutPage() {
                   <button
                     type="button"
                     onClick={handleCheckout}
-                    className="w-full h-[50px] black-btn flex justify-center items-center mt-4"
+                    disabled={isSubmitting || isCalculatingShipping}
+                    className={`w-full h-[50px] black-btn flex justify-center items-center mt-4 ${isSubmitting || isCalculatingShipping ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                   >
-                    <span className="text-sm font-semibold">Đặt hàng ngay</span>
+                    {isSubmitting ? (
+                      <div className="flex items-center">
+                        <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-sm font-semibold">Đang xử lý...</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-semibold">Đặt hàng ngay</span>
+                    )}
                   </button>
                 </div>
               </div>

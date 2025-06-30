@@ -353,7 +353,7 @@ function OrderGetAll() {
           <input
             type="text"
             className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
-            placeholder="Nhập tên khách hàng hoặc mã đơn hàng..."
+            placeholder="Nhập tên khách hàng..."
             value={searchTerm}
             onChange={handleSearchChange}
           />
@@ -418,24 +418,30 @@ function OrderGetAll() {
                       <td className="p-2 border border-gray-300 flex gap-2">
                         <Link
                           to={`/admin/orders/detail/${order.id}`}
-                          className="bg-blue-500 text-white py-1 px-3 rounded"
+                          className="bg-blue-500 text-white p-2 rounded"
+                          title="Xem chi tiết"
                         >
-                          <FaEye />
+                          <FaEye size={16} className="font-bold" />
                         </Link>
+
+                        <button
+                          onClick={() => handleTrackOrder(order.order_code)}
+                          className="bg-green-600 hover:bg-green-500 text-white p-2 rounded"
+                          title="Theo dõi"
+                        >
+                          <FaMapMarkerAlt size={16} className="font-bold" />
+                        </button>
+
                         {["pending"].includes(order.status) && (
                           <button
                             onClick={() => setSelectedOrder(order)}
-                           className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                            className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                            title="Xóa đơn"
                           >
-                            <FaTrashAlt />
+                            <FaTrashAlt size={20} className="font-bold" />
                           </button>
                         )}
-                        <button
-                          onClick={() => handleTrackOrder(order.order_code)}
-                          className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded whitespace-nowrap"
-                        >
-                          <FaMapMarkerAlt />
-                        </button>
+
                       </td>
                     </tr>
 
