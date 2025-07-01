@@ -1,11 +1,12 @@
 const { Op } = require("sequelize");
-const { Sequelize } = require('sequelize');
+const { Sequelize } = require("sequelize");
 const ProductVariantsModel = require("../../models/productVariantsModel");
 const ProductModel = require("../../models/productsModel");
 const PromotionProductModel = require("../../models/promotionProductsModel");
 const PromotionModel = require("../../models/promotionsModel");
 const PromotionUserModel = require("../../models/promotionUsersModel");
-// GET ALL PromotionProducts with pagination and search by product name
+
+// GET ALL PromotionProducts with pagination and search by product name, promotion name, sku, or status
 exports.getAll = async (req, res) => {
   const { searchTerm = "", page = 1, limit = 10 } = req.query;
   const pageNumber = parseInt(page);
@@ -13,7 +14,18 @@ exports.getAll = async (req, res) => {
   const offset = (pageNumber - 1) * pageSize;
 
   try {
+    const whereCondition = {};
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$variant.product.name$": { [Op.like]: `%${searchTerm}%` } },
+        { "$promotion.name$": { [Op.like]: `%${searchTerm}%` } },
+        { "$variant.sku$": { [Op.like]: `%${searchTerm}%` } },
+        { "$promotion.status$": { [Op.like]: `%${searchTerm}%` } },
+      ];
+    }
+
     const { count, rows } = await PromotionProductModel.findAndCountAll({
+      where: whereCondition,
       include: [
         {
           model: ProductVariantsModel,
@@ -24,13 +36,6 @@ exports.getAll = async (req, res) => {
               model: ProductModel,
               as: "product",
               attributes: ["name"],
-              where: searchTerm
-                ? {
-                    name: {
-                      [Op.like]: `%${searchTerm}%`,
-                    },
-                  }
-                : undefined,
             },
           ],
         },
@@ -39,27 +44,27 @@ exports.getAll = async (req, res) => {
           as: "promotion",
           attributes: {
             include: [
-              "name", "start_date", "end_date",
-              // Đếm số user sử dụng mỗi promotion_id
+              "name",
+              "start_date",
+              "end_date",
               [
                 Sequelize.literal(`(
                   SELECT COUNT(*)
                   FROM promotion_users AS pu
                   WHERE pu.promotion_id = promotion.id
                 )`),
-                "user_count"
+                "user_count",
               ],
-              // Đếm số lượng biến thể (variant) gán vào promotion
               [
                 Sequelize.literal(`(
                   SELECT COUNT(*)
                   FROM promotion_products AS pp
                   WHERE pp.promotion_id = promotion.id
                 )`),
-                "variant_count"
-              ]
+                "variant_count",
+              ],
             ],
-            exclude: ["quantity"], // Bỏ trường quantity
+            exclude: ["quantity"],
           },
         },
       ],
@@ -87,6 +92,7 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const id = req.params.id;
+    console.log(`Fetching promotion product with ID: ${id}`); // Log ID
 
     const data = await PromotionProductModel.findByPk(id, {
       include: [
@@ -105,24 +111,25 @@ exports.getById = async (req, res) => {
         {
           model: PromotionModel,
           as: "promotion",
-          attributes: ["name"],
+          attributes: ["name", "start_date", "end_date", "status"],
         },
       ],
     });
 
     if (!data) {
+      console.log(`No record found for ID: ${id}`); // Log khi không tìm thấy
       return res.status(404).json({ message: "Promotion product not found" });
     }
 
+    console.log("Fetched data:", JSON.stringify(data, null, 2)); // Log dữ liệu chi tiết
     res.json(data);
   } catch (err) {
-    console.error(err);
+    console.error("Error in getById:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
 // CREATE
-// controller: promotion-product.controller.js
 exports.create = async (req, res) => {
   try {
     const { product_variant_id, promotion_id } = req.body;
@@ -136,7 +143,6 @@ exports.create = async (req, res) => {
       });
     }
 
-    // Tạo tất cả cặp promotion-variant
     const payloads = [];
     for (const promoId of promotionIds) {
       for (const variantId of variantIds) {
@@ -147,7 +153,6 @@ exports.create = async (req, res) => {
       }
     }
 
-    // Lấy các bản ghi đã tồn tại
     const existingRecords = await PromotionProductModel.findAll({
       where: {
         promotion_id: promotionIds.length === 1 ? promotionIds[0] : promotionIds,
@@ -159,7 +164,6 @@ exports.create = async (req, res) => {
       existingRecords.map((item) => `${item.promotion_id}-${item.product_variant_id}`)
     );
 
-    // Lọc payloads chưa tồn tại
     const filteredPayloads = payloads.filter(
       (p) => !existingPairs.has(`${p.promotion_id}-${p.product_variant_id}`)
     );
@@ -168,7 +172,6 @@ exports.create = async (req, res) => {
       return res.status(409).json({ error: "Tất cả các cặp promotion-product đã tồn tại." });
     }
 
-    // Thêm mới những cặp chưa tồn tại
     const data = await PromotionProductModel.bulkCreate(filteredPayloads);
 
     return res.status(201).json({
@@ -181,56 +184,50 @@ exports.create = async (req, res) => {
   }
 };
 
-
 // UPDATE
 exports.update = async (req, res) => {
   try {
     const { promotion_id, product_variant_ids, status } = req.body;
 
-    // Kiểm tra dữ liệu đầu vào
     if (!promotion_id || !Array.isArray(product_variant_ids)) {
       return res.status(400).json({ message: "promotion_id và product_variant_ids là bắt buộc, product_variant_ids phải là mảng" });
     }
 
-    // Kiểm tra khuyến mãi tồn tại
     const promotion = await PromotionModel.findByPk(promotion_id);
     if (!promotion) {
       return res.status(404).json({ message: "Không tìm thấy khuyến mãi" });
     }
 
-    // Xóa tất cả bản ghi hiện tại trong promotion_products cho promotion_id
     await PromotionProductModel.destroy({
-      where: { promotion_id }
+      where: { promotion_id },
     });
 
-    // Tạo bản ghi mới trong promotion_products
-    const newRecords = product_variant_ids.map(variant_id => ({
+    const newRecords = product_variant_ids.map((variant_id) => ({
       promotion_id,
-      product_variant_id: variant_id
+      product_variant_id: variant_id,
     }));
     await PromotionProductModel.bulkCreate(newRecords);
 
-    // Cập nhật status và variant_count trong bảng promotions
     await promotion.update({
       status: status || promotion.status,
-      variant_count: product_variant_ids.length
+      variant_count: product_variant_ids.length,
     });
 
-    // Lấy dữ liệu cập nhật để trả về
     const updatedRecords = await PromotionProductModel.findAll({
       where: { promotion_id },
-      include: [{ model: PromotionModel, as: 'promotion' }]
+      include: [{ model: PromotionModel, as: "promotion" }],
     });
 
     res.json({
       message: "Cập nhật khuyến mãi thành công",
-      data: updatedRecords
+      data: updatedRecords,
     });
   } catch (err) {
     console.error("Lỗi khi cập nhật khuyến mãi:", err);
     res.status(500).json({ error: err.message || "Lỗi server" });
   }
 };
+
 // DELETE
 exports.remove = async (req, res) => {
   try {
@@ -245,15 +242,13 @@ exports.remove = async (req, res) => {
 };
 
 // GET ALL PROMOTIONS with dynamic status updates
-
 exports.getAllPromotion = async (req, res) => {
   try {
     const now = new Date();
 
-    // Lấy các promotion đang active từ bảng PromotionProduct
     const promotionProducts = await PromotionModel.findAll({
       where: {
-       status: {
+        status: {
           [Op.in]: ["active", "upcoming"],
         },
         applicable_to: "product",

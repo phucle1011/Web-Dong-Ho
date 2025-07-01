@@ -22,8 +22,7 @@ export default function ProductCardStyleOne({ datas, type }) {
   // Memoize product and variants
   const product = useMemo(() => datas || {}, [datas]);
   const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
-
- 
+  const representativeVariant = useMemo(() => product.representativeVariant || {}, [product.representativeVariant]);
 
   // Initialize state only once
   useEffect(() => {
@@ -46,7 +45,7 @@ export default function ProductCardStyleOne({ datas, type }) {
         setSelectedImage(firstVariantImages[0].image_url || firstValid.thumbnail || firstImage);
       }
     }
-  }, [product.id, product.thumbnail, variants]); // Minimal dependencies
+  }, [product.id, product.thumbnail, variants, selectedVariant]);
 
   // Memoize calculations
   const totalStock = useMemo(() =>
@@ -65,55 +64,38 @@ export default function ProductCardStyleOne({ datas, type }) {
     let hasStock = true;
     let discountPercent = 0;
 
-    if (variants.length > 0) {
+    // Prioritize representativeVariant from AllProductPage.js
+    if (representativeVariant && representativeVariant.originalPrice) {
+      displayOriginalPrice = parseFloat(representativeVariant.originalPrice) || 0;
+      displayPrice = parseFloat(representativeVariant.discountedPrice) || displayOriginalPrice;
+      discountPercent = parseFloat(representativeVariant.discountPercent) || 0;
+      hasStock = totalStock > 0;
+    } else if (variants.length > 0) {
       if (validVariants.length > 0) {
         const initialVariant = selectedVariant || validVariants[0];
         displayOriginalPrice = parseFloat(initialVariant.price) || 0;
-        displayPrice = parseFloat(initialVariant.price) || 0;
-
-        if (
-          initialVariant.promotion &&
-          initialVariant.promotion.discounted_price > 0 &&
-          initialVariant.promotion.discount_percent > 0
-        ) {
-          displayPrice = parseFloat(initialVariant.promotion.discounted_price);
-          discountPercent = parseFloat(initialVariant.promotion.discount_percent) || 0;
-          // console.log(
-          //   `Price calculation for product ${product.id} variant ${initialVariant.id}: discountPercent=${discountPercent}, discountedPrice=${displayPrice}`
-          // );
-        }
-
-        discountPercent = Math.round(discountPercent);
-        if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
-          discountPercent = 0;
-        }
+        displayPrice = parseFloat(initialVariant.promotion?.discounted_price || initialVariant.price) || 0;
+        discountPercent = parseFloat(initialVariant.promotion?.discount_percent || 0);
+        hasStock = parseInt(initialVariant.stock) > 0;
       } else {
         hasStock = false;
       }
     } else {
       displayOriginalPrice = parseFloat(product.price) || 0;
-      displayPrice = parseFloat(product.price) || 0;
+      displayPrice = parseFloat(product.promotion?.discounted_price || product.price) || 0;
+      discountPercent = parseFloat(product.promotion?.discount_percent || 0);
       hasStock = parseInt(product.stock) > 0;
-      if (
-        product.promotion &&
-        product.promotion.discounted_price > 0 &&
-        product.promotion.discount_percent > 0
-      ) {
-        displayPrice = parseFloat(product.promotion.discounted_price);
-        discountPercent = parseFloat(product.promotion.discount_percent) || 0;
-        // console.log(
-        //   `Price calculation for product ${product.id}: discountPercent=${discountPercent}, discountedPrice=${displayPrice}`
-        // );
-      }
-
-      discountPercent = Math.round(discountPercent);
-      if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
-        discountPercent = 0;
-      }
     }
 
+    // Ensure valid numbers
+    displayPrice = isNaN(displayPrice) ? 0 : Math.max(0, displayPrice);
+    displayOriginalPrice = isNaN(displayOriginalPrice) ? 0 : Math.max(0, displayOriginalPrice);
+    discountPercent = isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100 ? 0 : Math.round(discountPercent);
+
+    
+
     return { displayPrice, displayOriginalPrice, hasStock, discountPercent };
-  }, [product, variants, selectedVariant]);
+  }, [product, variants, selectedVariant, representativeVariant, totalStock]);
 
   const { displayPrice, displayOriginalPrice, hasStock, discountPercent } = priceInfo;
   const thumbnail = selectedImage || product.thumbnail?.trim() || "/images/no-image.jpg";
@@ -139,7 +121,6 @@ export default function ProductCardStyleOne({ datas, type }) {
       );
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
-      // console.error("Add to cart error:", error);
       toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
     }
   };
@@ -216,12 +197,17 @@ export default function ProductCardStyleOne({ datas, type }) {
               />
             </svg>
           </button>
-          <div className="overflow-hidden mt-5">
+          <div className="overflow-hidden mt-5 relative">
             <img
               src={thumbnail}
               alt={productName}
               className="w-full max-h-56 aspect-square object-contain rounded-lg shadow-sm hover:scale-105 transition-transform duration-300"
             />
+            {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+              <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
+                -{discountPercent}%
+              </span>
+            )}
             <div className="grid grid-cols-4 gap-1.5 mt-5 max-h-28 overflow-y-auto">
               {(variantImages.length > 0 ? variantImages : product.variantImages || []).map((img) => (
                 <div
@@ -320,14 +306,9 @@ export default function ProductCardStyleOne({ datas, type }) {
                 {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
               </span>
               {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                <div className="flex items-center space-x-1">
-                  <span className="text-gray-400 line-through text-xs">
-                    {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                  </span>
-                  <span className="text-white text-[10px] font-semibold bg-red-500 px-1 rounded">
-                    -{discountPercent}%
-                  </span>
-                </div>
+                <span className="text-gray-400 line-through text-xs">
+                  {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                </span>
               )}
             </div>
             <div className="flex items-center space-x-2">
@@ -372,7 +353,7 @@ export default function ProductCardStyleOne({ datas, type }) {
 
   // Skip render if product is invalid
   if (!product.id) {
-    // console.warn("Skipping render for product with invalid ID:", product);
+    console.warn("Skipping render for product with invalid ID:", product);
     return null;
   }
 
@@ -380,11 +361,10 @@ export default function ProductCardStyleOne({ datas, type }) {
   const handleNavigate = (e) => {
     if (!product.id || product.id === "unknown") {
       e.preventDefault();
-      // console.warn("Invalid product ID, preventing navigation:", product.id);
+      console.warn("Invalid product ID, preventing navigation:", product.id);
       toast.error("Sản phẩm không hợp lệ!");
       return;
     }
-    // console.log("Navigating to product:", `/product/${product.id}`);
     navigate(`/product/${product.id}`);
   };
 
@@ -393,12 +373,17 @@ export default function ProductCardStyleOne({ datas, type }) {
       className="product-card-one w-full h-full bg-white relative group overflow-hidden"
       style={{ boxShadow: "0px 15px 64px 0px rgba(0, 0, 0, 0.05)" }}
     >
-      <div className="product-card-img w-full h-[300px] overflow-hidden">
+      <div className="product-card-img w-full h-[300px] overflow-hidden relative">
         <img
           src={thumbnail}
           alt={productName}
           className="w-full h-full object-contain"
         />
+        {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+          <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10 sm:text-sm sm:px-3 sm:py-1.5">
+            -{discountPercent}%
+          </span>
+        )}
       </div>
       <div className="product-card-details px-[30px] pb-[30px] relative min-h-[150px]">
         <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
@@ -441,14 +426,9 @@ export default function ProductCardStyleOne({ datas, type }) {
                 {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
               </span>
               {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                <div className="flex items-center space-x-1">
-                  <span className="main-price text-qgray line-through font-600 text-[16px]">
-                    {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                  </span>
-                  <span className="discount-percent text-white text-xs font-semibold bg-qred px-2 py-0.5 rounded">
-                    -{discountPercent}%
-                  </span>
-                </div>
+                <span className="main-price text-qgray line-through font-600 text-[16px]">
+                  {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                </span>
               )}
             </p>
           </div>

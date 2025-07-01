@@ -29,7 +29,7 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const getPromotionStatus = (startDate, endDate) => {
     if (!startDate || !endDate) return { status: "Không xác định", className: "text-gray-500" };
-    const currentDate = new Date();
+    const currentDate = new Date(); // 02:15 PM +07, 01/07/2025
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (currentDate < start) {
@@ -284,16 +284,20 @@ const PromotionProductForm = ({ onSuccess }) => {
             </p>
           </div>
 
-          <div className="d-flex gap-2">
-            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+          <div className="mt-8 flex items-center gap-1">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+            >
               {isLoading ? "Đang thêm..." : "Thêm mới"}
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
               onClick={() => navigate("/admin/promotion-products/getAll")}
+              className="bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300 transition"
             >
-              Quay về
+              Quay lại
             </button>
           </div>
         </form>

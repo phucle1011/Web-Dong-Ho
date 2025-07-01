@@ -6,13 +6,18 @@ import ProductCardStyleOne from "../Helpers/Cards/ProductCardStyleOne";
 import DataIteration from "../Helpers/DataIteration";
 import Layout from "../Partials/LayoutHomeThree";
 import ProductsFilter from "./ProductsFilter";
+import {
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 
 export default function AllProductPage() {
-  // State declarations
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    limit: 12, // 12 sản phẩm mỗi trang
+    limit: 12,
     totalProducts: 0,
   });
   const [filters, setFilter] = useState({
@@ -27,29 +32,13 @@ export default function AllProductPage() {
     toilet: false,
     makeupCorner: false,
     babyItem: false,
-    apple: false,
-    samsung: false,
-    walton: false,
-    oneplus: false,
-    vivo: false,
-    oppo: false,
-    xiomi: false,
-    others: false,
-    sizeS: false,
-    sizeM: false,
-    sizeL: false,
-    sizeXL: false,
-    sizeXXL: false,
-    sizeFit: false,
   });
-  const [volume, setVolume] = useState({ min: 200, max: 50000000 });
-  const [storage, setStorage] = useState(null);
+  const [volume, setVolume] = useState([0, 1000000000]);
   const [filterToggle, setToggle] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [brandList, setBrandList] = useState([]);
 
-  // Fetch brands
   useEffect(() => {
     async function fetchBrands() {
       try {
@@ -57,18 +46,12 @@ export default function AllProductPage() {
           params: { page: 1, limit: 100 },
         });
         if (Array.isArray(res.data.data)) {
-          const brandIds = res.data.data.map(brand => brand.id.toString());
+          setBrandList(res.data.data);
           const updatedFilters = { ...filters };
-          Object.keys(updatedFilters).forEach(key => {
-            if (["apple", "samsung", "walton", "oneplus", "vivo", "oppo", "xiomi", "others"].includes(key)) {
-              updatedFilters[key] = false; // Reset các thương hiệu cũ
-            }
-          });
-          res.data.data.forEach(brand => {
-            updatedFilters[brand.id.toString()] = filters[brand.name.toLowerCase()] || false;
+          res.data.data.forEach((brand) => {
+            updatedFilters[brand.id.toString()] = false;
           });
           setFilter(updatedFilters);
-          setBrandList(res.data.data);
         }
       } catch (error) {
         console.error("Lỗi khi lấy danh sách thương hiệu:", error);
@@ -77,34 +60,48 @@ export default function AllProductPage() {
     fetchBrands();
   }, []);
 
-  // Checkbox handler
   const checkboxHandler = (e) => {
     const { name } = e.target;
     setFilter((prev) => ({
       ...prev,
       [name]: !prev[name],
     }));
-    setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset về trang 1 khi thay đổi bộ lọc
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
-  // Volume handler
   const volumeHandler = (newVolume) => {
-    setVolume(newVolume);
+    setVolume(Array.isArray(newVolume) ? newVolume : [0, 1000000000]);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
-  // Storage handler
-  const storageHandler = (newStorage) => {
-    setStorage(newStorage);
+  const resetFilters = () => {
+    setFilter({
+      mobileLaptop: false,
+      gaming: false,
+      imageVideo: false,
+      vehicles: false,
+      furnitures: false,
+      sport: false,
+      foodDrinks: false,
+      fashion: false,
+      toilet: false,
+      makeupCorner: false,
+      babyItem: false,
+    });
+    setVolume([0, 1000000000]);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
-  // Fetch products
+  const applyFilters = ({ filters, volume }) => {
+    setFilter(filters);
+    setVolume(volume);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  };
+
   useEffect(() => {
     async function fetchProducts() {
       setLoading(true);
       try {
-        // Chuẩn bị tham số API
         const selectedFilters = Object.keys(filters).filter(
           (key) => filters[key]
         );
@@ -124,102 +121,150 @@ export default function AllProductPage() {
           ].includes(key)
         );
         const brandFilters = selectedFilters.filter((key) =>
-          brandList.some((brand) => brand.id.toString() === key) ||
-          ["apple", "samsung", "walton", "oneplus", "vivo", "oppo", "xiomi", "others"].includes(key)
-        );
-        const sizeFilters = selectedFilters.filter((key) =>
-          ["sizeS", "sizeM", "sizeL", "sizeXL", "sizeXXL", "sizeFit"].includes(
-            key
-          )
+          brandList.some((brand) => brand.id.toString() === key)
         );
 
         const params = {
           page: pagination.currentPage,
           limit: pagination.limit,
-          min_price: volume.min,
-          max_price: volume.max,
+          min_price: volume[0] !== 0 ? volume[0] : undefined,
+          max_price: volume[1] !== 1000000000 ? volume[1] : undefined,
+          category_id: categoryFilters.join(",") || undefined,
+          brand_id: brandFilters.join(",") || undefined,
         };
 
-        if (categoryFilters.length > 0) {
-          params.category_id = categoryFilters.join(",");
-        }
-        if (brandFilters.length > 0) {
-          params.brand_id = brandFilters
-            .map(key => brandList.find(brand => brand.id.toString() === key)?.id || key)
-            .join(",");
-        }
-        if (sizeFilters.length > 0) {
-          params.size = sizeFilters
-            .map((size) => size.replace("size", "").toLowerCase())
-            .join(",");
-        }
-        if (storage) {
-          params.storage = storage;
-        }
+        console.log("API Parameters:", params);
 
         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
           params,
+          headers: { "Cache-Control": "no-cache" },
         });
-        const { data, pagination: paginationData } = res.data;
-        setProducts(Array.isArray(data) ? data : []);
+
+        console.log("API Response:", {
+          data: res.data.data,
+          pagination: res.data.pagination,
+          totalVariants: res.data.totalVariants,
+        });
+
+        setProducts(Array.isArray(res.data.data) ? res.data.data : []);
         setPagination((prev) => ({
           ...prev,
-          totalProducts: paginationData.totalProducts,
+          totalProducts: res.data.pagination?.totalProducts || 0,
         }));
         setError(null);
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách sản phẩm:", error);
+        console.error("API Error:", error.response?.data || error.message);
+        let errorMessage = "Không thể tải danh sách sản phẩm. Vui lòng thử lại hoặc thay đổi bộ lọc.";
+        if (error.response?.status === 400) {
+          errorMessage = "Tham số bộ lọc không hợp lệ. Vui lòng kiểm tra lại các bộ lọc.";
+        } else if (error.response?.status === 500) {
+          errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau.";
+        }
         setProducts([]);
-        setError("Không thể tải danh sách sản phẩm");
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     }
     fetchProducts();
-  }, [
-    pagination.currentPage,
-    pagination.limit,
-    filters,
-    volume,
-    storage,
-    brandList,
-  ]);
+  }, [pagination.currentPage, filters, volume, brandList]);
 
-  // Handle page change
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1) {
-      setPagination((prev) => ({ ...prev, currentPage: newPage }));
-    }
-  };
-
-  // Render pagination
   const renderPagination = () => {
-    const { currentPage, limit } = pagination;
-    const showNextPage = products.length === limit; // Chỉ hiển thị "Trang tiếp theo" nếu trang hiện tại có đủ 12 sản phẩm
+    const { currentPage, limit, totalProducts } = pagination;
+    const totalPages = Math.ceil(totalProducts / limit);
+    // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ 12 sản phẩm và có sản phẩm ở trang tiếp theo
+    const showNextPage = products.length === limit && totalProducts > currentPage * limit;
+    // Chỉ hiển thị nút "Previous" nếu không phải trang 1
+    const showPreviousPage = currentPage > 1;
+
+    console.log("Pagination Info:", {
+      currentPage,
+      totalProducts,
+      limit,
+      totalPages,
+      productsLength: products.length,
+      showNextPage,
+      showPreviousPage,
+    });
 
     return (
-      <div className="flex justify-center items-center mt-8">
-        {currentPage > 1 && (
+      <div className="flex justify-center mt-4">
+        <div className="flex items-center space-x-1">
+          {/* Nút "First" */}
           <button
+            disabled={!showPreviousPage}
+            onClick={() => handlePageChange(1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaAngleDoubleLeft />
+          </button>
+          {/* Nút "Previous" */}
+          <button
+            disabled={!showPreviousPage}
             onClick={() => handlePageChange(currentPage - 1)}
-            className="px-4 py-2 mx-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            className="px-2 py-1 border rounded disabled:opacity-50"
           >
-            Trước
+            <FaChevronLeft />
           </button>
-        )}
-        <span className="px-4 py-2 mx-1 bg-blue-600 text-white rounded-md">
-          {currentPage}
-        </span>
-        {showNextPage && (
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="px-4 py-2 mx-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-          >
-            Sau
-          </button>
-        )}
+
+          {/* Hiển thị tối đa 3 nút trang gần currentPage */}
+          {[...Array(totalPages)].map((_, i) => {
+            const page = i + 1;
+            if (
+              page >= currentPage - 1 &&
+              page <= currentPage + 1 &&
+              page <= totalPages
+            ) {
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 border rounded ${
+                    currentPage === page
+                      ? "bg-blue-500 text-white"
+                      : "bg-blue-100 text-black hover:bg-blue-200"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            }
+            return null;
+          })}
+
+          {/* Hiển thị nút "Next" và "Last" nếu showNextPage */}
+          {showNextPage && (
+            <>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="px-2 py-1 border rounded"
+              >
+                <FaChevronRight />
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                className="px-2 py-1 border rounded"
+              >
+                <FaAngleDoubleRight />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
+  };
+
+  const handlePageChange = (newPage) => {
+    const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);
+    console.log("handlePageChange:", { newPage, totalPages, currentPage: pagination.currentPage });
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPagination((prev) => ({ ...prev, currentPage: newPage }));
+    } else {
+      console.warn("Invalid page change attempt:", { newPage, totalPages });
+      if (newPage > totalPages) {
+        alert(`Không thể chuyển sang trang ${newPage}. Chỉ có ${totalPages} trang.`);
+      }
+    }
   };
 
   return (
@@ -228,7 +273,6 @@ export default function AllProductPage() {
         <div className="container-x mx-auto max-w-7xl">
           <BreadcrumbCom />
           <div className="w-full lg:flex lg:gap-8">
-            {/* Filter */}
             <div className="lg:w-[270px] mb-8 lg:mb-0">
               <ProductsFilter
                 filterToggle={filterToggle}
@@ -237,9 +281,9 @@ export default function AllProductPage() {
                 checkboxHandler={checkboxHandler}
                 volume={volume}
                 volumeHandler={volumeHandler}
-                storage={storage}
-                filterstorage={storageHandler}
+                onApplyFilters={applyFilters}
               />
+       
               <div className="w-full hidden lg:block h-[295px] overflow-hidden rounded-lg">
                 <img
                   src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-5.png`}
@@ -249,7 +293,6 @@ export default function AllProductPage() {
               </div>
             </div>
 
-            {/* Product List */}
             <div className="flex-1">
               <div className="products-sorting w-full bg-white h-auto md:h-[70px] flex flex-col md:flex-row md:items-center justify-between p-6 mb-10 rounded-lg shadow-sm">
                 <div>
@@ -266,11 +309,11 @@ export default function AllProductPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-medium text-sm text-gray-600">
-                   Sắp xếp theo:
+                    Sắp xếp theo:
                   </span>
                   <div className="flex items-center gap-2 border-b border-gray-300">
                     <span className="font-medium text-sm text-gray-600">
-                     Mặc định
+                      Mặc định
                     </span>
                     <svg
                       width="10"
@@ -308,7 +351,9 @@ export default function AllProductPage() {
               {loading && <p className="text-center">Đang tải...</p>}
               {error && <p className="text-center text-red-500">{error}</p>}
               {!loading && products.length === 0 && !error && (
-                <p className="text-center">Không có sản phẩm nào để hiển thị.</p>
+                <p className="text-center text-gray-600">
+                  Không tìm thấy sản phẩm phù hợp ở trang {pagination.currentPage}. Hãy thử điều chỉnh danh mục, thương hiệu, khoảng giá hoặc xóa bộ lọc.
+                </p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                 {products.length > 0 && (
@@ -325,7 +370,7 @@ export default function AllProductPage() {
                   </DataIteration>
                 )}
               </div>
-              {(products.length > 0 || pagination.currentPage > 1) && renderPagination()}
+              {products.length > 0 && renderPagination()}
             </div>
           </div>
         </div>

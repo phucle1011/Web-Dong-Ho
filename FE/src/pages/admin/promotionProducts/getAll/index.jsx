@@ -79,7 +79,7 @@ const PromotionProductList = () => {
   }, []);
 
   const handleSearch = () => {
-    fetchPromotions(1, searchTerm);
+    fetchPromotions(1, searchTerm.trim());
     setExpanded(null);
   };
 
@@ -131,18 +131,25 @@ const PromotionProductList = () => {
   };
 
   const renderPagination = () => {
-    const pages = [];
-    const maxPagesToShow = 5;
-    const startPage = Math.max(1, pagination.page - Math.floor(maxPagesToShow / 2));
-    const endPage = Math.min(pagination.totalPages, startPage + maxPagesToShow - 1);
+    const { page, totalPages, limit } = pagination;
+    // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ limit sản phẩm và còn trang tiếp theo
+    const showNextPage = promotionProducts.length === limit && totalPages > page;
+    // Chỉ hiển thị nút "Previous" nếu không phải trang 1
+    const showPreviousPage = page > 1;
+
+    // Hiển thị tối đa 3 nút trang gần currentPage
+    const pagesToShow = [];
+    const maxPages = 3;
+    const startPage = Math.max(1, page - 1);
+    const endPage = Math.min(totalPages, startPage + maxPages - 1);
 
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(
+      pagesToShow.push(
         <button
           key={i}
           onClick={() => handlePageChange(i)}
           className={`px-3 py-1 border rounded ${
-            i === pagination.page ? "bg-blue-600 text-white" : "bg-white"
+            i === page ? "bg-blue-600 text-white" : "bg-white"
           }`}
         >
           {i}
@@ -153,7 +160,7 @@ const PromotionProductList = () => {
     return (
       <div className="flex justify-center items-center gap-1 mt-4 flex-wrap">
         <button
-          disabled={pagination.page === 1}
+          disabled={!showPreviousPage}
           onClick={() => handlePageChange(1)}
           className="px-2 py-1 border rounded disabled:opacity-50"
           title="Trang đầu"
@@ -161,30 +168,32 @@ const PromotionProductList = () => {
           <FaAngleDoubleLeft />
         </button>
         <button
-          disabled={pagination.page === 1}
-          onClick={() => handlePageChange(pagination.page - 1)}
+          disabled={!showPreviousPage}
+          onClick={() => handlePageChange(page - 1)}
           className="px-2 py-1 border rounded disabled:opacity-50"
           title="Trang trước"
         >
           <FaChevronLeft />
         </button>
-        {pages}
-        <button
-          disabled={pagination.page === pagination.totalPages}
-          onClick={() => handlePageChange(pagination.page + 1)}
-          className="px-2 py-1 border rounded disabled:opacity-50"
-          title="Trang sau"
-        >
-          <FaChevronRight />
-        </button>
-        <button
-          disabled={pagination.page === pagination.totalPages}
-          onClick={() => handlePageChange(pagination.totalPages)}
-          className="px-2 py-1 border rounded disabled:opacity-50"
-          title="Trang cuối"
-        >
-          <FaAngleDoubleRight />
-        </button>
+        {pagesToShow}
+        {showNextPage && (
+          <>
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              className="px-2 py-1 border rounded"
+              title="Trang sau"
+            >
+              <FaChevronRight />
+            </button>
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              className="px-2 py-1 border rounded"
+              title="Trang cuối"
+            >
+              <FaAngleDoubleRight />
+            </button>
+          </>
+        )}
       </div>
     );
   };
@@ -204,8 +213,8 @@ const PromotionProductList = () => {
       <div className="mb-4 flex gap-2">
         <input
           type="text"
-          className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
-          placeholder="Nhập tên khuyến mãi cần tìm..."
+          className="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none"
+          placeholder="Tìm kiếm theo tên, SKU, trạng thái..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={(e) => {

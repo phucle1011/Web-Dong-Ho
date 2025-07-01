@@ -96,7 +96,9 @@ router.put('/users/:id', AuthController.update);
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
 
-router.get('/stock', ProductClientController.countStockGroupByProductId);
+router.get('/pricerange', ProductClientController.getPrice);
+
+// router.get('/stock', ProductClientController.countStockGroupByProductId);
 
 router.get('/:id', ProductVariantController.getProductVariantDetail);
 

@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import Constants from "../../../../Constants.jsx";
-import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
-import Select from 'react-select';
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
+import Select from "react-select";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -17,6 +17,7 @@ const PromotionProductEdit = () => {
   const [error, setError] = useState(null);
   const [customFormState, setCustomFormState] = useState({});
   const [variantStatus, setVariantStatus] = useState({});
+  const [selectedPromotion, setSelectedPromotion] = useState(null); // Thêm state để lưu khuyến mãi chọn
 
   const {
     register,
@@ -28,7 +29,7 @@ const PromotionProductEdit = () => {
 
   const getPromotionStatus = (startDate, endDate) => {
     if (!startDate || !endDate) return "Không xác định";
-    const currentDate = new Date();
+    const currentDate = new Date(); // 02:10 PM +07, 01/07/2025
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (currentDate < start) return "Sắp bắt đầu";
@@ -44,17 +45,14 @@ const PromotionProductEdit = () => {
           throw new Error("ID khuyến mãi không hợp lệ!");
         }
 
-        // Lấy danh sách khuyến mãi
+        // Lấy tất cả khuyến mãi (không lọc trạng thái)
         const promoRes = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`);
         const promoData = Array.isArray(promoRes.data.data) ? promoRes.data.data : [];
         if (!promoData.length) {
           throw new Error("Dữ liệu khuyến mãi không hợp lệ");
         }
-        const filteredPromotions = promoData.filter((promo) => {
-          const status = getPromotionStatus(promo.start_date, promo.end_date);
-          return status === "Sắp bắt đầu" || status === "Đang hoạt động";
-        });
-        setPromotions(filteredPromotions);
+        setPromotions(promoData); // Sử dụng toàn bộ dữ liệu, không lọc
+        console.log("Loaded promotions:", promoData);
 
         // Lấy danh sách biến thể sản phẩm
         const variantRes = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
@@ -141,8 +139,20 @@ const PromotionProductEdit = () => {
           console.warn(`Không tìm thấy biến thể hợp lệ cho promotion_id ${id}`);
         }
 
-        // Đặt giá trị cho form
-        setValue("promotion_id", id.toString());
+        // Tìm khuyến mãi từ promotions dựa trên id
+        const promotion = promotions.find((p) => p.id === parseInt(id));
+        if (promotion) {
+          setSelectedPromotion(promotion);
+          setValue("promotion_id", id.toString());
+        } else {
+          console.warn(`Promotion with ID ${id} not found in promotions list`);
+          // Nếu không tìm thấy trong promotions, sử dụng dữ liệu từ API (nếu có)
+          if (data[0]?.promotion) {
+            setSelectedPromotion(data[0].promotion);
+            setValue("promotion_id", id.toString());
+          }
+        }
+
         setValue("product_variant_id", productVariantIds);
         setCustomFormState((prev) => ({ ...prev, product_variant_id: productVariantIds }));
         trigger("product_variant_id");
@@ -164,7 +174,7 @@ const PromotionProductEdit = () => {
     };
 
     fetchDetail();
-  }, [productVariants, setValue, id, trigger]);
+  }, [productVariants, setValue, id, trigger, promotions]);
 
   const onSubmit = async (formData) => {
     const selectedVariants = formData.product_variant_id || [];
@@ -250,7 +260,8 @@ const PromotionProductEdit = () => {
             <select
               className="form-select"
               {...register("promotion_id", { required: "Vui lòng chọn chương trình khuyến mãi" })}
-              disabled
+              disabled // Luôn disabled để không cho phép chỉnh sửa
+              value={id} // Sử dụng id từ URL để chọn tự động
             >
               <option value="">-- Chọn khuyến mãi --</option>
               {promotions.map((promo) => (
@@ -261,6 +272,12 @@ const PromotionProductEdit = () => {
             </select>
             {errors.promotion_id && (
               <small className="text-danger">{errors.promotion_id.message}</small>
+            )}
+            {/* Hiển thị tên khuyến mãi nếu có, ngay cả khi không trong danh sách options */}
+            {selectedPromotion && (
+              <p className="mt-2 text-sm text-gray-600">
+                Tên khuyến mãi: <strong>{selectedPromotion.name}</strong> (Trạng thái: {getPromotionStatus(selectedPromotion.start_date, selectedPromotion.end_date)})
+              </p>
             )}
           </div>
 
@@ -304,20 +321,20 @@ const PromotionProductEdit = () => {
             </p>
           </div>
 
-          <div className="d-flex gap-2">
+          <div className="mt-8 flex items-center gap-1">
             <button
               type="submit"
-              className="btn btn-primary"
               disabled={isLoading}
+              className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
             >
               {isLoading ? "Đang cập nhật..." : "Cập nhật"}
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
               onClick={() => navigate("/admin/promotion-products/getAll")}
+              className="bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300 transition"
             >
-              Quay về
+              Quay lại
             </button>
           </div>
         </form>
