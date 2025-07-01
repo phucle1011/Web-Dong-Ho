@@ -626,20 +626,16 @@ export default function CheakoutPage() {
       toast.warning("Vui lòng chờ hệ thống tính toán phí vận chuyển...");
       return;
     }
-
     if (finalData.shippingService === "Đang tính..." || finalData.shippingService === "Chưa có địa chỉ") {
       toast.error("Vui lòng chờ hệ thống tính toán phí vận chuyển hoàn tất");
       return;
     }
-
     if (finalData.shippingService === "Không hỗ trợ giao hàng tới khu vực này") {
       toast.error("Rất tiếc, chúng tôi chưa hỗ trợ giao hàng tới địa chỉ của bạn");
       return;
     }
-
     try {
       setIsSubmitting(true);
-
       const selectedPaymentMethod = (document.querySelector('input[name="payment_method"]:checked')?.value || "").trim();
       if (!selectedPaymentMethod) {
         toast.error("Vui lòng chọn phương thức thanh toán");
@@ -689,20 +685,23 @@ export default function CheakoutPage() {
         promo_code: promoCodeData.code || null,
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
-        amount: finalData.total - finalData.promoDiscount
+        amount: finalData.total,
+        orderId: `ORDER-${Date.now()}-${user.id}`,
+        orderDescription: `Thanh toan don hang cho ${user.name}`,
+        orderType: 'other'
       };
-
-      payload.submitTimestamp = Date.now();
+      console.log("Payload đặt hàng:", payload);
 
       if (selectedPaymentMethod === "VNPay") {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
 
-        if (response.data.success && response.data.data?.paymentUrl) {
-          window.location.href = response.data.data.paymentUrl;
+        if (response.data.success && response.data.paymentUrl) {
+          window.location.href = response.data.paymentUrl;
           return;
         }
 
-        throw new Error(response.data.message || "Không thể tạo URL thanh toán VNPay");
+        toast.error(response.data.message || "Không thể khởi tạo thanh toán VNPay. Vui lòng thử lại.");
+        return;
       }
 
       let url = `${Constants.DOMAIN_API}/orders`;
@@ -739,7 +738,6 @@ export default function CheakoutPage() {
     } catch (error) {
       console.error("Lỗi đặt hàng:", error);
       const serverMessage = error.response?.data?.message;
-
       if (serverMessage?.includes("Giao dịch bị từ chối")) {
         toast.error("Giao dịch bị từ chối: Vui lòng kiểm tra tài khoản thanh toán hoặc dùng phương thức khác.");
       } else if (serverMessage?.includes("Số tiền thanh toán không hợp lệ")) {
@@ -782,8 +780,11 @@ export default function CheakoutPage() {
       };
 
       const servicePriority = [
-        { id: 53320, name: "Giao hàng tiêu chuẩn" },
-        { id: 53322, name: "Giao hàng hỏa tốc" }
+        { "id": 53320, "name": "Giao hàng tiêu chuẩn" },
+        { "id": 53322, "name": "Giao hàng hỏa tốc" },
+        { "id": 53321, "name": "Giao hàng nhanh" },
+        { "id": 53323, "name": "Giao hàng siêu tốc" },
+        { "id": 53324, "name": "Giao hàng tiết kiệm" }
       ];
 
       for (const service of servicePriority) {
