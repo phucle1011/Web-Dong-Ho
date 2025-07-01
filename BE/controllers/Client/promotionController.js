@@ -30,7 +30,7 @@ class PromotionController {
                     min_price_threshold: { [Op.lte]: total }, // đơn hàng đủ điều kiện
                     applicable_to: 'order',
                 },
-                attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold', 'end_date']
+                attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold', 'end_date','quantity']
             });
 
             return res.json({

@@ -4,51 +4,77 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { decodeToken } from "../Helpers/jwtDecode";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkerAlt, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import Constants from "../../../Constants";
 import Swal from "sweetalert2";
 import axios from 'axios';
 import { toast } from "react-toastify";
 
 export default function CheakoutPage() {
-
   const location = useLocation();
   const [checkoutItems, setCheckoutItems] = useState([]);
   const navigate = useNavigate();
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [promoCodeData, setPromoCodeData] = useState({
+    code: "",
+    discountAmount: 0,
+    maxPrice: null,
+    appliedAt: null
+  });
   const [finalData, setFinalData] = useState({
     total: 0,
     shippingFee: 0,
-    formattedAmount: "0"
+    shippingService: "Đang tính...",
+    formattedAmount: "0",
+    promoDiscount: 0
   });
   const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [allAddresses, setAllAddresses] = useState([]);
   const [provinces, setProvinces] = useState([]);
-  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [showAddressDropdown, setShowAddressDropdown] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedWard, setSelectedWard] = useState("");
   const [noteValue, setNoteValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const decoded = decodeToken(token);
   const id = decoded?.id;
-  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
 
   // useEffect(() => {
   //   if (!location.state && !localStorage.getItem("checkoutData")) {
   //     console.warn("Không có dữ liệu giỏ hàng");
   //     navigate("/cart");
   //   }
-  // }, []);
+  // }, [location.state, navigate]);
+
+  useEffect(() => {
+    const savedPromoCode = localStorage.getItem("selectedPromoCode");
+    if (savedPromoCode) {
+      try {
+        const parsed = JSON.parse(savedPromoCode);
+        setPromoCodeData(parsed);
+        setFinalData(prev => ({
+          ...prev,
+          promoDiscount: parsed.discountAmount || 0
+        }));
+      } catch (e) {
+        console.error("Không thể parse promo code từ localStorage:", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let items = [];
 
     if (location.state?.cartItems && location.state.cartItems.length > 0) {
       items = location.state.cartItems;
+      localStorage.setItem("checkoutData", JSON.stringify({ cartItems: items }));
     } else {
       const savedData = localStorage.getItem("checkoutData");
       if (savedData) {
@@ -96,29 +122,14 @@ export default function CheakoutPage() {
   }, [checkoutItems]);
 
   useEffect(() => {
-    const savedData = localStorage.getItem("finalTotal");
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        setFinalData(parsed);
-      } catch (e) {
-        console.error("Không thể parse finalTotal từ localStorage", e);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (token) {
       const decoded = decodeToken(token);
-
       if (decoded) {
         setUser(decoded);
       } else {
         console.warn("Không thể giải mã token.");
       }
-
     } else {
       console.warn("Không tìm thấy token trong localStorage.");
     }
@@ -135,7 +146,6 @@ export default function CheakoutPage() {
 
       try {
         const token = localStorage.getItem("token");
-
         const response = await fetch(`${Constants.DOMAIN_API}/admin/address/user/${user.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -194,24 +204,6 @@ export default function CheakoutPage() {
   useEffect(() => {
     fetchAllAddresses();
   }, [user?.id]);
-
-  useEffect(() => {
-    const fetchProvinces = async () => {
-      try {
-        const response = await fetch(`${Constants.DOMAIN_API}/apiRoutes/provinces`);
-        const data = await response.json();
-        if (response.ok && Array.isArray(data)) {
-          setProvinces(data);
-        } else {
-          console.error("Không thể tải danh sách tỉnh");
-        }
-      } catch (error) {
-        console.error("Lỗi kết nối đến server:", error);
-      }
-    };
-
-    fetchProvinces();
-  }, []);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -500,7 +492,6 @@ export default function CheakoutPage() {
       );
       setAllAddresses(updatedAddresses);
 
-      // Nếu đây là địa chỉ mặc định, cập nhật lại defaultAddress
       if (addressData.is_default === 1) {
         setDefaultAddress(updatedAddresses.find(addr => addr.id === addressId));
       }
@@ -509,17 +500,6 @@ export default function CheakoutPage() {
       toast.error("Lỗi khi cập nhật địa chỉ");
     }
   };
-
-  useEffect(() => {
-    return () => {
-      const currentPath = window.location.pathname;
-      if (currentPath !== "/checkout") {
-        localStorage.removeItem("selectedVoucher");
-        localStorage.removeItem("finalTotal");
-        localStorage.removeItem("checkoutData");
-      }
-    };
-  }, []);
 
   const handleSetDefaultAddress = async (addressId) => {
     try {
@@ -549,8 +529,6 @@ export default function CheakoutPage() {
   };
 
   const confirmSetDefaultAddress = (addressId) => {
-    const address = allAddresses.find(addr => addr.id === addressId);
-
     Swal.fire({
       title: "Xác nhận",
       text: "Bạn có chắc chắn muốn đặt địa chỉ này làm mặc định?",
@@ -561,7 +539,6 @@ export default function CheakoutPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         await handleSetDefaultAddress(addressId);
-        // Sau khi đặt làm mặc định, tính lại phí vận chuyển
         const newDefault = allAddresses.find(addr => addr.id === addressId);
         setDefaultAddress(newDefault);
       }
@@ -709,9 +686,10 @@ export default function CheakoutPage() {
         address: defaultAddress?.address_line || "",
         note: noteValue,
         promotion: selectedVoucher ? selectedVoucher.id : null,
+        promo_code: promoCodeData.code || null,
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
-        amount: finalData.total
+        amount: finalData.total - finalData.promoDiscount
       };
 
       payload.submitTimestamp = Date.now();
@@ -720,11 +698,10 @@ export default function CheakoutPage() {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
 
         if (response.data.success && response.data.data?.paymentUrl) {
-          window.location.href = response.data.data.paymentUrl; // Chuyển hướng sang VNPay
+          window.location.href = response.data.data.paymentUrl;
           return;
         }
 
-        // Chỉ ném lỗi nếu không thành công
         throw new Error(response.data.message || "Không thể tạo URL thanh toán VNPay");
       }
 
@@ -784,7 +761,7 @@ export default function CheakoutPage() {
           ...prev,
           shippingFee: 0,
           shippingService: "Chưa có địa chỉ",
-          formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+          formattedAmount: ((prev.total - prev.voucherDiscount - prev.promoDiscount) || 0).toLocaleString("vi-VN")
         }));
         return;
       }
@@ -828,12 +805,13 @@ export default function CheakoutPage() {
             const total = checkoutItems.reduce(
               (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
               0
-            ) - voucherDiscount + shippingFee;
+            ) - voucherDiscount - promoCodeData.discountAmount + shippingFee;
 
             setFinalData({
               total: total,
               shippingFee: shippingFee,
               shippingService: service.name,
+              promoDiscount: promoCodeData.discountAmount,
               formattedAmount: total.toLocaleString("vi-VN")
             });
             return;
@@ -847,7 +825,7 @@ export default function CheakoutPage() {
         ...prev,
         shippingFee: 0,
         shippingService: "Không hỗ trợ giao hàng tới khu vực này",
-        formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+        formattedAmount: ((prev.total - prev.voucherDiscount - prev.promoDiscount) || 0).toLocaleString("vi-VN")
       }));
 
     } catch (error) {
@@ -856,7 +834,7 @@ export default function CheakoutPage() {
         ...prev,
         shippingFee: 0,
         shippingService: "Lỗi tính phí",
-        formattedAmount: (prev.total - prev.voucherDiscount).toLocaleString("vi-VN")
+        formattedAmount: ((prev.total - prev.voucherDiscount - prev.promoDiscount) || 0).toLocaleString("vi-VN")
       }));
     } finally {
       setIsCalculatingShipping(false);
@@ -867,7 +845,7 @@ export default function CheakoutPage() {
     if (defaultAddress) {
       calculateShippingFee();
     }
-  }, [defaultAddress]);
+  }, [defaultAddress, voucherDiscount, promoCodeData.discountAmount]);
 
   useEffect(() => {
     const subTotal = checkoutItems.reduce(
@@ -875,22 +853,15 @@ export default function CheakoutPage() {
       0
     );
 
+    const total = subTotal - voucherDiscount - promoCodeData.discountAmount + (finalData.shippingFee || 0);
+
     setFinalData(prev => ({
       ...prev,
-      total: subTotal - voucherDiscount,
-      formattedAmount: (subTotal - voucherDiscount + prev.shippingFee).toLocaleString("vi-VN")
+      total: subTotal,
+      promoDiscount: promoCodeData.discountAmount,
+      formattedAmount: (total).toLocaleString("vi-VN")
     }));
-
-    if (defaultAddress) {
-      calculateShippingFee();
-    }
-  }, [checkoutItems, voucherDiscount, defaultAddress]);
-
-  useEffect(() => {
-    if (defaultAddress) {
-      calculateShippingFee();
-    }
-  }, [defaultAddress]);
+  }, [checkoutItems, voucherDiscount, promoCodeData.discountAmount, finalData.shippingFee]);
 
   const updateUserInfo = async (userId, updatedData) => {
     try {

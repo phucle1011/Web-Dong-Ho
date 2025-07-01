@@ -105,13 +105,23 @@ function CategoryEdit() {
                     )}
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
-                >
-                    {loading ? "Đang cập nhật..." : "Cập nhật danh mục"}
-                </button>
+                <div className="mt-6 flex gap-4">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+                    >
+                        {loading ? "Đang cập nhật..." : "Cập nhật danh mục"}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/admin/categories/getAll")}
+                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    >
+                        Quay lại
+                    </button>
+                </div>
             </form>
         </div>
     );

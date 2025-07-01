@@ -21,6 +21,17 @@ export default function CardPage({ cart = true }) {
   const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
+    localStorage.removeItem("selectedPromoCode");
+    localStorage.removeItem("selectedVoucher");
+    localStorage.removeItem("finalTotal");
+    localStorage.removeItem("checkoutData");
+    setPromoCode("");
+    setSelectedVoucher(null);
+    setDiscountInfo(null);
+    setError("");
+  }, []);
+
+  useEffect(() => {
     const fetchActivePromotions = async () => {
       setIsLoading(true);
 
@@ -63,7 +74,6 @@ export default function CardPage({ cart = true }) {
 
     fetchActivePromotions();
   }, [totalPrice]);
-
 
   useEffect(() => {
     let voucherDiscount = 0;
@@ -168,6 +178,17 @@ export default function CardPage({ cart = true }) {
         discountAmount: totalDiscount,
         max_price: selectedVoucher?.max_price || data.data.max_price || 0,
       }));
+
+      localStorage.setItem(
+        "selectedPromoCode",
+        JSON.stringify({
+          code: promoCode.trim(),
+          discountAmount: promoDiscount,
+          maxPrice: data.data.max_price,
+          appliedAt: Date.now()
+        })
+      );
+
       setError("");
     } catch (err) {
       setDiscountInfo((prev) => ({
@@ -349,6 +370,10 @@ export default function CardPage({ cart = true }) {
                                     })}
                                   </span>
                                 )}
+                                <span className={"text-red-500"}>
+                                  <br />
+                                  Còn lại: {voucher.quantity} lượt sử dụng
+                                </span>
                               </span>
                             </div>
                             {isSelected && (

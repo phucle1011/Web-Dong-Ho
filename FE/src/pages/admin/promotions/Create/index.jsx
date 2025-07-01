@@ -434,9 +434,16 @@ function PromotionCreate() {
           />
         </div>
 
-        <div className="mt-6">
-          <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded mt-2">
+        <div className="mt-6 flex gap-4">
+          <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded mt-2 text-center">
             Tạo khuyến mãi
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/promotions/getAll")}
+             className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 mt-2 text-center"
+          >
+            Quay lại
           </button>
         </div>
       </form>
