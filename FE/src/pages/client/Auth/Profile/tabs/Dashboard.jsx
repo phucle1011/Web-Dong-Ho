@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { decodeToken } from "../../../Helpers/jwtDecode";
-
+import Constants from "../../../../.././Constants";
 export default function Dashboard() {
   const [user, setUser] = useState({
     name: "",
@@ -44,7 +44,7 @@ export default function Dashboard() {
 
         // Gọi API thống kê đơn hàng
         const orderStatsRes = await axios.get(
-          `http://localhost:5000/profile/order-stats/${userId}`
+          `${Constants.DOMAIN_API}/profile/order-stats/${userId}`
         );
 
         if (orderStatsRes.data.success) {
@@ -53,7 +53,7 @@ export default function Dashboard() {
 
         // Gọi API lấy tổng sản phẩm trong giỏ hàng
         const cartRes = await axios.get(
-          `http://localhost:5000/profile/new-orders/${userId}`
+          `${Constants.DOMAIN_API}/profile/new-orders/${userId}`
         );
 
 
@@ -61,7 +61,7 @@ export default function Dashboard() {
 
         // Gọi API lấy thông tin user
         const userRes = await axios.get(
-          `http://localhost:5000/users/${userId}`,
+          `${Constants.DOMAIN_API}/users/${userId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

@@ -74,7 +74,7 @@ export default function Banner({ className }) {
                 <div
                   className="w-full h-full relative"
                   style={{
-                    backgroundImage: `url(/assets/images/banner-1.3.png)`,
+                    backgroundImage: `url(https://img.pikbest.com/origin/06/43/50/92WpIkbEsTf4D.jpg!bwr800)`,
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "cover",
                   }}
@@ -82,14 +82,14 @@ export default function Banner({ className }) {
                   <div className="container-x mx-auto flex items-center  h-full">
                     <div className="w-full h-full xl:flex items-center pt-20 xl:pt-0">
                       <div className="xl:w-[626px] w-full">
-                        <p className="md:text-[34px] text-[20px] font-medium text-white mb-[7px]">
+                        {/* <p className="md:text-[34px] text-[20px] font-medium text-white mb-[7px]">
                           VR BOX 3D Glass
                         </p>
                         <h1 className="md:text-[66px] text-[40px]  font-bold text-white md:leading-[80px] leading-[40px] mb-[44px]">
                           Explore Our Tech Collection Perfect Gadget
-                        </h1>
+                        </h1> */}
 
-                        <Link to="#" passhref="true">
+                        {/* <Link to="#" passhref="true">
                           <div rel="noopener noreferrer">
                             <div
                               className={`w-[160px] h-[52px] flex justify-center items-center group rounded bg-qh3-blue text-white relative transition-all duration-300 ease-in-out overflow-hidden cursor-pointer ${
@@ -98,7 +98,7 @@ export default function Banner({ className }) {
                             >
                               <div className="flex space-x-1 items-center transition-all duration-300 ease-in-out relative z-10">
                                 <span className="text-sm font-600 tracking-wide leading-7 mr-2">
-                                  Shop Now
+                                  Mua Ngay
                                 </span>
                                 <span>
                                   <svg
@@ -134,7 +134,7 @@ export default function Banner({ className }) {
                               ></div>
                             </div>
                           </div>
-                        </Link>
+                        </Link> */}
                       </div>
                     </div>
                   </div>
@@ -143,20 +143,20 @@ export default function Banner({ className }) {
               <div className="item w-full xl:h-[733px] h-[500px]">
                 <div
                   style={{
-                    backgroundImage: `url(/assets/images/banner-2.3.png)`,
+                    backgroundImage: `url(https://img.pikbest.com/origin/06/43/40/598pIkbEsTQmz.jpg!bwr800)`,
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "cover",
                   }}
                   className="w-full h-full relative"
                 >
                   <div className="container-x mx-auto flex items-center  h-full">
-                    <div className="w-full h-full xl:flex items-center pt-20 xl:pt-0">
+                    {/* <div className="w-full h-full xl:flex items-center pt-20 xl:pt-0">
                       <div className="xl:w-[626px] w-full">
                         <p className="md:text-[34px] text-[20px] font-medium text-qh3-blue mb-[7px]">
-                          VR BOX 3D Glass
+                          Đồng Hồ Rolex
                         </p>
                         <h1 className="md:text-[66px] text-[40px]  font-bold text-qblack md:leading-[80px] leading-[40px] mb-[44px]">
-                          Explore Our Tech Collection Perfect Gadget
+                          Khám phá bộ sưu tập đồng hồ – Phong cách hoàn hảo dành cho bạn
                         </h1>
 
                         <Link to="#" passhref="true">
@@ -168,7 +168,7 @@ export default function Banner({ className }) {
                             >
                               <div className="flex space-x-1 items-center transition-all duration-300 ease-in-out relative z-10">
                                 <span className="text-sm font-600 tracking-wide leading-7 mr-2">
-                                  Shop Now
+                                  Mua ngay
                                 </span>
                                 <span>
                                   <svg
@@ -206,27 +206,27 @@ export default function Banner({ className }) {
                           </div>
                         </Link>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
               <div className="item w-full xl:h-[733px] h-[500px]">
-                <div
+                  <div
                   style={{
-                    backgroundImage: `url(/assets/images/banner-3.1.png)`,
+                    backgroundImage: `url(https://img.pikbest.com/origin/06/43/55/53wpIkbEsTrst.jpg!bwr800)`,
                     backgroundRepeat: "no-repeat",
                     backgroundSize: "cover",
                   }}
                   className="w-full h-full relative"
-                >
-                  <div className="container-x mx-auto flex items-center  h-full">
+                > 
+                  {/*<div className="container-x mx-auto flex items-center  h-full">
                     <div className="w-full h-full xl:flex items-center pt-20 xl:pt-0">
                       <div className="xl:w-[626px] w-full">
                         <p className="md:text-[34px] text-[20px] font-medium text-qh3-blue mb-[7px]">
-                          VR BOX 3D Glass
+                          Đồng Hồ Rolex
                         </p>
                         <h1 className="md:text-[66px] text-[40px]  font-bold text-qblack md:leading-[80px] leading-[40px] mb-[44px]">
-                          Explore Our Tech Collection Perfect Gadget
+                          Khám phá bộ sưu tập đồng hồ – Phong cách hoàn hảo dành cho bạn
                         </h1>
 
                         <Link to="#" passhref="true">
@@ -238,7 +238,7 @@ export default function Banner({ className }) {
                             >
                               <div className="flex space-x-1 items-center transition-all duration-300 ease-in-out relative z-10">
                                 <span className="text-sm font-600 tracking-wide leading-7 mr-2">
-                                  Shop Now
+                                 Mua ngay
                                 </span>
                                 <span>
                                   <svg
@@ -277,8 +277,8 @@ export default function Banner({ className }) {
                         </Link>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </div>*/}
+                </div> 
               </div>
             </SimpleSlider>
           </div>

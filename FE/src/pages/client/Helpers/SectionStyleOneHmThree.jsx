@@ -10,7 +10,8 @@ export default function SectionStyleOneHmThree({
   products = [],
     type
 }) {
-
+  //  console.log(products);
+   
   const [productLength] = useState(4);
   return (
     <div data-aos="fade-up" className={`section-style-one ${className || ""}`}>

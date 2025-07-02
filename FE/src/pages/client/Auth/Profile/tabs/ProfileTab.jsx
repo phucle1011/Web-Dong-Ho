@@ -4,6 +4,7 @@ import axios from "axios";
 import { uploadToCloudinary } from "../../../../../Upload/uploadToCloudinary"; // Đường dẫn đúng với cấu trúc dự án của bạn
 import { decodeToken } from "../../../Helpers/jwtDecode";
 import { toast } from "react-toastify";
+import Constants from "../../../../.././Constants";
 
 export default function ProfileTab() {
   const [user, setUser] = useState({
@@ -43,7 +44,7 @@ export default function ProfileTab() {
         const token = localStorage.getItem("token");
         const decoded = decodeToken(token);
         const response = await axios.get(
-          `http://localhost:5000/users/${decoded.id}`,
+          `${Constants.DOMAIN_API}/users/${decoded.id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -79,7 +80,7 @@ export default function ProfileTab() {
       }
 
       await axios.put(
-        `http://localhost:5000/users/${user.id}`,
+        `${Constants.DOMAIN_API}/users/${user.id}`,
         {
           name: user.name,
           phone: user.phone,

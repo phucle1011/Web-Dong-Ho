@@ -11,6 +11,7 @@ import LayoutHomeThree from "../Partials/LayoutHomeThree";
 import SectionStyleOneHmThree from "../Helpers/SectionStyleOneHmThree";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import Constants from "../../../Constants";
 
 export default function HomeThree() {
   const { products } = datas;
@@ -32,15 +33,16 @@ export default function HomeThree() {
     setLoading(true);
     try {
       const [newRes, topSoldRes,topDiscounted] = await Promise.all([
-        axios.get("http://localhost:5000/products/getallnew"),
-        axios.get("http://localhost:5000/top-sold-products"),
-         axios.get("http://localhost:5000/top-discounted-products"),
+        axios.get(`${Constants.DOMAIN_API}/products/getallnew`),
+        axios.get(`${Constants.DOMAIN_API}/top-sold-products`),
+         axios.get(`${Constants.DOMAIN_API}/top-discounted-products`),
 
       ]);
 
       setProductnew(newRes.data.data || []);
       setProductTopsold(topSoldRes.data || []);
-      setProductTopDiscounted(topDiscounted.data.data || [])
+      setProductTopDiscounted(topDiscounted.data || [])
+      
 
     } catch (error) {
       console.error("Lỗi khi gọi API:", error);
@@ -66,14 +68,14 @@ export default function HomeThree() {
         <SectionStyleThree
           type={3}
           products={productNew}
-          sectionTitle="SANR PHAAMR MỚI "
+          sectionTitle="SANR PHẨM MỚI "
           seeMoreUrl="/all-products"
           className="new-products mb-[60px]"
           startLength={0}
          endLength={productNew.length}
         />
         <ProductsAds
-          ads={[`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-3.png`]}
+          ads={[`https://img.pikbest.com/origin/06/43/50/946pIkbEsTIUu.jpg!bwr800`]}
           className="products-ads-section mb-[60px]"
         />
 
@@ -87,7 +89,7 @@ export default function HomeThree() {
           className="category-products mb-[60px]"
         />
 
-        <ViewMoreTitle
+        {/* <ViewMoreTitle
           className="top-selling-product mb-[60px]"
           seeMoreUrl="/al  l-products"
           categoryTitle="Top Selling Products"
@@ -96,12 +98,12 @@ export default function HomeThree() {
             type={3}
             products={productNew.slice(3, productNew.length)}
           />
-        </ViewMoreTitle>
+        </ViewMoreTitle> */}
 
         <ProductsAds
           ads={[
-            `${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-1.png`,
-            `${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-2.png`,
+            `https://img.pikbest.com/origin/06/42/90/276pIkbEsTF5w.jpg!bwr800`,
+            `https://img.pikbest.com/origin/06/39/82/38epIkbEsTCR7.jpg!bwr800`,
           ]}
           sectionHeight="sm:h-[295px] h-full"
           className="products-ads-section mb-[60px]"
@@ -109,7 +111,7 @@ export default function HomeThree() {
         <SectionStyleOneHmThree
           type={3}
           // categoryBackground={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/section-category-2.jpg`}
-          products={productSold.slice(4, productSold.length)}
+          products={productDiscounted}
           brands={brands}
           categoryTitle="Electronics"
           sectionTitle="SẢN PHẨM GIẢM GIÁ"
@@ -120,12 +122,12 @@ export default function HomeThree() {
           className="mb-[60px]"
           lastDate="2025-10-04 4:00:00"
         />
-        <SectionStyleFour
+        {/* <SectionStyleFour
           products={productSold} 
           sectionTitle="Popular Sales"
           seeMoreUrl="/all-products"
           className="category-products mb-[60px]"
-        />
+        /> */}
       </LayoutHomeThree>
     </>
   );

@@ -191,7 +191,8 @@ const AddProduct = () => {
         <textarea
           rows={4}
           className="w-full border px-3 py-2 rounded text-sm"
-        
+                  {...register("description")}
+
         ></textarea>
       </div>
     </div>

@@ -40,7 +40,7 @@ function AttributeEdit() {
         try {
             await axios.put(`${Constants.DOMAIN_API}/admin/attribute/${id}`, data);
             toast.success("Cập nhật thuộc tính thành công!");
-            navigate("/admin/attributes/getall");
+            navigate("/admin/attribute/getall");
         } catch (error) {
             toast.error("Cập nhật thuộc tính thất bại.");
             console.error(error);
