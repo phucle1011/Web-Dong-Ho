@@ -52,9 +52,6 @@ if (req.query.query) {
       }
     }
 
-    console.log("Where Condition:", whereCondition);
-    console.log("Variant Where Condition:", variantWhereCondition);
-
     const { count: totalProducts, rows: products } =
       await Product.findAndCountAll({
         where: whereCondition,

@@ -92,7 +92,6 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log(`Fetching promotion product with ID: ${id}`); // Log ID
 
     const data = await PromotionProductModel.findByPk(id, {
       include: [
@@ -117,11 +116,9 @@ exports.getById = async (req, res) => {
     });
 
     if (!data) {
-      console.log(`No record found for ID: ${id}`); // Log khi không tìm thấy
       return res.status(404).json({ message: "Promotion product not found" });
     }
 
-    console.log("Fetched data:", JSON.stringify(data, null, 2)); // Log dữ liệu chi tiết
     res.json(data);
   } catch (err) {
     console.error("Error in getById:", err);

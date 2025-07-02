@@ -43,8 +43,8 @@ export default function Contact() {
         <PageTitle
           title="Liên Hệ"
           breadcrumb={[
-            { name: "home", path: "/" },
-            { name: "contact", path: "/contact" },
+            { name: "Trang chủ", path: "/" },
+            { name: "liên hệ", path: "/contact" },
           ]}
         />
       </div>

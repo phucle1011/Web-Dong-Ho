@@ -15,11 +15,9 @@ async function cleanupRememberTokens() {
 
                 if (decoded.exp < now) {
                     await user.update({ remember_token: null });
-                    // console.log(`Đã xóa remember_token cho user ID ${user.id}`);
                 }
             } catch (err) {
                 await user.update({ remember_token: null });
-                // console.log(`Token không hợp lệ → Đã xóa remember_token cho user ID ${user.id}`);
             }
         }
     } catch (error) {

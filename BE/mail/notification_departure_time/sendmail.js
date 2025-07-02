@@ -18,10 +18,8 @@ cron.schedule('* * * * *', async () => {
   try {
     const response = await axios.get('http://localhost:5000/admin/booking/list');
     const bookings = response.data.data;
-    console.log('📋 Số booking lấy về:', bookings.length);
 
     const now = dayjs();
-    /* console.log('Giờ hiện tại (Việt Nam):', now.format('HH:mm:ss DD/MM/YYYY')); */
 
 
     bookings.forEach((booking) => {
@@ -29,20 +27,12 @@ cron.schedule('* * * * *', async () => {
       const email = booking.emailUser;
       const departure = booking.Trip?.departureTime;
       const bookingId = booking.id;
- 
-      console.log('Booking:', { bookingId, status, email, departure });
+
 
       if (status === 'confirmed' && email && departure) {
         const departureTime = dayjs(departure);
-        console.log('Giờ khởi hàng của chuyến xe:', departureTime.format('HH:mm:ss DD/MM/YYYY'));
-        const diff = departureTime.diff(now, 'minute');
 
-        console.log(`Booking ID: ${bookingId}, Status: ${status}, Email: ${email}, Giờ khởi hành: ${departureTime.format('HH:mm')}, Còn ${diff} phút`);
-        console.log(' - Cron đang chạy lúc', now.format('HH:mm:ss'));
-        /* console.log('Departure (raw):', departure);
-        console.log('🇻🇳 Departure (Vietnam time):', departureTime.format('HH:mm:ss DD/MM/YYYY'));
-        console.log('Now (Vietnam time):', now.format('HH:mm:ss DD/MM/YYYY'));
-        console.log('Khoảng cách phút:', diff); */
+        const diff = departureTime.diff(now, 'minute');
 
         if (diff <= 30 && diff >= 29 && !sentEmails.has(bookingId)) {
           transporter.sendMail({
@@ -80,7 +70,6 @@ cron.schedule('* * * * *', async () => {
             if (err) {
               console.error('Lỗi gửi mail:', err);
             } else {
-              console.log(`Đã gửi nhắc nhở cho ${email}`);
               sentEmails.add(bookingId);
             }
           });

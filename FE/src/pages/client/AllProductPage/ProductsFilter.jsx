@@ -252,7 +252,7 @@ export default function ProductsFilter({
         </button>
         <button
           onClick={handleClearFilters}
-          className="w-full  bg-gray-300 text-qblack py-2 rounded hover:bg-gray-400 mt-2"
+          className="w-full  bg-gray-300 text-qblack py-2 rounded hover:bg-gray-400 mt-5"
         >
           Xóa bộ lọc
         </button>

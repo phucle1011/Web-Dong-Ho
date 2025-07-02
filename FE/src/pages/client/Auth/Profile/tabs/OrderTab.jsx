@@ -214,7 +214,7 @@ export default function OrderTab() {
         const quantity = item.quantity;
 
         if (!variantId || quantity <= 0) {
-          console.log("→ Bỏ qua sản phẩm:", { variantId, quantity });
+
           continue;
         }
 
@@ -222,7 +222,7 @@ export default function OrderTab() {
           const res = await axios.post(
             `${Constants.DOMAIN_API}/add-to-carts`,
             {
-              userId, // 👈 từ token
+              userId, 
               productVariantId: variantId,
               quantity,
             },
@@ -230,16 +230,16 @@ export default function OrderTab() {
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          console.log("✅ Thêm giỏ hàng thành công:", res.data);
+
         } catch (err) {
-          console.error("❌ Lỗi khi thêm vào giỏ:", err);
+          console.error("Lỗi khi thêm vào giỏ:", err);
         }
       }
 
       toast.success("Đã thêm lại sản phẩm từ đơn hàng bị hủy vào giỏ hàng.");
       navigate("/cart");
     } catch (error) {
-      console.error("❌ Lỗi khi mua lại đơn hàng:", error);
+      console.error("Lỗi khi mua lại đơn hàng:", error);
       toast.error("Không thể mua lại đơn hàng.");
     }
   };
@@ -261,7 +261,7 @@ export default function OrderTab() {
           ...detail,
           comment: detail.comments?.[0] || null,
         }));
-      console.log(res.data.data.orderDetails)
+
         setOrderDetailsMap((prev) => ({
           ...prev,
           [orderId]: processedDetails,

@@ -11,7 +11,7 @@ export default function TrackingOrder() {
           <PageTitle
             title="Track Order"
             breadcrumb={[
-              { name: "home", path: "/" },
+              { name: "trang chủ", path: "/" },
               { name: "Track Order", path: "/tracking-order" },
             ]}
           />

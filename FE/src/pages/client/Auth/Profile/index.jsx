@@ -80,7 +80,7 @@ export default function Profile() {
                       </Link>
                     </div>
 
-                    <div className="item group">
+                    {/* <div className="item group">
                       <Link to="/profile#payment">
                         <div className="flex space-x-3 items-center text-qgray hover:text-qblack">
                           <span>
@@ -91,7 +91,7 @@ export default function Profile() {
                           </span>
                         </div>
                       </Link>
-                    </div>
+                    </div> */}
                     <div className="item group">
                       <Link to="/profile#order">
                         <div className="flex space-x-3 items-center text-qgray hover:text-qblack">
@@ -109,7 +109,7 @@ export default function Profile() {
                             <IcoLove />
                           </span>
                           <span className=" font-normal text-base">
-                            Wishlist
+                            Danh sách yêu thích
                           </span>
                         </div>
                       </Link>
@@ -150,7 +150,7 @@ export default function Profile() {
                         </div>
                       </Link>
                     </div>
-                    <div className="item group">
+                    {/* <div className="item group">
                       <Link to="/profile#support">
                         <div className="flex space-x-3 items-center text-qgray hover:text-qblack">
                           <span>
@@ -161,7 +161,7 @@ export default function Profile() {
                           </span>
                         </div>
                       </Link>
-                    </div>
+                    </div> */}
                     <div className="item group">
                       <Link to="/profile#profile">
                         <div className="flex space-x-3 items-center text-qgray hover:text-qblack">
@@ -169,7 +169,7 @@ export default function Profile() {
                             <IcoLogout />
                           </span>
                           <span className=" font-normal text-base">
-                            Logoout
+                            Đăng xuất
                           </span>
                         </div>
                       </Link>

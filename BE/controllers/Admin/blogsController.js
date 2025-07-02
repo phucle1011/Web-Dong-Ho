@@ -55,7 +55,6 @@ class BlogController {
     try {
       const data = req.body; 
       const { user_id, title, image_url, content, meta_description, focus_keyword } = req.body;
-      console.log("Data nhận được:", { user_id, title, image_url, content, meta_description, focus_keyword });
 
       const newBlog = await Blog.create({
         user_id: data.user_id,

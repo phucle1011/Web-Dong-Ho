@@ -41,8 +41,7 @@ export default function HomeThree() {
       setProductnew(newRes.data.data || []);
       setProductTopsold(topSoldRes.data || []);
       setProductTopDiscounted(topDiscounted.data.data || [])
-      console.log("Sản phẩm mới:", newRes.data );
-      console.log("Sản phẩm bán chạy:", topDiscounted.data);
+
     } catch (error) {
       console.error("Lỗi khi gọi API:", error);
     } finally {

@@ -27,7 +27,6 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log("Token từ localStorage:", token);
 
         if (!token) {
           console.warn("Không tìm thấy token");
@@ -35,7 +34,6 @@ export default function Dashboard() {
         }
 
         const decoded = decodeToken(token);
-        console.log("Token đã decode:", decoded);
 
         const userId = decoded?.id;
         if (!userId) {
@@ -43,13 +41,11 @@ export default function Dashboard() {
           return;
         }
 
-        console.log("userId:", userId);
 
         // Gọi API thống kê đơn hàng
         const orderStatsRes = await axios.get(
           `http://localhost:5000/profile/order-stats/${userId}`
         );
-        console.log("Kết quả thống kê đơn hàng:", orderStatsRes.data);
 
         if (orderStatsRes.data.success) {
           setStats(orderStatsRes.data.data);
@@ -59,7 +55,7 @@ export default function Dashboard() {
         const cartRes = await axios.get(
           `http://localhost:5000/profile/new-orders/${userId}`
         );
-        
+
 
         setTotalItems(cartRes.data.data.totalNewOrders || 0);
 
@@ -76,7 +72,7 @@ export default function Dashboard() {
         const defaultAddress = userRes.data.data.addresses?.find(
           (addr) => addr.is_default === 1
         );
-          
+
         setUser({
           ...userRes.data.data,
           address: defaultAddress || null,
@@ -94,9 +90,8 @@ export default function Dashboard() {
     <>
       <div className="welcome-msg w-full">
         <div>
-    <p className="text-qblack text-lg">Xin chào, Shovo</p>
           <h1 className="font-bold text-[24px] text-qblack">
-      Chào mừng bạn đến với Hồ sơ của bạn
+            Chào mừng bạn đến với Hồ sơ của bạn
           </h1>
         </div>
       </div>
@@ -127,7 +122,7 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="text-xl text-white group-hover:text-qblacktext mt-5">
-           Đơn hàng mới
+            Đơn hàng mới
           </p>
           <span className="text-[40px] text-white group-hover:text-qblacktext font-bold leading-none mt-1 block">
             {totalItems}
@@ -191,70 +186,70 @@ export default function Dashboard() {
         </div>
       </div>
       <div className="dashboard-info mt-8 flex justify-between items-center bg-primarygray px-7 py-7">
-  {/* Thông tin cá nhân */}
-  <div>
-    <p className="title text-[22px] font-semibold">Thông tin cá nhân</p>
-    <div className="mt-5">
-      <table>
-        <tbody>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Họ tên:</td>
-            <td className="text-base text-qblack font-medium">{user.name}</td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Email:</td>
-            <td className="text-base text-qblack font-medium">{user.email}</td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">SĐT:</td>
-            <td className="text-base text-qblack font-medium">{user.phone}</td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Tỉnh/TP:</td>
-            <td className="text-base text-qblack font-medium">
-              {user.address?.city || "Chưa cập nhật"}
-            </td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Địa chỉ:</td>
-            <td className="text-base text-qblack font-medium">
-              {user.address?.address_line || "Chưa cập nhật"}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+        {/* Thông tin cá nhân */}
+        <div>
+          <p className="title text-[22px] font-semibold">Thông tin cá nhân</p>
+          <div className="mt-5">
+            <table>
+              <tbody>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Họ tên:</td>
+                  <td className="text-base text-qblack font-medium">{user.name}</td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Email:</td>
+                  <td className="text-base text-qblack font-medium">{user.email}</td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">SĐT:</td>
+                  <td className="text-base text-qblack font-medium">{user.phone}</td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Tỉnh/TP:</td>
+                  <td className="text-base text-qblack font-medium">
+                    {user.address?.city || "Chưa cập nhật"}
+                  </td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Địa chỉ:</td>
+                  <td className="text-base text-qblack font-medium">
+                    {user.address?.address_line || "Chưa cập nhật"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-  <div className="w-[1px] h-[164px] bg-[#E4E4E4]"></div>
+        <div className="w-[1px] h-[164px] bg-[#E4E4E4]"></div>
 
-  {/* Thông tin địa chỉ */}
-  <div className="ml-6">
-    <p className="title text-[22px] font-semibold">Thông tin địa chỉ</p>
-    <div className="mt-5">
-      <table>
-        <tbody>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Phường/Xã:</td>
-            <td className="text-base text-qblack font-medium">{user.address?.ward || "Chưa cập nhật"}</td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Quận/Huyện:</td>
-            <td className="text-base text-qblack font-medium">{user.address?.district || "Chưa cập nhật"}</td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Tỉnh/TP:</td>
-            <td className="text-base text-qblack font-medium">{user.address?.city || "Chưa cập nhật"}</td>
-          </tr>
-          <tr className="inline-flex mb-5">
-            <td className="text-base text-qgraytwo w-[100px] block">Địa chỉ chi tiết:</td>
-            <td className="text-base text-qblack font-medium">{user.address?.address_line || "Chưa cập nhật"}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+        {/* Thông tin địa chỉ */}
+        <div className="ml-6">
+          <p className="title text-[22px] font-semibold">Thông tin địa chỉ</p>
+          <div className="mt-5">
+            <table>
+              <tbody>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Phường/Xã:</td>
+                  <td className="text-base text-qblack font-medium">{user.address?.ward || "Chưa cập nhật"}</td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Quận/Huyện:</td>
+                  <td className="text-base text-qblack font-medium">{user.address?.district || "Chưa cập nhật"}</td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Tỉnh/TP:</td>
+                  <td className="text-base text-qblack font-medium">{user.address?.city || "Chưa cập nhật"}</td>
+                </tr>
+                <tr className="inline-flex mb-5">
+                  <td className="text-base text-qgraytwo w-[100px] block">Địa chỉ chi tiết:</td>
+                  <td className="text-base text-qblack font-medium">{user.address?.address_line || "Chưa cập nhật"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
     </>
   );

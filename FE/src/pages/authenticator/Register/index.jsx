@@ -13,7 +13,7 @@ function Register() {
     const navigate = useNavigate();
 
     const onSubmit = async (data) => {
-        console.log(data);
+
         try {
             const formData = {
                 fullName: data.fullName,
@@ -29,7 +29,6 @@ function Register() {
             });
 
         } catch (err) {
-            console.log(err);
             if (err.response) {
                 const errorMessage = err.response.data.message;
                 toast.error(errorMessage);

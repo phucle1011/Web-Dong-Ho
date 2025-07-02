@@ -34,37 +34,36 @@ export default function Footer({ type }) {
         </div>
         <div className="lg:flex justify-between mb-[50px]">
           <div className="lg:w-[424px]  ml-0 w-full mb-10 lg:mb-0">
-            <h1 className="text-[18] font-500 text-[#2F2F2F] mb-5">About Us</h1>
+            <h1 className="text-[18] font-500 text-[#2F2F2F] mb-5">Về chúng tôi</h1>
             <p className="text-[#9A9A9A] text-[15px] w-[247px] leading-[28px]">
-              We know there are a lot of threa developers our but we pride into
-              a firm in the industry.
+             Chúng tôi không chỉ bán đồng hồ - chúng tôi mang đến đẳng cấp và phong cách. Tự hào là thương hiệu đáng tin cậy trong ngành đồng hồ chính hãng.
             </p>
           </div>
           <div className="flex-1 lg:flex">
             <div className="lg:w-1/3 w-full mb-10 lg:mb-0">
               <div className="mb-5">
-                <h6 className="text-[18] font-500 text-[#2F2F2F]">Feature</h6>
+                <h6 className="text-[18] font-500 text-[#2F2F2F]">Tính năng</h6>
               </div>
               <div>
                 <ul className="flex flex-col space-y-4 ">
                   <li>
                     <Link to="/about">
                       <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                        About Us
+                        Về chúng tôi
                       </span>
                     </Link>
                   </li>
                   <li>
                     <Link to="/terms-condition">
                       <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                        Terms Condition
+                        Điều khoản & Điều kiện
                       </span>
                     </Link>
                   </li>
                   <li>
                     <Link to="/all-products">
                       <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                        Best Products
+                        Sản phẩm tốt nhất
                       </span>
                     </Link>
                   </li>
@@ -75,7 +74,7 @@ export default function Footer({ type }) {
               <div>
                 <div className="mb-5">
                   <h6 className="text-[18] font-500 text-[#2F2F2F]">
-                    General Links
+                    Liên kết chung
                   </h6>
                 </div>
                 <div>
@@ -83,21 +82,21 @@ export default function Footer({ type }) {
                     <li>
                       <Link to="/blogs">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                          Blog
+                          Tin tức
                         </span>
                       </Link>
                     </li>
                     <li>
-                      <Link to="/tracking-order">
+                      <Link to="/profile#order">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                          Tracking Order
+                          Đơn hàng
                         </span>
                       </Link>
                     </li>
                     <li>
-                      <Link to="/become-saller">
+                      <Link to="/products-compaire">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                          Become Seller
+                          So sánh sản phẩm
                         </span>
                       </Link>
                     </li>
@@ -108,28 +107,28 @@ export default function Footer({ type }) {
             <div className="lg:w-1/3 lg:flex lg:flex-col items-center w-full mb-10 lg:mb-0">
               <div>
                 <div className="mb-5">
-                  <h6 className="text-[18] font-500 text-[#2F2F2F]">Helpful</h6>
+                  <h6 className="text-[18] font-500 text-[#2F2F2F]">Hữu ích</h6>
                 </div>
                 <div>
                   <ul className="flex flex-col space-y-4 ">
                     <li>
                       <Link to="/flash-sale">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                          Flash Sale
+                          Giảm giá chớp nhoáng
                         </span>
                       </Link>
                     </li>
                     <li>
                       <Link to="/faq">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                          FAQ
+                          Câu hỏi thường gặp
                         </span>
                       </Link>
                     </li>
                     <li>
                       <Link to="/about">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
-                          Support
+                          Hổ trợ
                         </span>
                       </Link>
                     </li>
@@ -153,16 +152,16 @@ export default function Footer({ type }) {
               </a>
             </div>
             <span className="sm:text-base text-[10px] text-qgray font-300">
-              ©2022
+              ©2025
               <a
                 href="https://quomodosoft.com/"
                 target="_blank"
                 rel="noreferrer"
                 className="font-500 text-qblack mx-1"
               >
-                Quomodosoft
+                TimeMasters
               </a>
-              All rights reserved
+              Mọi quyền được bảo lưu
             </span>
           </div>
           <div className="">

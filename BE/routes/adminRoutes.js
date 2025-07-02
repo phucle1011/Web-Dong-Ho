@@ -22,10 +22,6 @@ const NotificationController = require('../controllers/Admin/notificationControl
 const AuthController = require('../controllers/Admin/authController');
 const ProductAttributeController = require('../controllers/Admin/product_attributesController');
 
-
-
-// router.use(checkJWT, isAdmin); // tất cả route phía dưới phải login và có role admin
-
 //------------------[ ADMIN ROUTES ]------------------
 
 //------------------[ ORDERS ]------------------\
@@ -95,7 +91,6 @@ router.delete('/product-variants/deleteAttributeValueById/:id', ProductControlle
 router.post('/products/imagesClauding', ProductController.deleteImagesClauding);
 
 //------------------[ ProductAttributeController ]------------------\
-
 router.get('/attribute', ProductAttributeController.getAll);
 router.post('/attribute', ProductAttributeController.create);
 router.get('/attribute/:id', ProductAttributeController.getById);

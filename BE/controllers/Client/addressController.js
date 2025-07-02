@@ -41,9 +41,6 @@ class AddressController {
       is_default = false,
     } = req.body;
 
-    // Log dữ liệu nhận được từ client để kiểm tra thiếu trường nào
-    console.log("Request body received in addAddress:", req.body);
-
     // Validate dữ liệu bắt buộc
     if (
       address_line.trim() === "" ||

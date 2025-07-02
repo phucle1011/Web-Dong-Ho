@@ -57,7 +57,7 @@ export default function BecomeSaller() {
           <PageTitle
             title="Seller Application"
             breadcrumb={[
-              { name: "home", path: "/" },
+              { name: "trang chủ", path: "/" },
               { name: "Become Saller", path: "/become-saller" },
             ]}
           />
@@ -219,7 +219,7 @@ export default function BecomeSaller() {
                 <div className="flex-1 mb-10 xl:mb-0">
                   <div className="update-profile w-full mb-9">
                     <h1 className="text-xl tracking-wide font-bold text-qblack flex items-center mb-2">
-                      Update Profile
+                      Cập nhật tài khoản
                       <span className="ml-1">
                         <svg
                           width="20"

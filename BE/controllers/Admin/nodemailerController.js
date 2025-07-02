@@ -109,7 +109,6 @@ class EmailController {
 
         await promotionUser.update({ email_sent: true });
 
-        console.log(`Đã gửi email cho ${cus.email} cho mã KM ${promotionId}`);
       });
 
       await Promise.all(sendPromises);

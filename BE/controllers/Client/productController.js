@@ -121,13 +121,6 @@ const averageRating =
 const ratingCount = totalRating.count;
 
 
-
-// ✅ In ra để kiểm tra (có thể xóa)
-console.log("Rating map theo variantId:", ratingMap);
-console.log("Tổng rating sản phẩm:", averageRating, "số lượt:", ratingCount);
-
-
-
 // ✅ Tiếp tục xử lý variants
 const variants = product.variants.map((variant) => {
   const promo = variant.promotionProducts?.[0]?.promotion || null;

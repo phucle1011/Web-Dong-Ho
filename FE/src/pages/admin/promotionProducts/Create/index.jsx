@@ -89,7 +89,7 @@ const PromotionProductForm = ({ onSuccess }) => {
               .map((item) => item.promotion_id)
           ),
         ];
-        console.log("Used promotion IDs:", usedPromotionIds);
+
         setUsedVariantIds(usedVariantIds);
         setUsedPromotionIds(usedPromotionIds);
       } catch (error) {
@@ -132,7 +132,7 @@ const PromotionProductForm = ({ onSuccess }) => {
 
     setIsLoading(true);
     try {
-      console.log("Submitting payload:", payload);
+
       await axios.post(
         `${Constants.DOMAIN_API}/admin/promotion-products`,
         payload

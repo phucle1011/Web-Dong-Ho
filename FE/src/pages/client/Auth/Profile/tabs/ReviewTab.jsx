@@ -30,8 +30,7 @@ export default function ReviewTab({ className }) {
           if (reviewsData.length > 0) {
             const totalRating = reviewsData.reduce((sum, review) => sum + (parseFloat(review.rating) || 0), 0);
             const avg = totalRating / reviewsData.length;
-            console.log('Reviews:', reviewsData.map(r => ({ id: r.id, rating: r.rating })));
-            console.log('AverageRating:', avg.toFixed(1));
+
             setAverageRating(parseFloat(avg.toFixed(1)));
           }
         } else {
@@ -102,7 +101,6 @@ export default function ReviewTab({ className }) {
               datas.productInfo?.thumbnail ||
               "/images/no-image.jpg";
 
-            console.log('Review ID:', datas.id, 'Rating:', datas.rating, 'Type:', typeof datas.rating);
 
             return (
               <div key={datas.id} className="bg-white p-4 rounded-lg shadow">

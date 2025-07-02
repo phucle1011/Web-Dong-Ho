@@ -21,7 +21,6 @@ function Login() {
                 password: props.password,
             };
             const res = await axios.post(`${URL}/login`, formData);
-            console.log(res.data);
     
             let expiresDate = new Date();
             expiresDate.setHours(expiresDate.getHours() + 10);

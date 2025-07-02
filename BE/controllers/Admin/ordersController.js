@@ -220,7 +220,6 @@ class OrderController {
 
                 if (promotion) {
                     if (promotion.special_promotion) {
-                        // console.log("Mã đặc biệt → Cập nhật 'used' = false");
                         await PromotionUserModel.update(
                             { used: false },
                             {
@@ -232,7 +231,6 @@ class OrderController {
                             }
                         );
                     } else {
-                        // console.log("Mã thường → Tăng lại số lượng");
                         await promotion.increment('quantity', { by: 1, transaction: t });
                     }
                 }

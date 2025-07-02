@@ -52,7 +52,7 @@ const PromotionProductEdit = () => {
           throw new Error("Dữ liệu khuyến mãi không hợp lệ");
         }
         setPromotions(promoData); // Sử dụng toàn bộ dữ liệu, không lọc
-        console.log("Loaded promotions:", promoData);
+
 
         // Lấy danh sách biến thể sản phẩm
         const variantRes = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
@@ -60,7 +60,7 @@ const PromotionProductEdit = () => {
         if (!variantData.length) {
           throw new Error("Dữ liệu biến thể sản phẩm không hợp lệ");
         }
-        console.log("All product variants:", variantData);
+
         setProductVariants(variantData);
 
         // Lấy danh sách sản phẩm khuyến mãi
@@ -68,7 +68,6 @@ const PromotionProductEdit = () => {
         const promotionProducts = Array.isArray(promotionProductsRes.data.data)
           ? promotionProductsRes.data.data
           : [];
-        console.log("All promotion products:", promotionProducts);
 
         // Lọc tất cả các biến thể đã được sử dụng trong bất kỳ khuyến mãi nào
         const usedIds = [...new Set(
@@ -76,7 +75,6 @@ const PromotionProductEdit = () => {
             .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
             .map((item) => item.product_variant_id)
         )];
-        console.log("Used variant IDs:", usedIds);
         setUsedVariantIds(usedIds);
 
         // Tạo trạng thái cho các biến thể
@@ -119,7 +117,6 @@ const PromotionProductEdit = () => {
           throw new Error("Không tìm thấy dữ liệu khuyến mãi!");
         }
 
-        console.log(`API response for promotion_id ${id}:`, data);
         const expectedVariantCount = data[0]?.promotion?.variant_count || 0;
         const productVariantIds = [...new Set(
           data
@@ -127,7 +124,6 @@ const PromotionProductEdit = () => {
             .map((item) => item.product_variant_id.toString())
         )];
 
-        console.log("Extracted product_variant_ids:", productVariantIds);
 
         if (productVariantIds.length !== expectedVariantCount) {
           console.warn(
@@ -208,7 +204,7 @@ const PromotionProductEdit = () => {
         product_variant_ids: selectedVariants.map((id) => parseInt(id)),
         status: "Active",
       };
-      console.log("Submitting payload:", payload);
+
       const response = await axios.put(`${Constants.DOMAIN_API}/admin/promotion/${id}`, payload);
       toast.success("Cập nhật khuyến mãi thành công!");
       setTimeout(() => {

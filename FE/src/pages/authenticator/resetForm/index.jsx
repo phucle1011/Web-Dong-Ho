@@ -20,7 +20,7 @@ function ResetForm() {
             const res = await axios.post(`${URL}/resetPassword`, data);
             toast.success("Yêu cầu đặt lại mật khẩu đã được gửi đến email của bạn!");
         } catch (err) {
-            console.log(err);
+
             if (err.response) {
                 const errorMessage = err.response.data.message;
                 toast.error(errorMessage);

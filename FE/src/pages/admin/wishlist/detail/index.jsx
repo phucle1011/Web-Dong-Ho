@@ -245,7 +245,7 @@ function WishlistDetail() {
                                     </tr>
                                 ) : (
                                     wishlistItems.map((item, index) => {
-                                        console.log("Item:", item); // <-- Xem variant.attributeValues và variant.stock có không?
+    
                                         const variant = item.variant;
                                         const product = variant.product;
 

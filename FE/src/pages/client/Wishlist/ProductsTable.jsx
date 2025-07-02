@@ -91,13 +91,6 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
                   product.thumbnail ||
                   "/default-image.jpg";
 
-                // Sửa console log để tránh undefined
-                console.log("Ảnh sản phẩm:", {
-                  thumbnail: product.thumbnail || "Không có",
-                  image: product.image || "Không có",
-                  imageUrl: imageUrl,
-                });
-
                 return (
                   <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
                     <td className="pl-10 py-4 w-[380px]">

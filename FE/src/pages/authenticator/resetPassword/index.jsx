@@ -12,7 +12,6 @@ function ResetPassword() {
     const {token} = useParams();
     const navigate = useNavigate();
 
-    console.log("Token from URL:", token); 
     const onSubmit = async (data) => {
         try {
             const formData = {

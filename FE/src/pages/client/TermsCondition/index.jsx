@@ -8,7 +8,7 @@ export default function TermsCondition() {
         <div className="w-full mb-[30px]">
           <PageTitle
             breadcrumb={[
-              { name: "home", path: "/" },
+              { name: "trang chủ", path: "/" },
               { name: "Terms and condition", path: "/terms-conditions" },
             ]}
             title="Terms and Condition"

@@ -22,7 +22,7 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const { changePassword } = require('../controllers/Client/PasswordOldController');
-const authenticate = require('../services/Middleware'); // Middleware để gán req.user
+const authenticate = require('../services/Middleware'); 
 const brandClientController = require('../controllers/Client/brandClientController');
 const ProfileController = require('../controllers/Client/ProfileController');
 const HomeController = require('../controllers/Client/HomeController');
@@ -31,8 +31,7 @@ const reviewController = require('../controllers/Client/reviewController');
 
 //------------------[ CLIENT ROUTES ]------------------
 
-//------------------[ CLIENT home ]------------------
-
+//------------------[ HOME]------------------
 router.get("/products/getallnew", HomeController.getAllNewProducts);
 router.get("/top-sold-products", HomeController.getTopSoldProducts);
 router.get("/top-discounted-products", HomeController.getDiscountedProducts);
@@ -59,7 +58,6 @@ router.post("/contact", ContactController.sendContactEmail);
 router.post('/promotions/apply',checkJWT, PromotionController.applyDiscount);
 router.get('/promotions/active',checkJWT, PromotionController.getActivePromotions);
 
-
 //------------------[ Products Compaire ]------------------
 router.get("/products/compare", ProductCompaireController.getAllForComparison);
 
@@ -68,8 +66,6 @@ router.get('/address/user/:id', AddressController.getAddressesByUser);
 router.delete('/user/:userId/addresses/:id', AddressController.deleteAddress);
 router.put('/user/:userId/addresses/:id', AddressController.updateAddress);
 router.post('/user/:userId/addresses', AddressController.addAddress);
-
-
 
 //------------------[ CARTS ]------------------
 router.get("/carts", checkJWT, CartController.getCartByUser);
@@ -105,22 +101,18 @@ router.put('/users/:id', AuthController.update);
 router.get("/profile/order-stats/:id", ProfileController.getOrderStats);
 router.get("/profile/new-orders/:id", ProfileController.getTotalNewOrders);
 
-
-
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
 
 router.get('/pricerange', ProductClientController.getPrice);
 
 // router.get('/stock', ProductClientController.countStockGroupByProductId);
-
 router.get('/:id', ProductVariantController.getProductVariantDetail);
 
 router.get('/product-variants/:id', ProductVariantController.getProductVariantDetail);
 router.get('/products/discounted', ProductVariantController.getDiscountedProducts);
 
 // ------------------[ Comment ]------------------//
-
 router.post('/comments', ClientCommentController.addComment);
 router.get('/comment/product/:id', ClientCommentController.getCommentsByProductId);
 router.put("/comments/:id", ClientCommentController.updateComment);
@@ -147,7 +139,6 @@ router.get('/brands/get-products-by-brands', BrandController.getProductsByBrands
 router.put('/users/:id', UserController.updateUserInfo);
 
 //------------------[ Reviews ]------------------
-
 router.get('/:userId/reviews', reviewController.getAllReviews);
 
 module.exports = router;

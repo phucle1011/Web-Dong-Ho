@@ -32,7 +32,6 @@ const NotificationList = ({ userId }) => {
 
   const fetchNotifications = useCallback(async () => {
     if (!effectiveUserId) {
-      console.log('No effectiveUserId, clearing notifications');
       setNotifications([]);
       setUnreadCount(0);
       setTotal(0);
@@ -41,11 +40,7 @@ const NotificationList = ({ userId }) => {
 
     try {
       setLoading(true);
-      console.log('Fetching notifications with params:', {
-        user_id: effectiveUserId,
-        page,
-        limit,
-      });
+
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/notification`, {
         params: {
           user_id: effectiveUserId,
@@ -57,7 +52,6 @@ const NotificationList = ({ userId }) => {
         },
       });
 
-      console.log('API Response:', res.data);
       const { notifications: notifs, total: totalCount } = res.data || { notifications: [], total: 0 };
 
       if (!Array.isArray(notifs)) {
@@ -69,7 +63,7 @@ const NotificationList = ({ userId }) => {
       }
 
       const unread = notifs.filter((n) => !n.read_at).length;
-      console.log('Processed:', { notifications: notifs, unread, total: totalCount });
+
       setUnreadCount(unread);
       setNotifications(notifs);
       setTotal(totalCount || 0);
@@ -131,14 +125,11 @@ const NotificationList = ({ userId }) => {
     fetchNotifications();
 
     if (effectiveUserId) {
-      console.log('Joining socket room for user:', effectiveUserId);
       socket.emit('join', effectiveUserId.toString());
     }
 
     socket.on('createNotification', (notification) => {
-      console.log('Received createNotification:', notification);
-      console.log('effectiveUserId:', effectiveUserId);
-      console.log('user_ids includes effectiveUserId:', notification.user_ids?.includes(effectiveUserId));
+
       if (notification.user_ids?.includes(effectiveUserId)) {
         toast.info(`Thông báo mới: ${notification.data?.title || 'Thông báo hệ thống'}`);
         fetchNotifications();
@@ -151,12 +142,12 @@ const NotificationList = ({ userId }) => {
     });
 
     const interval = setInterval(() => {
-      console.log('Polling notifications');
+
       fetchNotifications();
     }, 5000); // 5s for testing, revert to 10000 in production
 
     return () => {
-      console.log('Disconnecting socket and clearing interval');
+
       socket.disconnect();
       clearInterval(interval);
     };

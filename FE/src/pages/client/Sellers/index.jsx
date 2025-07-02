@@ -10,7 +10,7 @@ export default function Sallers() {
         <PageTitle
           title="All Seller "
           breadcrumb={[
-            { name: "home", path: "/" },
+            { name: "trang chủ", path: "/" },
             { name: "Sallers", path: "/sallers" },
           ]}
         />

@@ -45,11 +45,6 @@ cron.schedule('0 0 * * *', () => {
   cleanupRememberTokens();
 });
 
-// cron.schedule('* * * * *', () => {
-//     console.log('[CRON] Bắt đầu dọn dẹp remember_token...');
-//     cleanupRememberTokens();
-// });
-
 app.use(cors());
 
 require('./models/connectsModel');

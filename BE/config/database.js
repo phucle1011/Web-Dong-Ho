@@ -7,8 +7,8 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
   dialect: process.env.DB_DIALECT,
   logging: console.log,
   dialectOptions: {
-    useUTC: false, // Không sử dụng UTC
-    timezone: '+07:00', // Múi giờ Việt Nam
+    useUTC: false, 
+    timezone: '+07:00', 
   },
   timezone: '+07:00',
 });

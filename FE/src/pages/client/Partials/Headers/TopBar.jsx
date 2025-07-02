@@ -115,13 +115,13 @@ export default function TopBar({ className }) {
                     )}
                   </li>
                 )}
-                <li>
+                {/* <li>
                   <Link to="/tracking-order">
                     <span className="text-xs leading-6 text-qblack font-500 hover:text-qgray transition-colors">
                       Theo dõi đơn hàng
                     </span>
                   </Link>
-                </li>
+                </li> */}
                 <li>
                   <Link to="/faq">
                     <span className="text-xs leading-6 text-qblack font-500 hover:text-qgray transition-colors">
@@ -131,7 +131,7 @@ export default function TopBar({ className }) {
                 </li>
               </ul>
             </div>
-            <div className="topbar-dropdowns sm:block hidden">
+            {/* <div className="topbar-dropdowns sm:block hidden">
               <div className="flex space-x-6">
                 <div className="country-select flex space-x-1 items-center">
                   <div>
@@ -160,7 +160,7 @@ export default function TopBar({ className }) {
                   <Arrow className="fill-current qblack" />
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

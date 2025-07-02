@@ -64,7 +64,6 @@ const sendResetPassword = async (email, resetLink) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Email đặt lại mật khẩu đã được gửi đến ${email}`);
     return true;
   } catch (error) {
     console.error("Lỗi gửi email đặt lại mật khẩu:", error);

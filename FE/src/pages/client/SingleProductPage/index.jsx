@@ -65,7 +65,6 @@ useEffect(() => {
         `${Constants.DOMAIN_API}/products/${id}/variants`
       ).then((res) => { 
         setDescription(res.data.product.description)
-       console.log(res.data.product.description);
        
     })
   axios.get(`${Constants.DOMAIN_API}/products/${id}/similar`)
@@ -119,7 +118,7 @@ useEffect(() => {
               <div className="container-x mx-auto">
                 <BreadcrumbCom
                   paths={[
-                    { name: "home", path: "/" },
+                    { name: "trang chủ", path: "/" },
                     { name: "single product", path: "/single-product" },
                   ]}
                 />

@@ -8,7 +8,7 @@ export default function FourZeroFour() {
     <Layout>
       <div className="cart-page-wrapper w-full">
         <div className="container-x mx-auto">
-          <BreadcrumbCom paths={[{ name: "home", path: "/" }]} />
+          <BreadcrumbCom paths={[{ name: "trang chủ", path: "/" }]} />
           <div className="empty-card-wrapper w-full">
             <div className="flex justify-center items-center w-full">
               <div>

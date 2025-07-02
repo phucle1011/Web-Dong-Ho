@@ -209,12 +209,8 @@ export default function ProfileTab() {
         <div className="flex-1">
           <div className="update-logo w-full mb-9">
             <h1 className="text-xl font-bold text-qblack flex items-center mb-2">
-              Update Profile
+              Cập nhật tài khoản
             </h1>
-            <p className="text-sm text-qgraytwo mb-5">
-              Profile of at least Size{" "}
-              <span className="ml-1 text-qblack">300x300</span>. Max 5mb.
-            </p>
             <div className="flex xl:justify-center justify-start">
               <div className="relative">
                 <div className="sm:w-[198px] sm:h-[198px] w-[199px] h-[199px] rounded-full overflow-hidden relative">
@@ -250,14 +246,14 @@ export default function ProfileTab() {
 
       <div className="action-area flex space-x-4 items-center">
         <button type="button" className="text-sm text-qred font-semibold">
-          Cancel
+          Hủy
         </button>
         <button
           type="button"
           className="w-[164px] h-[50px] bg-qblack text-white text-sm"
           onClick={handleUpdate}
         >
-          Update Profile
+          Cập nhật tài khoản
         </button>
       </div>
     </>

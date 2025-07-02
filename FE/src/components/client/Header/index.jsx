@@ -134,7 +134,6 @@ function Header() {
             });
 
             if (response.data.success) {
-                console.log('Kết quả:', response.data.data);
                 navigator ('/bus', {
                     state: { tripsData: response.data.data }
                 });

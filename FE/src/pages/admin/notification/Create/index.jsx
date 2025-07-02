@@ -49,8 +49,6 @@ const CreateNotification = () => {
           ? discountRes.data
           : discountRes.data?.data || [];
 
-        console.log('Fetched users:', usersData);
-        console.log('Fetched discounts:', discountsData);
         setUsers(usersData);
         setDiscounts(discountsData);
       } catch (error) {
@@ -62,7 +60,6 @@ const CreateNotification = () => {
 
     // Join socket room for admin user
     if (userId) {
-      console.log('Joining socket room for user:', userId);
       socket.emit("join", userId.toString());
     }
 
@@ -74,7 +71,6 @@ const CreateNotification = () => {
 
     // Cleanup socket on unmount
     return () => {
-      console.log('Disconnecting socket');
       socket.disconnect();
     };
   }, [userId]);
@@ -106,11 +102,9 @@ const CreateNotification = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      console.log('Submitting formData:', formData);
       const response = await axios.post(`${Constants.DOMAIN_API}/admin/notification`, formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
-      console.log('Create notification response:', response.data);
       toast.success("Tạo thông báo thành công");
 
       // Emit socket event for new notification
@@ -121,7 +115,6 @@ const CreateNotification = () => {
         data: formData.data,
         created_at: new Date().toISOString(),
       };
-      console.log('Emitting createNotification:', eventData);
       socket.emit("createNotification", eventData);
 
       navigate("/admin/notification/getAll");

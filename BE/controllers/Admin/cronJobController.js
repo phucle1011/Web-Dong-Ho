@@ -19,9 +19,6 @@ async function updatePromotionStatuses() {
             // const endDate = new Date(promo.end_date).toISOString();
             // const nowDate = new Date().toISOString();
 
-            console.log(`Promo ID ${promo.id} trạng thái cũ: ${promo.status}, trạng thái mới: ${newStatus}`);
-            console.log(`Promo ID ${promo.id}: now=${nowDate}, start=${startDate}, end=${endDate}`);
-
             if (promo.status === 'inactive') {
                 newStatus = 'inactive';
             } else if (promo.quantity === 0) {
@@ -46,7 +43,6 @@ async function updatePromotionStatuses() {
 
             if (Object.keys(updateData).length > 0) {
                 await promo.update(updateData);
-                console.log(`Updated Promo ID ${promo.id} to status: ${newStatus}`);
             }
         }
     } catch (error) {
@@ -55,12 +51,10 @@ async function updatePromotionStatuses() {
 }
 
 cron.schedule('0 0 * * *', () => {
-    console.log('[CRON] Đang cập nhật trạng thái khuyến mãi lúc 00:00...');
     updatePromotionStatuses();
 });
 
 cron.schedule('59 23 * * *', () => {
-    console.log('[CRON] Đang cập nhật trạng thái khuyến mãi lúc 23:59...');
     updatePromotionStatuses();
 });
 

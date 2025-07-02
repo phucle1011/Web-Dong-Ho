@@ -133,17 +133,10 @@ export default function AllProductPage() {
           brand_id: brandFilters.join(",") || undefined,
         };
 
-        console.log("API Parameters:", params);
 
         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
           params,
           headers: { "Cache-Control": "no-cache" },
-        });
-
-        console.log("API Response:", {
-          data: res.data.data,
-          pagination: res.data.pagination,
-          totalVariants: res.data.totalVariants,
         });
 
         setProducts(Array.isArray(res.data.data) ? res.data.data : []);
@@ -177,15 +170,6 @@ export default function AllProductPage() {
     // Chỉ hiển thị nút "Previous" nếu không phải trang 1
     const showPreviousPage = currentPage > 1;
 
-    console.log("Pagination Info:", {
-      currentPage,
-      totalProducts,
-      limit,
-      totalPages,
-      productsLength: products.length,
-      showNextPage,
-      showPreviousPage,
-    });
 
     return (
       <div className="flex justify-center mt-4">
@@ -256,7 +240,6 @@ export default function AllProductPage() {
 
   const handlePageChange = (newPage) => {
     const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);
-    console.log("handlePageChange:", { newPage, totalPages, currentPage: pagination.currentPage });
     if (newPage >= 1 && newPage <= totalPages) {
       setPagination((prev) => ({ ...prev, currentPage: newPage }));
     } else {
@@ -285,11 +268,11 @@ export default function AllProductPage() {
               />
        
               <div className="w-full hidden lg:block h-[295px] overflow-hidden rounded-lg">
-                <img
+                {/* <img
                   src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-5.png`}
                   alt="Banner"
                   className="w-full h-full object-cover"
-                />
+                /> */}
               </div>
             </div>
 
