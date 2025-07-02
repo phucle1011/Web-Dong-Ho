@@ -673,6 +673,20 @@ export default function OrderTab() {
                                         </tr>
                                       )}
 
+                                      {Number(order.special_discount_amount) > 0 && (
+                                        <tr className="bg-gray-50">
+                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                            Giảm giá đặc biệt:
+                                          </td>
+                                          <td className="text-right p-2 border-t text-red-600 font-medium">
+                                            -{Number(order.special_discount_amount).toLocaleString("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            })}
+                                          </td>
+                                        </tr>
+                                      )}
+
                                       <tr className="bg-gray-100 font-semibold">
                                         <td colSpan={5} className="text-right p-2 border-t border-b">Tổng tiền:</td>
                                         <td className="text-right p-2 border-t border-b text-blue-600">

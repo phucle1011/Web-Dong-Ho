@@ -18,9 +18,7 @@ export default function CheakoutPage() {
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [promoCodeData, setPromoCodeData] = useState({
     code: "",
-    discountAmount: 0,
-    maxPrice: null,
-    appliedAt: null
+    discountAmount: 0
   });
   const [finalData, setFinalData] = useState({
     total: 0,
@@ -621,6 +619,22 @@ export default function CheakoutPage() {
     }
   };
 
+  useEffect(() => {
+  const savedPromoCode = localStorage.getItem("selectedPromoCode");
+  if (savedPromoCode) {
+    try {
+      const parsed = JSON.parse(savedPromoCode);
+      setPromoCodeData(parsed);
+      setFinalData(prev => ({
+        ...prev,
+        promoDiscount: parsed.discountAmount || 0
+      }));
+    } catch (e) {
+      console.error("Không thể parse promo code từ localStorage:", e);
+    }
+  }
+}, []);
+
   const handleCheckout = async () => {
     if (isSubmitting || isCalculatingShipping) {
       toast.warning("Vui lòng chờ hệ thống tính toán phí vận chuyển...");
@@ -698,7 +712,7 @@ export default function CheakoutPage() {
         address: defaultAddress?.address_line || "",
         note: noteValue,
         promotion: selectedVoucher ? selectedVoucher.id : null,
-        promo_code: promoCodeData.code || null,
+        promo_discount: promoCodeData.discountAmount || null,
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
         amount: finalData.total,

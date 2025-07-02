@@ -56,6 +56,10 @@ const OrderModel = connection.define('orders', {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: true
     },
+    special_discount_amount: {
+        type: DataTypes.DECIMAL(20, 2),
+        allowNull: true
+    }
 }, {
     tableName: 'orders',
     timestamps: true,

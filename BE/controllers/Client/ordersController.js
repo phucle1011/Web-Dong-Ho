@@ -253,7 +253,8 @@ class OrderController {
             promotion,
             note,
             shipping_fee,
-            cancellation_reason
+            cancellation_reason,
+            promo_discount
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -308,7 +309,7 @@ class OrderController {
             }
 
             let selectedVoucher = null;
-            let discount = 0;
+            let specialDiscount = parseFloat(promo_discount) || 0;
             let discountAmount = 0;
 
             if (promotion) {
@@ -359,6 +360,12 @@ class OrderController {
                     await selectedVoucher.save({ transaction: t });
                 }
             }
+
+            if (specialDiscount > 0) {
+                specialDiscount = Math.min(specialDiscount, totalPrice);
+                totalPrice -= specialDiscount;
+            }
+
             const order_code = `ORD-${Date.now()}`;
             const currentDateTime = new Date(Date.now() + 7 * 60 * 60 * 1000);
             const finalTotal = totalPrice + (shipping_fee || 0);
@@ -380,6 +387,7 @@ class OrderController {
                 cancellation_reason: note || null,
                 shipping_code: null,
                 discount_amount: discountAmount,
+                special_discount_amount: specialDiscount
             }, { transaction: t });
 
             const orderDetails = detailedCart.map((item) => ({
@@ -434,7 +442,8 @@ class OrderController {
             payment_method,
             shipping_fee,
             promotion,
-            orderId
+            orderId,
+            promo_discount
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -471,6 +480,7 @@ class OrderController {
             let selectedVoucher = null;
             let discountAmount = 0;
             let finalAmount = totalPrice;
+            let specialDiscount = parseFloat(promo_discount) || 0;
 
             if (promotion) {
                 selectedVoucher = await PromotionModel.findByPk(promotion);
@@ -515,6 +525,11 @@ class OrderController {
                 }
             }
 
+            if (specialDiscount > 0) {
+    specialDiscount = Math.min(specialDiscount, finalAmount);
+    finalAmount -= specialDiscount;
+}
+
             const finalTotalWithShipping = finalAmount + (parseFloat(shipping_fee) || 0);
 
             const simplifiedProducts = products.map(item => ({
@@ -541,6 +556,7 @@ class OrderController {
                 amount: finalTotalWithShipping,
                 originalAmount: totalPrice,
                 discountAmount: discountAmount,
+                specialDiscount: specialDiscount,
                 shipping_fee: shipping_fee || 0
             })).toString("base64");
 
@@ -587,6 +603,7 @@ class OrderController {
                         order_code: order_code,
                         originalAmount: totalPrice,
                         discountAmount: discountAmount,
+                        specialDiscount: specialDiscount,
                         finalAmount: finalAmount
                     }
                 });
@@ -644,7 +661,8 @@ class OrderController {
                 note,
                 products,
                 promotion,
-                shipping_fee
+                shipping_fee,
+                specialDiscount
             } = decoded;
 
             let totalPrice = 0;
@@ -674,6 +692,12 @@ class OrderController {
                     quantity: item.quantity,
                     total: price * item.quantity,
                 });
+            }
+
+            let finalSpecialDiscount = parseFloat(specialDiscount) || 0;
+            if (finalSpecialDiscount > 0) {
+                finalSpecialDiscount = Math.min(finalSpecialDiscount, totalPrice);
+                totalPrice -= finalSpecialDiscount;
             }
 
             let selectedVoucher = null;
@@ -760,6 +784,7 @@ class OrderController {
                 cancellation_reason: null,
                 shipping_code: null,
                 discount_amount: discountAmount,
+                special_discount_amount: finalSpecialDiscount
             }, { transaction: t });
 
             const orderDetails = detailedCart.map((item) => ({
