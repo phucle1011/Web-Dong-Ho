@@ -45,10 +45,11 @@ function PromotionCreate() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/list`);
-        setUsers(res.data.data);
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/getusers`);
+        setUsers(res.data.data); // Không sắp xếp lại, sử dụng thứ tự từ backend
       } catch (err) {
         console.error("Lỗi khi lấy danh sách người dùng:", err);
+        toast.error("Không thể lấy danh sách người dùng. Vui lòng thử lại.");
       }
     };
     fetchUsers();

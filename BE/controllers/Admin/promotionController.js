@@ -1,5 +1,8 @@
+const { fn, col, literal } = require('sequelize');
 const { Op } = require('sequelize');
 const PromotionModel = require('../../models/promotionsModel');
+const UserModel = require('../../models/usersModel');
+const OrderModel = require('../../models/ordersModel');
 
 class PromotionController {
   static async getAll(req, res) {
@@ -254,6 +257,69 @@ class PromotionController {
   }
 
 
+  static async getHighValueBuyers(req, res) {
+    try {
+      const now = new Date();
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+      const users = await UserModel.findAll({
+        include: [{
+          model: OrderModel,
+          as: 'orders',
+          where: {
+            status: 'delivered',
+            created_at: {
+              [Op.between]: [startOfLastMonth, endOfLastMonth]
+            }
+          },
+          required: false,
+          attributes: ['total_price', 'created_at']
+        }],
+        attributes: ['id', 'name']
+      });
+
+      const enrichedUsers = users.map(user => {
+        const orders = (user.orders || []).sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        const totalOrders = orders.length;
+
+        const totalSpentInMonth = orders.reduce(
+          (sum, order) => sum + parseFloat(order.total_price || 0),
+          0
+        );
+
+        const ordersInfo = orders.map(order => ({
+          created_at: new Date(order.created_at).toLocaleDateString('vi-VN'),
+          total_price: parseFloat(order.total_price)
+        }));
+
+        const isHighValue = totalOrders > 8 && totalSpentInMonth > 5000000;
+
+        return {
+          id: user.id,
+          name: user.name,
+          total_orders: totalOrders,
+          total_spent_in_month: totalSpentInMonth,
+          is_high_value: isHighValue,
+          orders_info: ordersInfo
+        };
+      });
+
+      const sortedUsers = enrichedUsers.sort((a, b) => {
+        if (a.is_high_value === b.is_high_value) {
+          return b.total_orders - a.total_orders;
+        }
+        return b.is_high_value - a.is_high_value;
+      });
+
+      res.json({ success: true, data: sortedUsers });
+    } catch (err) {
+      console.error('Lỗi khi lấy danh sách người dùng:', err);
+      res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
+    }
+  }
 
   static async getById(req, res) {
     const { id } = req.params;

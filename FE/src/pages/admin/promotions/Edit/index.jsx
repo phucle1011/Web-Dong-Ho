@@ -131,7 +131,7 @@ function PromotionEdit() {
                             required: "Vui lòng nhập giá trị giảm",
                             validate: (value) =>
                                 discountType === "percentage"
-                                    ? (value >= 1 && value <= 100) || "Giá trị phần trăm phải từ 1 đến 100"
+                                    ? (value >= 1 && value <= 80) || "Giá trị phần trăm phải từ 1 đến 80"
                                     : value >= 0 || "Giá trị cố định phải >= 0"
                         })}
                         className="w-full border rounded px-3 py-2"
@@ -210,66 +210,64 @@ function PromotionEdit() {
                     )}
                 </div>
 
-                <div>
-                    <label className="block mb-1 font-medium">Số tiền giảm giá tối đa (VNĐ)</label>
-                    <Controller
-                        control={control}
-                        name="max_price"
-                        rules={{
-                            required: "Vui lòng nhập số tiền giảm tối đa",
-                            validate: (value) => {
-                                const num = parseInt(value?.toString().replace(/\D/g, "") || "0");
-                                if (isNaN(num)) return "Phải là số hợp lệ";
-                                if (num < 0) return "Phải lớn hơn hoặc bằng 0";
+                {discountType === "percentage" && (
+                    <div>
+                        <label className="block mb-1 font-medium">Số tiền giảm giá tối đa (VNĐ)</label>
+                        <Controller
+                            control={control}
+                            name="max_price"
+                            rules={{
+                                required: discountType === "percentage" ? "Vui lòng nhập số tiền giảm tối đa" : false,
+                                validate: (value) => {
+                                    if (discountType !== "percentage") return true;
+                                    const num = parseInt(value?.toString().replace(/\D/g, "") || "0");
+                                    if (isNaN(num)) return "Phải là số hợp lệ";
+                                    if (num < 0) return "Phải lớn hơn hoặc bằng 0";
 
-                                const discountType = getValues("discount_type");
-                                const discountValue = Number(getValues("discount_value"));
-                                const minPrice = parseInt(getValues("min_price_threshold")?.toString().replace(/\D/g, "") || "0");
+                                    const discountValue = Number(getValues("discount_value"));
+                                    const minPrice = parseInt(getValues("min_price_threshold")?.toString().replace(/\D/g, "") || "0");
 
-                                let minDiscountAmount = 0;
-                                if (discountType === "percentage") {
-                                    minDiscountAmount = Math.floor((discountValue / 100) * minPrice);
-                                } else if (discountType === "fixed") {
-                                    minDiscountAmount = discountValue;
-                                }
+                                    const minDiscountAmount = Math.floor((discountValue / 100) * minPrice);
 
-                                if (num < minDiscountAmount) {
-                                    return `Số tiền giảm tối đa phải lớn hơn hoặc bằng ${minDiscountAmount.toLocaleString("vi-VN")} (theo giá trị giảm và ngưỡng đơn hàng)`;
-                                }
+                                    if (num < minDiscountAmount) {
+                                        return `Số tiền giảm tối đa phải lớn hơn hoặc bằng ${minDiscountAmount.toLocaleString("vi-VN")} (theo giá trị giảm và ngưỡng đơn hàng)`;
+                                    }
 
-                                return true;
-                            },
-                        }}
-                        render={({ field }) => {
-                            const formatVND = (value) => {
-                                const number = parseInt(value.replace(/\D/g, "") || "0");
-                                return number.toLocaleString("vi-VN");
-                            };
-                            const handleChange = (e) => {
-                                const formatted = formatVND(e.target.value);
-                                e.target.value = formatted;
-                                const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
-                                field.onChange(rawNumber);
-                            };
-                            const displayValue =
-                                typeof field.value === "number"
-                                    ? field.value.toLocaleString("vi-VN")
-                                    : field.value || "";
-                            return (
-                                <input
-                                    {...field}
-                                    value={displayValue}
-                                    onChange={handleChange}
-                                    placeholder="VD: 50.000"
-                                    className="w-full border rounded px-3 py-2"
-                                />
-                            );
-                        }}
-                    />
-                    {errors.max_price && (
-                        <p className="text-red-500 text-sm mt-1">{errors.max_price.message}</p>
-                    )}
-                </div>
+                                    return true;
+                                },
+                            }}
+                            render={({ field }) => {
+                                const formatVND = (value) => {
+                                    const number = parseInt(value.replace(/\D/g, "") || "0");
+                                    return number.toLocaleString("vi-VN");
+                                };
+                                const handleChange = (e) => {
+                                    const formatted = formatVND(e.target.value);
+                                    e.target.value = formatted;
+                                    const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
+                                    field.onChange(rawNumber);
+                                };
+                                const displayValue =
+                                    typeof field.value === "number"
+                                        ? field.value.toLocaleString("vi-VN")
+                                        : field.value || "";
+                                return (
+                                    <input
+                                        {...field}
+                                        value={displayValue}
+                                        onChange={handleChange}
+                                        placeholder="VD: 50.000"
+                                        className="w-full border rounded px-3 py-2"
+                                        disabled={isExpired || isActive}
+                                    />
+                                );
+                            }}
+                        />
+                        {errors.max_price && (
+                            <p className="text-red-500 text-sm mt-1">{errors.max_price.message}</p>
+                        )}
+                    </div>
+                )}
 
                 <div>
                     <label className="block mb-1 font-medium">Áp dụng cho</label>

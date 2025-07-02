@@ -30,7 +30,7 @@ class PromotionController {
                     min_price_threshold: { [Op.lte]: total }, // đơn hàng đủ điều kiện
                     applicable_to: 'order',
                 },
-                attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold', 'end_date','quantity']
+                attributes: ['id', 'code', 'name', 'discount_type', 'discount_value', 'max_price', 'min_price_threshold', 'end_date', 'quantity']
             });
 
             return res.json({
@@ -52,8 +52,6 @@ class PromotionController {
             let { code, orderTotal } = req.body;
             const userId = req.user?.id;
 
-            console.log('[applyDiscount] Yêu cầu:', { code, orderTotal, userId });
-
             if (!userId) {
                 return res.status(401).json({ success: false, message: 'Bạn cần đăng nhập để sử dụng mã giảm giá' });
             }
@@ -68,14 +66,13 @@ class PromotionController {
             if (isNaN(orderTotal)) {
                 return res.status(400).json({ success: false, message: 'Tổng đơn hàng không hợp lệ' });
             }
-            
+
             const result = await sequelize.transaction(async (t) => {
                 const promotion = await PromotionModel.findOne({
                     where: { code },
                     transaction: t,
                     lock: t.LOCK.UPDATE,
                 });
-
                 if (!promotion) {
                     throw { status: 404, message: 'Mã giảm giá không tồn tại' };
                 }
@@ -118,7 +115,6 @@ class PromotionController {
                     transaction: t,
                     lock: t.LOCK.UPDATE,
                 });
-
                 if (!promoUser) {
                     throw {
                         status: 403,
@@ -131,9 +127,9 @@ class PromotionController {
 
                 let discountAmount = 0;
 
-                if (promotion.discount_type === 'percentage') {
+                if (promotion.discount_type === 'percentage' && !isNaN(discountValue)) {
                     discountAmount = (orderTotal * discountValue) / 100;
-                } else if (promotion.discount_type === 'fixed') {
+                } else if (promotion.discount_type === 'fixed' && !isNaN(discountValue)) {
                     discountAmount = discountValue;
                 }
 
@@ -144,6 +140,8 @@ class PromotionController {
                 if (discountAmount > orderTotal) {
                     discountAmount = orderTotal;
                 }
+
+                discountAmount = !isNaN(discountAmount) ? discountAmount : 0;
 
                 return {
                     discountType: promotion.discount_type,
