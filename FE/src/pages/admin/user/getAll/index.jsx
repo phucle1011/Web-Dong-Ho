@@ -7,8 +7,8 @@ import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, F
 
 function UserList() {
     const [users, setUsers] = useState([]);
-    const [searchTerm, setSearchTerm] = useState(''); // State cho giá trị trong input
-    const [appliedSearchTerm, setAppliedSearchTerm] = useState(''); // State cho giá trị tìm kiếm đã được áp dụng
+    const [searchTerm, setSearchTerm] = useState('');
+    const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -23,16 +23,15 @@ function UserList() {
     const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, locked: 0 });
     const limit = 10;
 
-    // Hàm fetch dữ liệu chung
-    const fetchData = useCallback(async (page, currentFilterStatus, currentAppliedSearchTerm) => { // Thay đổi tham số
+    const fetchData = useCallback(async (page, currentFilterStatus, currentAppliedSearchTerm) => {
         setLoading(true);
         try {
             let url;
             let params = { page, limit };
 
-            if (currentAppliedSearchTerm.trim()) { // Sử dụng currentAppliedSearchTerm
+            if (currentAppliedSearchTerm.trim()) {
                 url = `${Constants.DOMAIN_API}/admin/user/search`;
-                params.searchTerm = currentAppliedSearchTerm.trim(); // Sử dụng currentAppliedSearchTerm
+                params.searchTerm = currentAppliedSearchTerm.trim();
                 if (currentFilterStatus) params.status = currentFilterStatus;
             } else {
                 url = `${Constants.DOMAIN_API}/admin/user/list`;
@@ -60,50 +59,28 @@ function UserList() {
         } finally {
             setLoading(false);
         }
-    }, []); // fetchData không còn phụ thuộc vào searchTerm nữa
+    }, []);
 
     useEffect(() => {
         fetchData(currentPage, filterStatus, appliedSearchTerm);
     }, [fetchData, currentPage, filterStatus, appliedSearchTerm]);
 
-    // Gọi API khi nhấn nút tìm kiếm hoặc Enter
     const handleSearchSubmit = () => {
-        // if (!searchTerm.trim()) { // Tùy chọn: có thể bỏ check này nếu muốn tìm kiếm rỗng trả về tất cả
-        //     toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
-        //     return;
-        // }
-        setCurrentPage(1); // Reset về trang 1 khi tìm kiếm mới
-        setAppliedSearchTerm(searchTerm); // Cập nhật appliedSearchTerm để kích hoạt useEffect
-        setIsSearching(true); // Đánh dấu là đang tìm kiếm
-        // fetchData(1, filterStatus, searchTerm); // Không cần gọi ở đây nữa, useEffect sẽ gọi
+        
+        setCurrentPage(1);
+        setAppliedSearchTerm(searchTerm);
+        setIsSearching(true);
     };
 
-    // Xử lý khi xóa input tìm kiếm
-    const handleClearSearch = () => {
-        setSearchTerm(''); // Xóa nội dung input
-        setAppliedSearchTerm(''); // Reset từ khóa tìm kiếm
-        setSearchError('');
-        setCurrentPage(1); // Reset về trang 1
-        setIsSearching(false);
-
-        // Gọi hàm fetchData với trạng thái lọc hiện tại
-        fetchData(1, filterStatus, '');
-    };
-
-    // Khi thay đổi trạng thái lọc
     const handleFilterChange = (status) => {
         setFilterStatus(status);
-        setCurrentPage(1); // Reset về trang 1 khi thay đổi bộ lọc
-        // fetchData(1, status, appliedSearchTerm); // Không cần gọi ở đây nữa, useEffect sẽ gọi
+        setCurrentPage(1);
     };
 
-    // Khi thay đổi trang
     const handlePageChange = (page) => {
         setCurrentPage(page);
-        // fetchData(page, filterStatus, appliedSearchTerm); // Không cần gọi ở đây nữa, useEffect sẽ gọi
     };
 
-    // Khi chọn trạng thái người dùng mới -> mở modal
     const handleStatusChange = (userId, newStatus) => {
         setSelectedUserId(userId);
         setSelectedNewStatus(newStatus);
@@ -112,7 +89,6 @@ function UserList() {
         setShowReasonModal(true);
     };
 
-    // Gửi lý do thay đổi trạng thái
     const handleSubmitReason = async () => {
         const finalReason = reasonOption === 'Khác' ? customReason : reasonOption;
         if (!finalReason || !finalReason.trim()) {
@@ -136,7 +112,6 @@ function UserList() {
         }
     };
 
-    // Helper: Hiển thị tên trạng thái tiếng Việt
     const getVietnameseStatus = (englishStatus) => {
         switch (englishStatus) {
             case "active": return "Hoạt động";
@@ -146,7 +121,6 @@ function UserList() {
         }
     };
 
-    // Helper: Danh sách lý do theo trạng thái
     const getReasonOptionsForStatus = (status) => {
         switch (status) {
             case "inactive":
@@ -195,7 +169,7 @@ function UserList() {
                 <h2 className="text-xl font-semibold mb-4">Danh sách người dùng</h2>
 
                 {/* Các nút lọc trạng thái */}
-                <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
+                <div className="flex flex-wrap items-center gap-6 px-6 py-4">
                     {[
                         { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
                         { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
@@ -220,13 +194,13 @@ function UserList() {
                     <input
                         type="text"
                         placeholder="Tìm kiếm theo tên hoặc email..."
-                        value={searchTerm} // Input vẫn bind với searchTerm
+                        value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()} // Gọi handleSearchSubmit khi nhấn Enter
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                         className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
                     />
                     <button
-                        onClick={handleSearchSubmit} // Gọi handleSearchSubmit khi nhấn nút
+                        onClick={handleSearchSubmit}
                         className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2"
                         title="Tìm kiếm"
                     >
@@ -314,9 +288,7 @@ function UserList() {
                                 <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronLeft /></button>
                                 {[...Array(totalPages)].map((_, i) => {
                                     const page = i + 1;
-                                    // Hiển thị 3 nút trang quanh trang hiện tại
                                     if (page >= currentPage - 1 && page <= currentPage + 1 || page === 1 || page === totalPages) {
-                                        // Thêm dấu ... nếu cần
                                         if (page === 1 && currentPage > 2) {
                                             return <span key="dots-start" className="px-2 py-1">...</span>;
                                         }

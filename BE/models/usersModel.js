@@ -19,7 +19,6 @@ const UserModel = connection.define('users', {
     password: {
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 'pending'
     },
     phone: {
         type: DataTypes.STRING,
@@ -39,7 +38,7 @@ const UserModel = connection.define('users', {
         allowNull: true 
     },
     remember_token: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true 
     },
     status: {

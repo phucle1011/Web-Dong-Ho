@@ -4,7 +4,6 @@ const nodemailer = require('nodemailer');
 const getEmailTemplate = require('../../utils/emailTemplate');
 const { Op } = require('sequelize');
 
-// Hàm tạo transporter với cấu hình SMTP (ví dụ dùng Gmail)
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -13,7 +12,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Helper: Gửi email với template chuyên nghiệp
 const sendEmail = async (to, subject, htmlContent) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -53,7 +51,6 @@ class UserController {
                 offset: offset
             });
 
-            // Đếm số lượng theo từng trạng thái
             const allStatuses = ['active', 'inactive', 'locked'];
             const counts = await Promise.all(
                 allStatuses.map(s => UserModel.count({ where: { status: s } }))
@@ -65,7 +62,6 @@ class UserController {
                 all: totalAll,
                 active: counts[0],
                 inactive: counts[1],
-                // pending: counts[2],
                 locked: counts[3]
             };
 
@@ -83,7 +79,6 @@ class UserController {
         }
     }
 
-    // Lấy thông tin chi tiết người dùng theo ID
     static async getById(req, res) {
         try {
             const { id } = req.params;
@@ -110,7 +105,6 @@ class UserController {
         }
     }
 
-    // Cập nhật trạng thái người dùng
     static async updateUserStatus(req, res) {
         try {
             const { id } = req.params;
@@ -129,12 +123,10 @@ class UserController {
                 return res.status(404).json({ message: "Người dùng không tồn tại." });
             }
 
-            // Cập nhật trạng thái và lưu lý do bất kể trạng thái nào
             user.status = status;
-            user.lockout_reason = reason; // Luôn lưu lý do
+            user.lockout_reason = reason;
             await user.save();
 
-            // Gửi email thông báo lý do
             const htmlContent = getEmailTemplate(user.name, status, reason);
 
             await sendEmail(user.email, "Thông báo thay đổi trạng thái tài khoản", htmlContent);
@@ -148,7 +140,7 @@ class UserController {
             res.status(500).json({ error: error.message });
         }
     }
-    // Tìm kiếm người dùng
+
     static async searchUser(req, res) {
         try {
             const { searchTerm, page = 1, limit = 10, status } = req.query;
@@ -168,7 +160,6 @@ class UserController {
                 ]
             };
 
-            // Nếu có status, thêm vào điều kiện tìm kiếm
             if (status && ['active', 'inactive', 'locked'].includes(status)) {
                 whereClause.status = status;
             }
@@ -191,9 +182,8 @@ class UserController {
                 });
             }
 
-            // Đếm số lượng theo từng trạng thái
             const allCounts = await Promise.all([
-                UserModel.count(),                          // tổng tất cả
+                UserModel.count(),
                 UserModel.count({ where: { status: 'active' } }),
                 UserModel.count({ where: { status: 'inactive' } }),
                 UserModel.count({ where: { status: 'locked' } })

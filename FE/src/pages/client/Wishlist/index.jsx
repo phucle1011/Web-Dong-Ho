@@ -196,7 +196,7 @@ export default function Wishlist({ wishlist = true }) {
                     </div>
                   </button>
                   <div className="w-[180px] h-[50px]">
-                    <button
+                    {/* <button
                       type="button"
                       onClick={handleAddAllToCart}
                       className={`yellow-btn text-sm font-semibold w-full h-full ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -205,7 +205,7 @@ export default function Wishlist({ wishlist = true }) {
                       <div className="w-full text-sm font-semibold">
                         {isProcessing ? 'Đang xử lý...' : 'Thêm tất cả vào giỏ hàng'}
                       </div>
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

@@ -255,7 +255,7 @@ function BrandList() {
                 </div>
 
                 {/* Các nút lọc trạng thái */}
-                <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4">
+                <div className="flex flex-wrap items-center gap-6 px-6 py-4">
                     {[
                         { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
                         { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },

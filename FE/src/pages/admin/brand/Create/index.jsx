@@ -146,8 +146,7 @@ function BrandCreate() {
     <div className="max-w-screen-xl mx-auto bg-white p-8 rounded shadow mt-8">
       <h3 className="text-2xl font-bold text-gray-700 text-center mb-5 border-b pb-3">Thêm thương hiệu</h3>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
         {/* Tên thương hiệu */}
         <div className="mb-6">
           <label htmlFor="name" className="block font-medium mb-2 text-gray-700">Tên thương hiệu *</label>
@@ -233,15 +232,25 @@ function BrandCreate() {
           </select>
           {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>}
         </div>
+      </form>
 
+      <div className="mt-6 flex space-x-4">
         <button
           type="submit"
+          onClick={handleSubmit(onSubmit)}
           disabled={loading}
           className="bg-[#073272] text-white px-6 py-3 rounded-md shadow-md hover:bg-[#052354] transition w-full md:w-auto"
         >
           {loading ? "Đang thêm thương hiệu..." : "Thêm Thương Hiệu"}
         </button>
-      </form>
+
+        <button
+          onClick={() => navigate("/admin/brand/getAll")}
+          className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out w-full md:w-auto"
+        >
+          Quay lại
+        </button>
+      </div>
     </div>
   );
 }

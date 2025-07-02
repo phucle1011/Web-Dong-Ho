@@ -6,18 +6,18 @@ import { Link } from "react-router-dom";
 import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaEye } from 'react-icons/fa';
 
 function WishlistList() {
-  const [groupedWishlistItems, setGroupedWishlistItems] = useState([]); // Lưu trữ dữ liệu đã nhóm
+  const [groupedWishlistItems, setGroupedWishlistItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 10;
+
   useEffect(() => {
     fetchGroupedWishlist(currentPage);
   }, [currentPage]);
 
-  // Hàm để nhóm dữ liệu từ API
   const groupWishlistData = (data) => {
     const grouped = {};
     data.forEach(item => {
@@ -26,20 +26,19 @@ function WishlistList() {
         if (!grouped[userId]) {
           grouped[userId] = {
             user: item.user,
-            wishlistItems: [] // Chứa các mục sản phẩm yêu thích
+            wishlistItems: []
           };
         }
-        grouped[userId].wishlistItems.push(item); // Thêm toàn bộ item vào mảng
+        grouped[userId].wishlistItems.push(item);
       }
     });
-    return Object.values(grouped); // Chuyển đổi thành mảng các nhóm người dùng
+    return Object.values(grouped);
   };
 
   const fetchGroupedWishlist = async (page) => {
     setLoading(true);
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist?page=${page}&limit=${limit}`);
-      // Nhóm dữ liệu nhận được từ API theo user_id
       const groupedData = groupWishlistData(res.data.data);
       setGroupedWishlistItems(groupedData);
       setTotalPages(res.data.totalPages);
@@ -51,44 +50,44 @@ function WishlistList() {
       setLoading(false);
     }
   };
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setSearchError('');
   };
 
   const handleSearchSubmit = async () => {
-    const value = searchTerm.trim();
-    if (!value) {
-      toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
-      return;
-    }
+  const value = searchTerm.trim();
+  if (!value) {
+    toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `${Constants.DOMAIN_API}/admin/users/wishlist/search?searchTerm=${value}&page=1&limit=${limit}`
-      );
+  setLoading(true);
+  try {
+    const res = await axios.get(
+      `${Constants.DOMAIN_API}/admin/users/wishlist/search?searchTerm=${encodeURIComponent(value)}&page=1&limit=${limit}`
+    );
+    const groupedSearchData = groupWishlistData(res.data.data);
 
-      const groupedSearchData = groupWishlistData(res.data.data);
-
-      if (groupedSearchData.length === 0) {
-        setSearchError("Không tìm thấy kết quả phù hợp.");
-        setGroupedWishlistItems([]);
-        setTotalPages(1);
-      } else {
-        setGroupedWishlistItems(groupedSearchData);
-        setTotalPages(res.data.totalPages || 1);
-        setSearchError('');
-      }
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm:", error);
-      setSearchError("Không thể tải kết quả tìm kiếm.");
+    if (groupedSearchData.length === 0) {
+      setSearchError("Không tìm thấy kết quả phù hợp.");
       setGroupedWishlistItems([]);
       setTotalPages(1);
-    } finally {
-      setLoading(false);
+    } else {
+      setGroupedWishlistItems(groupedSearchData);
+      setTotalPages(res.data.totalPages || 1);
+      setSearchError('');
     }
-  };
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm:", error.response ? error.response.data : error.message);
+    setSearchError("Không thể tải kết quả tìm kiếm. Vui lòng kiểm tra backend.");
+    setGroupedWishlistItems([]);
+    setTotalPages(1);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleClearSearch = () => {
     setSearchTerm('');
@@ -116,13 +115,7 @@ function WishlistList() {
             type="text"
             placeholder="Tìm kiếm theo tên người dùng..."
             value={searchTerm}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearchTerm(value);
-              if (!value.trim()) {
-                handleClearSearch(); // Tự động load lại toàn bộ danh sách
-              }
-            }}
+            onChange={handleSearchChange}
             className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -160,7 +153,6 @@ function WishlistList() {
                         {(currentPage - 1) * limit + userIndex + 1}
                       </td>
                       <td className="p-2 border font-medium">{userGroup.user.name}</td>
-                      {/* <td className="p-2 border text-blue-600">{userGroup.user.email}</td> */}
                       <td className="p-2 border">
                         {userGroup.wishlistItems.length > 0 ? (
                           <div className="space-y-2">

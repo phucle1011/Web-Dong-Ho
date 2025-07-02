@@ -137,6 +137,8 @@ router.post('/change-password', authenticate, changePassword);
 router.get('/brands/active', BrandController.getActiveBrands);
 router.get('/brands/search', BrandController.search);
 router.get('/brand/list', brandClientController.getAll);
+router.get('/brands/get-products-by-brands', BrandController.getProductsByBrands);
+
 
 //------------------[ USERS ]------------------
 router.put('/users/:id', UserController.updateUserInfo);

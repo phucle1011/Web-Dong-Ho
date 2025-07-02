@@ -1,8 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const http = require('http');  
-const { Server } = require('socket.io'); 
+const http = require('http');
+const { Server } = require('socket.io');
 
 const session = require("express-session");
 const clientRoutes = require('./routes/clientRoutes');
@@ -14,17 +14,19 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const cron = require('node-cron');
 const { Sequelize, Op } = require('sequelize');
 const OrderModel = require('./models/ordersModel');
+const cleanupRememberTokens = require('./controllers/Client/rememberTokenCleanup');
+
 
 cron.schedule('* * * * *', async () => {
   try {
     // 2h: - 2 * 60 * 1000
-    const twoMinutesAgo = new Date(Date.now() - 72 * 60 * 60 * 1000); 
+    const twoMinutesAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
 
     const ordersToUpdate = await OrderModel.findAll({
       where: {
         status: 'completed',
         updated_at: {
-          [Op.lte]: twoMinutesAgo, 
+          [Op.lte]: twoMinutesAgo,
         },
       },
     });
@@ -39,6 +41,15 @@ cron.schedule('* * * * *', async () => {
   }
 });
 
+cron.schedule('0 0 * * *', () => {
+  cleanupRememberTokens();
+});
+
+// cron.schedule('* * * * *', () => {
+//     console.log('[CRON] Bắt đầu dọn dẹp remember_token...');
+//     cleanupRememberTokens();
+// });
+
 app.use(cors());
 
 require('./models/connectsModel');
@@ -50,10 +61,10 @@ app.use('/public', express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
 app.use(cors({
-    origin: "*",
-    methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    allowedHeaders: "Content-Type, Authorization",
-    credentials: true
+  origin: "*",
+  methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+  allowedHeaders: "Content-Type, Authorization",
+  credentials: true
 }));
 
 app.use(clientRoutes);
@@ -67,7 +78,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*", 
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
