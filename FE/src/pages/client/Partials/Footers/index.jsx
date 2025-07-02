@@ -126,7 +126,7 @@ export default function Footer({ type }) {
                       </Link>
                     </li>
                     <li>
-                      <Link to="/about">
+                      <Link to="/contact">
                         <span className="text-[#9A9A9A] text-[15px] hover:text-qblack border-b border-transparent hover:border-qblack cursor-pointer capitalize">
                           Hổ trợ
                         </span>

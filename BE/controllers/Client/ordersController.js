@@ -19,6 +19,23 @@ const { FRONTEND_URL } = require("../../config/url");
 
 const crypto = require("crypto");
 
+const mongoose = require('mongoose');
+
+// Định nghĩa schema Mongoose cho Payment
+const paymentSchema = new mongoose.Schema({
+    orderId: { type: String, required: true, unique: true },
+    amount: { type: Number, required: true },
+    transactionId: { type: String }, // Mã giao dịch từ VNPay
+    responseCode: { type: String }, // Mã phản hồi từ VNPay
+    orderInfo: { type: String }, // Thông tin đơn hàng
+    paymentDate: { type: Date, default: Date.now }, // Thời gian thanh toán
+    status: { type: String, enum: ['success', 'failed'], default: 'success' }, // Trạng thái giao dịch
+    ipAddr: { type: String }, // Địa chỉ IP của client
+    bankCode: { type: String }, // Mã ngân hàng
+});
+
+const Payment = mongoose.model('Payment', paymentSchema);
+
 class OrderController {
 
     static async get(req, res) {
@@ -848,12 +865,12 @@ class OrderController {
         return ordered;
     }
 
-    static async createVNPayUrl(req, res) {
+static async createVNPayUrl(req, res) {
         try {
             const requiredEnvVars = ['VNPAY_TMN_CODE', 'VNPAY_HASH_SECRET', 'VNPAY_PAYMENT_URL', 'VNPAY_RETURN_URL'];
             for (const envVar of requiredEnvVars) {
                 if (!process.env[envVar]) {
-                    throw new Error(`Missing required environment variable: ${envVar}`);
+                    throw new Error(`Thiếu biến môi trường bắt buộc: ${envVar}`);
                 }
             }
 
@@ -866,13 +883,13 @@ class OrderController {
 
             const amount = Math.floor(Number(req.body.amount));
             if (isNaN(amount) || amount <= 0 || amount > 9999999999) {
-                return res.status(400).json({ code: '03', message: 'Invalid amount' });
+                return res.status(400).json({ code: '03', message: 'Số tiền không hợp lệ' });
             }
 
             const createDate = moment().format("YYYYMMDDHHmmss");
             const orderId = req.body.orderId || `VNPAY-${Date.now()}`;
 
-            const orderInfo = (req.body.orderDescription || `Thanh toan don hang ${orderId}`)
+            const orderInfo = (req.body.orderDescription || `Thanh toán đơn hàng ${orderId}`)
                 .substring(0, 255);
 
             const vnpParams = {
@@ -924,12 +941,12 @@ class OrderController {
 
     static async handleVNPayCallback(req, res) {
         try {
-
             const vnpParams = req.query;
             const secureHash = vnpParams.vnp_SecureHash;
             const orderId = vnpParams.vnp_TxnRef;
             const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
 
+            // Xóa các tham số liên quan đến chữ ký để kiểm tra
             delete vnpParams.vnp_SecureHash;
             delete vnpParams.vnp_SecureHashType;
 
@@ -943,19 +960,43 @@ class OrderController {
             const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
             if (calculatedHash !== secureHash) {
-                console.error('Signature mismatch!');
+                console.error('Chữ ký không khớp!');
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
             }
 
             if (vnpParams.vnp_ResponseCode !== '00') {
-                console.error('Transaction failed with code:', vnpParams.vnp_ResponseCode);
+                console.error('Giao dịch thất bại với mã:', vnpParams.vnp_ResponseCode);
+                // Lưu thông tin giao dịch thất bại vào cơ sở dữ liệu
+                await Payment.create({
+                    orderId,
+                    amount,
+                    transactionId: vnpParams.vnp_TransactionNo,
+                    responseCode: vnpParams.vnp_ResponseCode,
+                    orderInfo: vnpParams.vnp_OrderInfo,
+                    status: 'failed',
+                    ipAddr: vnpParams.vnp_IpAddr,
+                    bankCode: vnpParams.vnp_BankCode,
+                });
+
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
             }
+
+            // Lưu thông tin giao dịch thành công vào cơ sở dữ liệu
+            await Payment.create({
+                orderId,
+                amount,
+                transactionId: vnpParams.vnp_TransactionNo,
+                responseCode: vnpParams.vnp_ResponseCode,
+                orderInfo: vnpParams.vnp_OrderInfo,
+                status: 'success',
+                ipAddr: vnpParams.vnp_IpAddr,
+                bankCode: vnpParams.vnp_BankCode,
+            });
 
             return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
 
         } catch (error) {
-            console.error('Callback error:', error);
+            console.error('Lỗi callback:', error);
             const orderId = req.query.vnp_TxnRef || 'unknown';
             return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Callback_error&orderId=${orderId}`);
         }

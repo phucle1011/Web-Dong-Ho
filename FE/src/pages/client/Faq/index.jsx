@@ -9,10 +9,9 @@ export default function Faq() {
       <div className="faq-page-wrapper w-full mb-10">
         <div className="page-title w-full">
           <PageTitle
-            title="Frequently Asked Questions"
             breadcrumb={[
               { name: "trang chủ", path: "/" },
-              { name: "FAQ", path: "/faq" },
+              { name: "câu hỏi thường gặp", path: "/faq" },
             ]}
           />
         </div>
@@ -22,39 +21,32 @@ export default function Faq() {
           <div className="main-wrapper w-full lg:flex lg:space-x-[30px]">
             <div className="lg:w-1/2 w-full mb-10 lg:mb-0">
               <h1 className="text-qblack font-bold text-[22px] mb-4">
-                Frequently asked questions
+                Câu hỏi thường gặp
               </h1>
               <div className="flex flex-col space-y-7 justify-between">
                 <Accodion
-                  title="01. How does information technology work?"
-                  des="There are many variations of passages of Lorem Ipsum available into the 
-but the majority have suffered alteration in some form, by injecte find to a
-humour, or randomised words"
+                  title="01. Tôi có thể thanh toán bằng những hình thức nào?"
+                  des="Chúng tôi hỗ trợ các phương thức thanh toán như: Thanh toán khi nhận hàng (COD) và chuyển khoản ngân hàng"
                 />
                 <Accodion
                   init
-                  title="02. How can I become IT manager?"
-                  des="There are many variations of passages of Lorem Ipsum available into the 
-but the majority have suffered alteration in some form, by injecte find to a
-humour, or randomised words"
+                  title="02. Thời gian giao hàng mất bao lâu?"
+                  des="Khu vực nội thành: 1-3 ngày làm việc. Còn các tỉnh thành khác: 3-5 ngày làm việc
+(Một số khu vực xa có thể mất thêm thời gian)"
                 />
                 <Accodion
-                  title="03. What are the latest trends in IT?"
-                  des="There are many variations of passages of Lorem Ipsum available into the 
-but the majority have suffered alteration in some form, by injecte find to a
-humour, or randomised words"
+                  title="03. Tôi có thể đổi trả sản phẩm không?"
+                  des="Có. Bạn có thể đổi hoặc trả sản phẩm trong vòng 7 ngày kể từ khi nhận hàng, với điều kiện: ản phẩm còn nguyên hộp, chưa qua sử dụng
+                  , có hóa đơn mua hàng
+Lưu ý: Không áp dụng cho các sản phẩm khuyến mãi, giảm giá."
                 />
                 <Accodion
-                  title="04. How long should a business plan be?"
-                  des="There are many variations of passages of Lorem Ipsum available into the 
-but the majority have suffered alteration in some form, by injecte find to a
-humour, or randomised words"
+                  title="04. Đồng hồ có được bảo hành không?"
+                  des="Tất cả đồng hồ tại cửa hàng đều được bảo hành chính hãng từ 12 đến 24 tháng, tùy vào từng mẫu sản phẩm. Thông tin chi tiết được ghi rõ trong phiếu bảo hành đi kèm."
                 />
                 <Accodion
-                  title="05. How work the support policy?"
-                  des="There are many variations of passages of Lorem Ipsum available into the 
-but the majority have suffered alteration in some form, by injecte find to a
-humour, or randomised words"
+                  title="05. Làm sao để biết đồng hồ là hàng chính hãng?"
+                  des="Chúng tôi cam kết 100% sản phẩm là hàng chính hãng, có đầy đủ: Tem bảo hành, Hộp, sổ, thẻ bảo hành chính hãng, Hóa đơn VAT nếu khách yêu cầu"
                 />
               </div>
             </div>
@@ -62,7 +54,7 @@ humour, or randomised words"
               <div className="bg-white sm:p-10 p-5">
                 <div className="title flex flex-col items-center">
                   <h1 className="lg:text-[34px] text-xl font-bold text-qblack">
-                    Have Any Qustion
+                    Có bất kỳ câu hỏi nào hãy liên hệ chúng tôi
                   </h1>
                   <span className="-mt-5 block">
                     <svg

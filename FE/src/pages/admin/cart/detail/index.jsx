@@ -36,7 +36,7 @@ function CartDetailPage() {
           <h4 className="card-title mb-4">Chi tiết giỏ hàng của người dùng #{id}</h4>
 
           <div className="mb-4">
-            <Link to="/admin/carts/getAll" className="btn btn-secondary">
+            <Link to="/admin/carts/getAll" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
               Quay lại
             </Link>
           </div>

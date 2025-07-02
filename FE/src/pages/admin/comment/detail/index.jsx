@@ -181,8 +181,7 @@ function CommentDetailPage() {
                             onClick={() => handlePageChange(page)}
                             className={`px-3 py-1 border rounded ${
                               currentPage === page
-                                ? "bg-primary text-white"
-                                : "bg-light text-dark"
+                                ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
                             }`}
                           >
                             {page}
@@ -210,7 +209,7 @@ function CommentDetailPage() {
                 </div>
               )}
 
-              <Link to="/admin/comments/getAll" className="btn btn-secondary btn-sm mt-3">
+              <Link to="/admin/comments/getAll" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
                 Quay lại danh sách
               </Link>
             </div>

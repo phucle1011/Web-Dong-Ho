@@ -649,7 +649,7 @@ function UserDetail() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap space-x-2">
                       <button
-                        className="text-xl p-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                         onClick={() => showAddressModal(addr)}
                       >
                         <FaEdit size={20} />

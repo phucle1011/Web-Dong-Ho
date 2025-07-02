@@ -9,9 +9,8 @@ export default function PrivacyPolicy() {
           <PageTitle
             breadcrumb={[
               { name: "trang chủ", path: "/" },
-              { name: "Privacy Policy", path: "privacy-policy" },
+              { name: "chính sách bảo mật", path: "privacy-policy" },
             ]}
-            title="Privacy Policy"
           />
         </div>
         <div className="w-full">

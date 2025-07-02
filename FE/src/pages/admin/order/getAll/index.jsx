@@ -478,10 +478,10 @@ function OrderGetAll() {
                                         <span className="font-semibold">Vị trí:</span>{" "}
                                         {value.location}
                                       </p>
-                                      <p className="text-sm mb-1">
+                                      {/* <p className="text-sm mb-1">
                                         <span className="font-semibold">Trạng thái:</span>{" "}
                                         {value.status}
-                                      </p>
+                                      </p> */}
                                       {value.note && (
                                         <p className="text-sm">
                                           <span className="font-semibold">Ghi chú:</span>{" "}

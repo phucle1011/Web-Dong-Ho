@@ -971,7 +971,7 @@ export default function CheakoutPage() {
                           value={user?.email || ""}
                           onChange={(e) => handleUserInfoChange("email", e.target.value)}
                           className="w-full h-[44px] px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-                          required
+                          disabled
                         />
                       </div>
                       <div>

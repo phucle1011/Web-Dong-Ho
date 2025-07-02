@@ -9,159 +9,100 @@ export default function TermsCondition() {
           <PageTitle
             breadcrumb={[
               { name: "trang chủ", path: "/" },
-              { name: "Terms and condition", path: "/terms-conditions" },
+              { name: "Điều kiện - Điều khoản", path: "/terms-conditions" },
             ]}
-            title="Terms and Condition"
           />
         </div>
         <div className="w-full">
           <div className="container-x mx-auto">
             <div className="content-item w-full mb-10">
               <h2 className="text-[18px] font-medium text-qblack mb-5">
-                1. What Are Terms and Conditions?
+                1. Thông tin sản phẩm
               </h2>
               <p className="text-[15px] text-qgraytwo leading-7">
-                Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy
-                text ever since the 1500s, when an unknown printer took a galley
-                of type and scrambled it to make a type specimen book. It has
-                survived not only five centuries but also the on leap into
-                electronic typesetting, remaining essentially unchanged. It
-                wasn’t popularised in the 1960s with the release of Letraset
-                sheets containing Lorem Ipsum passages, andei more recently with
-                desktop publishing software like Aldus PageMaker including
-                versions of Lorem Ipsum to make a type specimen book.
+                - Tất cả hình ảnh, mô tả và giá cả sản phẩm đều được cung cấp một cách trung thực và rõ ràng.
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7">
+                - Chúng tôi có quyền thay đổi thông tin sản phẩm mà không cần thông báo trước.
               </p>
             </div>
             <div className="content-item w-full mb-10">
               <h2 className="text-[18px] font-medium text-qblack mb-5">
-                2. Does My Online Shop Need Terms and Conditions?
+                2. Giá cả và thanh toán
               </h2>
+              <p className="text-[15px] text-qgraytwo leading-7">
+              - Giá sản phẩm được niêm yết trên website là giá cuối cùng, đã bao gồm thuế
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7">
+              - Khách hàng có thể lựa chọn các hình thức thanh toán như: COD, chuyển khoản.
+              </p>
               <p className="text-[15px] text-qgraytwo leading-7 mb-10">
-                While it’s not legally required for ecommerce websites to have a
-                terms and conditions agreement, adding one will help protect
-                your online business.As terms and conditions are legally
-                enforceable rules, they allow you to set standards for how users
-                interact with your site. Here are some of the major benefits of
-                including terms and conditions on your ecommerce site:
-                <br />
-                <br />
-                has survived not only five centuries but also the on leap into
-                electronic typesetting, remaining essentially unchanged. It
-                wasn’t popularised in the 1960s with the release of Letraset
-                sheets containing Lorem Ipsum passages, andei more recently with
-                desktop.
+              - Đơn hàng chỉ được xử lý khi chúng tôi xác nhận đã nhận được thanh toán (trừ phương thức COD).
               </p>
               <div>
                 <h2 className="text-[18px] font-medium text-qblack mb-5">
-                  2. Does My Online Shop Need Terms and Conditions?
+                  3. Chính sách giao hàng
                 </h2>
 
-                <ul className="list-disc ml-5">
-                  <li className="text-[15px] text-qgraytwo leading-7">
-                    slim body with metal cover
-                  </li>
-                  <li className="text-[15px] text-qgraytwo leading-7">
-                    latest Intel Core i5-1135G7 import.metaor (4 cores / 8
-                    threads)
-                  </li>
-                  <li className="text-[15px] text-qgraytwo leading-7">
-                    8GB DDR4 RAM and fast 512GB PCIe SSD
-                  </li>
-                  <li className="text-[15px] text-qgraytwo leading-7">
-                    NVIDIA GeForce MX350 2GB GDDR5 graphics card backlit
-                    keyboard, touchpad with gesture support
-                  </li>
-                </ul>
+                <p className="text-[15px] text-qgraytwo leading-7">
+              - Thời gian giao hàng từ 1–5 ngày làm việc tùy khu vực.
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7 mb-10">
+              - Trong một số trường hợp bất khả kháng (dịch bệnh, thiên tai), thời gian có thể kéo dài.
+              </p>
               </div>
             </div>
 
             <div className="content-item w-full mb-10">
               <h2 className="text-[18px] font-medium text-qblack mb-5">
-                3. Protect Your Property
+                4. Chính sách đổi trả
               </h2>
               <p className="text-[15px] text-qgraytwo leading-7">
-                Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy
-                text ever since the 1500s, when an unknown printer took a galley
-                of type and scrambled it to make a type specimen book. It has
-                survived not only five centuries but also the on leap into
-                electronic typesetting, remaining essentially unchanged. It
-                wasn’t popularised in the 1960s with the release of Letraset
-                sheets containing Lorem Ipsum passages, andei more recently with
-                desktop publishing software like Aldus PageMaker including
-                versions of Lorem Ipsum to make a type specimen book. five
-                centuries but also the on leap into electronic typesetting,
-                remaining essentially unchanged. It wasn’t popularised in the
-                1960s with the release of Letraset sheets containing Lorem Ipsum
-                passages, andei more recently with desktop publishing software
-                like Aldus PageMaker including versions of Lorem Ipsum to make a
-                type specimen book.
+              - Đổi/trả trong vòng 70 ngày kể từ ngày nhận hàng.
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7">
+              - Sản phẩm phải còn nguyên vẹn, chưa qua sử dụng, có hóa đơn và đầy đủ phụ kiện đi kèm.
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7 mb-10">
+              - Không áp dụng đổi/trả với các sản phẩm khuyến mãi, giảm giá mạnh (trừ khi bị lỗi do nhà sản xuất).
               </p>
             </div>
             <div className="content-item w-full mb-10">
               <h2 className="text-[18px] font-medium text-qblack mb-5">
-                4. What to Include in Terms and Conditions for Online Stores
+                5. Chính sách bảo hành
               </h2>
               <p className="text-[15px] text-qgraytwo leading-7">
-                Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy
-                text ever since the 1500s, when an unknown printer took a galley
-                of type and scrambled it to make a type specimen book. It has
-                survived not only five centuries but also the on leap into
-                electronic typesetting, remaining essentially unchanged. It
-                wasn’t popularised in the 1960s with the release of Letraset
-                sheets containing Lorem Ipsum passages, andei more recently with
-                desktop publishing software like Aldus PageMaker including
-                versions of Lorem Ipsum to make a type specimen book.
-                <br />
-                <br />
-                five centuries but also the on leap into electronic typesetting,
-                remaining essentially unchanged. It wasn’t popularised in the
-                1960s with the release of Letraset sheets containing Lorem Ipsum
-                passages, andei more recently with desktop publishing software
-                like Aldus PageMaker including versions of Lorem Ipsum to make a
-                type specimen book. It wasn’t popularised in the 1960s with the
-                release of Letraset sheets containing Lorem Ipsum passages,
-                andei more recently with desktop publishing software like Aldus
-                PageMaker including versions of Lorem Ipsum to make a type
-                specimen book.
+              - Sản phẩm được bảo hành từ 12–24 tháng tùy theo loại đồng hồ.
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7 mb-10">
+              - Bảo hành không áp dụng với các lỗi do người dùng gây ra như: rơi vỡ, vào nước, trầy xước...
               </p>
             </div>
             <div className="content-item w-full mb-10">
               <h2 className="text-[18px] font-medium text-qblack mb-5">
-                05.Pricing and Payment Terms
+                6.Quyền sở hữu trí tuệ
               </h2>
               <p className="text-[15px] text-qgraytwo leading-7">
-                Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy
-                text ever since the 1500s, when an unknown printer took a galley
-                of type and scrambled it to make a type specimen book. It has
-                survived not only five centuries but also the on leap into
-                electronic typesetting, remaining essentially unchanged. It
-                wasn’t popularised in the 1960s with the release of Letraset
-                sheets containing Lorem Ipsum passages, andei more recently with
-                desktop publishing software like Aldus PageMaker including
-                versions of Lorem Ipsum to make a type specimen book.
-                <br />
-                <br />
-                five centuries but also the on leap into electronic typesetting,
-                remaining essentially unchanged. It wasn’t popularised in the
-                1960s with the release of Letraset sheets containing Lorem Ipsum
-                passages, andei more recently with desktop publishing software
-                like Aldus PageMaker including versions of Lorem Ipsum to make a
-                type specimen book. It wasn’t popularised in the 1960s with the
-                release of Letraset sheets containing Lorem Ipsum passages,
-                andei more recently with desktop publishing software like Aldus
-                PageMaker including versions of Lorem Ipsum to make a type
-                specimen book.
-                <br />
-                <br />
-                It has survived not only five centuries but also the on leap
-                into electronic typesetting, remaining essentially unchanged. It
-                wasn’t popularised in the 1960s with the release of Letraset
-                sheets containing Lorem Ipsum passages, andei more recently with
-                desktop
+                Mọi nội dung (hình ảnh, logo, mô tả sản phẩm...) thuộc quyền sở hữu của chúng tôi. Nghiêm cấm sao chép hoặc sử dụng lại nếu không có sự đồng ý bằng văn bản.
+              </p>
+            </div>
+            <div className="content-item w-full mb-10">
+              <h2 className="text-[18px] font-medium text-qblack mb-5">
+                7. Quy định về tài khoản người dùng
+              </h2>
+              <p className="text-[15px] text-qgraytwo leading-7">
+              - Khách hàng tự chịu trách nhiệm bảo mật tài khoản đăng nhập.
+              </p>
+              <p className="text-[15px] text-qgraytwo leading-7 mb-10">
+              - Không sử dụng website vào mục đích gian lận, phá hoại hoặc lừa đảo.
+              </p>
+            </div>
+            <div className="content-item w-full mb-10">
+              <h2 className="text-[18px] font-medium text-qblack mb-5">
+                8. Thay đổi điều khoản
+              </h2>
+              <p className="text-[15px] text-qgraytwo leading-7 mb-10">
+              Chúng tôi có quyền cập nhật, thay đổi điều khoản bất kỳ lúc nào. Những thay đổi sẽ được công bố công khai trên website.
               </p>
             </div>
           </div>

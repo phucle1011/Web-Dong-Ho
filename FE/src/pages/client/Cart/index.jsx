@@ -131,7 +131,7 @@ export default function Cart({ className, type }) {
         </div>
         <div className="flex justify-center py-[15px]">
           <p className="text-[13px] font-500 text-qgray">
-            Nhận trả lại trong vòng <span className="text-qblack">30 ngày</span>
+            Nhận trả lại trong vòng <span className="text-qblack">7 ngày</span>
           </p>
         </div>
       </div>
