@@ -24,9 +24,16 @@ const upload = multer({ storage });
 const { changePassword } = require('../controllers/Client/PasswordOldController');
 const authenticate = require('../services/Middleware'); // Middleware để gán req.user
 const brandClientController = require('../controllers/Client/brandClientController');
+const ProfileController = require('../controllers/Client/ProfileController');
+const HomeController = require('../controllers/Client/HomeController');
 const UserController = require('../controllers/Client/userControllers');
-
 //------------------[ CLIENT ROUTES ]------------------
+
+//------------------[ CLIENT home ]------------------
+
+router.get("/products/getallnew", HomeController.getAllNewProducts);
+router.get("/top-sold-products", HomeController.getTopSoldProducts);
+router.get("/top-discounted-products", HomeController.getDiscountedProducts);
 
 //------------------[ CHATBOX ]------------------//
 router.post("/chatbox",chatWithBot.chatWithBot);
@@ -92,6 +99,11 @@ router.post('/auth/reset-password', AuthController.resetPassword);
 router.post('/auth/update-password/:token', AuthController.updatePassword);
 router.get('/users/:id', AuthController.getById);
 router.put('/users/:id', AuthController.update);
+
+router.get("/profile/order-stats/:id", ProfileController.getOrderStats);
+router.get("/profile/new-orders/:id", ProfileController.getTotalNewOrders);
+
+
 
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);

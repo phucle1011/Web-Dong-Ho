@@ -1,13 +1,102 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { decodeToken } from "../../../Helpers/jwtDecode";
 
 export default function Dashboard() {
+  const [user, setUser] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    avatar: "",
+    address: {
+      address_line: "",
+      ward: "",
+      district: "",
+      city: "",
+    },
+  });
+
+  const [profileImg, setProfileImg] = useState("");
+  const [totalItems, setTotalItems] = useState(0);
+  const [stats, setStats] = useState({
+    totalCompletedOrders: 0,
+    totalPendingAndShippingOrders: 0,
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        console.log("Token từ localStorage:", token);
+
+        if (!token) {
+          console.warn("Không tìm thấy token");
+          return;
+        }
+
+        const decoded = decodeToken(token);
+        console.log("Token đã decode:", decoded);
+
+        const userId = decoded?.id;
+        if (!userId) {
+          console.warn("Không lấy được userId từ token");
+          return;
+        }
+
+        console.log("userId:", userId);
+
+        // Gọi API thống kê đơn hàng
+        const orderStatsRes = await axios.get(
+          `http://localhost:5000/profile/order-stats/${userId}`
+        );
+        console.log("Kết quả thống kê đơn hàng:", orderStatsRes.data);
+
+        if (orderStatsRes.data.success) {
+          setStats(orderStatsRes.data.data);
+        }
+
+        // Gọi API lấy tổng sản phẩm trong giỏ hàng
+        const cartRes = await axios.get(
+          `http://localhost:5000/profile/new-orders/${userId}`
+        );
+        
+
+        setTotalItems(cartRes.data.data.totalNewOrders || 0);
+
+        // Gọi API lấy thông tin user
+        const userRes = await axios.get(
+          `http://localhost:5000/users/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const defaultAddress = userRes.data.data.addresses?.find(
+          (addr) => addr.is_default === 1
+        );
+          
+        setUser({
+          ...userRes.data.data,
+          address: defaultAddress || null,
+        });
+
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu dashboard:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <>
       <div className="welcome-msg w-full">
         <div>
-          <p className="text-qblack text-lg">Hello, Shovo</p>
+    <p className="text-qblack text-lg">Xin chào, Shovo</p>
           <h1 className="font-bold text-[24px] text-qblack">
-            Welcome to your Profile
+      Chào mừng bạn đến với Hồ sơ của bạn
           </h1>
         </div>
       </div>
@@ -38,10 +127,10 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="text-xl text-white group-hover:text-qblacktext mt-5">
-            New Orders
+           Đơn hàng mới
           </p>
           <span className="text-[40px] text-white group-hover:text-qblacktext font-bold leading-none mt-1 block">
-            656
+            {totalItems}
           </span>
         </div>
         <div className="qv-item w-[252px] h-[208px] bg-qblack group hover:bg-qyellow transition-all duration-300 ease-in-out p-6">
@@ -62,10 +151,10 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="text-xl text-white group-hover:text-qblacktext mt-5">
-            New Orders
+            Đơn đã hoàn thành
           </p>
           <span className="text-[40px] text-white group-hover:text-qblacktext font-bold leading-none mt-1 block">
-            656
+            {stats.totalCompletedOrders}
           </span>
         </div>
         <div className="qv-item w-[252px] h-[208px] bg-qblack group hover:bg-qyellow transition-all duration-300 ease-in-out p-6">
@@ -94,110 +183,79 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="text-xl text-white group-hover:text-qblacktext mt-5">
-            New Orders
+            Đơn đang chờ xử lý
           </p>
           <span className="text-[40px] text-white group-hover:text-qblacktext font-bold leading-none mt-1 block">
-            656
+            {stats.totalProcessingOrders}
           </span>
         </div>
       </div>
       <div className="dashboard-info mt-8 flex justify-between items-center bg-primarygray px-7 py-7">
-        <div className="">
-          <p className="title text-[22px] font-semibold">
-            Parsonal Information
-          </p>
-          <div className="mt-5">
-            <table>
-              <tbody>
-                <tr className="inline-flex mb-5">
-                  <td className="text-base text-qgraytwo w-[100px] block">
-                    <div>Name:</div>
-                  </td>
-                  <td className="text-base text-qblack font-medium">
-                    Shuvo khan
-                  </td>
-                </tr>
-                <tr className="inline-flex mb-5">
-                  <td className="text-base text-qgraytwo w-[100px] block">
-                    <div>Email:</div>
-                  </td>
-                  <td className="text-base text-qblack font-medium">
-                    rafiqulislamsuvobd@gmail.com
-                  </td>
-                </tr>
-                <tr className="inline-flex mb-5">
-                  <td className="text-base text-qgraytwo w-[100px] block">
-                    <div>Phone:</div>
-                  </td>
-                  <td className="text-base text-qblack font-medium">
-                    01792166627
-                  </td>
-                </tr>
-                <tr className="inline-flex mb-5">
-                  <td className="text-base text-qgraytwo w-[100px] block">
-                    <div>City:</div>
-                  </td>
-                  <td className="text-base text-qblack font-medium">
-                    Dhaka,Bangladesh
-                  </td>
-                </tr>
-                <tr className="inline-flex mb-5">
-                  <td className="text-base text-qgraytwo w-[100px] block">
-                    <div>Zip:</div>
-                  </td>
-                  <td className="text-base text-qblack font-medium">4040</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="w-[1px] h-[164px] bg-[#E4E4E4]"></div>
-        <div className="ml-6">
-          <p className="title text-[22px] font-semibold">Shop Info</p>
-          <div className="mt-5">
-            <table>
-              <tr className="inline-flex mb-5">
-                <td className="text-base text-qgraytwo w-[100px] block">
-                  <div>Name:</div>
-                </td>
-                <td className="text-base text-qblack font-medium">
-                  Shuvo khan
-                </td>
-              </tr>
-              <tr className="inline-flex mb-5">
-                <td className="text-base text-qgraytwo w-[100px] block">
-                  <div>Email:</div>
-                </td>
-                <td className="text-base text-qblack font-medium">
-                  rafiqulislamsuvobd@gmail.com
-                </td>
-              </tr>
-              <tr className="inline-flex mb-5">
-                <td className="text-base text-qgraytwo w-[100px] block">
-                  <div>Phone:</div>
-                </td>
-                <td className="text-base text-qblack font-medium">
-                  01792166627
-                </td>
-              </tr>
-              <tr className="inline-flex mb-5">
-                <td className="text-base text-qgraytwo w-[100px] block">
-                  <div>City:</div>
-                </td>
-                <td className="text-base text-qblack font-medium">
-                  Dhaka,Bangladesh
-                </td>
-              </tr>
-              <tr className="inline-flex mb-5">
-                <td className="text-base text-qgraytwo w-[100px] block">
-                  <div>Zip:</div>
-                </td>
-                <td className="text-base text-qblack font-medium">4040</td>
-              </tr>
-            </table>
-          </div>
-        </div>
-      </div>
+  {/* Thông tin cá nhân */}
+  <div>
+    <p className="title text-[22px] font-semibold">Thông tin cá nhân</p>
+    <div className="mt-5">
+      <table>
+        <tbody>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Họ tên:</td>
+            <td className="text-base text-qblack font-medium">{user.name}</td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Email:</td>
+            <td className="text-base text-qblack font-medium">{user.email}</td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">SĐT:</td>
+            <td className="text-base text-qblack font-medium">{user.phone}</td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Tỉnh/TP:</td>
+            <td className="text-base text-qblack font-medium">
+              {user.address?.city || "Chưa cập nhật"}
+            </td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Địa chỉ:</td>
+            <td className="text-base text-qblack font-medium">
+              {user.address?.address_line || "Chưa cập nhật"}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div className="w-[1px] h-[164px] bg-[#E4E4E4]"></div>
+
+  {/* Thông tin địa chỉ */}
+  <div className="ml-6">
+    <p className="title text-[22px] font-semibold">Thông tin địa chỉ</p>
+    <div className="mt-5">
+      <table>
+        <tbody>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Phường/Xã:</td>
+            <td className="text-base text-qblack font-medium">{user.address?.ward || "Chưa cập nhật"}</td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Quận/Huyện:</td>
+            <td className="text-base text-qblack font-medium">{user.address?.district || "Chưa cập nhật"}</td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Tỉnh/TP:</td>
+            <td className="text-base text-qblack font-medium">{user.address?.city || "Chưa cập nhật"}</td>
+          </tr>
+          <tr className="inline-flex mb-5">
+            <td className="text-base text-qgraytwo w-[100px] block">Địa chỉ chi tiết:</td>
+            <td className="text-base text-qblack font-medium">{user.address?.address_line || "Chưa cập nhật"}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
     </>
   );
 }

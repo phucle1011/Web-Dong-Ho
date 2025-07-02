@@ -65,11 +65,12 @@ useEffect(() => {
         `${Constants.DOMAIN_API}/products/${id}/variants`
       ).then((res) => { 
         setDescription(res.data.product.description)
+       console.log(res.data.product.description);
        
     })
   axios.get(`${Constants.DOMAIN_API}/products/${id}/similar`)
     .then((res) => {
-      setRelatedProducts(res.data.similarProducts);
+      setRelatedProducts(res.data.data);
        
     })
     .catch((err) => {

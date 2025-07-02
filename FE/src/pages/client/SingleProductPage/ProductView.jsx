@@ -22,6 +22,8 @@ export default function ProductView({ className, reportHandler }) {
   const [selectedImage, setSelectedImage] = useState("");
   const [isInWishlist, setIsInWishlist] = useState(false);
   const { id: productId } = useParams();
+const [avgRating, setAvgRating] = useState(0);
+const [ratingCount, setRatingCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -65,6 +67,17 @@ export default function ProductView({ className, reportHandler }) {
       checkWishlistStatus(selectedVariant.id);
     }
   }, [selectedVariant]);
+
+  useEffect(() => {
+  if (selectedVariant) {
+    const avg = selectedVariant.averageRating || 0;
+    
+    const count = parseInt(selectedVariant.ratingCount || 0);
+    setAvgRating(avg);
+    setRatingCount(count);
+  }
+}, [selectedVariant]);
+
 
   const checkWishlistStatus = async (variantId) => {
     const token = localStorage.getItem("token");
@@ -239,8 +252,7 @@ export default function ProductView({ className, reportHandler }) {
     setSelectedVariant(variant);
   };
 
-  const avgRating = productData?.averageRating || 0;
-  const ratingCount = productData?.ratingCount || 0;
+
 
   const renderStars = (avgRating) => {
     const fullStars = Math.floor(avgRating);
@@ -316,15 +328,13 @@ export default function ProductView({ className, reportHandler }) {
           >
             {productData.name}
           </p>
-          <div
-            data-aos="fade-up"
-            className="flex space-x-[10px] items-center mb-6"
-          >
-            <div className="flex">{renderStars(avgRating)}</div>
-            <span className="text-[13px] font-normal text-qblack">
-              {ratingCount} Đánh giá
-            </span>
-          </div>
+         <div className="flex items-center gap-2 mb-4">
+  <div className="flex">{renderStars(avgRating)}</div>
+  <span className="text-sm text-gray-600">
+    {ratingCount} đánh giá
+  </span>
+</div>
+
           <p
             data-aos="fade-up"
             className="text-qgray text-sm text-normal mb-[30px] leading-7"

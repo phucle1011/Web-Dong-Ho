@@ -37,6 +37,7 @@ const EditVariantForm = () => {
           sku: data.sku || "",
           price: data.price || "",
           stock: data.stock || "",
+          product_id:data.product_id || "",
           attributes:
             data.attributeValues?.map((attr) => ({
               id: attr.id,
@@ -383,7 +384,7 @@ const EditVariantForm = () => {
   </button>
 
   <Link
-    to="/admin/products/getAll"
+    to={`/admin/products/detail/${formData.product_id}`}
     className="bg-gray-200 text-gray-800 py-1.5 px-4 rounded hover:bg-gray-300 transition flex items-center justify-center text-sm"
   >
     Quay lại

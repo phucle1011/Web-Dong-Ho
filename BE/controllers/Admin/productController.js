@@ -621,6 +621,9 @@ static async getVariantById(req, res) {
     const { variant_id } = req.params;
 
     const variant = await ProductVariant.findByPk(variant_id, {
+      attributes: {
+        include: ["product_id"], // 👈 Thêm product_id vào kết quả
+      },
       include: [
         {
           model: ProductVariantAttributeValue,
@@ -658,6 +661,7 @@ static async getVariantById(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
 
 static async deleteAttributeValueById (req, res){
   try {

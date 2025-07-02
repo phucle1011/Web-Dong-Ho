@@ -9,6 +9,8 @@ import CampaignCountDown from "./CampaignCountDown";
 import ProductsAds from "./ProductsAds";
 import LayoutHomeThree from "../Partials/LayoutHomeThree";
 import SectionStyleOneHmThree from "../Helpers/SectionStyleOneHmThree";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
 
 export default function HomeThree() {
   const { products } = datas;
@@ -16,6 +18,43 @@ export default function HomeThree() {
   products.forEach((product) => {
     brands.push(product.brand);
   });
+  const [productNew, setProductnew] = useState([]);
+    const [productSold, setProductTopsold] = useState([]);
+        const [productDiscounted, setProductTopDiscounted] = useState([]);
+
+
+  const [loading, setLoading] = useState(true);
+
+  // Tạo danh sách thương hiệu từ products
+
+ useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [newRes, topSoldRes,topDiscounted] = await Promise.all([
+        axios.get("http://localhost:5000/products/getallnew"),
+        axios.get("http://localhost:5000/top-sold-products"),
+         axios.get("http://localhost:5000/top-discounted-products"),
+
+      ]);
+
+      setProductnew(newRes.data.data || []);
+      setProductTopsold(topSoldRes.data || []);
+      setProductTopDiscounted(topDiscounted.data.data || [])
+      console.log("Sản phẩm mới:", newRes.data );
+      console.log("Sản phẩm bán chạy:", topDiscounted.data);
+    } catch (error) {
+      console.error("Lỗi khi gọi API:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
+  if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
+
   return (
     <>
       <LayoutHomeThree type={3} childrenClasses="pt-0">
@@ -27,10 +66,12 @@ export default function HomeThree() {
         />
         <SectionStyleThree
           type={3}
-          products={products}
-          sectionTitle="New Arrivals"
+          products={productNew}
+          sectionTitle="SANR PHAAMR MỚI "
           seeMoreUrl="/all-products"
           className="new-products mb-[60px]"
+          startLength={0}
+         endLength={productNew.length}
         />
         <ProductsAds
           ads={[`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-3.png`]}
@@ -39,22 +80,22 @@ export default function HomeThree() {
 
         <SectionStyleOneHmThree
           type={3}
-          products={products}
+          products={productSold}
           brands={brands}
           categoryTitle="Mobile & Tablet"
-          sectionTitle="Gamer World"
+          sectionTitle="SẢN PHẨM BÁN CHẠY"
           seeMoreUrl="/all-products"
           className="category-products mb-[60px]"
         />
 
         <ViewMoreTitle
           className="top-selling-product mb-[60px]"
-          seeMoreUrl="/all-products"
+          seeMoreUrl="/al  l-products"
           categoryTitle="Top Selling Products"
         >
           <SectionStyleTwo
             type={3}
-            products={products.slice(3, products.length)}
+            products={productNew.slice(3, productNew.length)}
           />
         </ViewMoreTitle>
 
@@ -68,11 +109,11 @@ export default function HomeThree() {
         />
         <SectionStyleOneHmThree
           type={3}
-          categoryBackground={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/section-category-2.jpg`}
-          products={products.slice(4, products.length)}
+          // categoryBackground={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/section-category-2.jpg`}
+          products={productSold.slice(4, productSold.length)}
           brands={brands}
           categoryTitle="Electronics"
-          sectionTitle="Popular Sales"
+          sectionTitle="SẢN PHẨM GIẢM GIÁ"
           seeMoreUrl="/all-productss"
           className="category-products mb-[60px]"
         />
@@ -81,7 +122,7 @@ export default function HomeThree() {
           lastDate="2025-10-04 4:00:00"
         />
         <SectionStyleFour
-          products={products} 
+          products={productSold} 
           sectionTitle="Popular Sales"
           seeMoreUrl="/all-products"
           className="category-products mb-[60px]"

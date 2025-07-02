@@ -15,8 +15,8 @@ export default function ProductCardRowStyleTwo({ className, datas, type }) {
       <div className="flex space-x-5 items-center w-full h-full lg:p-[30px] sm:p-5 p-2">
         <div className="lg:w-1/2 w-1/3 h-full">
           <img
-            src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/${
-              datas.image
+            src={`${
+              datas.thumbnail
             }`}
             alt=""
             className="w-full h-full object-contain"
@@ -34,7 +34,7 @@ export default function ProductCardRowStyleTwo({ className, datas, type }) {
             </div>
             <Link to="/single-product">
               <p className="title mb-2 sm:text-[15px] text-[13px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600">
-                {datas.title}
+                {datas.name}
               </p>
             </Link>
             <p className="price mb-[26px]">

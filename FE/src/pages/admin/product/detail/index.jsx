@@ -104,26 +104,30 @@ useEffect(() => {
     }
   };
   const deleteProduct = async () => {
-    if (!selectedProduct) return;
+  if (!selectedProduct) return;
 
-    try {
-      await axios.delete(
-        `${Constants.DOMAIN_API}/admin/variants/${selectedProduct.id}`
-      );
-      toast.success("Xóa sản phẩm thành công");
-    } catch (error) {
-      console.error("Lỗi khi xóa sản phẩm:", error);
-      if (
-        error.response?.data?.error?.includes("foreign key constraint fails")
-      ) {
-        toast.error("Không thể xóa vì có sản phẩm đang sử dụng sản phẩm này.");
-      } else {
-        toast.error("Xóa thất bại. Vui lòng thử lại.");
-      }
-    } finally {
-      setSelectedProduct(null);
+  try {
+    await axios.delete(
+      `${Constants.DOMAIN_API}/admin/variants/${selectedProduct.id}`
+    );
+    toast.success("Xóa sản phẩm thành công");
+
+    // 👉 Gọi lại API để cập nhật danh sách biến thể
+    fetchVariants(currentPage);
+  } catch (error) {
+    console.error("Lỗi khi xóa sản phẩm:", error);
+    if (
+      error.response?.data?.error?.includes("foreign key constraint fails")
+    ) {
+      toast.error("Không thể xóa vì có sản phẩm đang sử dụng sản phẩm này.");
+    } else {
+      toast.error("Xóa thất bại. Vui lòng thử lại.");
     }
-  };
+  } finally {
+    setSelectedProduct(null);
+  }
+};
+
   if (!formData) return <div>Đang tải...</div>;
   const handleThumbnailChange = async (e) => {
   const file = e.target.files[0];
