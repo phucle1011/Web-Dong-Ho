@@ -21,11 +21,16 @@ const CommentModel = connection.define('comments', {
     },
     rating: {
         type: DataTypes.INTEGER,
-        allowNull: true 
+        allowNull: true
     },
     comment_text: {
         type: DataTypes.TEXT,
-        allowNull: false 
+        allowNull: false
+    },
+    edited: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
     }
 }, {
     tableName: 'comments',

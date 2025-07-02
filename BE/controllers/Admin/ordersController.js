@@ -145,12 +145,12 @@ class OrderController {
                                     }
                                 ]
                             },
-                            {
-                                model: CommentModel,
-                                as: 'comments',
-                                attributes: ['id', 'rating', 'comment_text'],
-                                required: false
-                            }
+                                                 {
+    model: CommentModel,
+    as: 'comments',
+    attributes: ['id', 'rating', 'comment_text', 'edited'],
+    required: false,
+  },
                         ]
                     },
                     {

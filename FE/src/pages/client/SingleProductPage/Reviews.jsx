@@ -7,6 +7,7 @@ import StarRating from "../Helpers/StarRating";
 import LoaderStyleOne from "../Helpers/Loaders/LoaderStyleOne";
 import { decodeToken } from "../Helpers/jwtDecode";
 
+
 const ProductReviewSection = () => {
   const { id: productId } = useParams();
   const [orderDetailId, setOrderDetailId] = useState(null);
@@ -22,18 +23,44 @@ const ProductReviewSection = () => {
   const [filterType, setFilterType] = useState("all");
   const [filterRating, setFilterRating] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+
+  useEffect(() => {
+    const storedOrderDetailId = sessionStorage.getItem("pendingReviewOrderDetailId");
+    if (storedOrderDetailId) {
+      setOrderDetailId(storedOrderDetailId);
+      sessionStorage.removeItem("pendingReviewOrderDetailId"); 
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       const decoded = decodeToken(token);
       setUserId(decoded?.user_id || decoded?.id || null);
     }
-    const storedOrderDetailId = localStorage.getItem("pendingReviewOrderDetailId");
-    if (storedOrderDetailId) {
-      setOrderDetailId(storedOrderDetailId);
-      localStorage.removeItem("pendingReviewOrderDetailId");
-    }
   }, []);
+
+  useEffect(() => {
+    if (userId && orderDetailId && comments.length > 0) {
+      const userComment = comments.find(c => c.user_id === userId && c.order_detail_id == orderDetailId);
+      if (userComment && !userComment.edited) {
+        setMessage(userComment.comment_text || "");
+        setRating(userComment.rating || 0);
+      }
+    }
+  }, [userId, orderDetailId, comments]);
+
+  useEffect(() => {
+    if (userId) {
+      const userComment = comments.find(c => c.user_id === userId && c.order_detail_id == orderDetailId);
+      if (userComment) {
+        const el = document.getElementById(`comment-${userComment.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    }
+  }, [comments]);
 
   useEffect(() => {
     if (productId) {
@@ -57,6 +84,22 @@ const ProductReviewSection = () => {
         return { ...parent, author: parent.user?.name || "Ẩn danh", replys };
       });
       setComments(structured);
+
+      const storedOrderDetailId = sessionStorage.getItem("pendingReviewOrderDetailId");
+      if (storedOrderDetailId && userId) {
+        const comment = structured.find(
+          c => c.user_id === userId && c.order_detail_id == storedOrderDetailId
+        );
+
+        if (comment) {
+          setMessage(comment.comment_text || "");
+          setRating(comment.rating || 0);
+        }
+
+        setOrderDetailId(storedOrderDetailId);
+        sessionStorage.removeItem("pendingReviewOrderDetailId");
+      }
+
     } catch (error) {
       console.error("Lỗi khi lấy bình luận:", error);
     } finally {
@@ -64,60 +107,40 @@ const ProductReviewSection = () => {
     }
   };
 
-const handleImageChange = async (e) => {
-  const files = Array.from(e.target.files);
-  if (files.length > 3) {
-    Swal.fire({
-      icon: "error",
-      title: "Chỉ được tải tối đa 3 ảnh",
-      text: "Vui lòng chọn lại ảnh.",
-    });
-    e.target.value = null;
-    return;
-  }
-
-  const urls = await handleImageUploads(files);
-  setImageFiles(urls);
-};
-
-
-  const handleSingleImageUpload = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "duantotnghiep_preset");
-    formData.append("cloud_name", "ddkqka4b4");
-    formData.append("moderation", "aws_rek");
-
-    try {
-      const res = await fetch("https://api.cloudinary.com/v1_1/ddkqka4b4/image/upload", {
-        method: "POST",
-        body: formData,
+  const handleImageChange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 3) {
+      Swal.fire({
+        icon: "error",
+        title: "Chỉ được tải tối đa 3 ảnh",
+        text: "Vui lòng chọn lại ảnh.",
       });
-
-      const data = await res.json();
-      const moderationResult = data.moderation?.[0]?.response;
-      const isAdult = moderationResult?.Adult?.Confidence > 80;
-      const isViolence = moderationResult?.Violence?.Confidence > 80;
-
-      if (isAdult || isViolence) {
+      e.target.value = null;
+      return;
+    }
+    
+    // Kiểm tra từng hình ảnh xem có phải là đồng hồ không
+    for (const file of files) {
+      const isWatch = await isWatchImage(file);
+      if (!isWatch) {
         Swal.fire({
           icon: "error",
-          title: "Ảnh không phù hợp",
-          text: "Ảnh chứa nội dung phản cảm hoặc bạo lực. Vui lòng chọn ảnh khác.",
+          title: "Ảnh không hợp lệ",
+          text: "Một hoặc nhiều ảnh bạn tải lên không phải là đồng hồ. Vui lòng chọn lại.",
         });
-        return null;
+        e.target.value = null;
+        return;
       }
-
-      return data.secure_url;
-    } catch (error) {
-      console.error("Lỗi kiểm duyệt ảnh:", error);
-      return null;
     }
+
+    setImageFiles(files);
   };
+
 
 
   const handleImageUploads = async (files) => {
   const urls = [];
+
   for (const file of files) {
     const formData = new FormData();
     formData.append("file", file);
@@ -129,60 +152,145 @@ const handleImageChange = async (e) => {
         method: "POST",
         body: formData,
       });
+
       const data = await res.json();
-      if (data.secure_url) urls.push(data.secure_url);
+
+      if (data.secure_url) {
+        urls.push(data.secure_url); // Chỉ thêm 1 lần
+      }
     } catch (err) {
       console.error("Lỗi upload ảnh:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Lỗi tải ảnh",
+        text: "Không thể tải ảnh lên Cloudinary. Vui lòng thử lại.",
+      });
+      return null; // dừng luôn nếu 1 ảnh lỗi
     }
   }
+
   return urls;
 };
 
-  
+
+
+
   const reviewAction = async () => {
     if (!message || rating === 0) {
-      Swal.fire({ icon: "warning", title: "Thiếu thông tin", text: "Vui lòng nhập nội dung và chọn số sao trước khi gửi." });
+      Swal.fire({
+        icon: "warning",
+        title: "Thiếu thông tin", 
+        text: "Vui lòng nhập nội dung và chọn số sao trước khi gửi.",
+      });
       return;
     }
-
-    const filter = new Filter();
-    const badWordsVi = [
-      "địt", "cặc", "lồn", "buồi", "vãi", "vcl", "dm", "đmm", "đm", "cl", "ngu", "đần", "đụ", "chó", "mẹ mày", "con mẹ",
-      "óc chó", "đồ ngu", "thằng ngu", "thằng khùng", "khốn nạn", "fuck", "shit"
-    ];
-    filter.addWords(...badWordsVi);
-
-    if (filter.isProfane(message)) {
-      Swal.fire({ icon: "error", title: "Ngôn ngữ không phù hợp", text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa." });
-      return;
-    }
-
-    if (!orderDetailId) {
-      Swal.fire({ icon: "error", title: "Thiếu mã đơn hàng", text: "Không thể gửi đánh giá do thiếu mã chi tiết đơn hàng." });
-      return;
-    }
-
-    setReviewLoading(true);
-    let imageUrls = [];
-    if (imageFiles?.length > 0) imageUrls = await handleImageUploads(imageFiles);
 
     try {
-      const payload = {
-        user_id: userId,
-        rating,
-        comment_text: message,
-        order_detail_id: Number(orderDetailId),
-        images: imageUrls,
-      };
-      await axios.post("http://localhost:5000/comments", payload);
-      Swal.fire({ icon: "success", title: "Đánh giá thành công!", text: "Cảm ơn bạn đã gửi đánh giá cho sản phẩm." });
-      setMessage(""); setRating(0); setHoverRating(0); setImageFiles([]); setOrderDetailId(null);
-      fetchComments();
+      const response = await fetch("/badword.txt");
+      const text = await response.text();
+
+      const badWordsVi = text
+        .split("\n")
+        .map((word) => word.trim())
+        .filter((word) => word.length > 0 && !word.startsWith("#"));
+
+      const filter = new Filter();
+      filter.addWords(...badWordsVi);
+
+      if (filter.isProfane(message)) {
+        Swal.fire({
+          icon: "error",
+          title: "Ngôn ngữ không phù hợp",
+          text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.",
+        });
+        return;
+      }
+
+      if (!orderDetailId) {
+        Swal.fire({
+          icon: "error",
+          title: "Thiếu mã đơn hàng",
+          text: "Không thể gửi đánh giá do thiếu mã chi tiết đơn hàng.",
+        });
+        return;
+      }
+
+      setReviewLoading(true);
+      let imageUrls = [];
+
+      if (imageFiles?.length > 0) {
+        const thumbnail = comments[0]?.orderDetail?.variant?.product?.thumbnail;
+        if (!thumbnail) {
+          Swal.fire({
+            icon: "error",
+            title: "Không có ảnh sản phẩm",
+            text: "Không tìm thấy ảnh sản phẩm để so sánh.",
+          });
+          return;
+        }
+
+        imageUrls = await handleImageUploads(imageFiles);
+if (!imageUrls) {
+  setReviewLoading(false);
+  return;
+}
+
+      }
+
+      const existingComment = comments.find(
+        (c) => c.user_id === userId && c.order_detail_id == orderDetailId
+      );
+
+      try {
+        if (existingComment) {
+          if (existingComment.edited) {
+            Swal.fire("Không thể gửi", "Bạn chỉ được chỉnh sửa đánh giá một lần.", "warning");
+            return;
+          }
+
+          await axios.put(`http://localhost:5000/comments/${existingComment.id}`, {
+            rating,
+            comment_text: message,
+            images: imageUrls,
+            edited: true
+          });
+
+          Swal.fire("Đã cập nhật đánh giá", "", "success");
+        } else {
+          const payload = {
+            user_id: userId,
+            rating,
+            comment_text: message,
+            order_detail_id: Number(orderDetailId),
+            images: imageUrls,
+          };
+          await axios.post("http://localhost:5000/comments", payload);
+          Swal.fire("Đánh giá thành công!", "Cảm ơn bạn đã đánh giá.", "success");
+        }
+
+        setMessage("");
+        setRating(0);
+        setHoverRating(0);
+        setImageFiles([]);
+        setOrderDetailId(null);
+        fetchComments();
+      } catch (error) {
+        console.error("Lỗi khi gửi/chỉnh sửa bình luận:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi",
+          text: "Lỗi khi gửi đánh giá. Vui lòng thử lại.",
+        });
+      } finally {
+        setReviewLoading(false);
+      }
     } catch (error) {
-      console.error("Lỗi khi gửi bình luận:", error);
-      Swal.fire({ icon: "error", title: "Lỗi gửi đánh giá", text: "Chúng Tôi Kiểm Tra hình Ảnh Của Bạn Không Hợp Lệ" });
-    } finally {
-      setReviewLoading(false);
+      console.error("Lỗi khi đọc tệp từ khóa:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Lỗi",
+        text: "Không thể kiểm tra từ ngữ không phù hợp. Vui lòng thử lại sau.",
+      });
     }
   };
 
@@ -211,21 +319,20 @@ const handleImageChange = async (e) => {
   });
   const visibleComments = filteredComments.slice(0, visibleCount);
 
-
   return (
     <>
-    {selectedImage && (
-  <div
-    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-    onClick={() => setSelectedImage(null)}
-  >
-    <img
-      src={selectedImage}
-      alt="Full View"
-      className="max-w-[90%] max-h-[90%] rounded-lg shadow-lg"
-    />
-  </div>
-)}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Full View"
+            className="max-w-[90%] max-h-[90%] rounded-lg shadow-lg"
+          />
+        </div>
+      )}
       {/* Filter & Rating Summary */}
       <div className="max-w-[900px] mx-auto mt-5 px-6 bg-[#fff7f4] rounded-md border py-6">
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
@@ -271,41 +378,42 @@ const handleImageChange = async (e) => {
 
       {/* Danh sách bình luận */}
       <div className="py-10 max-w-[900px] mx-auto">
-{visibleComments.map((comment) => (
-  <div key={comment.id} className="bg-white border rounded-lg p-6 mb-6 shadow relative">
-    {/* Góc phải trên: Số sao */}
-    <div className="absolute top-4 right-4 flex items-center gap-1">
-      {renderStars(comment.rating)}
-      <span className="text-sm text-gray-500">({comment.rating.toFixed(1)})</span>
-    </div>
+        {visibleComments.map((comment) => (
+          <div id={`comment-${comment.id}`} key={comment.id} className="bg-white border rounded-lg p-6 mb-6 shadow relative">
+            {/* Góc phải trên: Số sao */}
+            <div className="absolute top-4 right-4 flex items-center gap-1">
+              {renderStars(comment.rating)}
+              <span className="text-sm text-gray-500">({comment.rating.toFixed(1)})</span>
+            </div>
 
-    <div className="flex flex-col gap-4">
-      {/* Tên người dùng */}
-      <div className="text-lg font-semibold">{comment.user?.name || comment.author}</div>
+            <div className="flex flex-col gap-4">
+              {/* Tên người dùng */}
+              <div className="text-lg font-semibold">{comment.user?.name || comment.author}</div>
 
-      {/* Phân loại + Ngày */}
-      <div className="text-sm text-gray-500">
-        Phân loại hàng:{" "}
-        <span className="font-medium">{comment.orderDetail?.variant?.sku || "Không rõ"}</span>{" "}
-        | {new Date(comment.created_at).toLocaleDateString("vi-VN", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })}
-      </div>
+              {/* Phân loại + Ngày */}
+              <div className="text-sm text-gray-500">
+                Phân loại hàng:{" "}
+                <span className="font-medium">{comment.orderDetail?.variant?.sku || "Không rõ"}</span>{" "}
+                | {new Date(comment.created_at).toLocaleDateString("vi-VN", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                })}
+              </div>
 
-      {/* Nội dung bình luận */}
-      <p className="text-gray-700 text-base">{comment.comment_text}</p>
+              {/* Nội dung bình luận */}
+              <p className="text-gray-700 text-base">{comment.comment_text}</p>
 
-      {/* Ảnh hoặc video */}
-      {comment.commentImages?.length > 0 && (
-        <div className="flex gap-3 flex-wrap mt-2">
-          {comment.commentImages.map((media, idx) =>
-            media.image_url.endsWith(".mp4") ? (
-              <video key={idx} controls width="150" className="rounded-md">
-                <source src={media.image_url} type="video/mp4" />
-              </video>
-            ) : (
+              {/* Ảnh hoặc video */}
+              {comment.commentImages?.length > 0 && (
+                <div className="flex gap-3 flex-wrap mt-2">
+                  {comment.commentImages.map((media, idx) =>
+                    media.image_url.endsWith(".mp4") ? (
+                      <video key={idx} controls width="150" className="rounded-md">
+                        <source src={media.image_url} type="video/mp4" />
+                      </video>
+                    ) : (
+                     
               <img
   key={idx}
   src={media.image_url}

@@ -261,7 +261,7 @@ export default function OrderTab() {
           ...detail,
           comment: detail.comments?.[0] || null,
         }));
-
+      console.log(res.data.data.orderDetails)
         setOrderDetailsMap((prev) => ({
           ...prev,
           [orderId]: processedDetails,
@@ -616,32 +616,56 @@ export default function OrderTab() {
                                               currency: "VND",
                                             })}
                                           </td>
-                                          <td className="p-2">
+<td className="p-2">
+  {order.status === "delivered" ? (
+    <button
+      className="text-blue-600 hover:underline"
+      onClick={() => {
+        const product = item.variant?.product;
+        const productId = product?.id;
+        const deliveredAt = new Date(item.updated_at);
+        const currentDate = new Date();
+        const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
 
-                                            <button
-                                              className={`text-blue-600 hover:underline`}
-                                              onClick={() => {
-                                                const orderDetailId = item.id;
-                                                const product = item.variant?.product;
-                                                const productId = product?.id;
+        if (daysPassed > 7) {
+          toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
+          return;
+        }
 
-                                                if (item.comment) {
-                                                  navigate(`/product/${productId}#review`);
-                                                  return;
-                                                }
+        const editedOnce = item.comment && Number(item.comment.edited) === 1;
 
-                                                if (orderDetailId && productId) {
-                                                  localStorage.setItem("pendingReviewOrderDetailId", orderDetailId);
-                                                  navigate(`/product/${productId}`);
-                                                } else {
-                                                  toast.error("Không thể xác định sản phẩm để đánh giá.");
-                                                }
-                                              }}
-                                            >
-                                              {item.comment ? "Xem đánh giá" : "Đánh giá"}
-                                            </button>
+        if (item.comment) {
+          if (editedOnce) {
+            // Đã chỉnh sửa => chỉ được xem
+            navigate(`/product/${productId}#comment-${item.comment.id}`);
+          } else {
+            // Chưa chỉnh sửa => cho phép chỉnh sửa
+            sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+            navigate(`/product/${productId}#review`);
+          }
+        } else {
+          // Chưa có đánh giá => cho phép đánh giá
+          sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+          navigate(`/product/${productId}#review`);
+        }
+      }}
+    >
+      {item.comment ? (
+        Number(item.comment.edited) === 1 ? (
+          <span>Xem đánh giá</span>
+        ) : (
+          <span>Chỉnh sửa đánh giá</span>
+        )
+      ) : (
+        <span>Đánh giá</span>
+      )}
+    </button>
+  ) : (
+    <span className="text-gray-400 italic">Chưa thể đánh giá</span>
+  )}
+</td>
 
-                                          </td>
+
                                         </tr>
                                       ))}
 

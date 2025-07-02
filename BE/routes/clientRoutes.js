@@ -121,6 +121,7 @@ router.get('/products/discounted', ProductVariantController.getDiscountedProduct
 
 router.post('/comments', ClientCommentController.addComment);
 router.get('/comment/product/:id', ClientCommentController.getCommentsByProductId);
+router.put("/comments/:id", ClientCommentController.updateComment);
 
 // ------------------[ Wishlist ]------------------//
 router.get('/wishlist', WishlistController.getAllWishlists);
