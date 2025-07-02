@@ -52,7 +52,7 @@ export default function ProductsFilter({
           setCategoryList([]);
         }
       } catch (error) {
-        console.error('Lỗi khi lấy danh sách danh mục:', error);
+        console.error('Error fetching categories:', error);
         setCategoryList([]);
       }
     }
@@ -62,26 +62,37 @@ export default function ProductsFilter({
   useEffect(() => {
     async function fetchBrands() {
       try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/brands/active`, {
+        const res = await axios.get(`${Constants.DOMAIN_API}/brand/list`, {
           params: { page: brandPagination.currentPage, limit: brandPagination.limit },
         });
+
+
         if (Array.isArray(res.data.data)) {
           setBrandList(res.data.data);
           setBrandPagination((prev) => ({
             ...prev,
-            totalPages: res.data.totalPages || 1,
-            currentPage: res.data.currentPage || 1,
+            totalPages: res.data.pagination?.totalPages || 1,
+            currentPage: res.data.pagination?.currentPage || 1,
           }));
         } else {
           setBrandList([]);
-          setBrandPagination((prev) => ({ ...prev, totalPages: 1 }));
+          setBrandPagination((prev) => ({
+            ...prev,
+            totalPages: 1,
+            currentPage: 1,
+          }));
         }
       } catch (error) {
-        console.error('Lỗi khi lấy danh sách thương hiệu:', error);
+        console.error('Error fetching brands:', error);
         setBrandList([]);
-        setBrandPagination((prev) => ({ ...prev, totalPages: 1 }));
+        setBrandPagination((prev) => ({
+          ...prev,
+          totalPages: 1,
+          currentPage: 1,
+        }));
       }
     }
+
     fetchBrands();
   }, [brandPagination.currentPage, brandPagination.limit]);
 
@@ -93,7 +104,7 @@ export default function ProductsFilter({
         const maxPrice = parseFloat(res.data.data.maxPrice) || 1000000000;
         setTempVolume([minPrice, maxPrice]);
       } catch (error) {
-        console.error('Lỗi khi lấy khoảng giá:', error);
+        console.error('Error fetching price range:', error);
         setTempVolume([0, 1000000000]);
       }
     }
@@ -117,6 +128,7 @@ export default function ProductsFilter({
   };
 
   const handleBrandPageChange = (newPage) => {
+ 
     if (newPage >= 1 && newPage <= brandPagination.totalPages) {
       setBrandPagination((prev) => ({ ...prev, currentPage: newPage }));
     }
@@ -197,47 +209,57 @@ export default function ProductsFilter({
         </div>
         <div className="filter-items">
           <ul>
-            {brandList.map((brand) => (
-              <li key={brand.id} className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <div>
-                    <Checkbox
-                      id={brand.id}
-                      name={brand.id.toString()}
-                      handleChange={checkboxHandler}
-                      checked={!!filters[brand.id.toString()]}
-                    />
+            {brandList.length > 0 ? (
+              brandList.map((brand) => (
+                <li key={brand.id} className="item flex justify-between items-center mb-5">
+                  <div className="flex space-x-[14px] items-center">
+                    <div>
+                      <Checkbox
+                        id={brand.id}
+                        name={brand.id.toString()}
+                        handleChange={checkboxHandler}
+                        checked={!!filters[brand.id.toString()]}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={brand.id} className="text-xs font-black font-400 capitalize">
+                        {brand.name}
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label htmlFor={brand.id} className="text-xs font-black font-400 capitalize">
-                      {brand.name}
-                    </label>
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              ))
+            ) : (
+              <li className="text-xs text-qblack font-400">Không có thương hiệu nào</li>
+            )}
           </ul>
           {brandPagination.totalPages > 1 && (
             <div className="flex justify-center items-center mt-2">
-              {brandPagination.currentPage > 1 && (
-                <button
-                  onClick={() => handleBrandPageChange(brandPagination.currentPage - 1)}
-                  className="px-2 py-1 mx-0.5 bg-gray-300 text-gray-600 text-xs rounded hover:bg-gray-400"
-                >
-                  Trước
-                </button>
-              )}
+              <button
+                onClick={() => handleBrandPageChange(brandPagination.currentPage - 1)}
+                disabled={brandPagination.currentPage === 1}
+                className={`px-2 py-1 mx-0.5 text-xs rounded ${
+                  brandPagination.currentPage === 1
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+                }`}
+              >
+                Trước
+              </button>
               <span className="px-2 py-1 mx-0.5 bg-gray-300 text-gray-600 text-xs rounded">
                 {brandPagination.currentPage} / {brandPagination.totalPages}
               </span>
-              {brandPagination.currentPage < brandPagination.totalPages && (
-                <button
-                  onClick={() => handleBrandPageChange(brandPagination.currentPage + 1)}
-                  className="px-2 py-1 mx-0.5 bg-gray-300 text-gray-600 text-xs rounded hover:bg-gray-400"
-                >
-                  Sau
-                </button>
-              )}
+              <button
+                onClick={() => handleBrandPageChange(brandPagination.currentPage + 1)}
+                disabled={brandPagination.currentPage === brandPagination.totalPages}
+                className={`px-2 py-1 mx-0.5 text-xs rounded ${
+                  brandPagination.currentPage === brandPagination.totalPages
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+                }`}
+              >
+                Sau
+              </button>
             </div>
           )}
         </div>
@@ -246,13 +268,13 @@ export default function ProductsFilter({
       <div className="mt-10">
         <button
           onClick={handleApply}
-          className="w-full  bg-blue-600 text-white py-2 rounded hover:bg-blue-500"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-500"
         >
           Áp dụng
         </button>
         <button
           onClick={handleClearFilters}
-          className="w-full  bg-gray-300 text-qblack py-2 rounded hover:bg-gray-400 mt-5"
+          className="w-full bg-gray-300 text-qblack py-2 rounded hover:bg-gray-400 mt-5"
         >
           Xóa bộ lọc
         </button>

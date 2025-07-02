@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants.jsx";
 import { Link } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
   FaAngleDoubleLeft,
@@ -12,7 +12,7 @@ import {
   FaTrashAlt,
   FaChevronDown,
   FaChevronUp,
-  FaEdit
+  FaEdit,
 } from "react-icons/fa";
 
 const PromotionProductList = () => {
@@ -27,6 +27,9 @@ const PromotionProductList = () => {
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteItem, setDeleteItem] = useState({ id: null, name: "" });
+  const dialogRef = useRef(null);
 
   const getPromotionStatus = (startDate, endDate) => {
     if (!startDate || !endDate) return "inactive";
@@ -78,6 +81,12 @@ const PromotionProductList = () => {
     fetchPromotions(1, "");
   }, []);
 
+  useEffect(() => {
+    if (showDeleteDialog && dialogRef.current) {
+      dialogRef.current.focus(); // Focus dialog for accessibility
+    }
+  }, [showDeleteDialog]);
+
   const handleSearch = () => {
     fetchPromotions(1, searchTerm.trim());
     setExpanded(null);
@@ -89,16 +98,33 @@ const PromotionProductList = () => {
     setExpanded(null);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa?")) {
-      try {
-        await axios.delete(`${Constants.DOMAIN_API}/admin/promotions/${id}`);
-        toast.success("Xóa thành công!");
-        fetchPromotions(pagination.page, searchTerm);
-      } catch (err) {
-        console.error("Lỗi khi xóa sản phẩm khuyến mãi:", err);
-        toast.error("Xóa thất bại!");
-      }
+  const handleDelete = (id, name) => {
+    setDeleteItem({ id, name });
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`${Constants.DOMAIN_API}/admin/promotions/${deleteItem.id}`);
+      toast.success("Xóa thành công!");
+      fetchPromotions(pagination.page, searchTerm);
+    } catch (err) {
+      console.error("Lỗi khi xóa:", err);
+      toast.error(`Xóa thất bại: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setShowDeleteDialog(false);
+      setDeleteItem({ id: null, name: "" });
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteDialog(false);
+    setDeleteItem({ id: null, name: "" });
+  };
+
+  const handleDialogKeyDown = (e) => {
+    if (e.key === "Escape") {
+      cancelDelete();
     }
   };
 
@@ -132,12 +158,9 @@ const PromotionProductList = () => {
 
   const renderPagination = () => {
     const { page, totalPages, limit } = pagination;
-    // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ limit sản phẩm và còn trang tiếp theo
     const showNextPage = promotionProducts.length === limit && totalPages > page;
-    // Chỉ hiển thị nút "Previous" nếu không phải trang 1
     const showPreviousPage = page > 1;
 
-    // Hiển thị tối đa 3 nút trang gần currentPage
     const pagesToShow = [];
     const maxPages = 3;
     const startPage = Math.max(1, page - 1);
@@ -226,9 +249,19 @@ const PromotionProductList = () => {
           className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
           title="Tìm kiếm"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
-            </svg>
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z"
+            />
+          </svg>
         </button>
       </div>
 
@@ -299,7 +332,11 @@ const PromotionProductList = () => {
                           onClick={() => toggleExpand(promoName)}
                           className="bg-blue-500 text-white p-2 rounded"
                         >
-                          {isExpanded ? <FaChevronUp size={16} className="font-bold" /> : <FaChevronDown size={16} className="font-bold" />}
+                          {isExpanded ? (
+                            <FaChevronUp size={16} className="font-bold" />
+                          ) : (
+                            <FaChevronDown size={16} className="font-bold" />
+                          )}
                         </button>
                       </td>
                     </tr>
@@ -341,9 +378,10 @@ const PromotionProductList = () => {
                                     </td>
                                     <td className="border p-2 text-center">
                                       <button
-                                        onClick={() => handleDelete(item.id)}
+                                        onClick={() => handleDelete(item.id, promoName)}
                                         className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                         title="Xóa"
+                                        aria-label={`Xóa ${promoName}`}
                                       >
                                         <FaTrashAlt size={20} className="font-bold" />
                                       </button>
@@ -371,6 +409,44 @@ const PromotionProductList = () => {
       )}
 
       {renderPagination()}
+
+      {showDeleteDialog && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-labelledby="delete-dialog-title"
+          aria-modal="true"
+          onKeyDown={handleDialogKeyDown}
+          ref={dialogRef}
+          tabIndex={-1}
+        >
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h3 id="delete-dialog-title" className="text-lg font-semibold mb-4">
+              Xác nhận xóa
+            </h3>
+            <p className="mb-6 text-gray-700">
+              Bạn có chắc chắn muốn xóa <strong>{deleteItem.name || "khuyến mãi"}</strong>?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+                aria-label="Xác nhận xóa"
+              >
+                Xóa
+              </button>
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                aria-label="Hủy xóa"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
