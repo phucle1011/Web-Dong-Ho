@@ -1,63 +1,144 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import DataIteration from "../../../Helpers/DataIteration";
-import Star from "../../../Helpers/icons/Star";
-import { Link } from "react-router-dom";
+import { Star, StarHalf } from "lucide-react"; // Xóa StarOutline
+import Constants from "../../../../../Constants";
+import { decodeToken } from "../../../Helpers/jwtDecode";
 
-export default function ReviewTab({ className, products }) {
+export default function ReviewTab({ className }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [averageRating, setAverageRating] = useState(0);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const decoded = decodeToken(token);
+
+        const response = await axios.get(`${Constants.DOMAIN_API}/${decoded.id}/reviews`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.data?.success) {
+          const reviewsData = response.data.data || [];
+          setReviews(reviewsData);
+
+          if (reviewsData.length > 0) {
+            const totalRating = reviewsData.reduce((sum, review) => sum + (parseFloat(review.rating) || 0), 0);
+            const avg = totalRating / reviewsData.length;
+            console.log('Reviews:', reviewsData.map(r => ({ id: r.id, rating: r.rating })));
+            console.log('AverageRating:', avg.toFixed(1));
+            setAverageRating(parseFloat(avg.toFixed(1)));
+          }
+        } else {
+          throw new Error(response.data?.error || 'Không thể lấy đánh giá');
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  if (loading) {
+    return <div className="text-center py-4 text-gray-500">Đang tải đánh giá...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500 py-4">{error}</div>;
+  }
+
+  if (reviews.length === 0) {
+    return <div className="text-center py-4 text-gray-500">Bạn chưa có đánh giá nào</div>;
+  }
+
+  // Hàm renderStars sửa để dùng Star cho sao rỗng
+  const renderStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    return (
+      <>
+        {Array(fullStars)
+          .fill()
+          .map((_, i) => (
+            <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" fill="#FFD700" />
+          ))}
+        {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" fill="#FFD700" />}
+        {Array(emptyStars)
+          .fill()
+          .map((_, i) => (
+            <Star key={`empty-${i}`} className="text-gray-300 w-4 h-4" fill="none" stroke="#D1D5DB" />
+          ))}
+      </>
+    );
+  };
+
   return (
-    <>
-      <div className="review-tab-wrapper w-full">
-        <div className="grid grid-cols-2 gap-8">
-          <DataIteration datas={products} startLength={0} endLength={6}>
-            {({ datas }) => (
-              <div key={datas.id} className="item">
-                <div
-                  style={{ boxShadow: "0px 15px 64px rgba(0, 0, 0, 0.05)" }}
-                  className={`product-row-card-style-one w-full h-[170px] bg-white group relative overflow-hidden ${
-                    className || ""
-                  }`}
-                >
-                  <div className="flex space-x-2 items-center w-full h-full p-2">
-                    <div className="w-1/3 h-full">
-                      <img
-                        src={`${
-                          process.env.REACT_APP_PUBLIC_URL
-                        }/assets/images/${datas.image}`}
-                        alt=""
-                        className="w-full h-full object-contain"
-                      />
+    <div className="review-tab-wrapper w-full">
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h3 className="text-lg font-semibold mb-2">Đánh giá của bạn</h3>
+        <div className="flex items-center">
+          <div className="text-3xl font-bold mr-4">{averageRating}/5</div>
+          <div className="flex">
+            {renderStars(averageRating)}
+          </div>
+          <span className="ml-2 text-gray-600">({reviews.length} đánh giá)</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DataIteration datas={reviews} startLength={0} endLength={reviews.length}>
+          {({ datas }) => {
+            const productImage =
+              datas.productInfo?.image ||
+              datas.productInfo?.variantImages?.[0]?.image_url ||
+              datas.productInfo?.thumbnail ||
+              "/images/no-image.jpg";
+
+            console.log('Review ID:', datas.id, 'Rating:', datas.rating, 'Type:', typeof datas.rating);
+
+            return (
+              <div key={datas.id} className="bg-white p-4 rounded-lg shadow">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-medium">{datas.userInfo?.name || "Người dùng"}</h4>
+                      <span className="text-sm text-gray-500">
+                        {new Date(datas.createdAt).toLocaleDateString("vi-VN")}
+                      </span>
                     </div>
-                    <div className="flex-1 flex flex-col justify-center h-full">
-                      <div>
-                        <span className="text-qgray text-sm mb-1.5 block">
-                          July 22, 2022
-                        </span>
-                        {/* reviews */}
-                        <div className="flex mb-1.5">
-                          {Array.from(Array(datas.review), () => (
-                            <span key={datas.review + Math.random()}>
-                              <Star />
-                            </span>
-                          ))}
+                    <div className="flex my-2 items-center">
+                      {renderStars(parseFloat(datas.rating || 0))}
+                      <span className="ml-2 text-sm text-gray-500">{parseFloat(datas.rating || 0).toFixed(1)}</span>
+                    </div>
+                    <p className="text-gray-700 mb-2">{datas.comment}</p>
+                    {datas.productInfo && (
+                      <div className="mt-3 flex items-center space-x-3">
+                        <img
+                          src={productImage}
+                          alt={datas.productInfo.name}
+                          className="w-14 h-14 object-contain border rounded"
+                        />
+                        <div className="text-sm text-gray-600">
+                          <div className="font-medium">{datas.productInfo.name}</div>
+                          <div className="text-xs text-gray-500">Sản phẩm đã mua</div>
                         </div>
-                        <Link to="/single-product">
-                          <p className="title mb-2 sm:text-[15px] text-[13px] font-600 text-qblack leading-[24px] line-clamp-1 hover:text-blue-600">
-                            {datas.title}
-                          </p>
-                        </Link>
-                        <p className="price mb-[26px] text-sm text-qgray line-clamp-2">
-                          Didn't I tell you not put your phone on charge because
-                          weekend?
-                        </p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
-            )}
-          </DataIteration>
-        </div>
+            );
+          }}
+        </DataIteration>
       </div>
-    </>
+    </div>
   );
 }

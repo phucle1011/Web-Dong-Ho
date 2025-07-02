@@ -133,7 +133,7 @@ export default function Profile() {
                             <IcoReviewHand />
                           </span>
                           <span className=" font-normal text-base">
-                            Reviews
+                            Đánh giá
                           </span>
                         </div>
                       </Link>
@@ -145,7 +145,7 @@ export default function Profile() {
                             <IcoPassword />
                           </span>
                           <span className=" font-normal text-base">
-                            Change Password
+                            Thay Đổi Mật Khẩu
                           </span>
                         </div>
                       </Link>

@@ -27,6 +27,8 @@ const brandClientController = require('../controllers/Client/brandClientControll
 const ProfileController = require('../controllers/Client/ProfileController');
 const HomeController = require('../controllers/Client/HomeController');
 const UserController = require('../controllers/Client/userControllers');
+const reviewController = require('../controllers/Client/reviewController');
+
 //------------------[ CLIENT ROUTES ]------------------
 
 //------------------[ CLIENT home ]------------------
@@ -143,5 +145,9 @@ router.get('/brands/get-products-by-brands', BrandController.getProductsByBrands
 
 //------------------[ USERS ]------------------
 router.put('/users/:id', UserController.updateUserInfo);
+
+//------------------[ Reviews ]------------------
+
+router.get('/:userId/reviews', reviewController.getAllReviews);
 
 module.exports = router;
