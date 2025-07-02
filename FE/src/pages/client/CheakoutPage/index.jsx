@@ -674,7 +674,23 @@ export default function CheakoutPage() {
       }
 
       const payload = {
-        products: checkoutItems,
+        products: checkoutItems.map(item => ({
+          id: item.id,
+          user_id: item.user_id,
+          product_variant_id: item.product_variant_id,
+          quantity: item.quantity,
+          variant: {
+            id: item.product_variant_id,
+            sku: item.variant.sku || `SKU-${item.product_variant_id}`,
+            price: parseFloat(item.variant.price),
+            product: {
+              name: item.product?.name || "Không tên"
+            },
+            images: item.variant.images || [],
+            attributeValues: item.variant.attributeValues || []
+          }
+        }))
+        ,
         user_id: user.id,
         name: user.name,
         phone: user.phone,
@@ -686,11 +702,10 @@ export default function CheakoutPage() {
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
         amount: finalData.total,
-        orderId: `ORDER-${Date.now()}-${user.id}`,
+        orderId: `ORD-${Date.now()}`,
         orderDescription: `Thanh toan don hang cho ${user.name}`,
         orderType: 'other'
       };
-      console.log("Payload đặt hàng:", payload);
 
       if (selectedPaymentMethod === "VNPay") {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);

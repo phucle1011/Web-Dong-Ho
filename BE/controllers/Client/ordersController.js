@@ -7,10 +7,7 @@ const PromotionModel = require("../../models/promotionsModel");
 const ProductVariantModel = require("../../models/productVariantsModel");
 
 const requestIp = require('request-ip');
-const querystring = require("querystring");
 const moment = require('moment');
-const dateFormat = require('dateformat');
-const now = new Date();
 const { Op } = require("sequelize");
 const sequelize = require('../../config/database');
 
@@ -21,7 +18,6 @@ const { BACKEND_URL } = require("../../config/url");
 const { FRONTEND_URL } = require("../../config/url");
 
 const crypto = require("crypto");
-const { log } = require("console");
 
 class OrderController {
 
@@ -437,7 +433,8 @@ class OrderController {
             note,
             payment_method,
             shipping_fee,
-            promotion
+            promotion,
+            orderId
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -454,6 +451,7 @@ class OrderController {
 
             for (const item of products) {
                 const variant = item.variant;
+
                 if (!variant) {
                     return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
                 }
@@ -520,12 +518,16 @@ class OrderController {
             const finalTotalWithShipping = finalAmount + (parseFloat(shipping_fee) || 0);
 
             const simplifiedProducts = products.map(item => ({
-                product_id: item.variant.id,
-                price: parseFloat(item.variant.price),
+                variant: {
+                    id: item.variant.id,
+                    sku: item.variant.sku,
+                    price: parseFloat(item.variant.price)
+                },
                 quantity: item.quantity
             }));
 
-            const order_code = `ORD-${Date.now()}`;
+            const order_code = req.body.orderId;
+
             const extraData = Buffer.from(JSON.stringify({
                 user_id,
                 name,
@@ -536,7 +538,7 @@ class OrderController {
                 products: simplifiedProducts,
                 promotion,
                 orderId: order_code,
-                amount: finalAmount,
+                amount: finalTotalWithShipping,
                 originalAmount: totalPrice,
                 discountAmount: discountAmount,
                 shipping_fee: shipping_fee || 0
@@ -630,9 +632,9 @@ class OrderController {
         }
 
         const t = await sequelize.transaction();
-
         try {
             const decoded = JSON.parse(Buffer.from(extraData, "base64").toString("utf-8"));
+
             const {
                 user_id,
                 name,
@@ -642,67 +644,125 @@ class OrderController {
                 note,
                 products,
                 promotion,
-                originalAmount,
-                discountAmount,
                 shipping_fee
             } = decoded;
 
-            if (parseFloat(amount) !== parseFloat(decoded.amount)) {
-                console.error("Số tiền không khớp:", {
-                    momoAmount: amount,
-                    decodedAmount: decoded.amount
-                });
-                await t.rollback();
-                return res.status(400).json({ message: "Số tiền thanh toán không hợp lệ." });
-            }
+            let totalPrice = 0;
+            const detailedCart = [];
 
             for (const item of products) {
-                const productVariant = await ProductVariantModel.findByPk(item.product_id, {
-                    transaction: t,
-                    lock: t.LOCK.UPDATE
+                const variant = item.variant;
+                if (!variant) {
+                    console.error("Thiếu variant trong product:", item);
+                    await t.rollback();
+                    return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
+                }
+
+                const variantExists = await ProductVariantModel.findByPk(variant.id, { transaction: t });
+                if (!variantExists) {
+                    console.error("Biến thể sản phẩm không tồn tại:", variant.id);
+                    await t.rollback();
+                    return res.status(400).json({ message: "Biến thể sản phẩm không tồn tại." });
+                }
+
+                const price = parseFloat(variant.price);
+                totalPrice += price * item.quantity;
+                detailedCart.push({
+                    product_id: variant.id,
+                    name: variant.sku,
+                    price: price,
+                    quantity: item.quantity,
+                    total: price * item.quantity,
                 });
-
-                if (!productVariant) {
-                    await t.rollback();
-                    return res.status(400).json({ message: `Biến thể sản phẩm với ID ${item.product_id} không tồn tại.` });
-                }
-
-                if (productVariant.stock < item.quantity) {
-                    await t.rollback();
-                    return res.status(400).json({ message: `Sản phẩm ID ${item.product_id} không đủ số lượng tồn kho.` });
-                }
-
-                productVariant.stock -= item.quantity;
-                await productVariant.save({ transaction: t });
             }
 
-            const uniqueOrderCode = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            let selectedVoucher = null;
+            let discountAmount = 0;
 
-            const orderData = {
+            if (promotion) {
+                selectedVoucher = await PromotionModel.findByPk(promotion, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE,
+                });
+
+                if (selectedVoucher) {
+                    const now = new Date();
+                    if (
+                        selectedVoucher.status !== 'active' ||
+                        now < selectedVoucher.start_date ||
+                        now > selectedVoucher.end_date ||
+                        selectedVoucher.quantity <= 0 ||
+                        totalPrice < selectedVoucher.min_price_threshold
+                    ) {
+                        await t.rollback();
+                        return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
+                    }
+
+                    if (selectedVoucher.special_promotion) {
+                        const promoUser = await PromotionModel.findOne({
+                            where: {
+                                promotion_id: selectedVoucher.id,
+                                user_id,
+                                email_sent: true,
+                                used: { [Op.not]: true },
+                            },
+                            transaction: t,
+                            lock: t.LOCK.UPDATE,
+                        });
+
+                        if (!promoUser) {
+                            await t.rollback();
+                            return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
+                        }
+
+                        promoUser.used = true;
+                        await promoUser.save({ transaction: t });
+                    }
+
+                    if (selectedVoucher.discount_type === 'fixed') {
+                        discountAmount = Math.min(parseFloat(selectedVoucher.discount_value), totalPrice);
+                    } else if (selectedVoucher.discount_type === 'percentage') {
+                        const maxPrice = parseFloat(selectedVoucher.max_price || '999999999');
+                        discountAmount = Math.min(
+                            (totalPrice * parseFloat(selectedVoucher.discount_value)) / 100,
+                            maxPrice
+                        );
+                    }
+
+                    totalPrice -= discountAmount;
+
+                    selectedVoucher.quantity -= 1;
+                    await selectedVoucher.save({ transaction: t });
+                }
+            }
+            const finalTotalWithShipping = totalPrice + (parseFloat(shipping_fee) || 0);
+
+            if (parseFloat(amount) !== finalTotalWithShipping) {
+                console.error("Số tiền không khớp:", { amount, finalTotalWithShipping });
+                await t.rollback();
+                return res.status(400).json({ message: "Số tiền thanh toán không khớp với tổng tiền đơn hàng." });
+            }
+
+            const newOrder = await OrderModel.create({
                 user_id,
                 promotion_id: promotion || null,
+                name,
+                phone,
+                email,
+                address,
                 total_price: parseFloat(amount),
-                discount_amount: parseFloat(discountAmount) || 0,
                 payment_method: "Momo",
-                order_code: uniqueOrderCode,
+                order_code: orderId,
                 shipping_address: address,
                 note: note || "",
-                shipping_fee: shipping_fee || 0,
+                shipping_fee: parseFloat(shipping_fee) || 0,
                 status: "pending",
                 cancellation_reason: null,
                 shipping_code: null,
-            };
+                discount_amount: discountAmount,
+            }, { transaction: t });
 
-            const newOrder = await OrderModel.create(orderData, {
-                transaction: t,
-                validate: true
-            });
-
-            if (!newOrder || !newOrder.id) {
-                throw new Error("Không tạo được đơn hàng (newOrder null)");
-            }
-
-            const orderDetails = decoded.products.map((item) => ({
+            const orderDetails = detailedCart.map((item) => ({
                 order_id: newOrder.id,
                 product_variant_id: item.product_id,
                 quantity: item.quantity,
@@ -711,36 +771,15 @@ class OrderController {
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
-            if (promotion) {
-                await PromotionModel.decrement('quantity', {
-                    where: { id: promotion },
-                    transaction: t
-                });
-
-                if (decoded.isSpecialPromotion) {
-                    await PromotionModel.update(
-                        { used: true },
-                        {
-                            where: {
-                                promotion_id: promotion,
-                                user_id: user_id
-                            },
-                            transaction: t
-                        }
-                    );
-                }
-            }
-
-            const successfullyOrderedProductIds = products.map(p => p.variant?.id || p.product_id);
+            const successfullyOrderedProductIds = products.map(p => p.variant.id);
 
             await CartModel.destroy({
                 where: {
-                    user_id: user_id,
-                    product_variant_id: successfullyOrderedProductIds
+                    user_id,
+                    product_variant_id: successfullyOrderedProductIds,
                 },
                 transaction: t
             });
-
 
             await t.commit();
 
@@ -760,24 +799,10 @@ class OrderController {
                     successfullyOrderedProductIds
                 }
             });
-
         } catch (err) {
-            if (t && !t.finished) {
-                await t.rollback();
-            }
-
-            console.error("Lỗi xử lý IPN:", {
-                error: err.message,
-                errors: err.errors || [],
-                stack: err.stack,
-                receivedData: req.body
-            });
-
-            return res.status(500).json({
-                message: "Lỗi xử lý thông báo thanh toán.",
-                error: err.message,
-                details: err.errors || []
-            });
+            await t.rollback();
+            console.error("Lỗi xử lý ipn:", err);
+            return res.status(500).json({ message: "Lỗi xử lý thông báo thanh toán.", error: err.message });
         }
     }
 
@@ -789,7 +814,7 @@ class OrderController {
             'vnp_OrderInfo', 'vnp_Amount', 'vnp_ReturnUrl',
             'vnp_IpAddr', 'vnp_CreateDate', 'vnp_BankCode',
             'vnp_OrderType'
-        ].sort(); // Sắp xếp theo bảng chữ cái ASCII
+        ].sort();
         keys.forEach(key => {
             if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
                 ordered[key] = obj[key];
@@ -800,7 +825,6 @@ class OrderController {
 
     static async createVNPayUrl(req, res) {
         try {
-            // Validate environment variables
             const requiredEnvVars = ['VNPAY_TMN_CODE', 'VNPAY_HASH_SECRET', 'VNPAY_PAYMENT_URL', 'VNPAY_RETURN_URL'];
             for (const envVar of requiredEnvVars) {
                 if (!process.env[envVar]) {
@@ -808,26 +832,21 @@ class OrderController {
                 }
             }
 
-            // Get client IP
             let ipAddr = requestIp.getClientIp(req) || '127.0.0.1';
 
-            // Get config
             const tmnCode = process.env.VNPAY_TMN_CODE.trim();
             const secretKey = process.env.VNPAY_HASH_SECRET.trim();
             const vnpUrl = process.env.VNPAY_PAYMENT_URL.trim();
             const returnUrl = process.env.VNPAY_RETURN_URL.trim();
 
-            // Validate amount
             const amount = Math.floor(Number(req.body.amount));
             if (isNaN(amount) || amount <= 0 || amount > 9999999999) {
                 return res.status(400).json({ code: '03', message: 'Invalid amount' });
             }
 
-            // Create date and order ID
             const createDate = moment().format("YYYYMMDDHHmmss");
             const orderId = req.body.orderId || `VNPAY-${Date.now()}`;
 
-            // Process order info
             const orderInfo = (req.body.orderDescription || `Thanh toan don hang ${orderId}`)
                 .substring(0, 255);
 
@@ -847,23 +866,18 @@ class OrderController {
                 vnp_BankCode: req.body.bankCode || ''
             };
 
-            // Sắp xếp params
             const sortedParams = OrderController.sortObject(vnpParams);
 
-            // Tạo chuỗi ký
             const signData = Object.entries(sortedParams)
                 .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
                 .join('&');
 
-            // Tạo chữ ký
             const hmac = crypto.createHmac("sha512", secretKey);
             hmac.update(Buffer.from(signData, 'utf-8'));
             const signed = hmac.digest('hex');
 
-            // Thêm chữ ký vào params
             sortedParams.vnp_SecureHash = signed;
 
-            // Tạo URL
             const queryString = Object.entries(sortedParams)
                 .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
                 .join('&');
@@ -885,15 +899,12 @@ class OrderController {
 
     static async handleVNPayCallback(req, res) {
         try {
-            console.log('=== VNPay Callback Debug ===');
-            console.log('Query params:', req.query);
 
             const vnpParams = req.query;
             const secureHash = vnpParams.vnp_SecureHash;
             const orderId = vnpParams.vnp_TxnRef;
             const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
 
-            // Kiểm tra signature
             delete vnpParams.vnp_SecureHash;
             delete vnpParams.vnp_SecureHashType;
 
@@ -907,21 +918,19 @@ class OrderController {
             const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
             if (calculatedHash !== secureHash) {
-                console.error('❌ Signature mismatch!');
+                console.error('Signature mismatch!');
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
             }
 
-            // Kiểm tra trạng thái giao dịch
             if (vnpParams.vnp_ResponseCode !== '00') {
-                console.error('❌ Transaction failed with code:', vnpParams.vnp_ResponseCode);
+                console.error('Transaction failed with code:', vnpParams.vnp_ResponseCode);
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
             }
 
-            console.log('✅ Payment successful!');
             return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
 
         } catch (error) {
-            console.error('❌ Callback error:', error);
+            console.error('Callback error:', error);
             const orderId = req.query.vnp_TxnRef || 'unknown';
             return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Callback_error&orderId=${orderId}`);
         }
@@ -937,10 +946,9 @@ class OrderController {
                 },
             });
 
-            const currentDateTimeUTC = new Date(
-                currentDateTime.getTime() - 7 * 60 * 60 * 1000
-            );
+            const currentDateTimeUTC = new Date();
             const formattedDate = currentDateTimeUTC.toLocaleString("vi-VN", {
+                timeZone: "Asia/Ho_Chi_Minh",
                 hour12: false,
             });
             const formattedPrice = new Intl.NumberFormat("vi-VN").format(
