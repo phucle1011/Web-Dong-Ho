@@ -499,7 +499,7 @@ const [ratingCount, setRatingCount] = useState(0);
                   }
                   handleAddToCart(selectedVariant.id, quantity);
                 }}
-                className="black-btn text-sm font-semibold w-full h-full"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold w-full h-full"
               >
                 THÊM GIỎ HÀNG
               </button>
