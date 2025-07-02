@@ -17,6 +17,7 @@ export default function ProductCardStyleOne({ datas, type }) {
   const [selectedImage, setSelectedImage] = useState("");
   const [variantImages, setVariantImages] = useState([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
   const navigate = useNavigate();
 
   // Memoize product and variants
@@ -36,13 +37,17 @@ export default function ProductCardStyleOne({ datas, type }) {
     // Initialize states only if not set
     setSelectedImage((prev) => prev || firstImage);
     setVariantImages((prev) => prev.length === 0 ? variants.flatMap((v) => v.images || []) : prev);
-    
+
     if (validVariants.length > 0 && !selectedVariant) {
       const firstValid = validVariants[0];
       setSelectedVariant(firstValid);
       const firstVariantImages = firstValid.images || [];
       if (firstVariantImages.length > 0) {
         setSelectedImage(firstVariantImages[0].image_url || firstValid.thumbnail || firstImage);
+      }
+
+      if (selectedVariant) {
+        checkWishlistStatus(selectedVariant.id);
       }
     }
   }, [product.id, product.thumbnail, variants, selectedVariant]);
@@ -92,7 +97,7 @@ export default function ProductCardStyleOne({ datas, type }) {
     displayOriginalPrice = isNaN(displayOriginalPrice) ? 0 : Math.max(0, displayOriginalPrice);
     discountPercent = isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100 ? 0 : Math.round(discountPercent);
 
-    
+
 
     return { displayPrice, displayOriginalPrice, hasStock, discountPercent };
   }, [product, variants, selectedVariant, representativeVariant, totalStock]);
@@ -157,6 +162,98 @@ export default function ProductCardStyleOne({ datas, type }) {
     const newImages = variant.images || [];
     setVariantImages(newImages);
     setSelectedImage(newImages.length > 0 ? newImages[0].image_url || thumbnail : thumbnail);
+    checkWishlistStatus(variant.id);
+  };
+
+  const checkWishlistStatus = async (variantId) => {
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!token || !userId) {
+      setIsInWishlist(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const isInWishlist = response.data.data.some(
+        (item) => item.product_variant_id === variantId
+      );
+      setIsInWishlist(isInWishlist);
+      console.log("Wishlist status checked, isInWishlist:", isInWishlist);
+    } catch (error) {
+      setIsInWishlist(false);
+      console.error("Lỗi khi kiểm tra trạng thái wishlist:", error);
+      toast.error("Không thể kiểm tra trạng thái danh sách yêu thích.");
+    }
+  };
+
+  const handleAddToWishlist = async () => {
+    if (!selectedVariant) {
+      toast.error("Vui lòng chọn biến thể sản phẩm.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!token || !userId) {
+      toast.error("Bạn cần đăng nhập để thêm sản phẩm vào danh sách yêu thích.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${Constants.DOMAIN_API}/wishlist`, {
+        userId,
+        productVariantId: selectedVariant.id,
+      });
+      toast.success(response.data.message || "Đã thêm vào danh sách yêu thích!");
+      setIsInWishlist(true);
+      await checkWishlistStatus(selectedVariant.id);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi thêm vào danh sách yêu thích.";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleRemoveFromWishlist = async () => {
+    if (!selectedVariant) {
+      toast.error("Vui lòng chọn biến thể sản phẩm.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!token || !userId) {
+      toast.error("Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
+      return;
+    }
+
+    try {
+      const response = await axios.delete(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist/${selectedVariant.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.info(response.data.message || "Đã xóa khỏi danh sách yêu thích!");
+      setIsInWishlist(false);
+      await checkWishlistStatus(selectedVariant.id);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Lỗi khi xóa khỏi danh sách yêu thích.";
+      toast.error(errorMessage);
+    }
   };
 
   const QuickViewDialog = () =>
@@ -213,9 +310,8 @@ export default function ProductCardStyleOne({ datas, type }) {
                 <div
                   key={img.id || img.image_url}
                   onClick={() => setSelectedImage(img.image_url)}
-                  className={`w-[55px] h-[55px] p-1 border rounded-md cursor-pointer ${
-                    selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
-                  } hover:border-blue-400 transition-colors`}
+                  className={`w-[55px] h-[55px] p-1 border rounded-md cursor-pointer ${selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
+                    } hover:border-blue-400 transition-colors`}
                 >
                   <img
                     src={img.image_url}
@@ -253,9 +349,8 @@ export default function ProductCardStyleOne({ datas, type }) {
                     return (
                       <button
                         key={variant.id}
-                        className={`border rounded-md p-2 text-xs text-center transition ${
-                          inStock ? "cursor-pointer hover:bg-gray-100" : "opacity-50 cursor-not-allowed"
-                        } ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
+                        className={`border rounded-md p-2 text-xs text-center transition ${inStock ? "cursor-pointer hover:bg-gray-100" : "opacity-50 cursor-not-allowed"
+                          } ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
                         onClick={() => inStock && handleVariantSelect(variant)}
                         disabled={!inStock}
                       >
@@ -338,9 +433,8 @@ export default function ProductCardStyleOne({ datas, type }) {
             <button
               type="button"
               onClick={addToCart}
-              className={`w-full py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${
-                !hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`w-full py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${!hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             >
               Thêm giỏ hàng
@@ -389,9 +483,8 @@ export default function ProductCardStyleOne({ datas, type }) {
         <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
           <button
             type="button"
-            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full ${
-              !hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full ${!hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             onClick={addToCart}
           >
@@ -419,9 +512,8 @@ export default function ProductCardStyleOne({ datas, type }) {
           <div className="price-container group-hover:hidden">
             <p className="price flex items-center space-x-2">
               <span
-                className={`offer-price ${
-                  discountPercent > 0 ? "text-qred" : "text-qblack"
-                } font-600 text-[18px]`}
+                className={`offer-price ${discountPercent > 0 ? "text-qred" : "text-qblack"
+                  } font-600 text-[18px]`}
               >
                 {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
               </span>
@@ -450,9 +542,15 @@ export default function ProductCardStyleOne({ datas, type }) {
             <QuickViewIco className="w-5 h-5" />
           </span>
         </a>
-        <a href="#">
+        <a
+          // href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            isInWishlist ? handleRemoveFromWishlist() : handleAddToWishlist();
+          }}
+        >
           <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-            <ThinLove className="w-5 h-5" />
+            <ThinLove className="w-5 h-5" fill={isInWishlist ? "#FF0000" : "none"} stroke={isInWishlist ? "#FF0000" : "#000000"} />
           </span>
         </a>
         <a href="#">

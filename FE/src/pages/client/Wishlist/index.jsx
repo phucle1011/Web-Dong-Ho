@@ -67,11 +67,17 @@ export default function Wishlist({ wishlist = true }) {
     }
 
     try {
+      const payload = wishlistItems.map((item) => ({
+        product_variant_id: item.product_variant_id,
+        quantity: 1,
+      }));
+
       const response = await axios.post(
         `${Constants.DOMAIN_API}/users/${userId}/wishlist/add-to-cart`,
-        {},
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       toast.success(response.data.message || "Đã thêm tất cả sản phẩm vào giỏ hàng!");
     } catch (error) {
       const errorMessage =
@@ -98,7 +104,6 @@ export default function Wishlist({ wishlist = true }) {
       return;
     }
 
-    // Hiển thị dialog xác nhận với SweetAlert2
     const result = await Swal.fire({
       title: "Xác nhận xóa",
       text: "Bạn có chắc muốn xóa toàn bộ danh sách yêu thích?",
@@ -196,7 +201,7 @@ export default function Wishlist({ wishlist = true }) {
                     </div>
                   </button>
                   <div className="w-[180px] h-[50px]">
-                    {/* <button
+                    <button
                       type="button"
                       onClick={handleAddAllToCart}
                       className={`yellow-btn text-sm font-semibold w-full h-full ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -205,7 +210,7 @@ export default function Wishlist({ wishlist = true }) {
                       <div className="w-full text-sm font-semibold">
                         {isProcessing ? 'Đang xử lý...' : 'Thêm tất cả vào giỏ hàng'}
                       </div>
-                    </button> */}
+                    </button>
                   </div>
                 </div>
               </div>

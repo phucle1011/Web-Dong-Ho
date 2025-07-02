@@ -12,10 +12,13 @@ import axios from "axios";
 import Constants from "../../../../Constants";
 import { toast } from "react-toastify";
 import ReactDOM from "react-dom";
+import Wishlist from "../../Helpers/Wishlist";
+import { decodeToken } from "../../Helpers/jwtDecode";
 
 export default function Middlebar({ className, type }) {
   const [count, setCount] = useState(0);
   const [compareCount, setCompareCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
@@ -35,7 +38,27 @@ export default function Middlebar({ className, type }) {
       }
     };
 
+    const fetchWishlistCount = async () => {
+      const decoded = decodeToken(token);
+      const userId = decoded?.id;
+      if (!userId) {
+        // toast.error("Không thể xác định ID người dùng từ token.");
+        return;
+      }
+
+      try {
+        const response = await axios.get(`${Constants.DOMAIN_API}/users/${userId}/wishlist`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { userId },
+        });
+        setWishlistCount(response.data.data.length || 0);
+      } catch (err) {
+        // toast.error("Không thể lấy số lượng danh sách yêu thích.");
+      }
+    };
+
     fetchCount();
+    fetchWishlistCount();
   }, []);
 
   useEffect(() => {
@@ -167,27 +190,31 @@ export default function Middlebar({ className, type }) {
                 </Link>
                 {compareCount > 0 && (
                   <span
-                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
-                      type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                    }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                      }`}
                   >
                     {compareCount}
                   </span>
                 )}
               </div>
-              <div className="favorite relative">
+              <div className="cart-wrapper group relative py-4">
+                <div className="cart relative cursor-pointer">
                 <Link to="/wishlist">
                   <span>
                     <ThinLove />
                   </span>
                 </Link>
-                <span
-                  className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
-                    type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                  }`}
-                >
-                  1
-                </span>
+                  <span
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                      }`}
+                  >
+                    {wishlistCount}
+                  </span>
+                </div>
+                <Wishlist
+                  type={type}
+                  className="absolute -right-[45px] top-11 z-50 hidden group-hover:block"
+                />
               </div>
               <div className="cart-wrapper group relative py-4">
                 <div className="cart relative cursor-pointer">
@@ -197,9 +224,8 @@ export default function Middlebar({ className, type }) {
                     </span>
                   </Link>
                   <span
-                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${
-                      type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                    }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                      }`}
                   >
                     {count}
                   </span>

@@ -52,7 +52,6 @@ class AuthController {
 
       return successResponse(res, "Đăng nhập admin thành công!", { token }, 200);
     } catch (error) {
-      console.error("Lỗi khi đăng nhập admin:", error);
       return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
     }
   }

@@ -15,7 +15,7 @@ export const decodeToken = (token) => {
   }
 };
 
-const ProtectedRoute = ({ allowedRoles = [], children }) => {
+const ProtectedRoute = ({ allowedRoles = [], restrictedRoles = [], children }) => {
   const token = localStorage.getItem('token');
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,6 +39,12 @@ const ProtectedRoute = ({ allowedRoles = [], children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Kiểm tra xem user bị cấm không?
+  if (restrictedRoles.length && restrictedRoles.includes(decoded.role)) {
+    return <Navigate to="/" replace />; // Chuyển về trang chủ nếu là admin
+  }
+
+  // Kiểm tra quyền truy cập
   if (allowedRoles.length && !allowedRoles.includes(decoded.role)) {
     return <Navigate to="/" replace />;
   }

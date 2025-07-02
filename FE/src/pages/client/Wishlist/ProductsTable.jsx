@@ -71,16 +71,15 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
                 <th className="py-4 pl-10 w-[380px]">Sản phẩm</th>
                 <th className="py-4 text-center">Thuộc tính</th>
                 <th className="py-4 text-center">Giá</th>
-                <th className="py-4 text-center">Số lượng</th>
                 <th className="py-4 text-center">Tổng</th>
-                <th className="py-4 text-right pr-10">Hành động</th>
+                <th className="py-4 text-right pr-10"></th>
               </tr>
             </thead>
             <tbody>
               {products.map((item) => {
                 const product = item.variant?.product || {};
                 const price = item.variant?.price
-                  ? parseFloat(item.variant.price).toLocaleString("vi-VN") + " ₫"
+                  ? parseFloat(item.variant.price).toLocaleString("vi-VN") + "₫"
                   : "N/A";
                 const attributes =
                   item.variant?.attributeValues?.map(
@@ -111,11 +110,6 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
                     </td>
                     <td className="py-4 text-center">{attributes}</td>
                     <td className="py-4 text-center">{price}</td>
-                    <td className="py-4">
-                      <div className="flex justify-center items-center">
-                        <InputQuantityCom initialValue={1} disabled={true} />
-                      </div>
-                    </td>
                     <td className="text-center py-4">
                       <div className="flex space-x-1 items-center justify-center">
                         <span className="text-[15px] font-normal">{price}</span>

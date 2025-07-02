@@ -9,28 +9,28 @@ const BrandModel = connection.define('brands', {
     },
     name: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: false // Khớp với bảng
     },
     slug: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: false // Khớp với bảng
     },
     country: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true // Khớp với bảng
     },
     logo: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true // Khớp với bảng
     },
     description: {
         type: DataTypes.TEXT,
-        allowNull: false 
+        allowNull: true // Khớp với bảng, sửa từ false thành true
     },
     status: {
         type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,
-        defaultValue: 'active'
+        defaultValue: 'active' // Khớp với bảng
     }
 }, {
     tableName: 'brands',

@@ -1,212 +1,249 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import InputQuantityCom from "../../../Helpers/InputQuantityCom";
+import axios from "axios";
+import Constants from "../../../../../Constants";
+import { decodeToken } from "../../../Helpers/jwtDecode";
+import { toast } from "react-toastify";
+import Swal from "sweetalert2";
+import { FaTrashAlt } from "react-icons/fa";
+
 
 export default function WishlistTab({ className }) {
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const token = localStorage.getItem("token");
+  let userId = null;
+
+  if (token) {
+    const decoded = decodeToken(token);
+    if (decoded && decoded.id) {
+      userId = decoded.id;
+    }
+  }
+
+  // Lấy wishlist từ API
+  const fetchWishlist = async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/users/${userId}/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setWishlistItems(res.data.data || []);
+    } catch (error) {
+      console.error("Lỗi khi tải wishlist:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWishlist();
+  }, [userId]);
+
+  const handleRemove = async (wishlistItemId, productVariantId) => {
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập.");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Xác nhận xóa",
+      text: "Bạn có chắc muốn xóa sản phẩm này khỏi wishlist?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axios.delete(`${Constants.DOMAIN_API}/users/${userId}/wishlist/${productVariantId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Đã xóa sản phẩm khỏi wishlist!");
+      fetchWishlist(); // Làm mới danh sách
+    } catch (error) {
+      toast.error("Không thể xóa sản phẩm.");
+    }
+  };
+
+  // Xóa toàn bộ wishlist
+  const handleClearWishlist = async () => {
+    if (isProcessing || !userId) return;
+    setIsProcessing(true);
+
+    if (wishlistItems.length === 0) {
+      toast.info("Danh sách yêu thích trống!");
+      setIsProcessing(false);
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Xác nhận xóa",
+      text: "Bạn có chắc muốn xóa toàn bộ danh sách yêu thích?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Xóa",
+      cancelButtonText: "Hủy",
+    });
+
+    if (!result.isConfirmed) {
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      await axios.delete(`${Constants.DOMAIN_API}/users/${userId}/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setWishlistItems([]);
+      toast.success("Đã xóa toàn bộ danh sách yêu thích!");
+    } catch (error) {
+      toast.error("Không thể xóa danh sách yêu thích.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Thêm tất cả vào giỏ hàng
+  const handleAddAllToCart = async () => {
+    if (isProcessing || !userId) {
+      toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng.");
+      return;
+    }
+
+    if (wishlistItems.length === 0) {
+      toast.info("Danh sách yêu thích trống!");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      await axios.post(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist/add-to-cart`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Đã thêm tất cả sản phẩm vào giỏ hàng!");
+    } catch (error) {
+      toast.error("Không thể thêm sản phẩm vào giỏ hàng.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return <div>Đang tải dữ liệu...</div>;
+  }
+
   return (
     <>
       <div className={`w-full ${className || ""}`}>
         <div className="relative w-full overflow-x-auto border border-[#EDEDED]">
           <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead>
+              <tr className="text-[13px] font-medium text-black bg-[#F6F6F6] uppercase border-b">
+                <th className="py-4 pl-10 w-[380px]">Sản phẩm</th>
+                <th className="py-4 text-center">Tình trạng</th>
+                <th className="py-4 text-center">Giá</th>
+                <th className="py-4 text-center">Tổng</th>
+                <th className="py-4 text-right pr-10"></th>
+              </tr>
+            </thead>
             <tbody>
-              {/* table heading */}
-              <tr className="text-[13px] font-medium text-black bg-[#F6F6F6] whitespace-nowrap px-2 border-b default-border-bottom uppercase">
-                <td className="py-4 pl-10 block whitespace-nowrap  w-[380px]">
-                  product
-                </td>
-                <td className="py-4 whitespace-nowrap text-center">
-                  stock status
-                </td>
-                <td className="py-4 whitespace-nowrap text-center">price</td>
-                <td className="py-4 whitespace-nowrap  text-center">
-                  quantity
-                </td>
-                <td className="py-4 whitespace-nowrap  text-center">total</td>
-                <td className="py-4 whitespace-nowrap text-right w-[114px] block"></td>
-              </tr>
-              {/* table heading end */}
-              <tr className="bg-white border-b hover:bg-gray-50">
-                <td className="pl-10  py-4 ">
-                  <div className="flex space-x-6 items-center">
-                    <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">
-                      <img
-                        src={`${
-                          process.env.REACT_APP_PUBLIC_URL
-                        }/assets/images/product-img-1.jpg`}
-                        alt="product"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="flex-1 flex flex-col">
-                      <p className="font-medium text-[15px] text-qblack">
-                        iPhone 12 Pro Max 128GB
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-2">
-                  <span className="text-[15px] font-normal">In Stock(23)</span>
-                </td>
-                <td className="text-center py-4 px-2">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span className="text-[15px] font-normal">$38</span>
-                  </div>
-                </td>
-                <td className=" py-4">
-                  <div className="flex justify-center items-center">
-                    <InputQuantityCom />
-                  </div>
-                </td>
-                <td className="text-right py-4">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span className="text-[15px] font-normal">$38</span>
-                  </div>
-                </td>
-                <td className="text-right py-4">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span>
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 10 10"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M9.7 0.3C9.3 -0.1 8.7 -0.1 8.3 0.3L5 3.6L1.7 0.3C1.3 -0.1 0.7 -0.1 0.3 0.3C-0.1 0.7 -0.1 1.3 0.3 1.7L3.6 5L0.3 8.3C-0.1 8.7 -0.1 9.3 0.3 9.7C0.7 10.1 1.3 10.1 1.7 9.7L5 6.4L8.3 9.7C8.7 10.1 9.3 10.1 9.7 9.7C10.1 9.3 10.1 8.7 9.7 8.3L6.4 5L9.7 1.7C10.1 1.3 10.1 0.7 9.7 0.3Z"
-                          fill="#AAAAAA"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </td>
-              </tr>
-              <tr className="bg-white border-b hover:bg-gray-50">
-                <td className="pl-10  py-4  w-[380px]">
-                  <div className="flex space-x-6 items-center">
-                    <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">
-                      <img
-                        src={`${
-                          process.env.REACT_APP_PUBLIC_URL
-                        }/assets/images/product-img-2.jpg`}
-                        alt="product"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="flex-1 flex flex-col">
-                      <p className="font-medium text-[15px] text-qblack">
-                        iPhone 12 Pro Max 128GB
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-2">
-                  <span className="text-[15px] font-normal">In Stock(23)</span>
-                </td>
-                <td className="text-center py-4 px-2">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span className="text-[15px] font-normal">$38</span>
-                  </div>
-                </td>
-                <td className=" py-4">
-                  <div className="flex justify-center items-center">
-                    <InputQuantityCom />
-                  </div>
-                </td>
-                <td className="text-right py-4">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span className="text-[15px] font-normal">$38</span>
-                  </div>
-                </td>
-                <td className="text-right py-4">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span>
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 10 10"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M9.7 0.3C9.3 -0.1 8.7 -0.1 8.3 0.3L5 3.6L1.7 0.3C1.3 -0.1 0.7 -0.1 0.3 0.3C-0.1 0.7 -0.1 1.3 0.3 1.7L3.6 5L0.3 8.3C-0.1 8.7 -0.1 9.3 0.3 9.7C0.7 10.1 1.3 10.1 1.7 9.7L5 6.4L8.3 9.7C8.7 10.1 9.3 10.1 9.7 9.7C10.1 9.3 10.1 8.7 9.7 8.3L6.4 5L9.7 1.7C10.1 1.3 10.1 0.7 9.7 0.3Z"
-                          fill="#AAAAAA"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </td>
-              </tr>
-              <tr className="bg-white border-b hover:bg-gray-50">
-                <td className="pl-10  py-4  w-[380px]">
-                  <div className="flex space-x-6 items-center">
-                    <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">
-                      <img
-                        src={`${
-                          process.env.REACT_APP_PUBLIC_URL
-                        }/assets/images/product-img-3.jpg`}
-                        alt="product"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div className="flex-1 flex flex-col">
-                      <p className="font-medium text-[15px] text-qblack">
-                        iPhone 12 Pro Max 128GB
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-2">
-                  <span className="text-[15px] font-normal">In Stock(23)</span>
-                </td>
-                <td className="text-center py-4 px-2">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span className="text-[15px] font-normal">$38</span>
-                  </div>
-                </td>
-                <td className=" py-4">
-                  <div className="flex justify-center items-center">
-                    <InputQuantityCom />
-                  </div>
-                </td>
-                <td className="text-right py-4">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span className="text-[15px] font-normal">$38</span>
-                  </div>
-                </td>
-                <td className="text-right py-4">
-                  <div className="flex space-x-1 items-center justify-center">
-                    <span>
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 10 10"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M9.7 0.3C9.3 -0.1 8.7 -0.1 8.3 0.3L5 3.6L1.7 0.3C1.3 -0.1 0.7 -0.1 0.3 0.3C-0.1 0.7 -0.1 1.3 0.3 1.7L3.6 5L0.3 8.3C-0.1 8.7 -0.1 9.3 0.3 9.7C0.7 10.1 1.3 10.1 1.7 9.7L5 6.4L8.3 9.7C8.7 10.1 9.3 10.1 9.7 9.7C10.1 9.3 10.1 8.7 9.7 8.3L6.4 5L9.7 1.7C10.1 1.3 10.1 0.7 9.7 0.3Z"
-                          fill="#AAAAAA"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </td>
-              </tr>
+              {wishlistItems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-gray-500">
+                    Danh sách yêu thích trống!
+                  </td>
+                </tr>
+              ) : (
+                wishlistItems.map((item) => {
+                  const product = item.variant?.product || {};
+                  const price = item.variant?.price
+                    ? parseFloat(item.variant.price).toLocaleString("vi-VN") + "₫"
+                    : "N/A";
+                  const attributes =
+                    item.variant?.attributeValues?.map(
+                      (av) => `${av.attribute?.name || "Thuộc tính"}: ${av.value}`
+                    ).join(", ") || "Chưa có thuộc tính";
+                  const imageUrl =
+                    item.variant?.images?.[0]?.image_url ||
+                    product.thumbnail ||
+                    "/default-image.jpg";
+
+                  return (
+                    <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
+                      <td className="pl-10 py-4 w-[380px]">
+                        <div className="flex space-x-6 items-center">
+                          <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">
+                            <img
+                              src={imageUrl}
+                              alt={product.name || "Sản phẩm"}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col">
+                            <p className="font-medium text-[15px] text-qblack">
+                              {product.name || "Sản phẩm không xác định"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 text-center">Còn hàng</td>
+                      <td className="py-4 text-center">{price}</td>
+                      <td className="text-center py-4">{price}</td>
+                      <td className="py-4 text-right pr-10">
+                        <button
+                          onClick={() => handleRemove(item.id, item.product_variant_id)}
+                          type="button"
+                          className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                          title="Xóa khỏi danh sách yêu thích"
+                        >
+                          <FaTrashAlt size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
       <div className="w-full mt-[30px] flex sm:justify-end justify-start">
         <div className="sm:flex sm:space-x-[30px] items-center">
-          <button type="button">
+          <button
+            type="button"
+            onClick={handleClearWishlist}
+            disabled={isProcessing}
+            className={`${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
             <div className="w-full text-sm font-semibold text-qred mb-5 sm:mb-0">
-              Clean Wishlist
+              {isProcessing ? "Đang xử lý..." : "Xóa toàn bộ"}
             </div>
           </button>
           <div className="w-[180px] h-[50px]">
-            <button type="button" className="yellow-btn">
+            <button
+              type="button"
+              onClick={handleAddAllToCart}
+              disabled={isProcessing}
+              className={`yellow-btn w-full h-full ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
               <div className="w-full text-sm font-semibold">
-                Add to Cart All
+                {isProcessing ? "Đang xử lý..." : "Thêm tất cả vào giỏ hàng"}
               </div>
             </button>
           </div>

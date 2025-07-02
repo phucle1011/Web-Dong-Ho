@@ -5,6 +5,7 @@ const UserModel = require('../../models/usersModel');
 const ProductVariantAttributeValueModel = require("../../models/productVariantAttributeValuesModel");
 const ProductAttributeModel = require("../../models/productAttributesModel");
 const VariantImageModel = require("../../models/variantImagesModel");
+const CartModel = require("../../models/cartDetailsModel");
 
 const { Op } = require('sequelize');
 

@@ -221,6 +221,41 @@ const AppRoutes = () => {
       </Route>
 
       <Route path="/*" element={<FourZeroFour />} />
+      {/*--------------------ADMIN-------------------- */}
+      {/* <Route
+        path="/checkout"
+        element={
+          <ProtectedRoute restrictedRoles={["admin"]}>
+            <CheakoutPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wishlist"
+        element={
+          <ProtectedRoute restrictedRoles={["admin"]}>
+            <Wishlist />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/cart"
+        element={
+          <ProtectedRoute restrictedRoles={["admin"]}>
+            <CardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute allowedRoles={["user", "admin"]} restrictedRoles={["admin"]}>
+            <Profile />
+          </ProtectedRoute>
+        }
+      /> */}
     </Routes>
   );
 };

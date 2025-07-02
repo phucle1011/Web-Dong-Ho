@@ -73,7 +73,7 @@ class BrandController {
 
     static async create(req, res) {
         try {
-            const { name, slug, country, description, status, logo } = req.body; // Thêm 'logo'
+            const { name, slug, country, description, status, logo } = req.body;
 
             let errors = {};
 
@@ -93,11 +93,18 @@ class BrandController {
                 errors.status = "Trạng thái không hợp lệ.";
             }
 
+            if (logo !== undefined && (
+                typeof logo !== 'string' ||
+                !/^https?:\/\//.test(logo)
+            )) {
+                errors.logo = "Logo phải là URL hợp lệ.";
+            }
+
             if (Object.keys(errors).length > 0) {
                 return res.status(400).json({
                     status: 400,
                     message: "Dữ liệu không hợp lệ.",
-                    errors
+                    errors,
                 });
             }
 
@@ -111,7 +118,7 @@ class BrandController {
                 return res.status(400).json({
                     status: 400,
                     message: "Thương hiệu đã tồn tại với tên hoặc slug này.",
-                    errors: { name: "Tên thương hiệu này đã tồn tại." }
+                    errors: { name: "Tên thương hiệu này đã tồn tại." },
                 });
             }
 
@@ -121,7 +128,7 @@ class BrandController {
                 country: cleanCountry,
                 description: cleanDescription,
                 status,
-                logo: logo || null // <-- Nhận URL từ Cloudinary
+                logo: logo || null,
             });
 
             res.status(201).json({
@@ -132,8 +139,9 @@ class BrandController {
         } catch (error) {
             console.error("Lỗi trong hàm tạo thương hiệu:", error);
             res.status(500).json({
+                status: 500,
                 message: "Lỗi nội bộ máy chủ khi tạo thương hiệu.",
-                error: error.message
+                error: error.message,
             });
         }
     }

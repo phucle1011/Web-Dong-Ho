@@ -1,9 +1,8 @@
-// src/components/ConfirmLogoutModal.js
 import React from "react";
 
 export default function ConfirmLogoutModal({ onConfirm, onCancel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 w-screen h-screen">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Xác nhận đăng xuất</h3>
         <p className="text-sm text-gray-600 mb-6">Bạn có chắc chắn muốn đăng xuất?</p>

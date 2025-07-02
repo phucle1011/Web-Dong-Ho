@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import datas from "../../../../data/products.json";
 import BreadcrumbCom from "../../BreadcrumbCom";
 import Layout from "../../Partials/LayoutHomeThree";
@@ -22,12 +22,16 @@ import ProfileTab from "./tabs/ProfileTab";
 import ReviewTab from "./tabs/ReviewTab";
 import SupportTab from "./tabs/SupportTab";
 import WishlistTab from "./tabs/WishlistTab";
+import ConfirmLogoutModal from "../../../../components/client/Confirm/ConfirmLogoutModal";
+
 
 export default function Profile() {
   const [switchDashboard, setSwitchDashboard] = useState(false);
   const location = useLocation();
   const getHashContent = location.hash.split("#");
   const [active, setActive] = useState("dashboard");
+  const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   useEffect(() => {
     setActive(
       getHashContent && getHashContent.length > 1
@@ -35,6 +39,22 @@ export default function Profile() {
         : "dashboard"
     );
   }, [getHashContent]);
+
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("tokenExpire");
+    setShowLogoutModal(false);
+    navigate("/");
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="profile-page-wrapper w-full">
@@ -163,14 +183,16 @@ export default function Profile() {
                       </Link>
                     </div> */}
                     <div className="item group">
-                      <Link to="/profile#profile">
-                        <div className="flex space-x-3 items-center text-qgray hover:text-qblack">
-                          <span>
-                            <IcoLogout />
-                          </span>
-                          <span className=" font-normal text-base">
-                            Đăng xuất
-                          </span>
+                      <Link
+                        to="/login"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleLogout();
+                        }}
+                      >
+                        <div className="flex space-x-3 items-center text-qgray hover:text-qblack cursor-pointer">
+                          <span><IcoLogout /></span>
+                          <span className="font-normal text-base">Đăng xuất</span>
                         </div>
                       </Link>
                     </div>
@@ -221,6 +243,12 @@ export default function Profile() {
             </div>
           </div>
         </div>
+        {showLogoutModal && (
+          <ConfirmLogoutModal
+            onConfirm={confirmLogout}
+            onCancel={cancelLogout}
+          />
+        )}
       </div>
     </Layout>
   );

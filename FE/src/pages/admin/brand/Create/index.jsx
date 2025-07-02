@@ -92,22 +92,42 @@ function BrandCreate() {
         setLoading(true);
 
         let logoUrl = null;
-
-        // Upload ảnh lên Cloudinary nếu có chọn file
         if (logoFile) {
           try {
             logoUrl = await uploadToCloudinary(logoFile);
+            if (!logoUrl) {
+              toast.error("Lỗi: Không nhận được URL từ Cloudinary");
+              setLoading(false);
+              return;
+            }
           } catch (err) {
-            toast.error("Lỗi khi upload ảnh lên Cloudinary");
+            toast.error("Lỗi khi upload ảnh lên Cloudinary: " + err.message);
             setLoading(false);
             return;
           }
         }
 
+        // Kiểm tra dữ liệu trước khi gửi
+        if (!formData.name || formData.name.trim() === '') {
+          setError("name", { type: "required", message: "Tên không được để trống" });
+          setLoading(false);
+          return;
+        }
+        if (!formData.country || formData.country === '') {
+          setError("country", { type: "required", message: "Quốc gia là bắt buộc" });
+          setLoading(false);
+          return;
+        }
+        if (!formData.status || !['active', 'inactive'].includes(formData.status)) {
+          setError("status", { type: "required", message: "Trạng thái không hợp lệ" });
+          setLoading(false);
+          return;
+        }
+
         const brandData = {
           ...formData,
           slug: generateSlug(formData.name),
-          logo: logoUrl, // Gửi URL ảnh đã upload
+          logo: logoUrl?.url || null,
         };
 
         try {
@@ -122,10 +142,9 @@ function BrandCreate() {
             reset();
             setLogoFile(null);
             navigate("/admin/brand/getAll");
-          } else {
-            toast.error(res.data.message || "Lỗi khi thêm thương hiệu.");
           }
         } catch (error) {
+          console.error("Lỗi từ server:", error.response?.data);
           const errRes = error.response?.data;
           if (errRes?.errors) {
             Object.entries(errRes.errors).forEach(([key, msg]) => {
