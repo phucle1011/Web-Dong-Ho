@@ -111,12 +111,12 @@ export default function Blog() {
                     </div>
                   </div>
                   <h2 className="text-[24px] font-semibold mb-4">{blog.title}</h2>
-                  <p
-                    className="text-base text-qgray leading-7"
-                    style={{ textAlign: "justify" }}
-                  >
-                    {blog.content.replace(/<[^>]+>/g, "")}
-                  </p>
+<div
+  className="text-base text-qgray leading-7"
+  style={{ textAlign: "justify" }}
+  dangerouslySetInnerHTML={{ __html: blog.content }}
+/>
+
 
                 </div>
               </div>

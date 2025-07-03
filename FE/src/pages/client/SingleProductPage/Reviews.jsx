@@ -28,7 +28,7 @@ const ProductReviewSection = () => {
     const storedOrderDetailId = sessionStorage.getItem("pendingReviewOrderDetailId");
     if (storedOrderDetailId) {
       setOrderDetailId(storedOrderDetailId);
-      sessionStorage.removeItem("pendingReviewOrderDetailId"); 
+      sessionStorage.removeItem("pendingReviewOrderDetailId");
     }
   }, []);
 
@@ -118,7 +118,7 @@ const ProductReviewSection = () => {
       e.target.value = null;
       return;
     }
-    
+
     // Kiểm tra từng hình ảnh xem có phải là đồng hồ không
     for (const file of files) {
       const isWatch = await isWatchImage(file);
@@ -139,160 +139,143 @@ const ProductReviewSection = () => {
 
 
   const handleImageUploads = async (files) => {
-  const urls = [];
+    const urls = [];
 
-  for (const file of files) {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "duantotnghiep_preset");
-    formData.append("cloud_name", "ddkqka4b4");
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "duantotnghiep_preset");
+      formData.append("cloud_name", "ddkqka4b4");
 
-    try {
-      const res = await fetch("https://api.cloudinary.com/v1_1/ddkqka4b4/image/upload", {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        const res = await fetch("https://api.cloudinary.com/v1_1/ddkqka4b4/image/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (data.secure_url) {
-        urls.push(data.secure_url); // Chỉ thêm 1 lần
+        if (data.secure_url) {
+          urls.push(data.secure_url); // Chỉ thêm 1 lần
+        }
+      } catch (err) {
+        console.error("Lỗi upload ảnh:", err);
+        Swal.fire({
+          icon: "error",
+          title: "Lỗi tải ảnh",
+          text: "Không thể tải ảnh lên Cloudinary. Vui lòng thử lại.",
+        });
+        return null; // dừng luôn nếu 1 ảnh lỗi
       }
-    } catch (err) {
-      console.error("Lỗi upload ảnh:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Lỗi tải ảnh",
-        text: "Không thể tải ảnh lên Cloudinary. Vui lòng thử lại.",
-      });
-      return null; // dừng luôn nếu 1 ảnh lỗi
     }
+
+    return urls;
+  };
+
+
+
+
+ const reviewAction = async () => {
+  if (!message || rating === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Thiếu thông tin",
+      text: "Vui lòng nhập nội dung và chọn số sao trước khi gửi.",
+    });
+    return;
   }
 
-  return urls;
-};
+  try {
+    const response = await fetch("/badword.txt");
+    const text = await response.text();
 
+    const badWordsVi = text
+      .split("\n")
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0 && !word.startsWith("#"));
 
+    const filter = new Filter();
+    filter.addWords(...badWordsVi);
 
-
-  const reviewAction = async () => {
-    if (!message || rating === 0) {
+    if (filter.isProfane(message)) {
       Swal.fire({
-        icon: "warning",
-        title: "Thiếu thông tin", 
-        text: "Vui lòng nhập nội dung và chọn số sao trước khi gửi.",
+        icon: "error",
+        title: "Ngôn ngữ không phù hợp",
+        text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.",
       });
       return;
     }
 
-    try {
-      const response = await fetch("/badword.txt");
-      const text = await response.text();
-
-      const badWordsVi = text
-        .split("\n")
-        .map((word) => word.trim())
-        .filter((word) => word.length > 0 && !word.startsWith("#"));
-
-      const filter = new Filter();
-      filter.addWords(...badWordsVi);
-
-      if (filter.isProfane(message)) {
-        Swal.fire({
-          icon: "error",
-          title: "Ngôn ngữ không phù hợp",
-          text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.",
-        });
-        return;
-      }
-
-      if (!orderDetailId) {
-        Swal.fire({
-          icon: "error",
-          title: "Thiếu mã đơn hàng",
-          text: "Không thể gửi đánh giá do thiếu mã chi tiết đơn hàng.",
-        });
-        return;
-      }
-
-      setReviewLoading(true);
-      let imageUrls = [];
-
-      if (imageFiles?.length > 0) {
-        const thumbnail = comments[0]?.orderDetail?.variant?.product?.thumbnail;
-        if (!thumbnail) {
-          Swal.fire({
-            icon: "error",
-            title: "Không có ảnh sản phẩm",
-            text: "Không tìm thấy ảnh sản phẩm để so sánh.",
-          });
-          return;
-        }
-
-        imageUrls = await handleImageUploads(imageFiles);
-if (!imageUrls) {
-  setReviewLoading(false);
-  return;
-}
-
-      }
-
-      const existingComment = comments.find(
-        (c) => c.user_id === userId && c.order_detail_id == orderDetailId
-      );
-
-      try {
-        if (existingComment) {
-          if (existingComment.edited) {
-            Swal.fire("Không thể gửi", "Bạn chỉ được chỉnh sửa đánh giá một lần.", "warning");
-            return;
-          }
-
-          await axios.put(`http://localhost:5000/comments/${existingComment.id}`, {
-            rating,
-            comment_text: message,
-            images: imageUrls,
-            edited: true
-          });
-
-          Swal.fire("Đã cập nhật đánh giá", "", "success");
-        } else {
-          const payload = {
-            user_id: userId,
-            rating,
-            comment_text: message,
-            order_detail_id: Number(orderDetailId),
-            images: imageUrls,
-          };
-          await axios.post("http://localhost:5000/comments", payload);
-          Swal.fire("Đánh giá thành công!", "Cảm ơn bạn đã đánh giá.", "success");
-        }
-
-        setMessage("");
-        setRating(0);
-        setHoverRating(0);
-        setImageFiles([]);
-        setOrderDetailId(null);
-        fetchComments();
-      } catch (error) {
-        console.error("Lỗi khi gửi/chỉnh sửa bình luận:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Lỗi",
-          text: "Lỗi khi gửi đánh giá. Vui lòng thử lại.",
-        });
-      } finally {
-        setReviewLoading(false);
-      }
-    } catch (error) {
-      console.error("Lỗi khi đọc tệp từ khóa:", error);
+    if (!orderDetailId) {
       Swal.fire({
         icon: "error",
-        title: "Lỗi",
-        text: "Không thể kiểm tra từ ngữ không phù hợp. Vui lòng thử lại sau.",
+        title: "Thiếu mã đơn hàng",
+        text: "Không thể gửi đánh giá do thiếu mã chi tiết đơn hàng.",
       });
+      return;
     }
-  };
+
+    setReviewLoading(true);
+    let imageUrls = [];
+
+    // ✅ Chỉ upload ảnh nếu có, không cần so sánh với ảnh sản phẩm
+    if (imageFiles?.length > 0) {
+      imageUrls = await handleImageUploads(imageFiles);
+      if (!imageUrls) {
+        setReviewLoading(false);
+        return;
+      }
+    }
+
+    const existingComment = comments.find(
+      (c) => c.user_id === userId && c.order_detail_id == orderDetailId
+    );
+
+    if (existingComment) {
+      if (existingComment.edited) {
+        Swal.fire("Không thể gửi", "Bạn chỉ được chỉnh sửa đánh giá một lần.", "warning");
+        return;
+      }
+
+      await axios.put(`http://localhost:5000/comments/${existingComment.id}`, {
+        rating,
+        comment_text: message,
+        images: imageUrls,
+        edited: true,
+      });
+
+      Swal.fire("Đã cập nhật đánh giá", "", "success");
+    } else {
+      const payload = {
+        user_id: userId,
+        rating,
+        comment_text: message,
+        order_detail_id: Number(orderDetailId),
+        images: imageUrls,
+      };
+      await axios.post("http://localhost:5000/comments", payload);
+      Swal.fire("Đánh giá thành công!", "Cảm ơn bạn đã đánh giá.", "success");
+    }
+
+    // Reset form
+    setMessage("");
+    setRating(0);
+    setHoverRating(0);
+    setImageFiles([]);
+    setOrderDetailId(null);
+    fetchComments();
+  } catch (error) {
+    console.error("Lỗi khi gửi/chỉnh sửa bình luận:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Lỗi",
+      text: "Đã xảy ra lỗi. Vui lòng thử lại.",
+    });
+  } finally {
+    setReviewLoading(false);
+  }
+};
+
 
   const renderStars = (rating) => [...Array(5)].map((_, i) => (
     <span key={i} style={{ color: i < rating ? "#FFA500" : "#ccc", fontSize: "20px" }}>★</span>
@@ -413,34 +396,34 @@ if (!imageUrls) {
                         <source src={media.image_url} type="video/mp4" />
                       </video>
                     ) : (
-                     
-              <img
-  key={idx}
-  src={media.image_url}
-  alt={`comment-img-${idx}`}
-  className="w-28 h-28 rounded-md object-cover cursor-pointer hover:opacity-80 transition"
-  onClick={() => setSelectedImage(media.image_url)}
-/>
 
-            )
-          )}
-        </div>
-      )}
+                      <img
+                        key={idx}
+                        src={media.image_url}
+                        alt={`comment-img-${idx}`}
+                        className="w-28 h-28 rounded-md object-cover cursor-pointer hover:opacity-80 transition"
+                        onClick={() => setSelectedImage(media.image_url)}
+                      />
 
-      {/* Trả lời (nếu có) */}
-      {comment.replys?.length > 0 && (
-        <div className="pl-4 border-l mt-4 space-y-3">
-          {comment.replys.map((reply) => (
-            <div key={reply.id}>
-              <strong>{reply.author}</strong>
-              <p className="text-sm text-gray-600">{reply.comment_text}</p>
+                    )
+                  )}
+                </div>
+              )}
+
+              {/* Trả lời (nếu có) */}
+              {comment.replys?.length > 0 && (
+                <div className="pl-4 border-l mt-4 space-y-3">
+                  {comment.replys.map((reply) => (
+                    <div key={reply.id}>
+                      <strong>{reply.author}</strong>
+                      <p className="text-sm text-gray-600">{reply.comment_text}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-))}
+          </div>
+        ))}
 
 
       </div>

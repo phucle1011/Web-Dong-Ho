@@ -73,19 +73,35 @@ class BlogController {
   }
 
   static async update(req, res) {
-    try {
-      const id = req.params.id;
-      const { user_id, title, image_url, content } = req.body;
+  try {
+    const id = req.params.id;
+    const {
+      user_id,
+      title,
+      image_url,
+      content,
+      meta_description,
+      focus_keyword
+    } = req.body;
 
-      const blog = await Blog.findByPk(id);
-      if (!blog) return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+    const blog = await Blog.findByPk(id);
+    if (!blog) return res.status(404).json({ message: 'Không tìm thấy bài viết' });
 
-      await blog.update({ user_id, title, image_url, content });
-      res.json({ message: 'Cập nhật thành công', blog });
-    } catch (error) {
-      res.status(500).json({ message: 'Lỗi khi cập nhật bài viết', error: error.message });
-    }
+    await blog.update({
+      user_id,
+      title,
+      image_url,
+      content,
+      meta_description,
+      focus_keyword
+    });
+
+    res.json({ message: 'Cập nhật thành công', blog });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi khi cập nhật bài viết', error: error.message });
   }
+}
+
 
   static async delete(req, res) {
     try {
