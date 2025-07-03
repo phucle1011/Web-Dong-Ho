@@ -18,6 +18,7 @@ const { BACKEND_URL } = require("../../config/url");
 const { FRONTEND_URL } = require("../../config/url");
 
 const crypto = require("crypto");
+const { log } = require("console");
 
 const mongoose = require('mongoose');
 
@@ -345,7 +346,7 @@ class OrderController {
                     }
 
                     if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionModel.findOne({
+                        const promoUser = await PromotionUserModel.findOne({
                             where: {
                                 promotion_id: selectedVoucher.id,
                                 user_id,
@@ -543,9 +544,9 @@ class OrderController {
             }
 
             if (specialDiscount > 0) {
-    specialDiscount = Math.min(specialDiscount, finalAmount);
-    finalAmount -= specialDiscount;
-}
+                specialDiscount = Math.min(specialDiscount, finalAmount);
+                finalAmount -= specialDiscount;
+            }
 
             const finalTotalWithShipping = finalAmount + (parseFloat(shipping_fee) || 0);
 

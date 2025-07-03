@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
+import { FaArrowUp } from "react-icons/fa";
 
 function PromotionCreate() {
   const navigate = useNavigate();
@@ -74,7 +75,22 @@ function PromotionCreate() {
 
   const userOptions = users.map((user) => ({
     value: user.id,
-    label: user.name || user.email || `User ${user.id}`,
+    label: (
+      <div className="flex items-center justify-between gap-2">
+        <span>
+          {user.name || user.email}{" "}
+          <span className="text-sm">
+            (
+            <FaArrowUp className="inline text-green-600 mr-1" />
+            <span className="text-green-600">{user.total_orders} đơn</span> -{" "}
+            <span className="text-yellow-500">
+              {user.total_spent_in_month.toLocaleString("vi-VN")}₫
+            </span>
+            )
+          </span>
+        </span>
+      </div>
+    ),
   }));
 
   function formatDateToLocalISO(date) {
@@ -442,7 +458,7 @@ function PromotionCreate() {
 
           <button
             onClick={() => navigate("/admin/promotions/getAll")}
-             className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 mt-2 text-center"
+            className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 mt-2 text-center"
           >
             Quay lại
           </button>
