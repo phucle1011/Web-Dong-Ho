@@ -78,7 +78,6 @@ import AttributeCreate from "./pages/admin/product/attribute/create";
 
 
 
-
 // Protected Route
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
 
@@ -114,7 +113,7 @@ const AppRoutes = () => {
         <Route path="/blogs" element={<Blogs />} />
         <Route path="/blogs/:id" element={<Blog />} />
         <Route path="/cart" element={<CardPage />} />
-        <Route path="/checkout" element={<CheakoutPage />} />
+        {/* <Route path="/checkout" element={<CheakoutPage />} /> */}
         <Route path="/contact" element={<Contact />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/flash-sale" element={<FlashSale />} />
@@ -222,7 +221,7 @@ const AppRoutes = () => {
 
       <Route path="/*" element={<FourZeroFour />} />
       {/*--------------------ADMIN-------------------- */}
-      {/* <Route
+      <Route
         path="/checkout"
         element={
           <ProtectedRoute restrictedRoles={["admin"]}>
@@ -255,7 +254,7 @@ const AppRoutes = () => {
             <Profile />
           </ProtectedRoute>
         }
-      /> */}
+      />
     </Routes>
   );
 };

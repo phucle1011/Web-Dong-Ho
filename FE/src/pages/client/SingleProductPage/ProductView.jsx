@@ -335,12 +335,12 @@ const [ratingCount, setRatingCount] = useState(0);
   </span>
 </div>
 
-          <p
+          {/* <p
             data-aos="fade-up"
             className="text-qgray text-sm text-normal mb-[30px] leading-7"
           >
             {productData.description}
-          </p>
+          </p> */}
           <span className="block text-sm font-semibold uppercase text-gray-600 mb-4 mt-8">
             Biến thể
           </span>

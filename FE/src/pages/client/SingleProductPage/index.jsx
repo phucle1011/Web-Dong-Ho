@@ -162,7 +162,7 @@ useEffect(() => {
                       Đánh Giá
                     </span>
                   </li>
-                  <li>
+                  {/* <li>
                     <span
                       onClick={() => setTab("info")}
                       className={`py-[15px] sm:text-[15px] text-sm sm:block border-b font-medium cursor-pointer ${
@@ -173,7 +173,7 @@ useEffect(() => {
                     >
                       Thông Tin Người Bán
                     </span>
-                  </li>
+                  </li> */}
                 </ul>
               </div>
               <div className="w-full h-[1px] bg-[#E8E8E8] absolute left-0 sm:top-[50px] top-[36px] -z-10"></div>
