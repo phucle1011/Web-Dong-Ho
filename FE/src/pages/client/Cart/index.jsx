@@ -14,10 +14,11 @@ export default function Cart({ className, type }) {
   }, []);
 
   const fetchCart = async () => {
-    // if (!token) {
-    //   console.warn("Chưa đăng nhập, không thể tải giỏ hàng");
-    //   return;
-    // }
+    if (!token) {
+      console.warn("Chưa đăng nhập, không thể tải giỏ hàng");
+      toast.error("Vui lòng đăng nhập để xem giỏ hàng");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -29,17 +30,15 @@ export default function Cart({ className, type }) {
       setCartItems(res.data.data);
     } catch (error) {
       console.error("Lỗi gọi API:", error.response?.data || error.message);
-      // toast.error("Không thể tải giỏ hàng");
+      toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
-  const newestItems = cartItems.slice(-3);
-
-  const subtotal = newestItems.reduce((total, item) => {
-    const price = parseFloat(item.variant?.price || 0);
-    const quantity = item.quantity;
+  const subtotal = cartItems.reduce((total, item) => {
+    const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
+    const quantity = parseInt(item.quantity || 0);
     return total + price * quantity;
   }, 0);
 
@@ -53,15 +52,17 @@ export default function Cart({ className, type }) {
         <div className="product-items h-[310px] overflow-y-scroll">
           <ul>
             {loading ? (
-              <li className="text-center">Đang tải...</li>
-            ) : newestItems.length === 0 ? (
-              <li className="text-center">Giỏ hàng trống.</li>
+              <li className="text-center py-4">Đang tải...</li>
+            ) : cartItems.length === 0 ? (
+              <li className="text-center py-4">Giỏ hàng trống.</li>
             ) : (
-              newestItems.map((item) => {
+              cartItems.slice(-3).map((item) => {
                 const variant = item.variant;
                 const image = variant?.images?.[0]?.image_url || "";
-                const price = parseFloat(variant.price || 0);
-                const quantity = item.quantity;
+                const originalPrice = parseFloat(variant.price || 0);
+                const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
+                const quantity = parseInt(item.quantity || 0);
 
                 return (
                   <li key={item.id} className="w-full h-full flex">
@@ -77,13 +78,21 @@ export default function Cart({ className, type }) {
                         <p className="title mb-2 text-[13px] font-600 text-qblack leading-4 line-clamp-2 hover:text-blue-600">
                           {variant.sku}
                         </p>
-                        <p className="price">
-                          <span className="offer-price text-qred font-600 text-[15px] ml-2">
-                            {price.toLocaleString("vi-VN", {
+                        <p className="price flex flex-col gap-1">
+                          <span className={`font-600 text-[15px] ${discountPercent > 0 ? "text-qred" : "text-qblack"}`}>
+                            {Number(price).toLocaleString("vi-VN", {
                               style: "currency",
                               currency: "VND",
                             })}
                           </span>
+                          {discountPercent > 0 && price < originalPrice && (
+                            <span className="text-gray-400 line-through text-[12px]">
+                              {Number(originalPrice).toLocaleString("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              })}
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -111,8 +120,8 @@ export default function Cart({ className, type }) {
         <div className="product-actions px-4 mb-[30px]">
           <div className="total-equation flex justify-between items-center mb-[28px]">
             <span className="text-[15px] font-500 text-qblack">Tổng cộng</span>
-            <span className="text-[15px] font-500 text-qred ">
-              {subtotal.toLocaleString("vi-VN", {
+            <span className="text-[15px] font-500 text-qred">
+              {Number(subtotal).toLocaleString("vi-VN", {
                 style: "currency",
                 currency: "VND",
               })}
@@ -120,7 +129,7 @@ export default function Cart({ className, type }) {
           </div>
           <div className="product-action-btn">
             <a href="/cart">
-              <div className="gray-btn w-full h-[50px] mb-[10px] ">
+              <div className="gray-btn w-full h-[50px] mb-[10px]">
                 <span>Xem giỏ hàng</span>
               </div>
             </a>

@@ -9,11 +9,9 @@ import {
   FaAngleDoubleRight,
   FaEye,
   FaMapMarkerAlt,
-  FaTrashAlt,
 } from "react-icons/fa";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
-import FormDelete from "../../../../components/formDelete";
 import { Link } from "react-router-dom";
 
 function OrderGetAll() {
@@ -46,10 +44,10 @@ function OrderGetAll() {
         return "Đã xác nhận";
       case "shipping":
         return "Đang giao";
-      case "completed":
-        return "Hoàn thành";
       case "delivered":
         return "Đã giao hàng thành công";
+      case "completed":
+        return "Hoàn thành";
       case "cancelled":
         return "Đã hủy";
       default:
@@ -107,31 +105,6 @@ function OrderGetAll() {
     fetchOrders(currentPage);
   }, [currentPage, statusFilter]);
 
-  const deleteOrder = async () => {
-    if (!selectedOrder) return;
-    try {
-      await axios.delete(
-        `${Constants.DOMAIN_API}/admin/orders/delete/${selectedOrder.id}`
-      );
-      toast.success("Hủy đơn hàng thành công");
-      setSelectedOrder(null);
-      fetchOrders(currentPage);
-    } catch (error) {
-      const message = error.response?.data?.message || "";
-      if (
-        message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
-      ) {
-        toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
-      } else if (message === "Id không tồn tại") {
-        toast.error("Đơn hàng không tồn tại");
-      } else {
-        toast.error("Không thể hủy đơn hàng");
-      }
-    } finally {
-      setSelectedOrder(null);
-    }
-  };
-
   useEffect(() => {
     if (!searchTerm.trim()) {
       fetchOrders(1);
@@ -141,19 +114,19 @@ function OrderGetAll() {
   const getStatusesForOrder = (currentStatus) => {
     switch (currentStatus) {
       case "pending":
-        return ["pending", "confirmed", "shipping", "completed", "delivered", "cancelled"];
+        return ["pending", "confirmed", "shipping", "delivered", "completed", "cancelled"];
       case "confirmed":
-        return ["confirmed", "shipping", "completed", "delivered"];
+        return ["confirmed", "shipping", "delivered", "completed"];
       case "shipping":
-        return ["shipping", "completed", "delivered"];
-      case "completed":
-        return ["completed", "delivered"];
+        return ["shipping", "delivered", "completed"];
       case "delivered":
-        return ["delivered"];
+        return ["delivered", "completed"];
+      case "completed":
+        return ["completed"];
       case "cancelled":
         return ["cancelled"];
       default:
-        return ["pending", "confirmed", "shipping", "completed", "delivered", "cancelled"];
+        return ["pending", "confirmed", "shipping", "delivered", "completed", "cancelled"];
     }
   };
 
@@ -370,16 +343,16 @@ function OrderGetAll() {
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
-            <thead className="bg-gray-100 text-gray-600">
+            <thead className="bg-gray-100">
               <tr>
-                <th className="w-12 px-6 py-3 border border-gray-300">STT</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold cursor-pointer">Mã đơn</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold">Tên khách hàng</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold">Ngày tạo</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold">Tổng tiền</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold">Trạng thái</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold">Thanh toán</th>
-                <th className="px-6 py-3 border border-gray-300 font-semibold">Hành động</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">STT</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Mã đơn</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Tên khách hàng</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Ngày tạo</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Tổng tiền</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Trạng thái</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Thanh toán</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Xem chi tiết</th>
               </tr>
             </thead>
             <tbody>
@@ -431,17 +404,6 @@ function OrderGetAll() {
                         >
                           <FaMapMarkerAlt size={16} className="font-bold" />
                         </button>
-
-                        {["pending"].includes(order.status) && (
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                            title="Xóa đơn"
-                          >
-                            <FaTrashAlt size={20} className="font-bold" />
-                          </button>
-                        )}
-
                       </td>
                     </tr>
 
@@ -573,15 +535,6 @@ function OrderGetAll() {
           </div>
         </div>
       </div>
-
-      {selectedOrder && (
-        <FormDelete
-          isOpen={true}
-          onClose={() => setSelectedOrder(null)}
-          onConfirm={deleteOrder}
-          message={`Bạn có chắc chắn muốn hủy đơn hàng "${selectedOrder.order_code}"?`}
-        />
-      )}
     </div>
   );
 }

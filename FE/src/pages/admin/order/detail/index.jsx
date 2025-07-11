@@ -82,77 +82,31 @@ function OrderDetail() {
       </div>
 
       <div className="bg-white shadow-md rounded-md p-4 mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h1 className="text-xl font-semibold">Thông tin khách hàng</h1>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+        <h4 className="text-xl font-semibold mb-4">Thông tin khách hàng</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
           <div>
-            <label className="block text-sm font-medium mb-1">Mã đơn</label>
-            <input
-              type="text"
-              value={order.order_code || ""}
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+            <span className="font-medium">Mã đơn:</span> {order.order_code || "—"}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Họ tên</label>
-            <input
-              type="text"
-              value={user.name || ""}
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+            <span className="font-medium">Họ tên:</span> {order.user?.name || "—"}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Số điện thoại</label>
-            <input
-              type="text"
-              value={user.phone || ""}
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+            <span className="font-medium">Số điện thoại:</span> {order.user?.phone || "—"}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="text"
-              value={user.email || ""}
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+            <span className="font-medium">Email:</span> {order.user?.email || "—"}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Địa chỉ</label>
-            <input
-              type="text"
-              value={order.shipping_address || ""}
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+            <span className="font-medium">Địa chỉ:</span> {order.shipping_address || "—"}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Phương thức thanh toán</label>
-            <input
-              type="text"
-              value={order.payment_method || ""}
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+            <span className="font-medium">Phương thức thanh toán:</span> {order.payment_method || "—"}
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Ngày đặt hàng</label>
-            <input
-              type="text"
-              value={
-                order.created_at
-                  ? new Date(order.created_at).toLocaleDateString()
-                  : ""
-              }
-              readOnly
-              className="w-full border rounded p-2 bg-gray-100"
-            />
+          <div className="md:col-span-2">
+            <span className="font-medium">Ngày đặt hàng:</span>{" "}
+            {order.created_at
+              ? new Date(order.created_at).toLocaleDateString()
+              : "—"}
           </div>
         </div>
       </div>

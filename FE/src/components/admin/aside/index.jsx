@@ -77,12 +77,12 @@ function Aside() {
             <li className="nav-small-cap">
               <span className="hide-menu">Quản lý đơn hàng</span>
             </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/carts/getAll" ? "active" : ""}`}>
+            {/* <li className={`sidebar-item ${location.pathname === "/admin/carts/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link" to="/admin/carts/getAll">
                 <FaShoppingCart />
                 <span className="hide-menu">Quản lý giỏ hàng</span>
               </Link>
-            </li>
+            </li> */}
             <li className={`sidebar-item ${location.pathname === "/admin/orders/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link" to="/admin/orders/getAll">
                 <FaBox />

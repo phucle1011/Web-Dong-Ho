@@ -4,6 +4,8 @@ const ProductVariantAttributeValuesModel = require('../../models/productVariantA
 const VariantImageModel = require("../../models/variantImagesModel");
 const ProductAttribute = require("../../models/productAttributesModel");
 const ProductModel = require('../../models/productsModel');
+const PromotionProductModel = require('../../models/promotionProductsModel');
+const PromotionModel = require('../../models/promotionsModel');
 
 const { Op } = require('sequelize');
 
@@ -43,17 +45,90 @@ class CartController {
                                         as: "attribute",
                                     },
                                 ],
+                            },
+                            {
+                                model: PromotionProductModel,
+                                as: "promotionProducts",
+                                include: [
+                                    {
+                                        model: PromotionModel,
+                                        as: "promotion",
+                                        where: {
+                                            status: "active",
+                                            start_date: { [Op.lte]: new Date() },
+                                            end_date: { [Op.gte]: new Date() },
+                                        },
+                                        required: false,
+                                    },
+                                ],
+                                required: false,
                             }
+
                         ]
                     }
                 ],
                 order: [['id', 'DESC']]
             });
 
+            const processedCartItems = cartItems.map(item => {
+                const itemJson = item.toJSON();
+                const variant = itemJson.variant;
+                if (variant && variant.promotionProducts && variant.promotionProducts.length > 0) {
+                    const bestPromotion = variant.promotionProducts.reduce((best, promoProduct) => {
+                        const promo = promoProduct.promotion;
+                        if (!promo) return best;
+                        const variantPrice = parseFloat(variant.price) || 0;
+                        let finalPrice = variantPrice;
+                        let discountPercent = 0;
+
+                        if (promo.discount_type === "percentage") {
+                            finalPrice -= (finalPrice * parseFloat(promo.discount_value)) / 100;
+                            discountPercent = parseFloat(promo.discount_value);
+                        } else if (promo.discount_type === "fixed") {
+                            finalPrice -= parseFloat(promo.discount_value);
+                            discountPercent = ((variantPrice - finalPrice) / variantPrice) * 100;
+                        }
+                        finalPrice = Math.max(0, finalPrice);
+
+                        const newPromo = {
+                            id: promo.id,
+                            code: promo.code,
+                            discount_type: promo.discount_type,
+                            discount_value: parseFloat(promo.discount_value),
+                            discounted_price: parseFloat(finalPrice.toFixed(2)),
+                            discount_percent: parseFloat(discountPercent.toFixed(2)),
+                            meets_conditions: promo.quantity == null || promo.quantity > 0,
+                        };
+
+                        if (
+                            !best ||
+                            (newPromo.meets_conditions &&
+                                newPromo.discounted_price < best.discounted_price)
+                        ) {
+                            return newPromo;
+                        }
+                        return best;
+                    }, null);
+
+                    variant.promotion = bestPromotion || {
+                        discounted_price: parseFloat(variant.price) || 0,
+                        discount_percent: 0,
+                        meets_conditions: true,
+                    };
+                } else {
+                    variant.promotion = {
+                        discounted_price: parseFloat(variant.price) || 0,
+                        discount_percent: 0,
+                        meets_conditions: true,
+                    };
+                }
+                return itemJson;
+            });
+
             res.status(200).json({
                 status: 200,
                 message: `Lấy giỏ hàng của người dùng ${userId} thành công`,
-                data: cartItems,
+                data: processedCartItems,
                 count
             });
         } catch (error) {

@@ -12,6 +12,8 @@ const axios = require('axios');
 const ExcelJS = require('exceljs');
 const sequelize = require('../../config/database');
 
+require("dotenv").config();
+const nodemailer = require("nodemailer");
 
 class OrderController {
 
@@ -145,12 +147,12 @@ class OrderController {
                                     }
                                 ]
                             },
-                                                 {
-    model: CommentModel,
-    as: 'comments',
-    attributes: ['id', 'rating', 'comment_text', 'edited'],
-    required: false,
-  },
+                            {
+                                model: CommentModel,
+                                as: 'comments',
+                                attributes: ['id', 'rating', 'comment_text', 'edited'],
+                                required: false,
+                            },
                         ]
                     },
                     {
@@ -195,6 +197,7 @@ class OrderController {
                 email,
                 total_price,
                 payment_method_id,
+                cancellation_reason
             } = req.body;
 
             const order = await OrderModel.findByPk(id, { transaction: t });
@@ -237,6 +240,18 @@ class OrderController {
             }
 
             await t.commit();
+
+            if (status === "cancelled" && oldStatus !== "cancelled") {
+                try {
+                    const user = await UserModel.findByPk(order.user_id);
+                    if (user && user.email) {
+                        await OrderController.sendOrderCancellationEmail(order, user, user.email, cancellation_reason || null);
+                    }
+                } catch (emailError) {
+                    console.error("Lỗi gửi email hủy đơn hàng:", emailError);
+                }
+            }
+
             return res.status(200).json({
                 status: 200,
                 message: "Cập nhật đơn hàng thành công.",
@@ -250,6 +265,119 @@ class OrderController {
         }
     }
 
+    static async sendOrderCancellationEmail(order, user, customerEmail, cancellationReason) {
+        try {
+            let transporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            });
+
+            const formattedDate = new Date().toLocaleString("vi-VN", {
+                timeZone: "Asia/Ho_Chi_Minh",
+                hour12: false,
+            });
+
+            const formattedTotal = new Intl.NumberFormat("vi-VN").format(order.total_price);
+            const formattedShipping = new Intl.NumberFormat("vi-VN").format(order.shipping_fee || 0);
+            const formattedDiscount = new Intl.NumberFormat("vi-VN").format(order.discount_amount || 0);
+
+            const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+                <meta charset="UTF-8" />
+                <title>Hủy đơn hàng</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background: #f5f5f5;
+                        padding: 20px;
+                        color: #333;
+                    }
+                    .container {
+                        max-width: 500px;
+                        margin: auto;
+                        background: #fff;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                    .title {
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #d32f2f;
+                        margin-bottom: 16px;
+                    }
+                    .info {
+                        font-size: 14px;
+                        margin-bottom: 12px;
+                    }
+                    .info span {
+                        font-weight: bold;
+                    }
+                    .reason {
+                        font-style: italic;
+                        color: #555;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="title">Đơn hàng của bạn đã bị hủy</div>
+    
+                    <div class="info"><span>Mã đơn hàng:</span> #${order.order_code}</div>
+                    <div class="info"><span>Khách hàng:</span> ${user?.name || "Không xác định"}</div>
+                    <div class="info"><span>Email:</span> ${user?.email || customerEmail}</div>
+                    <div class="info"><span>Ngày hủy:</span> ${formattedDate}</div>
+                    <div class="info"><span>Tổng tiền:</span> ${formattedTotal}₫</div>
+    
+                    ${order.discount_amount > 0
+                    ? `<div class="info"><span>Giảm giá:</span> -${formattedDiscount}₫</div>`
+                    : ""
+                }
+    
+                    ${order.shipping_fee > 0
+                    ? `<div class="info"><span>Phí vận chuyển:</span> +${formattedShipping}₫</div>`
+                    : ""
+                }
+    
+                    <div class="info"><span>Lý do hủy:</span> <span class="reason">${cancellationReason || "Không có lý do cụ thể"}</span></div>
+    
+                    <p style="margin-top: 20px; font-size: 13px; color: #777;">
+                        Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ lại với chúng tôi. Cảm ơn bạn đã sử dụng dịch vụ.
+                    </p>
+
+                ${["momo", "vnpay"].includes(order.payment_method?.toLowerCase?.())
+                        ? `<p style="margin-top: 12px; font-size: 13px; color: #d32f2f;">
+                                Vì đơn hàng được thanh toán bằng <strong>${order.payment_method.toUpperCase()}</strong>, vui lòng liên hệ với chúng tôi để được hoàn tiền qua:
+                                <br />Email: <a href="mailto:phuclnhpc09097@gmail.com">phuclnhpc09097@gmail.com</a>
+                                <br />Zalo: <a href="https://zalo.me/0379169731" target="_blank">0379169731</a>
+                           </p>`
+                        : ""
+                }
+
+                </div>
+            </body>
+            </html>
+            `;
+
+            const mailOptions = {
+                from: `"Cửa hàng của bạn" <${process.env.EMAIL_USER}>`,
+                to: customerEmail,
+                subject: `Hủy đơn hàng #${order.order_code}`,
+                html: htmlContent
+            };
+
+            await transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error("Lỗi gửi email hủy đơn hàng (chi tiết):", error);
+            throw new Error("Không thể gửi email hủy đơn hàng.");
+        }
+
+    }
 
     static async delete(req, res) {
         const t = await sequelize.transaction();

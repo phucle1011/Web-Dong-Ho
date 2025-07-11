@@ -34,7 +34,7 @@ export default function Middlebar({ className, type }) {
         });
         setCount(res.data?.count ?? 0);
       } catch (err) {
-        toast.error("Không thể lấy số lượng giỏ hàng.");
+        // toast.error("Không thể lấy số lượng giỏ hàng.");
       }
     };
 

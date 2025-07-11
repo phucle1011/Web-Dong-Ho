@@ -47,13 +47,14 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems(res.data.data);
     } catch (error) {
       console.error("Lỗi khi lấy giỏ hàng:", error);
+      toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
     }
   };
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
-      const price = parseFloat(item.variant?.price || 0);
-      const quantity = item.quantity;
+      const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
+      const quantity = parseInt(item.quantity || 0);
       return total + price * quantity;
     }, 0);
   };
@@ -61,7 +62,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const calculateSelectedTotal = () => {
     return cartItems.reduce((total, item) => {
       if (selectedItems.includes(item.product_variant_id)) {
-        const price = parseFloat(item.variant?.price || 0);
+        const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
         const quantity = parseInt(item.quantity || 0);
         return total + price * quantity;
       }
@@ -157,7 +158,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
           }
         }
       );
-      setCartItems([]);
       await fetchCart();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");
@@ -256,7 +256,9 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                 const variant = item.variant;
                 const image = variant?.images?.[0]?.image_url || "";
                 const attributes = variant.attributeValues || [];
-                const price = parseFloat(variant.price);
+                const originalPrice = parseFloat(variant.price || 0);
+                const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
                 const quantity = item.quantity;
                 const stock = variant.stock;
                 const total = price * quantity;
@@ -270,6 +272,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                     <td className="text-center">
                       {stock === 0 ? (
                         <span title="Sản phẩm hết hàng, không thể chọn" className="cursor-help text-red-500">
+                          Hết hàng
                         </span>
                       ) : (
                         <input
@@ -324,10 +327,16 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                       </div>
                     </td>
                     <td className="text-center py-4">
-                      {Number(price).toLocaleString("vi-VN", {
-                        style: "currency",
-                        currency: "VND",
-                      })}
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`font-semibold ${discountPercent > 0 ? "text-red-500" : "text-black"}`}>
+                          {Number(price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                        </span>
+                        {discountPercent > 0 && price < originalPrice && (
+                          <span className="text-black-400 line-through text-xs">
+                            {Number(originalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 text-center align-middle">
                       {stock === 0 ? (
@@ -348,7 +357,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                       )}
                     </td>
                     <td className="text-center py-4">
-                      {total.toLocaleString("vi-VN")}₫
+                      {Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                     </td>
                     <td className="text-right py-4">
                       <button

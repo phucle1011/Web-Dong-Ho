@@ -10,22 +10,28 @@ import Swal from "sweetalert2";
 import axios from 'axios';
 import { toast } from "react-toastify";
 
-export default function CheakoutPage() {
+export default function CheckoutPage() {
   const location = useLocation();
-  const [checkoutItems, setCheckoutItems] = useState([]);
   const navigate = useNavigate();
-  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [checkoutItems, setCheckoutItems] = useState([]);
+  const [originalTotalPrice, setOriginalTotalPrice] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [discountInfo, setDiscountInfo] = useState(null);
+  const [finalTotal, setFinalTotal] = useState(0);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+
   const [promoCodeData, setPromoCodeData] = useState({
     code: "",
-    discountAmount: 0
+    discountAmount: 0,
   });
   const [finalData, setFinalData] = useState({
     total: 0,
     shippingFee: 0,
     shippingService: "Đang tính...",
     formattedAmount: "0",
-    promoDiscount: 0
+    promoDiscount: 0,
+    voucherDiscount: 0,
   });
   const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
@@ -44,80 +50,67 @@ export default function CheakoutPage() {
   const decoded = decodeToken(token);
   const id = decoded?.id;
 
-  // useEffect(() => {
-  //   if (!location.state && !localStorage.getItem("checkoutData")) {
-  //     console.warn("Không có dữ liệu giỏ hàng");
-  //     navigate("/cart");
-  //   }
-  // }, [location.state, navigate]);
-
   useEffect(() => {
-    const savedPromoCode = localStorage.getItem("selectedPromoCode");
-    if (savedPromoCode) {
-      try {
-        const parsed = JSON.parse(savedPromoCode);
-        setPromoCodeData(parsed);
-        setFinalData(prev => ({
-          ...prev,
-          promoDiscount: parsed.discountAmount || 0
-        }));
-      } catch (e) {
-        console.error("Không thể parse promo code từ localStorage:", e);
-      }
+    if (!location.state && !localStorage.getItem("checkoutData")) {
+      console.warn("Không có dữ liệu giỏ hàng");
+      toast.error("Không có sản phẩm để thanh toán. Vui lòng quay lại giỏ hàng.");
+      navigate("/cart");
     }
-  }, []);
+  }, [location.state, navigate]);
 
   useEffect(() => {
     let items = [];
+    let savedTotalPrice = 0;
+    let savedOriginalTotalPrice = 0;
+    let savedDiscountInfo = null;
+    let savedFinalTotal = 0;
 
     if (location.state?.cartItems && location.state.cartItems.length > 0) {
       items = location.state.cartItems;
-      localStorage.setItem("checkoutData", JSON.stringify({ cartItems: items }));
+      savedTotalPrice = location.state.totalPrice || 0;
+      savedOriginalTotalPrice = location.state.originalTotalPrice || 0;
+      savedDiscountInfo = location.state.discountInfo || null;
+      savedFinalTotal = location.state.finalTotal || 0;
+      localStorage.setItem(
+        "checkoutData",
+        JSON.stringify({
+          cartItems: items,
+          totalPrice: savedTotalPrice,
+          originalTotalPrice: savedOriginalTotalPrice,
+          discountInfo: savedDiscountInfo,
+          finalTotal: savedFinalTotal,
+        })
+      );
     } else {
       const savedData = localStorage.getItem("checkoutData");
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
           items = parsedData.cartItems || [];
+          savedTotalPrice = parsedData.totalPrice || 0;
+          savedOriginalTotalPrice = parsedData.originalTotalPrice || 0;
+          savedDiscountInfo = parsedData.discountInfo || null;
+          savedFinalTotal = parsedData.finalTotal || 0;
         } catch (error) {
           console.error("Lỗi parse dữ liệu từ localStorage:", error);
+          toast.error("Dữ liệu giỏ hàng không hợp lệ. Vui lòng quay lại giỏ hàng.");
+          navigate("/cart");
         }
       }
     }
 
     setCheckoutItems(items);
+    setTotalPrice(savedTotalPrice);
+    setOriginalTotalPrice(savedOriginalTotalPrice);
+    setDiscountInfo(savedDiscountInfo);
+    setFinalTotal(savedFinalTotal);
+    setPromoCodeData({
+      code: savedDiscountInfo?.code || "",
+      discountAmount: savedDiscountInfo?.promoDiscount || 0,
+    });
+    setVoucherDiscount(savedDiscountInfo?.voucherDiscount || 0);
+    setSelectedVoucher(savedDiscountInfo?.voucher || null);
   }, [location.state]);
-
-  useEffect(() => {
-    const savedVoucher = localStorage.getItem("selectedVoucher");
-    if (savedVoucher) {
-      try {
-        const voucher = JSON.parse(savedVoucher);
-        setSelectedVoucher(voucher);
-
-        if (voucher.discount_type === "fixed") {
-          const total = checkoutItems.reduce(
-            (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
-            0
-          );
-          const discount = Math.min(voucher.discount_value, total);
-          setVoucherDiscount(discount);
-        } else if (voucher.discount_type === "percentage") {
-          const total = checkoutItems.reduce(
-            (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
-            0
-          );
-          const maxPrice = voucher.max_price || Infinity;
-          const discount = Math.min((total * voucher.discount_value) / 100, maxPrice);
-          setVoucherDiscount(discount);
-        } else if (voucher.discount_type === "shipping") {
-          setVoucherDiscount(0);
-        }
-      } catch (e) {
-        console.error("Lỗi parse voucher từ localStorage:", e);
-      }
-    }
-  }, [checkoutItems]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -127,11 +120,14 @@ export default function CheakoutPage() {
         setUser(decoded);
       } else {
         console.warn("Không thể giải mã token.");
+        toast.error("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
       }
     } else {
       console.warn("Không tìm thấy token trong localStorage.");
+      toast.error("Vui lòng đăng nhập để tiếp tục thanh toán.");
+      navigate("/login");
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -619,21 +615,149 @@ export default function CheakoutPage() {
     }
   };
 
-  useEffect(() => {
-  const savedPromoCode = localStorage.getItem("selectedPromoCode");
-  if (savedPromoCode) {
+  const calculateShippingFee = async () => {
+    setIsCalculatingShipping(true);
+
     try {
-      const parsed = JSON.parse(savedPromoCode);
-      setPromoCodeData(parsed);
+      if (!defaultAddress) {
+        setFinalData(prev => ({
+          ...prev,
+          shippingFee: 0,
+          shippingService: "Chưa có địa chỉ",
+          formattedAmount: Number(prev.total - prev.voucherDiscount - prev.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+        }));
+        return;
+      }
+
+      const toProvinceId = await getProvinceIdByName(defaultAddress.city);
+      if (!toProvinceId) throw new Error("Không tìm thấy mã tỉnh");
+
+      const toDistrictId = await getDistrictIdByProvinceAndName(toProvinceId, defaultAddress.district);
+      if (!toDistrictId) throw new Error("Không tìm thấy mã quận");
+
+      const toWardCode = await getWardCodeByDistrictAndName(toDistrictId, defaultAddress.ward);
+      if (!toWardCode) throw new Error("Không tìm thấy mã phường");
+
+      const warehouse = {
+        from_province_id: 220,
+        from_district_id: 1574,
+        from_ward_code: "550110"
+      };
+
+      const servicePriority = [
+        { "id": 53320, "name": "Giao hàng tiêu chuẩn" },
+        { "id": 53322, "name": "Giao hàng hỏa tốc" },
+        { "id": 53321, "name": "Giao hàng nhanh" },
+        { "id": 53323, "name": "Giao hàng siêu tốc" },
+        { "id": 53324, "name": "Giao hàng tiết kiệm" }
+      ];
+
+      for (const service of servicePriority) {
+        try {
+          const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
+            from_district_id: warehouse.from_district_id,
+            from_ward_code: warehouse.from_ward_code,
+            to_district_id: Number(toDistrictId),
+            to_ward_code: toWardCode,
+            service_id: service.id,
+            weight: 500,
+            length: 20,
+            width: 20,
+            height: 15
+          });
+
+          if (response.data.success) {
+            const shippingFee = response.data.data.total;
+            const total = totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0) + shippingFee;
+
+            setFinalData({
+              total: totalPrice,
+              shippingFee: shippingFee,
+              shippingService: service.name,
+              promoDiscount: discountInfo?.promoDiscount || 0,
+              voucherDiscount: discountInfo?.voucherDiscount || 0,
+              formattedAmount: Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+            });
+            return;
+          }
+        } catch (error) {
+          console.warn(`Dịch vụ ${service.name} không khả dụng:`, error.message);
+        }
+      }
+
       setFinalData(prev => ({
         ...prev,
-        promoDiscount: parsed.discountAmount || 0
+        shippingFee: 0,
+        shippingService: "Không hỗ trợ giao hàng tới khu vực này",
+        formattedAmount: Number(prev.total - prev.voucherDiscount - prev.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
       }));
-    } catch (e) {
-      console.error("Không thể parse promo code từ localStorage:", e);
+
+    } catch (error) {
+      console.error("Lỗi tính phí vận chuyển:", error);
+      setFinalData(prev => ({
+        ...prev,
+        shippingFee: 0,
+        shippingService: "Lỗi tính phí",
+        formattedAmount: Number(prev.total - prev.voucherDiscount - prev.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+      }));
+    } finally {
+      setIsCalculatingShipping(false);
     }
-  }
-}, []);
+  };
+
+  useEffect(() => {
+    if (defaultAddress) {
+      calculateShippingFee();
+    }
+  }, [defaultAddress, discountInfo, totalPrice]);
+
+  useEffect(() => {
+    const total = totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0) + (finalData.shippingFee || 0);
+
+    setFinalData(prev => ({
+      ...prev,
+      total: totalPrice,
+      promoDiscount: discountInfo?.promoDiscount || 0,
+      voucherDiscount: discountInfo?.voucherDiscount || 0,
+      formattedAmount: Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+    }));
+  }, [checkoutItems, discountInfo, totalPrice, finalData.shippingFee]);
+
+  const updateUserInfo = async (userId, updatedData) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${Constants.DOMAIN_API}/users/${userId}`,
+        updatedData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật thông tin:", error);
+      toast.error("Cập nhật thông tin người dùng thất bại");
+      return null;
+    }
+  };
+
+  const handleUserInfoChange = async (field, value) => {
+    if (!user || !user.id) return;
+
+    const updatedUser = { ...user, [field]: value };
+    setUser(updatedUser);
+
+    const payload = {
+      [field]: value
+    };
+
+    const updatedUserData = await updateUserInfo(user.id, payload);
+    if (updatedUserData) {
+      setUser(updatedUserData);
+    }
+  };
 
   const handleCheckout = async () => {
     if (isSubmitting || isCalculatingShipping) {
@@ -641,7 +765,7 @@ export default function CheakoutPage() {
       return;
     }
     if (finalData.shippingService === "Đang tính..." || finalData.shippingService === "Chưa có địa chỉ") {
-      toast.error("Vui lòng chờ hệ thống tính toán phí vận chuyển hoàn tất");
+      toast.error("Vui lòng chờ hệ thống tính toán phí vận chuyển hoàn tất hoặc thêm địa chỉ giao hàng");
       return;
     }
     if (finalData.shippingService === "Không hỗ trợ giao hàng tới khu vực này") {
@@ -696,15 +820,15 @@ export default function CheakoutPage() {
           variant: {
             id: item.product_variant_id,
             sku: item.variant.sku || `SKU-${item.product_variant_id}`,
-            price: parseFloat(item.variant.price),
+            price: parseFloat(item.variant.promotion?.discounted_price || item.variant.price || 0),
+            original_price: parseFloat(item.variant.price || 0),
             product: {
               name: item.product?.name || "Không tên"
             },
             images: item.variant.images || [],
             attributeValues: item.variant.attributeValues || []
           }
-        }))
-        ,
+        })),
         user_id: user.id,
         name: user.name,
         phone: user.phone,
@@ -712,10 +836,11 @@ export default function CheakoutPage() {
         address: defaultAddress?.address_line || "",
         note: noteValue,
         promotion: selectedVoucher ? selectedVoucher.id : null,
-        promo_discount: promoCodeData.discountAmount || null,
+        promo_discount: discountInfo?.promoDiscount || 0,
+        voucher_discount: discountInfo?.voucherDiscount || 0,
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
-        amount: finalData.total,
+        amount: finalData.total - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0) + (finalData.shippingFee || 0),
         orderId: `ORD-${Date.now()}`,
         orderDescription: `Thanh toan don hang cho ${user.name}`,
         orderType: 'other'
@@ -776,154 +901,6 @@ export default function CheakoutPage() {
       }
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const calculateShippingFee = async () => {
-    setIsCalculatingShipping(true);
-
-    try {
-      if (!defaultAddress) {
-        setFinalData(prev => ({
-          ...prev,
-          shippingFee: 0,
-          shippingService: "Chưa có địa chỉ",
-          formattedAmount: ((prev.total - prev.voucherDiscount - prev.promoDiscount) || 0).toLocaleString("vi-VN")
-        }));
-        return;
-      }
-
-      const toProvinceId = await getProvinceIdByName(defaultAddress.city);
-      if (!toProvinceId) throw new Error("Không tìm thấy mã tỉnh");
-
-      const toDistrictId = await getDistrictIdByProvinceAndName(toProvinceId, defaultAddress.district);
-      if (!toDistrictId) throw new Error("Không tìm thấy mã quận");
-
-      const toWardCode = await getWardCodeByDistrictAndName(toDistrictId, defaultAddress.ward);
-      if (!toWardCode) throw new Error("Không tìm thấy mã phường");
-
-      const warehouse = {
-        from_province_id: 220,
-        from_district_id: 1574,
-        from_ward_code: "550110"
-      };
-
-      const servicePriority = [
-        { "id": 53320, "name": "Giao hàng tiêu chuẩn" },
-        { "id": 53322, "name": "Giao hàng hỏa tốc" },
-        { "id": 53321, "name": "Giao hàng nhanh" },
-        { "id": 53323, "name": "Giao hàng siêu tốc" },
-        { "id": 53324, "name": "Giao hàng tiết kiệm" }
-      ];
-
-      for (const service of servicePriority) {
-        try {
-          const response = await axios.post(`${Constants.DOMAIN_API}/shipping/shipping-fee`, {
-            from_district_id: warehouse.from_district_id,
-            from_ward_code: warehouse.from_ward_code,
-            to_district_id: Number(toDistrictId),
-            to_ward_code: toWardCode,
-            service_id: service.id,
-            weight: 500,
-            length: 20,
-            width: 20,
-            height: 15
-          });
-
-          if (response.data.success) {
-            const shippingFee = response.data.data.total;
-            const total = checkoutItems.reduce(
-              (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
-              0
-            ) - voucherDiscount - promoCodeData.discountAmount + shippingFee;
-
-            setFinalData({
-              total: total,
-              shippingFee: shippingFee,
-              shippingService: service.name,
-              promoDiscount: promoCodeData.discountAmount,
-              formattedAmount: total.toLocaleString("vi-VN")
-            });
-            return;
-          }
-        } catch (error) {
-          console.warn(`Dịch vụ ${service.name} không khả dụng:`, error.message);
-        }
-      }
-
-      setFinalData(prev => ({
-        ...prev,
-        shippingFee: 0,
-        shippingService: "Không hỗ trợ giao hàng tới khu vực này",
-        formattedAmount: ((prev.total - prev.voucherDiscount - prev.promoDiscount) || 0).toLocaleString("vi-VN")
-      }));
-
-    } catch (error) {
-      console.error("Lỗi tính phí vận chuyển:", error);
-      setFinalData(prev => ({
-        ...prev,
-        shippingFee: 0,
-        shippingService: "Lỗi tính phí",
-        formattedAmount: ((prev.total - prev.voucherDiscount - prev.promoDiscount) || 0).toLocaleString("vi-VN")
-      }));
-    } finally {
-      setIsCalculatingShipping(false);
-    }
-  };
-
-  useEffect(() => {
-    if (defaultAddress) {
-      calculateShippingFee();
-    }
-  }, [defaultAddress, voucherDiscount, promoCodeData.discountAmount]);
-
-  useEffect(() => {
-    const subTotal = checkoutItems.reduce(
-      (sum, item) => sum + parseFloat(item.variant.price || 0) * item.quantity,
-      0
-    );
-
-    const total = subTotal - voucherDiscount - promoCodeData.discountAmount + (finalData.shippingFee || 0);
-
-    setFinalData(prev => ({
-      ...prev,
-      total: subTotal,
-      promoDiscount: promoCodeData.discountAmount,
-      formattedAmount: (total).toLocaleString("vi-VN")
-    }));
-  }, [checkoutItems, voucherDiscount, promoCodeData.discountAmount, finalData.shippingFee]);
-
-  const updateUserInfo = async (userId, updatedData) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${Constants.DOMAIN_API}/users/${userId}`,
-        updatedData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Lỗi khi cập nhật thông tin:", error);
-      return null;
-    }
-  };
-
-  const handleUserInfoChange = async (field, value) => {
-    if (!user || !user.id) return;
-
-    const updatedUser = { ...user, [field]: value };
-    setUser(updatedUser);
-
-    const payload = {
-      [field]: value
-    };
-
-    const updatedUserData = await updateUserInfo(user.id, payload);
-    if (updatedUserData) {
-      setUser(updatedUserData);
     }
   };
 
@@ -1093,7 +1070,6 @@ export default function CheakoutPage() {
                           <div className="text-gray-500">Chưa có địa chỉ mặc định</div>
                         )}
                       </div>
-
                     </div>
                   </form>
                 </div>
@@ -1109,14 +1085,16 @@ export default function CheakoutPage() {
                       <ul className="space-y-4">
                         {checkoutItems.map((item) => {
                           const variant = item.variant;
-                          const price = parseFloat(variant.price || 0);
+                          const originalPrice = parseFloat(variant.price || 0);
+                          const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                          const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
                           const quantity = item.quantity;
                           const total = price * quantity;
                           const attributes = variant.attributeValues;
                           const image = variant?.images?.[0]?.image_url || "";
 
                           return (
-                            <li key={item.id} className=" pb-4">
+                            <li key={item.id} className="pb-4">
                               <div className="flex justify-between items-start gap-4">
                                 <div className="w-[80px] h-[80px] flex justify-center items-center border border-[#EDEDED] overflow-hidden">
                                   <img
@@ -1154,11 +1132,21 @@ export default function CheakoutPage() {
                                   <p className="text-sm text-gray-700">
                                     Số lượng: <strong>{quantity}</strong>
                                   </p>
+                                  <div className="flex flex-col gap-1">
+                                    <span className={`font-semibold ${discountPercent > 0 ? "text-qred" : "text-qblack"}`}>
+                                      {Number(price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                    </span>
+                                    {discountPercent > 0 && price < originalPrice && (
+                                      <span className="text-gray-400 line-through text-xs">
+                                        {Number(originalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
 
                                 <div className="text-right min-w-[100px]">
                                   <span className="text-lg font-bold text-qred block">
-                                    {total.toLocaleString("vi-VN")}₫
+                                    {Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                                   </span>
                                 </div>
                               </div>
@@ -1171,43 +1159,37 @@ export default function CheakoutPage() {
                     )}
                   </ul>
 
-                  {selectedVoucher && (
-                    <div className="flex items-center justify-between p-3 border border-green-500 bg-green-50 rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200">
-                      <div className="flex items-center flex-1 min-w-0">
-                        {selectedVoucher.discount_type === "shipping" && (
-                          <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
-                        )}
-                        {selectedVoucher.discount_type !== "shipping" && (
-                          <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
-                        )}
-                        <span className="text-sm flex-1 text-gray-700 flex-wrap">
-                          {selectedVoucher.name}{" "}
-                          {selectedVoucher.discount_type === 'percentage' && (
-                            <span className="text-gray-500">
-                              (Giảm {selectedVoucher.discount_value}%{selectedVoucher.max_price ? `, Tối đa ${Number(selectedVoucher.max_price).toLocaleString("vi-VN", {
-                                style: "currency",
-                                currency: "VND",
-                              })}` : ''})
-                            </span>
-                          )}
-                          {selectedVoucher.discount_type === 'fixed' && (
-                            <span className="text-gray-500">
-                              (Giảm {Number(selectedVoucher.discount_value).toLocaleString("vi-VN", {
-                                style: "currency",
-                                currency: "VND",
-                              })})
-                            </span>
-                          )}
-                          <span className="text-gray-500"> (Đơn tối thiểu {Number(selectedVoucher.min_price_threshold).toLocaleString("vi-VN", {
-                            style: "currency",
-                            currency: "VND",
-                          })}) </span>
+                  <div className="mt-4 border-t pt-4">
+                    {originalTotalPrice > totalPrice && (
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-600">Tổng giá gốc:</span>
+                        <span className="text-gray-400 line-through">
+                          {Number(originalTotalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                         </span>
                       </div>
+                    )}
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">Tổng tiền (sau khuyến mãi sản phẩm):</span>
+                      <span className="font-semibold">
+                        {Number(totalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                      </span>
                     </div>
-                  )}
-
-                  <div className="mt-4 border-t pt-4">
+                    {discountInfo?.voucherDiscount > 0 && (
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-600">Giảm giá (Voucher):</span>
+                        <span className="text-green-600">
+                          -{Number(discountInfo.voucherDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                        </span>
+                      </div>
+                    )}
+                    {discountInfo?.promoDiscount > 0 && (
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-600">Giảm giá (Mã đặc biệt):</span>
+                        <span className="text-green-600">
+                          -{Number(discountInfo.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-600">Phí vận chuyển:</span>
                       <div className="text-right">
@@ -1222,7 +1204,7 @@ export default function CheakoutPage() {
                         ) : (
                           <>
                             <span className="font-semibold">
-                              {finalData.shippingFee ? `${finalData.shippingFee.toLocaleString("vi-VN")}₫` : 'Không hỗ trợ'}
+                              {finalData.shippingFee ? `${Number(finalData.shippingFee).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}` : 'Không hỗ trợ'}
                             </span>
                             {finalData.shippingService && (
                               <span className="text-xs text-gray-500 block">({finalData.shippingService})</span>
@@ -1231,11 +1213,45 @@ export default function CheakoutPage() {
                         )}
                       </div>
                     </div>
-
+                    {selectedVoucher && (
+                      <div className="flex items-center justify-between p-3 border border-green-500 bg-green-50 rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200">
+                        <div className="flex items-center flex-1 min-w-0">
+                          {selectedVoucher.discount_type === "shipping" && (
+                            <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
+                          )}
+                          {selectedVoucher.discount_type !== "shipping" && (
+                            <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
+                          )}
+                          <span className="text-sm flex-1 text-gray-700 flex-wrap">
+                            {selectedVoucher.name}{" "}
+                            {selectedVoucher.discount_type === 'percentage' && (
+                              <span className="text-gray-500">
+                                (Giảm {selectedVoucher.discount_value}%{selectedVoucher.max_price ? `, Tối đa ${Number(selectedVoucher.max_price).toLocaleString("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                })}` : ''})
+                              </span>
+                            )}
+                            {selectedVoucher.discount_type === 'fixed' && (
+                              <span className="text-gray-500">
+                                (Giảm {Number(selectedVoucher.discount_value).toLocaleString("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                })})
+                              </span>
+                            )}
+                            <span className="text-gray-500"> (Đơn tối thiểu {Number(selectedVoucher.min_price_threshold).toLocaleString("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            })}) </span>
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center pt-2 border-t mt-2">
                       <span className="text-lg font-bold">Tổng cộng:</span>
                       <span className="text-xl font-bold text-qred">
-                        {finalData.formattedAmount || "0"}₫
+                        {finalData.formattedAmount || "0"}
                       </span>
                     </div>
                   </div>
@@ -1278,7 +1294,6 @@ export default function CheakoutPage() {
                               type="radio"
                               name="payment_method"
                               value="COD"
-                              defaultChecked
                             />
                           </div>
                           <label htmlFor="cod" className="text-[18px] text-normal text-qblack">

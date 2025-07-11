@@ -11,6 +11,7 @@ import axios from "axios";
 
 export default function CardPage({ cart = true }) {
   const [totalPrice, setTotalPrice] = useState(0);
+  const [originalTotalPrice, setOriginalTotalPrice] = useState(0);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [discountInfo, setDiscountInfo] = useState(null);
   const [promoCode, setPromoCode] = useState("");
@@ -210,8 +211,21 @@ export default function CardPage({ cart = true }) {
   const finalTotal = discountInfo ? totalPrice - discountInfo.discountAmount : totalPrice;
 
   useEffect(() => {
-
-  }, [selectedProductVariants, cartItems]);
+    // Cập nhật checkoutData khi selectedProductVariants hoặc cartItems thay đổi
+    if (selectedProductVariants.length > 0) {
+      const checkoutData = {
+        selectedProductVariants,
+        cartItems: cartItems.filter((item) =>
+          selectedProductVariants.includes(item.product_variant_id)
+        ),
+        totalPrice,
+        originalTotalPrice,
+        discountInfo,
+        finalTotal,
+      };
+      localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
+    }
+  }, [selectedProductVariants, cartItems, totalPrice, originalTotalPrice, discountInfo, finalTotal]);
 
   useEffect(() => {
     const savedVoucher = localStorage.getItem("selectedVoucher");
@@ -223,15 +237,12 @@ export default function CardPage({ cart = true }) {
 
   const saveFinalTotalToLocalStorage = () => {
     const finalData = {
-      label: discountInfo ? "" : "",
-      amount: discountInfo
-        ? totalPrice - discountInfo.discountAmount
-        : totalPrice,
-      formattedAmount: discountInfo
-        ? (totalPrice - discountInfo.discountAmount).toLocaleString("vi-VN")
-        : totalPrice.toLocaleString("vi-VN"),
+      label: discountInfo ? "Tổng sau giảm" : "Tổng cộng",
+      amount: finalTotal,
+      formattedAmount: Number(finalTotal).toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
       hasDiscount: !!discountInfo,
       discountAmount: discountInfo?.discountAmount || 0,
+      originalTotalPrice,
     };
 
     localStorage.setItem("finalTotal", JSON.stringify(finalData));
@@ -239,7 +250,12 @@ export default function CardPage({ cart = true }) {
 
   useEffect(() => {
     saveFinalTotalToLocalStorage();
-  }, [totalPrice, discountInfo]);
+  }, [totalPrice, originalTotalPrice, discountInfo, finalTotal]);
+
+  const handleTotalChange = (newTotal) => {
+    setTotalPrice(newTotal.discountedTotal || newTotal);
+    setOriginalTotalPrice(newTotal.originalTotal || newTotal);
+  };
 
   return (
     <Layout childrenClasses={cart ? "pt-0 pb-0" : ""}>
@@ -270,7 +286,7 @@ export default function CardPage({ cart = true }) {
             <div className="container-x mx-auto">
               <ProductsTable
                 className="mb-[30px]"
-                onTotalChange={setTotalPrice}
+                onTotalChange={handleTotalChange}
                 onSelectedItemsChange={setSelectedProductVariants}
                 onCartItemsChange={setCartItems}
               />
@@ -350,16 +366,16 @@ export default function CardPage({ cart = true }) {
                                 {voucher.discount_type === 'percentage' && (
                                   <span className="text-gray-500"><br />
                                     Giảm {voucher.discount_value}% {voucher.max_price ? `, 
-                                    Tối đa ${Number(voucher.max_price).toLocaleString("vi-VN", { style: "currency", currency: "VND", })}` : ''}
+                                    Tối đa ${Number(voucher.max_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}` : ''}
                                   </span>
                                 )}
                                 {voucher.discount_type === 'fixed' && (
                                   <span className="text-gray-500"><br />
-                                    Giảm {Number(voucher.discount_value).toLocaleString("vi-VN", { style: "currency", currency: "VND", })}
+                                    Giảm {Number(voucher.discount_value).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                                   </span>
                                 )}
                                 <span className="text-gray-500"><br />
-                                  Đơn tối thiểu {Number(voucher.min_price_threshold).toLocaleString("vi-VN", { style: "currency", currency: "VND", })}
+                                  Đơn tối thiểu {Number(voucher.min_price_threshold).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                                 </span>
                                 {voucher.end_date && (
                                   <span className="text-gray-500"><br />
@@ -389,10 +405,18 @@ export default function CardPage({ cart = true }) {
                 <div className="lg:w-1/2 w-full">
                   <div className="border border-[#EDEDED] px-[30px] py-[26px]">
                     <div className="sub-total mb-6">
+                      {originalTotalPrice > totalPrice && (
+                        <div className="flex justify-between mb-3">
+                          <p className="text-[15px] font-medium text-qblack">Tổng giá gốc</p>
+                          <p className="text-[15px] font-medium text-gray-400 line-through">
+                            {Number(originalTotalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                          </p>
+                        </div>
+                      )}
                       <div className="flex justify-between mb-3">
-                        <p className="text-[15px] font-medium text-qblack">Tổng tiền</p>
+                        <p className="text-[15px] font-medium text-qblack">Tổng tiền (sau khuyến mãi sản phẩm)</p>
                         <p className="text-[15px] font-medium text-qred">
-                          {totalPrice.toLocaleString()}₫
+                          {Number(totalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                         </p>
                       </div>
                       {discountInfo && (
@@ -401,7 +425,7 @@ export default function CardPage({ cart = true }) {
                             <div className="flex justify-between mb-3">
                               <p className="text-[15px] font-medium text-qblack">Giảm giá (Mã đặc biệt)</p>
                               <p className="text-[15px] font-medium text-green-600">
-                                -{discountInfo.promoDiscount.toLocaleString()}₫
+                                -{Number(discountInfo.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                               </p>
                             </div>
                           )}
@@ -409,7 +433,7 @@ export default function CardPage({ cart = true }) {
                             <div className="flex justify-between mb-3">
                               <p className="text-[15px] font-medium text-qblack">Giảm giá (Voucher)</p>
                               <p className="text-[15px] font-medium text-green-600">
-                                -{discountInfo.voucherDiscount.toLocaleString()}₫
+                                -{Number(discountInfo.voucherDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                               </p>
                             </div>
                           )}
@@ -417,17 +441,14 @@ export default function CardPage({ cart = true }) {
                             <div className="flex justify-between mb-3">
                               <p className="text-[13px] text-qgraytwo italic">Giảm tối đa</p>
                               <p className="text-[13px] text-qgraytwo italic">
-                                {Number(discountInfo.max_price).toLocaleString("vi-VN", {
-                                  style: "currency",
-                                  currency: "VND",
-                                })}
+                                {Number(discountInfo.max_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                               </p>
                             </div>
                           )}
                           <div className="flex justify-between mb-3">
                             <p className="text-[15px] font-medium text-qblack">Tổng sau giảm</p>
                             <p className="text-[15px] font-medium text-qred">
-                              {(totalPrice - discountInfo.discountAmount).toLocaleString()}₫
+                              {Number(finalTotal).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                             </p>
                           </div>
                         </>
@@ -446,10 +467,7 @@ export default function CardPage({ cart = true }) {
                         {discountInfo ? "Tổng sau giảm" : "Tổng cộng"}
                       </p>
                       <p className="text-[18px] font-medium text-qred">
-                        {discountInfo
-                          ? (totalPrice - discountInfo.discountAmount).toLocaleString("vi-VN")
-                          : totalPrice.toLocaleString("vi-VN")}
-                        ₫
+                        {Number(finalTotal).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                       </p>
                     </div>
 
@@ -462,18 +480,24 @@ export default function CardPage({ cart = true }) {
                             cartItems: cartItems.filter((item) =>
                               selectedProductVariants.includes(item.product_variant_id)
                             ),
+                            totalPrice,
+                            originalTotalPrice,
+                            discountInfo,
+                            finalTotal,
                           },
                         }}
                         onClick={() => {
-                          localStorage.setItem(
-                            "checkoutData",
-                            JSON.stringify({
-                              selectedProductVariants,
-                              cartItems: cartItems.filter((item) =>
-                                selectedProductVariants.includes(item.product_variant_id)
-                              ),
-                            })
-                          );
+                          const checkoutData = {
+                            selectedProductVariants,
+                            cartItems: cartItems.filter((item) =>
+                              selectedProductVariants.includes(item.product_variant_id)
+                            ),
+                            totalPrice,
+                            originalTotalPrice,
+                            discountInfo,
+                            finalTotal,
+                          };
+                          localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
                         }}
                       >
                         <div className="w-full h-[50px] black-btn flex justify-center items-center">
