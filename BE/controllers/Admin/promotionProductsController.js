@@ -8,7 +8,7 @@ const PromotionUserModel = require("../../models/promotionUsersModel");
 
 // GET ALL PromotionProducts with pagination and search by product name, promotion name, sku, or status
 exports.getAll = async (req, res) => {
-  const { searchTerm = "", page = 1, limit = 10 } = req.query;
+  const { searchTerm = "", page = 1, limit = 10, promotion_id } = req.query;
   const pageNumber = parseInt(page);
   const pageSize = parseInt(limit);
   const offset = (pageNumber - 1) * pageSize;
@@ -22,6 +22,11 @@ exports.getAll = async (req, res) => {
         { "$variant.sku$": { [Op.like]: `%${searchTerm}%` } },
         { "$promotion.status$": { [Op.like]: `%${searchTerm}%` } },
       ];
+    }
+    if (promotion_id) {
+      whereCondition.promotion_id = parseInt(promotion_id);
+      // Đảm bảo product_variant_id không null
+      whereCondition.product_variant_id = { [Op.ne]: null };
     }
 
     const { count, rows } = await PromotionProductModel.findAndCountAll({
@@ -50,16 +55,9 @@ exports.getAll = async (req, res) => {
               [
                 Sequelize.literal(`(
                   SELECT COUNT(*)
-                  FROM promotion_users AS pu
-                  WHERE pu.promotion_id = promotion.id
-                )`),
-                "user_count",
-              ],
-              [
-                Sequelize.literal(`(
-                  SELECT COUNT(*)
                   FROM promotion_products AS pp
                   WHERE pp.promotion_id = promotion.id
+                    AND pp.product_variant_id IS NOT NULL
                 )`),
                 "variant_count",
               ],
@@ -68,25 +66,57 @@ exports.getAll = async (req, res) => {
           },
         },
       ],
-      limit: pageSize,
-      offset,
+      limit: promotion_id ? undefined : pageSize,
+      offset: promotion_id ? 0 : offset,
       distinct: true,
     });
 
+    // Log để debug
+    if (promotion_id && rows.length === 0) {
+      console.log(`Không tìm thấy bản ghi nào cho promotion_id ${promotion_id} trong promotion_products với product_variant_id hợp lệ`);
+    }
+
+    // Đồng bộ variant_count nếu cần
+    if (promotion_id) {
+      const actualVariantCount = rows.filter(
+        (item) => item.product_variant_id && !isNaN(item.product_variant_id)
+      ).length;
+      const promotion = await PromotionModel.findOne({
+        where: { id: parseInt(promotion_id) },
+      });
+      if (promotion && promotion.variant_count !== actualVariantCount) {
+        console.warn(
+          `Số lượng variant_count (${promotion.variant_count}) không khớp với số lượng thực tế (${actualVariantCount}) cho promotion_id ${promotion_id}`
+        );
+        await PromotionModel.update(
+          { variant_count: actualVariantCount },
+          { where: { id: parseInt(promotion_id) } }
+        );
+        // Cập nhật variant_count trong dữ liệu trả về
+        rows.forEach((item) => {
+          if (item.promotion) {
+            item.promotion.variant_count = actualVariantCount;
+          }
+        });
+      }
+    }
+
     res.json({
       data: rows,
-      pagination: {
-        total: count,
-        page: pageNumber,
-        limit: pageSize,
-        totalPages: Math.ceil(count / pageSize),
-      },
+      pagination: promotion_id
+        ? undefined
+        : {
+            total: count,
+            page: pageNumber,
+            limit: pageSize,
+            totalPages: Math.ceil(count / pageSize),
+          },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Lỗi khi lấy danh sách promotion_products:", err.message);
     res.status(500).json({ error: err.message });
   }
-};
+}; 
 
 // GET BY ID
 exports.getById = async (req, res) => {
@@ -199,15 +229,18 @@ exports.update = async (req, res) => {
       where: { promotion_id },
     });
 
-    const newRecords = product_variant_ids.map((variant_id) => ({
-      promotion_id,
-      product_variant_id: variant_id,
-    }));
+    const newRecords = product_variant_ids
+      .filter((variant_id) => variant_id && !isNaN(variant_id)) // Lọc bỏ variant_id không hợp lệ
+      .map((variant_id) => ({
+        promotion_id,
+        product_variant_id: variant_id,
+      }));
+
     await PromotionProductModel.bulkCreate(newRecords);
 
     await promotion.update({
       status: status || promotion.status,
-      variant_count: product_variant_ids.length,
+      variant_count: newRecords.length,
     });
 
     const updatedRecords = await PromotionProductModel.findAll({

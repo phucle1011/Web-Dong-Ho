@@ -61,17 +61,43 @@ const PromotionProductList = () => {
     setLoading(true);
     setError(null);
     try {
+      const offset = (page - 1) * pagination.limit;
       const response = await axios.get(`${Constants.DOMAIN_API}/admin/promotion`, {
-        params: { page, limit: pagination.limit, searchTerm: search },
+        params: { page: 1, limit: offset + pagination.limit * 100, searchTerm: search }, // Tăng limit để lấy nhiều dữ liệu hơn
       });
       const data = Array.isArray(response.data?.data) ? response.data.data : [];
-      setPromotionProducts(data);
-      setPagination(
-        response.data?.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 }
-      );
+
+      if (!data.length) {
+        console.warn("API trả về dữ liệu rỗng!");
+      }
+
+      // Nhóm dữ liệu theo tên khuyến mãi
+      const grouped = {};
+      data.forEach((item) => {
+        if (item.promotion_id && item.product_variant_id) {
+          const promoName = item.promotion?.name || "Không rõ tên";
+          if (!grouped[promoName]) grouped[promoName] = [];
+          grouped[promoName].push(item);
+        }
+      });
+
+      // Lấy danh sách tên khuyến mãi duy nhất và chọn cho trang hiện tại
+      const groupedKeys = Object.keys(grouped);
+      const startIndex = (page - 1) * pagination.limit;
+      const selectedPromotions = groupedKeys.slice(startIndex, startIndex + pagination.limit);
+      const selectedProducts = selectedPromotions.flatMap((key) => grouped[key]);
+
+      setPromotionProducts(selectedProducts);
+      setPagination({
+        total: groupedKeys.length,
+        page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(groupedKeys.length / pagination.limit) || 1,
+      });
     } catch (err) {
       console.error("Lỗi khi lấy dữ liệu:", err);
-      setError("Không thể tải danh sách khuyến mãi!");
+      setError("Không thể tải danh sách khuyến mãi! Vui lòng thử lại.");
+      toast.error("Không thể tải danh sách khuyến mãi!");
     } finally {
       setLoading(false);
     }
@@ -83,7 +109,7 @@ const PromotionProductList = () => {
 
   useEffect(() => {
     if (showDeleteDialog && dialogRef.current) {
-      dialogRef.current.focus(); // Focus dialog for accessibility
+      dialogRef.current.focus();
     }
   }, [showDeleteDialog]);
 
@@ -107,7 +133,7 @@ const PromotionProductList = () => {
     try {
       await axios.delete(`${Constants.DOMAIN_API}/admin/promotions/${deleteItem.id}`);
       toast.success("Xóa thành công!");
-      fetchPromotions(pagination.page, searchTerm);
+      fetchPromotions(1, searchTerm);
     } catch (err) {
       console.error("Lỗi khi xóa:", err);
       toast.error(`Xóa thất bại: ${err.response?.data?.message || err.message}`);
@@ -128,16 +154,24 @@ const PromotionProductList = () => {
     }
   };
 
+  const toggleExpand = (promoName) => {
+    setExpanded(expanded === promoName ? null : promoName);
+  };
+
   const groupByPromotionName = (products) => {
     const grouped = {};
     products.forEach((item) => {
-      const promoName = item.promotion?.name || "Không rõ tên";
-      if (!grouped[promoName]) grouped[promoName] = [];
-      grouped[promoName].push(item);
+      if (item.promotion_id && item.product_variant_id) {
+        const promoName = item.promotion?.name || "Không rõ tên";
+        if (!grouped[promoName]) grouped[promoName] = [];
+        grouped[promoName].push(item);
+      }
     });
 
     return Object.entries(grouped).map(([name, items]) => {
-      const variantCount = items.length;
+      const variantCount = [...new Set(
+        items.map(item => item.product_variant_id)
+      )].length; // Đếm số biến thể duy nhất
       const promotionId = items[0]?.promotion?.id || null;
       return [name, items, variantCount, promotionId];
     });
@@ -152,14 +186,10 @@ const PromotionProductList = () => {
     }
   };
 
-  const toggleExpand = (promoName) => {
-    setExpanded(expanded === promoName ? null : promoName);
-  };
-
   const renderPagination = () => {
-    const { page, totalPages, limit } = pagination;
-    const showNextPage = promotionProducts.length === limit && totalPages > page;
+    const { page, totalPages } = pagination;
     const showPreviousPage = page > 1;
+    const showNextPage = page < totalPages;
 
     const pagesToShow = [];
     const maxPages = 3;
