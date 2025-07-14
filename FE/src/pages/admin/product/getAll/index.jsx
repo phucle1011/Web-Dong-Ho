@@ -12,7 +12,7 @@ import {
   FaEye,
   FaTrashAlt,
   FaTrash,
-  FaEdit
+  FaEdit,
 } from "react-icons/fa";
 
 const AdminProductList = () => {
@@ -28,7 +28,6 @@ const AdminProductList = () => {
   const recordsPerPage = 10;
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -65,9 +64,13 @@ const AdminProductList = () => {
     }
   }, [currentPage, searchTerm, selectedCategory, selectedBrand]);
 
-
   // Tách hàm search riêng
-  const searchProducts = async (page, search, categoryId = "", brandId = "") => {
+  const searchProducts = async (
+    page,
+    search,
+    categoryId = "",
+    brandId = ""
+  ) => {
     try {
       const res = await axios.get(
         `${Constants.DOMAIN_API}/admin/products/productList/search`,
@@ -89,7 +92,6 @@ const AdminProductList = () => {
       setTotalPages(1);
     }
   };
-
 
   const deleteProduct = async () => {
     if (!selectedProduct) return;
@@ -195,26 +197,23 @@ const AdminProductList = () => {
         {/* Tiêu đề */}
         <h2 className="text-xl font-semibold mb-4">Danh sách sản phẩm</h2>
 
-        {/* Nút thêm sản phẩm */}
-        <div className="flex justify-end mb-3">
+        {/* Nút thêm sản phẩm và danh sách thuộc tính */}
+        <div className="flex justify-end mb-3 gap-3">
           <Link
             to="/admin/products/create"
             className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
           >
             + Thêm sản phẩm
           </Link>
-        </div>
-        <div className="flex justify-end mb-3">
-           <Link
-  to={`/admin/attribute/getall`}
-  className="bg-indigo-500 text-white py-1 px-3 rounded hover:bg-indigo-600 transition"
-  title="Thêm thuộc tính"
->
-  <i className="fa-solid fa-plus">Danh Sách Thuộc Tính</i>
-</Link>
-        </div>
-       
 
+          <Link
+            to="/admin/attribute/getall"
+            className="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition"
+            title="Danh sách thuộc tính"
+          >
+            Danh sách thuộc tính
+          </Link>
+        </div>
 
         {/* Ô tìm kiếm */}
         <div className="mb-3 flex gap-2">
@@ -255,8 +254,18 @@ const AdminProductList = () => {
             onClick={handleSearchSubmit}
             className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z"
+              />
             </svg>
           </button>
         </div>
@@ -265,17 +274,18 @@ const AdminProductList = () => {
         <table className="w-full border-collapse border border-gray-500 mt-3">
           <thead className="bg-gray-200">
             <tr>
-              <th className="p-2 border">#</th>
-              <th className="p-2 border">Tên</th>
-              <th className="p-2 border">Ảnh</th>
-              <th className="p-2 border">Trạng thái</th>
-              <th className="p-2 border">Danh mục</th>
-              <th className="p-2 border">Thương hiệu</th>
-              <th className="p-2 border">Biến thể</th>
-              <th className="p-2 border"> Kho </th>
-              <th className="p-2 border"> Hành động</th>
+              <th className="p-2 border whitespace-nowrap">#</th>
+              <th className="p-2 border whitespace-nowrap">Tên</th>
+              <th className="p-2 border whitespace-nowrap">Ảnh</th>
+              <th className="p-2 border whitespace-nowrap">Trạng thái</th>
+              <th className="p-2 border whitespace-nowrap">Danh mục</th>
+              <th className="p-2 border whitespace-nowrap">Thương hiệu</th>
+              <th className="p-2 border whitespace-nowrap">Biến thể</th>
+              <th className="p-2 border whitespace-nowrap">Kho</th>
+              <th className="p-2 border whitespace-nowrap">Hành động</th>
             </tr>
           </thead>
+
           <tbody>
             {products.length === 0 ? (
               <tr>
@@ -292,30 +302,40 @@ const AdminProductList = () => {
                   <td className="p-2 border">{product.name}</td>
                   <td className="p-2 border">
                     <img
-                      src={product.thumbnail || "https://via.placeholder.com/60"}
+                      src={
+                        product.thumbnail || "https://via.placeholder.com/60"
+                      }
                       alt={product.name}
                       className="w-16 h-16 object-cover rounded"
                     />
                   </td>
                   <td className="p-2 border text-center">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${product.status === 1
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        product.status === 1
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
-                        }`}
+                      }`}
                     >
                       {product.status === 1 ? "Hiển thị" : "Ẩn"}
                     </span>
                   </td>
-                  <td className="p-2 border">{product.category?.name || "Không có"}</td>
-                  <td className="p-2 border">{product.brand?.name || "Không có"}</td>
+                  <td className="p-2 border">
+                    {product.category?.name || "Không có"}
+                  </td>
+                  <td className="p-2 border">
+                    {product.brand?.name || "Không có"}
+                  </td>
 
                   <td className="p-2 border text-center">
                     {product.variantCount ?? product.variants?.length ?? 0}
                   </td>
                   <td className="p-2 border text-center">
                     {product.variants
-                      ? product.variants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
+                      ? product.variants.reduce(
+                          (sum, variant) => sum + (variant.stock || 0),
+                          0
+                        )
                       : 0}
                   </td>
 
@@ -340,16 +360,16 @@ const AdminProductList = () => {
                       </Link>
 
                       {/* Nút xoá */}
-                      <button
-                        onClick={() => setSelectedProduct(product)}
-                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                        title="Xoá sản phẩm"
-                      >
-                        <FaTrashAlt size={20} className="font-bold" />
-                      </button>
+                      {product.variants?.length === 0 && (
+                        <button
+                          onClick={() => setSelectedProduct(product)}
+                          className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                          title="Xoá sản phẩm"
+                        >
+                          <FaTrashAlt size={20} className="font-bold" />
+                        </button>
+                      )}
                     </div>
-
-
                   </td>
                 </tr>
               ))
@@ -394,10 +414,11 @@ const AdminProductList = () => {
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 border rounded ${currentPage === page
+                    className={`px-3 py-1 border rounded ${
+                      currentPage === page
                         ? "bg-blue-500 text-white"
                         : "bg-blue-100 text-black hover:bg-blue-200"
-                      }`}
+                    }`}
                   >
                     {page}
                   </button>

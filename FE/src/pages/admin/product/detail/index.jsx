@@ -14,6 +14,7 @@ import {
   FaEdit
 } from "react-icons/fa";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
+import { Editor } from "@tinymce/tinymce-react";
 
 import * as XLSX from "xlsx";
 const AdminProductDetail = () => {
@@ -32,6 +33,9 @@ const AdminProductDetail = () => {
 const [totalPages, setTotalPages] = useState(1);
 const [currentPage, setCurrentPage] = useState(1);
 const limit = 5;
+
+
+const [description, setDescription] = useState("");
 
   const handleImageClick = (images, index) => {
     setSelectedImages(images);
@@ -64,6 +68,7 @@ useEffect(() => {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/products/${id}`);
       setProduct(res.data.data);
       setFormData(res.data.data);
+      setDescription(res.data.data.description)
     } catch (error) {
       console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
     }
@@ -90,11 +95,14 @@ useEffect(() => {
           : value,
     }));
   };
-
+const productData = {
+        ...formData,
+        description: description,
+      };
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`${Constants.DOMAIN_API}/admin/products/${id}`, formData);
+      await axios.put(`${Constants.DOMAIN_API}/admin/products/${id}`, productData);
       toast.success("Cập nhật sản phẩm thành công!");
       fetchProduct(); // Cập nhật lại dữ liệu
     } catch (error) {
@@ -227,12 +235,44 @@ useEffect(() => {
     {/* Mô tả để cuối */}
     <div className="mt-4">
       <label className="font-semibold">Mô tả:</label>
-      <textarea
-        name="description"
-        className="border rounded p-2 w-full"
-        rows={4}
-        value={formData.description}
-        onChange={handleChange}
+      <Editor
+        apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
+        value={description}
+        init={{
+          height: 400,
+          menubar: true,
+          plugins: [
+            "advlist", "autolink", "lists", "link", "image", "charmap", "preview", "anchor",
+            "searchreplace", "visualblocks", "code", "fullscreen",
+            "insertdatetime", "media", "table", "help", "wordcount"
+          ],
+          toolbar:
+            "undo redo | formatselect | bold italic backcolor | \
+             alignleft aligncenter alignright alignjustify | \
+             bullist numlist outdent indent | image | help",
+          image_title: true,
+          automatic_uploads: true,
+          file_picker_types: "image",
+          file_picker_callback: function (cb, value, meta) {
+            const input = document.createElement("input");
+            input.setAttribute("type", "file");
+            input.setAttribute("accept", "image/*");
+            input.onchange = async function () {
+              const file = input.files[0];
+              if (!file) return;
+      
+              try {
+                const result = await uploadToCloudinary(file);
+                
+                cb(result.url, { title: file.name }); // truyền đúng kiểu string URL
+              } catch (err) {
+                console.error("Upload lỗi:", err);
+              }
+            };
+            input.click();
+          },
+        }}
+        onEditorChange={(content) => setDescription(content)}
       />
     </div>
   </div>
@@ -325,12 +365,16 @@ useEffect(() => {
                 >
                 <FaEdit size={20} className="font-bold" />
                 </Link>
-                <button
-                  onClick={() => setSelectedProduct(variant)}
-                  className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                >
-                  <FaTrashAlt size={20} className="font-bold" />
-                </button>
+                {variant.canDelete && (
+  <button
+    onClick={() => handleDeleteVariant(variant.id)}
+    className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+    title="Xoá biến thể"
+  >
+    <FaTrashAlt size={16} />
+  </button>
+)}
+
               </div>
             </td>
           </tr>

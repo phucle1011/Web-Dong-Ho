@@ -6,6 +6,8 @@ const VariantImage = require("../../models/variantImagesModel");
 const BrandModel = require("../../models/brandsModel");
 const CategoryModel = require("../../models/categoriesModel");
 const cloudinary = require("../../config/cloudinaryConfig");
+const OrderDetail = require("../../models/orderDetailsModel");
+const CartItem = require("../../models/cartDetailsModel");
 
 const { Op,Sequelize } = require("sequelize");
 
@@ -114,7 +116,7 @@ static async getAllAttributes(req, res) {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Lấy thông tin cơ bản của sản phẩm
+    // Lấy thông tin sản phẩm
     const product = await Product.findByPk(id, {
       include: [
         {
@@ -134,12 +136,12 @@ static async getAllAttributes(req, res) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
 
-    // Lấy biến thể có phân trang
-    const { count, rows: variants } = await ProductVariant.findAndCountAll({
+    // Lấy danh sách biến thể có phân trang
+    const { count, rows } = await ProductVariant.findAndCountAll({
       where: { product_id: id },
       limit,
       offset,
-        distinct: true,  // thêm dòng nà
+      distinct: true,
       include: [
         {
           model: ProductVariantAttributeValue,
@@ -155,10 +157,34 @@ static async getAllAttributes(req, res) {
           model: VariantImage,
           as: "images",
         },
+        {
+          model: OrderDetail,
+          as: "orderDetails",
+          attributes: ["id"],
+          required: false, // Cho phép biến thể không có đơn hàng vẫn lấy được
+        },
+        {
+          model: CartItem,
+          as: "carts", // Alias này phải đúng với model association
+          attributes: ["id"],
+          required: false, // Cho phép biến thể không có trong giỏ hàng vẫn lấy được
+        },
       ],
       order: [["created_at", "DESC"]],
     });
 
+    // Gắn thêm flag `canDelete` cho mỗi biến thể
+    const variants = rows.map((variant) => {
+      const usedInOrder = variant.orderDetails && variant.orderDetails.length > 0;
+      const usedInCart = variant.carts && variant.carts.length > 0;
+
+      return {
+        ...variant.toJSON(),
+        canDelete: !usedInOrder && !usedInCart, // Chỉ có thể xóa nếu không nằm trong đơn hàng hoặc giỏ hàng
+      };
+    });
+
+    // Trả về kết quả
     res.status(200).json({
       status: 200,
       data: {
@@ -173,9 +199,13 @@ static async getAllAttributes(req, res) {
       },
     });
   } catch (error) {
+    console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
     res.status(500).json({ error: error.message });
   }
 }
+
+
+
 
 
 

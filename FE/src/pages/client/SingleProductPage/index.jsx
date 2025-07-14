@@ -185,9 +185,12 @@ useEffect(() => {
                     <h6 className="text-[18px] font-medium text-qblack mb-2">
                       MÔ TẢ
                     </h6>
-                    <p className="text-[15px] text-qgray text-normal mb-10">
-                    {description}
-                    </p>
+                    <div
+  className="prose prose-img:rounded-md"
+  dangerouslySetInnerHTML={{ __html: description }}
+></div>
+
+                    
                     
                   </div>
                 )}

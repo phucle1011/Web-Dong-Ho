@@ -36,6 +36,11 @@ const ProductModel = connection.define('products', {
     allowNull: false,
     defaultValue: 1
   },
+  publication_status: {
+    type: DataTypes.ENUM('draft', 'published'),
+    allowNull: false,
+    defaultValue: 'draft' // mặc định là bản nháp
+  },
   createdAt: {
     type: DataTypes.DATE,
     field: 'created_at'

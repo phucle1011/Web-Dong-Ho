@@ -23,3 +23,20 @@ export const uploadToCloudinary = async (file) => {
     throw err;
   }
 };
+// ✅ HÀM XÓA ẢNH
+export const deleteImageFromCloudinary = async (publicId) => {
+  try {
+    const response = await fetch("http://localhost:5000/admin/products/imagesClauding", {
+      method: "POST", // phải có method
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ public_id: publicId }), // đúng format
+    });
+
+    return await response.json();
+  } catch (err) {
+    console.error("Lỗi xóa ảnh Cloudinary:", err);
+    return { success: false };
+  }
+};

@@ -21,7 +21,7 @@ const generateSlug = (text) => {
     .replace(/-+$/, "");
 };
 
-function BrandCreate() {
+function BrandCreate({ onSuccess, isModal = false }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
@@ -141,20 +141,33 @@ function BrandCreate() {
             toast.success("Thêm thương hiệu thành công!");
             reset();
             setLogoFile(null);
-            navigate("/admin/brand/getAll");
+            if (isModal) {
+    onSuccess?.(); // ✅ Gọi callback để cập nhật danh sách
+  } else {
+    navigate("/admin/brand/getAll"); // ✅ Chỉ redirect nếu không phải modal
+  }
           }
         } catch (error) {
-          console.error("Lỗi từ server:", error.response?.data);
-          const errRes = error.response?.data;
-          if (errRes?.errors) {
-            Object.entries(errRes.errors).forEach(([key, msg]) => {
-              setError(key, { type: "server", message: msg });
-            });
-            toast.error("Có lỗi xảy ra, vui lòng kiểm tra lại.");
-          } else {
-            toast.error(errRes?.message || "Lỗi không xác định.");
-          }
-        } finally {
+  const errRes = error?.response?.data;
+  console.error("Lỗi từ server:", errRes || error.message);
+
+  if (errRes?.errors) {
+    // Nếu có các lỗi dạng object { field: message }
+    Object.entries(errRes.errors).forEach(([key, msg]) => {
+      setError(key, { type: "server", message: msg });
+    });
+    toast.error("❌ Có lỗi xảy ra, vui lòng kiểm tra lại.");
+  } else if (errRes?.message || errRes?.error) {
+    toast.error("❌ " + (errRes.message || errRes.error));
+  } else if (error.request) {
+    // Có request gửi đi nhưng không nhận được phản hồi
+    toast.error("❌ Không nhận được phản hồi từ server.");
+  } else {
+    // Lỗi khác như network, CORS, hoặc cú pháp
+    toast.error("❌ " + error.message || "Lỗi không xác định.");
+  }
+}
+ finally {
           setLoading(false);
         }
       }
