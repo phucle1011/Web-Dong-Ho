@@ -19,10 +19,6 @@ const OrderModel = connection.define('orders', {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: true
     },
-    discount_amount: {
-        type: DataTypes.DECIMAL(20, 2),
-        allowNull: true
-    },
     status: {
         type: DataTypes.ENUM('pending','confirmed','shipping','completed','delivered','cancelled'),
         allowNull: false,

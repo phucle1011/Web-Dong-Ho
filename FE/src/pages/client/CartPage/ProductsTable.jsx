@@ -47,7 +47,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems(res.data.data);
     } catch (error) {
       console.error("Lỗi khi lấy giỏ hàng:", error);
-      toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
+      // toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
     }
   };
 

@@ -143,7 +143,7 @@ class OrderController {
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
 
-            const previousStatus = order.status; 
+            const previousStatus = order.status;
 
             if (name !== undefined) order.name = name;
             if (status !== undefined) order.status = status;
@@ -156,12 +156,12 @@ class OrderController {
 
             await order.save();
 
-             if (previousStatus !== "cancelled" && status === "cancelled") {
-            const user = await UserModel.findByPk(order.user_id); 
-            if (user && user.email) {
-                await this.sendOrderCancellationEmail(order, user, user.email, cancellation_reason);
+            if (previousStatus !== "cancelled" && status === "cancelled") {
+                const user = await UserModel.findByPk(order.user_id);
+                if (user && user.email) {
+                    await this.sendOrderCancellationEmail(order, user, user.email, cancellation_reason);
+                }
             }
-        }
 
             res.status(200).json({
                 status: 200,
@@ -242,25 +242,25 @@ class OrderController {
     }
 
     static async sendOrderCancellationEmail(order, user, customerEmail, cancellationReason) {
-    try {
-        let transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+        try {
+            let transporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            });
 
-        const formattedDate = new Date().toLocaleString("vi-VN", {
-            timeZone: "Asia/Ho_Chi_Minh",
-            hour12: false,
-        });
+            const formattedDate = new Date().toLocaleString("vi-VN", {
+                timeZone: "Asia/Ho_Chi_Minh",
+                hour12: false,
+            });
 
-        const formattedTotal = new Intl.NumberFormat("vi-VN").format(order.total_price);
-        const formattedShipping = new Intl.NumberFormat("vi-VN").format(order.shipping_fee || 0);
-        const formattedDiscount = new Intl.NumberFormat("vi-VN").format(order.discount_amount || 0);
+            const formattedTotal = new Intl.NumberFormat("vi-VN").format(order.total_price);
+            const formattedShipping = new Intl.NumberFormat("vi-VN").format(order.shipping_fee || 0);
+            const formattedDiscount = new Intl.NumberFormat("vi-VN").format(order.discount_amount || 0);
 
-        const htmlContent = `
+            const htmlContent = `
         <!DOCTYPE html>
         <html lang="vi">
         <head>
@@ -310,14 +310,12 @@ class OrderController {
                 <div class="info"><span>Ngày hủy:</span> ${formattedDate}</div>
                 <div class="info"><span>Tổng tiền:</span> ${formattedTotal}₫</div>
 
-                ${
-                  order.discount_amount > 0
+                ${order.discount_amount > 0
                     ? `<div class="info"><span>Giảm giá:</span> -${formattedDiscount}₫</div>`
                     : ""
                 }
 
-                ${
-                  order.shipping_fee > 0
+                ${order.shipping_fee > 0
                     ? `<div class="info"><span>Phí vận chuyển:</span> +${formattedShipping}₫</div>`
                     : ""
                 }
@@ -332,19 +330,19 @@ class OrderController {
         </html>
         `;
 
-        const mailOptions = {
-            from: `"Cửa hàng của bạn" <${process.env.EMAIL_USER}>`,
-            to: customerEmail,
-            subject: `Hủy đơn hàng #${order.order_code}`,
-            html: htmlContent
-        };
+            const mailOptions = {
+                from: `"Cửa hàng của bạn" <${process.env.EMAIL_USER}>`,
+                to: customerEmail,
+                subject: `Hủy đơn hàng #${order.order_code}`,
+                html: htmlContent
+            };
 
-        await transporter.sendMail(mailOptions);
-    } catch (error) {
-        console.error("Lỗi gửi email hủy đơn hàng:", error);
-        throw new Error("Không thể gửi email hủy đơn hàng.");
+            await transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error("Lỗi gửi email hủy đơn hàng:", error);
+            throw new Error("Không thể gửi email hủy đơn hàng.");
+        }
     }
-}
 
     static async confirmDelivered(req, res) {
         try {
@@ -386,7 +384,6 @@ class OrderController {
             promotion,
             note,
             shipping_fee,
-            cancellation_reason,
             promo_discount,
             voucher_discount
         } = req.body;
@@ -482,12 +479,12 @@ class OrderController {
                         await promoUser.save({ transaction: t });
                     }
 
-                    if (selectedVoucher.discount_type === 'fixed') {
-                        discountAmount = Math.min(selectedVoucher.discount_value, totalPrice);
-                    } else if (selectedVoucher.discount_type === 'percentage') {
-                        const maxPrice = selectedVoucher.max_price || Infinity;
-                        discountAmount = Math.min((totalPrice * selectedVoucher.discount_value) / 100, maxPrice);
-                    }
+                    // if (selectedVoucher.discount_type === 'fixed') {
+                    //     discountAmount = Math.min(selectedVoucher.discount_value, totalPrice);
+                    // } else if (selectedVoucher.discount_type === 'percentage') {
+                    //     const maxPrice = selectedVoucher.max_price || Infinity;
+                    //     discountAmount = Math.min((totalPrice * selectedVoucher.discount_value) / 100, maxPrice);
+                    // }
 
                     totalPrice -= discountAmount;
                     selectedVoucher.quantity -= 1;
@@ -498,6 +495,12 @@ class OrderController {
             if (specialDiscount > 0) {
                 specialDiscount = Math.min(specialDiscount, totalPrice);
                 totalPrice -= specialDiscount;
+            }
+
+            let voucherDiscount = parseFloat(voucher_discount) || 0;
+            if (voucherDiscount > 0) {
+                voucherDiscount = Math.min(voucherDiscount, totalPrice);
+                totalPrice -= voucherDiscount;
             }
 
             const order_code = `ORD-${Date.now()}`;
@@ -520,8 +523,8 @@ class OrderController {
                 status: "pending",
                 cancellation_reason: note || null,
                 shipping_code: null,
-                discount_amount: voucher_discount,
-                special_discount_amount: specialDiscount
+                discount_amount: voucherDiscount || 0,
+                special_discount_amount: specialDiscount || 0
             }, { transaction: t });
 
             const orderDetails = detailedCart.map((item) => ({
@@ -573,11 +576,10 @@ class OrderController {
             email,
             address,
             note,
-            payment_method,
             shipping_fee,
             promotion,
-            orderId,
-            promo_discount
+            promo_discount,
+            voucher_discount
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -593,78 +595,74 @@ class OrderController {
             const detailedCart = [];
 
             for (const item of products) {
-                const variant = item.variant;
+    const variant = item.variant;
+    if (!variant) {
+        return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
+    }
 
-                if (!variant) {
-                    return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
+    const price = parseFloat(variant.price);
+    totalPrice += price * item.quantity;
+
+    detailedCart.push({
+        product_id: variant.id,
+        name: variant.sku,
+        price: price,
+        quantity: item.quantity,
+        total: price * item.quantity,
+    });
+}
+
+let specialDiscount = parseFloat(promo_discount) || 0;
+specialDiscount = Math.min(specialDiscount, totalPrice);
+let priceAfterSpecial = totalPrice - specialDiscount;
+
+let discountAmount = 0;
+let selectedVoucher = null;
+
+if (promotion) {
+    selectedVoucher = await PromotionModel.findByPk(promotion);
+    if (selectedVoucher) {
+        const now = new Date();
+        if (
+            selectedVoucher.status !== 'active' ||
+            now < selectedVoucher.start_date ||
+            now > selectedVoucher.end_date ||
+            selectedVoucher.quantity <= 0 ||
+            totalPrice < parseFloat(selectedVoucher.min_price_threshold)
+        ) {
+            return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
+        }
+
+        if (selectedVoucher.special_promotion) {
+            const promoUser = await PromotionModel.findOne({
+                where: {
+                    promotion_id: selectedVoucher.id,
+                    user_id,
+                    email_sent: true,
+                    used: { [Op.not]: true },
                 }
+            });
 
-                const price = parseFloat(variant.price);
-                totalPrice += price * item.quantity;
-
-                detailedCart.push({
-                    product_id: variant.id,
-                    name: variant.sku,
-                    price: price,
-                    quantity: item.quantity,
-                    total: price * item.quantity,
-                });
+            if (!promoUser) {
+                return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
             }
+        }
 
-            let selectedVoucher = null;
-            let discountAmount = 0;
-            let finalAmount = totalPrice;
-            let specialDiscount = parseFloat(promo_discount) || 0;
+        if (selectedVoucher.discount_type === 'fixed') {
+            discountAmount = Math.min(parseFloat(selectedVoucher.discount_value), priceAfterSpecial);
+        } else if (selectedVoucher.discount_type === 'percentage') {
+            const maxPrice = parseFloat(selectedVoucher.max_price || '999999999');
+            discountAmount = Math.min(
+                (priceAfterSpecial * parseFloat(selectedVoucher.discount_value)) / 100,
+                maxPrice
+            );
+        }
+    }
+}
 
-            if (promotion) {
-                selectedVoucher = await PromotionModel.findByPk(promotion);
-                if (selectedVoucher) {
-                    const now = new Date();
-                    if (
-                        selectedVoucher.status !== 'active' ||
-                        now < selectedVoucher.start_date ||
-                        now > selectedVoucher.end_date ||
-                        selectedVoucher.quantity <= 0 ||
-                        totalPrice < parseFloat(selectedVoucher.min_price_threshold)
-                    ) {
-                        return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
-                    }
-
-                    if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionModel.findOne({
-                            where: {
-                                promotion_id: selectedVoucher.id,
-                                user_id,
-                                email_sent: true,
-                                used: { [Op.not]: true },
-                            }
-                        });
-
-                        if (!promoUser) {
-                            return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
-                        }
-                    }
-
-                    if (selectedVoucher.discount_type === 'fixed') {
-                        discountAmount = Math.min(parseFloat(selectedVoucher.discount_value), totalPrice);
-                    } else if (selectedVoucher.discount_type === 'percentage') {
-                        const maxPrice = parseFloat(selectedVoucher.max_price || '999999999');
-                        discountAmount = Math.min(
-                            (totalPrice * parseFloat(selectedVoucher.discount_value)) / 100,
-                            maxPrice
-                        );
-                    }
-
-                    finalAmount = totalPrice - discountAmount;
-                }
-            }
-
-            if (specialDiscount > 0) {
-                specialDiscount = Math.min(specialDiscount, finalAmount);
-                finalAmount -= specialDiscount;
-            }
-
-            const finalTotalWithShipping = finalAmount + (parseFloat(shipping_fee) || 0);
+const finalAmount = priceAfterSpecial - discountAmount;
+const shipping = parseFloat(shipping_fee) || 0;
+const finalTotalWithShipping = finalAmount + shipping;
 
             const simplifiedProducts = products.map(item => ({
                 variant: {
@@ -689,9 +687,10 @@ class OrderController {
                 orderId: order_code,
                 amount: finalTotalWithShipping,
                 originalAmount: totalPrice,
-                discountAmount: discountAmount,
+                discountAmount: discountAmount || 0,
                 specialDiscount: specialDiscount,
-                shipping_fee: shipping_fee || 0
+                shipping_fee: shipping_fee || 0,
+                voucher_discount
             })).toString("base64");
 
             const endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
@@ -776,194 +775,195 @@ class OrderController {
     }
 
     static async momoPaymentNotification(req, res) {
-        const { resultCode, orderId, amount, extraData } = req.body;
+    const { resultCode, orderId, amount, extraData } = req.body;
 
-        if (resultCode !== 0) {
-            return res.status(200).json({ message: "Thanh toán thất bại hoặc bị hủy." });
-        }
-
-        const t = await sequelize.transaction();
-        try {
-            const decoded = JSON.parse(Buffer.from(extraData, "base64").toString("utf-8"));
-
-            const {
-                user_id,
-                name,
-                phone,
-                email,
-                address,
-                note,
-                products,
-                promotion,
-                shipping_fee,
-                specialDiscount
-            } = decoded;
-
-            let totalPrice = 0;
-            const detailedCart = [];
-
-            for (const item of products) {
-                const variant = item.variant;
-                if (!variant) {
-                    console.error("Thiếu variant trong product:", item);
-                    await t.rollback();
-                    return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
-                }
-
-                const variantExists = await ProductVariantModel.findByPk(variant.id, { transaction: t });
-                if (!variantExists) {
-                    console.error("Biến thể sản phẩm không tồn tại:", variant.id);
-                    await t.rollback();
-                    return res.status(400).json({ message: "Biến thể sản phẩm không tồn tại." });
-                }
-
-                const price = parseFloat(variant.price);
-                totalPrice += price * item.quantity;
-                detailedCart.push({
-                    product_id: variant.id,
-                    name: variant.sku,
-                    price: price,
-                    quantity: item.quantity,
-                    total: price * item.quantity,
-                });
-            }
-
-            let finalSpecialDiscount = parseFloat(specialDiscount) || 0;
-            if (finalSpecialDiscount > 0) {
-                finalSpecialDiscount = Math.min(finalSpecialDiscount, totalPrice);
-                totalPrice -= finalSpecialDiscount;
-            }
-
-            let selectedVoucher = null;
-            let discountAmount = 0;
-
-            if (promotion) {
-                selectedVoucher = await PromotionModel.findByPk(promotion, {
-                    transaction: t,
-                    lock: t.LOCK.UPDATE,
-                });
-
-                if (selectedVoucher) {
-                    const now = new Date();
-                    if (
-                        selectedVoucher.status !== 'active' ||
-                        now < selectedVoucher.start_date ||
-                        now > selectedVoucher.end_date ||
-                        selectedVoucher.quantity <= 0 ||
-                        totalPrice < selectedVoucher.min_price_threshold
-                    ) {
-                        await t.rollback();
-                        return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
-                    }
-
-                    if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionModel.findOne({
-                            where: {
-                                promotion_id: selectedVoucher.id,
-                                user_id,
-                                email_sent: true,
-                                used: { [Op.not]: true },
-                            },
-                            transaction: t,
-                            lock: t.LOCK.UPDATE,
-                        });
-
-                        if (!promoUser) {
-                            await t.rollback();
-                            return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
-                        }
-
-                        promoUser.used = true;
-                        await promoUser.save({ transaction: t });
-                    }
-
-                    if (selectedVoucher.discount_type === 'fixed') {
-                        discountAmount = Math.min(parseFloat(selectedVoucher.discount_value), totalPrice);
-                    } else if (selectedVoucher.discount_type === 'percentage') {
-                        const maxPrice = parseFloat(selectedVoucher.max_price || '999999999');
-                        discountAmount = Math.min(
-                            (totalPrice * parseFloat(selectedVoucher.discount_value)) / 100,
-                            maxPrice
-                        );
-                    }
-
-                    totalPrice -= discountAmount;
-
-                    selectedVoucher.quantity -= 1;
-                    await selectedVoucher.save({ transaction: t });
-                }
-            }
-            const finalTotalWithShipping = totalPrice + (parseFloat(shipping_fee) || 0);
-
-            if (parseFloat(amount) !== finalTotalWithShipping) {
-                console.error("Số tiền không khớp:", { amount, finalTotalWithShipping });
-                await t.rollback();
-                return res.status(400).json({ message: "Số tiền thanh toán không khớp với tổng tiền đơn hàng." });
-            }
-
-            const newOrder = await OrderModel.create({
-                user_id,
-                promotion_id: promotion || null,
-                name,
-                phone,
-                email,
-                address,
-                total_price: parseFloat(amount),
-                payment_method: "Momo",
-                order_code: orderId,
-                shipping_address: address,
-                note: note || "",
-                shipping_fee: parseFloat(shipping_fee) || 0,
-                status: "pending",
-                cancellation_reason: null,
-                shipping_code: null,
-                discount_amount: discountAmount,
-                special_discount_amount: finalSpecialDiscount
-            }, { transaction: t });
-
-            const orderDetails = detailedCart.map((item) => ({
-                order_id: newOrder.id,
-                product_variant_id: item.product_id,
-                quantity: item.quantity,
-                price: item.price,
-            }));
-
-            await OrderDetail.bulkCreate(orderDetails, { transaction: t });
-
-            const successfullyOrderedProductIds = products.map(p => p.variant.id);
-
-            await CartModel.destroy({
-                where: {
-                    user_id,
-                    product_variant_id: successfullyOrderedProductIds,
-                },
-                transaction: t
-            });
-
-            await t.commit();
-
-            await OrderController.sendOrderConfirmationEmail(
-                newOrder,
-                { name, phone },
-                products,
-                email,
-                new Date()
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: "Đơn hàng đã được tạo sau khi thanh toán thành công.",
-                data: {
-                    order: newOrder,
-                    successfullyOrderedProductIds
-                }
-            });
-        } catch (err) {
-            await t.rollback();
-            console.error("Lỗi xử lý ipn:", err);
-            return res.status(500).json({ message: "Lỗi xử lý thông báo thanh toán.", error: err.message });
-        }
+    if (resultCode !== 0) {
+        return res.status(200).json({ message: "Thanh toán thất bại hoặc bị hủy." });
     }
+
+    const t = await sequelize.transaction();
+    try {
+        const decoded = JSON.parse(Buffer.from(extraData, "base64").toString("utf-8"));
+
+        const {
+            user_id,
+            name,
+            phone,
+            email,
+            address,
+            note,
+            products,
+            promotion,
+            shipping_fee,
+            specialDiscount
+        } = decoded;
+
+        let totalPrice = 0;
+        const detailedCart = [];
+
+        for (const item of products) {
+            const variant = item.variant;
+            if (!variant) {
+                console.error("Thiếu variant trong product:", item);
+                await t.rollback();
+                return res.status(400).json({ message: "Thông tin biến thể sản phẩm bị thiếu." });
+            }
+
+            const variantExists = await ProductVariantModel.findByPk(variant.id, { transaction: t });
+            if (!variantExists) {
+                console.error("Biến thể sản phẩm không tồn tại:", variant.id);
+                await t.rollback();
+                return res.status(400).json({ message: "Biến thể sản phẩm không tồn tại." });
+            }
+
+            const price = parseFloat(variant.price);
+            totalPrice += price * item.quantity;
+            detailedCart.push({
+                product_id: variant.id,
+                name: variant.sku,
+                price: price,
+                quantity: item.quantity,
+                total: price * item.quantity,
+            });
+        }
+
+        let finalSpecialDiscount = parseFloat(specialDiscount) || 0;
+        finalSpecialDiscount = Math.min(finalSpecialDiscount, totalPrice);
+        let priceAfterSpecial = totalPrice - finalSpecialDiscount;
+
+        let discountAmount = 0;
+        let selectedVoucher = null;
+        let finalAmount = priceAfterSpecial;
+
+        if (promotion) {
+            selectedVoucher = await PromotionModel.findByPk(promotion, {
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+
+            if (selectedVoucher) {
+                const now = new Date();
+                if (
+                    selectedVoucher.status !== 'active' ||
+                    now < selectedVoucher.start_date ||
+                    now > selectedVoucher.end_date ||
+                    selectedVoucher.quantity <= 0 ||
+                    priceAfterSpecial < parseFloat(selectedVoucher.min_price_threshold)
+                ) {
+                    await t.rollback();
+                    return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
+                }
+
+                if (selectedVoucher.special_promotion) {
+                    const promoUser = await PromotionModel.findOne({
+                        where: {
+                            promotion_id: selectedVoucher.id,
+                            user_id,
+                            email_sent: true,
+                            used: { [Op.not]: true },
+                        },
+                        transaction: t,
+                        lock: t.LOCK.UPDATE,
+                    });
+
+                    if (!promoUser) {
+                        await t.rollback();
+                        return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
+                    }
+
+                    promoUser.used = true;
+                    await promoUser.save({ transaction: t });
+                }
+
+                if (selectedVoucher.discount_type === 'fixed') {
+                    discountAmount = Math.min(parseFloat(selectedVoucher.discount_value), priceAfterSpecial);
+                } else if (selectedVoucher.discount_type === 'percentage') {
+                    const maxPrice = parseFloat(selectedVoucher.max_price || '999999999');
+                    discountAmount = Math.min(
+                        (priceAfterSpecial * parseFloat(selectedVoucher.discount_value)) / 100,
+                        maxPrice
+                    );
+                }
+
+                finalAmount = priceAfterSpecial - discountAmount;
+
+                selectedVoucher.quantity -= 1;
+                await selectedVoucher.save({ transaction: t });
+            }
+        }
+
+        const shipping = parseFloat(shipping_fee) || 0;
+        const finalTotalWithShipping = finalAmount + shipping;
+
+        if (Math.abs(parseFloat(amount) - finalTotalWithShipping) > 1e-6) {
+            console.error("Số tiền không khớp:", { amount, finalTotalWithShipping });
+            await t.rollback();
+            return res.status(400).json({ message: "Số tiền thanh toán không khớp với tổng tiền đơn hàng." });
+        }
+
+        const newOrder = await OrderModel.create({
+            user_id,
+            promotion_id: promotion || null,
+            name,
+            phone,
+            email,
+            address,
+            total_price: parseFloat(amount),
+            payment_method: "Momo",
+            order_code: orderId,
+            shipping_address: address,
+            note: note || "",
+            shipping_fee: shipping,
+            status: "pending",
+            cancellation_reason: null,
+            shipping_code: null,
+            discount_amount: discountAmount || 0,
+            special_discount_amount: finalSpecialDiscount || 0
+        }, { transaction: t });
+
+        const orderDetails = detailedCart.map((item) => ({
+            order_id: newOrder.id,
+            product_variant_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+        }));
+
+        await OrderDetail.bulkCreate(orderDetails, { transaction: t });
+
+        const successfullyOrderedProductIds = products.map(p => p.variant.id);
+
+        await CartModel.destroy({
+            where: {
+                user_id,
+                product_variant_id: successfullyOrderedProductIds,
+            },
+            transaction: t
+        });
+
+        await t.commit();
+
+        await OrderController.sendOrderConfirmationEmail(
+            newOrder,
+            { name, phone },
+            products,
+            email,
+            new Date()
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Đơn hàng đã được tạo sau khi thanh toán thành công.",
+            data: {
+                order: newOrder,
+                successfullyOrderedProductIds
+            }
+        });
+    } catch (err) {
+        await t.rollback();
+        console.error("Lỗi xử lý ipn:", err);
+        return res.status(500).json({ message: "Lỗi xử lý thông báo thanh toán.", error: err.message });
+    }
+}
 
     static sortObject(obj) {
         const ordered = {};

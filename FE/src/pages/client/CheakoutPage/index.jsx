@@ -619,13 +619,17 @@ export default function CheckoutPage() {
     setIsCalculatingShipping(true);
 
     try {
+
       if (!defaultAddress) {
-        setFinalData(prev => ({
-          ...prev,
-          shippingFee: 0,
-          shippingService: "Chưa có địa chỉ",
-          formattedAmount: Number(prev.total - prev.voucherDiscount - prev.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-        }));
+        setFinalData(prev => {
+          const amount = Math.max(0, prev.total - prev.voucherDiscount - prev.promoDiscount);
+          return {
+            ...prev,
+            shippingFee: 0,
+            shippingService: "Chưa có địa chỉ",
+            formattedAmount: amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+          };
+        });
         return;
       }
 
@@ -685,12 +689,15 @@ export default function CheckoutPage() {
         }
       }
 
-      setFinalData(prev => ({
-        ...prev,
-        shippingFee: 0,
-        shippingService: "Không hỗ trợ giao hàng tới khu vực này",
-        formattedAmount: Number(prev.total - prev.voucherDiscount - prev.promoDiscount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-      }));
+      setFinalData(prev => {
+        const amount = Math.max(0, prev.total - prev.voucherDiscount - prev.promoDiscount);
+        return {
+          ...prev,
+          shippingFee: 0,
+          shippingService: "Không hỗ trợ giao hàng tới khu vực này",
+          formattedAmount: amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+        };
+      });
 
     } catch (error) {
       console.error("Lỗi tính phí vận chuyển:", error);
@@ -712,7 +719,7 @@ export default function CheckoutPage() {
   }, [defaultAddress, discountInfo, totalPrice]);
 
   useEffect(() => {
-    const total = totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0) + (finalData.shippingFee || 0);
+    const total = Math.max(0, totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0);
 
     setFinalData(prev => ({
       ...prev,
@@ -840,7 +847,7 @@ export default function CheckoutPage() {
         voucher_discount: discountInfo?.voucherDiscount || 0,
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
-        amount: finalData.total - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0) + (finalData.shippingFee || 0),
+        amount: Math.max(0, finalData.total - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0),
         orderId: `ORD-${Date.now()}`,
         orderDescription: `Thanh toan don hang cho ${user.name}`,
         orderType: 'other'

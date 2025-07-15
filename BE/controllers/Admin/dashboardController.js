@@ -26,7 +26,7 @@ class DashboardController {
           {
             model: OrderModel,
             as: 'order',
-            where: { status: 'delivered' },
+            where: { status: 'completed' },
             attributes: [],
           },
         ],
@@ -58,7 +58,7 @@ class DashboardController {
               model: OrderModel,
               as: 'order',
               where: {
-                status: 'delivered',
+                status: 'completed',
                 created_at: {
                   [Op.between]: [startDate, endDate]
                 }
@@ -123,7 +123,7 @@ class DashboardController {
           model: OrderModel,
           as: 'order',
           where: {
-            status: 'delivered',
+            status: 'completed',
             created_at: { [Op.between]: [startDate, endDate] }
           },
           attributes: [],
@@ -179,7 +179,7 @@ static async getRevenueByDaysInMonth(req, res) {
           model: OrderModel,
           as: 'order',
           where: {
-            status: 'delivered',
+            status: 'completed',
             created_at: { [Op.between]: [startDate, endDate] }
           },
           attributes: [],
@@ -229,7 +229,7 @@ static async getRevenueByCustomRange(req, res) {
           model: OrderModel,
           as: 'order',
           where: {
-            status: 'delivered',
+            status: 'completed',
             created_at: { [Op.between]: [startDate, endDate] }
           },
           attributes: [],
