@@ -73,7 +73,8 @@ router.put('/promotion/:id', promotionProductsController.update);
 router.delete('/promotions/:id', promotionProductsController.remove);
 
 //------------------[ PRODUCT ]------------------\
-router.get('/products', ProductController.get);
+router.get('/products/draft', ProductController.getDraftProducts);
+router.get('/products/published', ProductController.getPublishedProducts);
 router.get('/products/:id', ProductController.getById);
 router.post('/products', ProductController.createProduct);
 router.post('/products/:product_id/variants', ProductController.addVariant);

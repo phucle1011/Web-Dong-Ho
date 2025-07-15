@@ -28,6 +28,9 @@ const AdminProductList = () => {
   const recordsPerPage = 10;
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [publicationStatus, setPublicationStatus] = useState("published");
+const [publishedCount, setPublishedCount] = useState(0);
+const [draftCount, setDraftCount] = useState(0);
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -55,21 +58,35 @@ const AdminProductList = () => {
     };
     fetchCategories();
   }, []);
-
   useEffect(() => {
-    if (!searchTerm && !selectedCategory && !selectedBrand) {
-      fetchProducts(currentPage);
+    const hasSearch = searchTerm || selectedCategory || selectedBrand;
+
+    if (hasSearch) {
+      searchProducts(
+        currentPage,
+        searchTerm,
+        selectedCategory,
+        selectedBrand,
+        publicationStatus
+      );
     } else {
-      searchProducts(currentPage, searchTerm, selectedCategory, selectedBrand);
+      fetchProducts(currentPage, searchTerm); // searchTerm có thể rỗng
     }
-  }, [currentPage, searchTerm, selectedCategory, selectedBrand]);
+  }, [
+    currentPage,
+    searchTerm,
+    selectedCategory,
+    selectedBrand,
+    publicationStatus,
+  ]);
 
   // Tách hàm search riêng
   const searchProducts = async (
     page,
     search,
     categoryId = "",
-    brandId = ""
+    brandId = "",
+    status = ""
   ) => {
     try {
       const res = await axios.get(
@@ -79,13 +96,14 @@ const AdminProductList = () => {
             searchTerm: search,
             categoryId: categoryId || undefined,
             brandId: brandId || undefined,
+            publicationStatus: status || undefined,
             page,
             limit: recordsPerPage,
           },
         }
       );
       setProducts(res.data.data);
-      setTotalPages(res.data.totalPages || 1);
+      setTotalPages(res.data.pagination?.totalPages || 1);
     } catch (error) {
       console.error("Lỗi khi tìm kiếm sản phẩm:", error);
       setProducts([]);
@@ -131,20 +149,60 @@ const AdminProductList = () => {
   };
 
   const fetchProducts = async (page, search = "") => {
-    try {
-      const params = { page, limit: recordsPerPage };
-      if (search) params.searchTerm = search;
+  try {
+    const params = { page, limit: 10 };
+    let url = "";
+    let fetchMainData;
 
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/products`, {
-        params,
-      });
+    // Nếu có tìm kiếm
+    if (search) {
+      url = `${Constants.DOMAIN_API}/admin/products/productList/search`;
+      params.searchTerm = search;
+      if (publicationStatus) {
+        params.publicationStatus = publicationStatus;
+      }
 
-      setProducts(res.data.data);
-      setTotalPages(res.data.pagination.totalPages);
-    } catch (error) {
-      console.error("Lỗi khi lấy sản phẩm:", error);
+      // Gọi API search chính
+      fetchMainData = axios.get(url, { params });
+
+      // Gọi API thống kê draft và published song song
+      const [resMain, resPublished, resDraft] = await Promise.all([
+        fetchMainData,
+        axios.get(`${Constants.DOMAIN_API}/admin/products/published`, { params: { page: 1, limit: 1 } }),
+        axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, { params: { page: 1, limit: 1 } }),
+      ]);
+
+      setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
+      setDraftCount(resDraft.data.pagination?.totalProducts || 0);
+      setProducts(resMain.data.data);
+      setTotalPages(resMain.data.pagination?.totalPages || 1);
+    } else {
+      // Không có tìm kiếm
+      if (publicationStatus === "published") {
+        url = `${Constants.DOMAIN_API}/admin/products/published`;
+      } else if (publicationStatus === "draft") {
+        url = `${Constants.DOMAIN_API}/admin/products/draft`;
+      }
+
+      // Gọi API chính và 2 API thống kê song song
+      const [resMain, resPublished, resDraft] = await Promise.all([
+        axios.get(url, { params }),
+        axios.get(`${Constants.DOMAIN_API}/admin/products/published`, { params: { page: 1, limit: 1 } }),
+        axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, { params: { page: 1, limit: 1 } }),
+      ]);
+
+      setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
+      setDraftCount(resDraft.data.pagination?.totalProducts || 0);
+      setProducts(resMain.data.data);
+      setTotalPages(resMain.data.pagination?.totalPages || 1);
     }
-  };
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm:", error);
+    setProducts([]);
+    setTotalPages(1);
+  }
+};
+
 
   const handleSearchInputChange = (e) => {
     setSearchInput(e.target.value);
@@ -154,8 +212,12 @@ const AdminProductList = () => {
     const trimmedSearch = searchInput.trim();
     setCurrentPage(1); // reset page
 
-    // Nếu không có từ khóa và danh mục trống, load lại danh sách gốc
-    if (!trimmedSearch && !selectedCategory) {
+    if (
+      !trimmedSearch &&
+      !selectedCategory &&
+      !selectedBrand &&
+      !publicationStatus
+    ) {
       setSearchTerm("");
       fetchProducts(1);
       return;
@@ -169,6 +231,7 @@ const AdminProductList = () => {
             searchTerm: trimmedSearch,
             categoryId: selectedCategory || undefined,
             brandId: selectedBrand || undefined,
+            publicationStatus: publicationStatus || undefined,
             page: 1,
             limit: recordsPerPage,
           },
@@ -176,7 +239,7 @@ const AdminProductList = () => {
       );
 
       setProducts(res.data.data);
-      setTotalPages(res.data.totalPages || 1);
+      setTotalPages(res.data.pagination?.totalPages || 1);
       setSearchTerm(trimmedSearch);
     } catch (error) {
       console.error("Lỗi khi tìm kiếm sản phẩm:", error);
@@ -190,30 +253,89 @@ const AdminProductList = () => {
       setCurrentPage(page);
     }
   };
+const handlePublish = async (productId) => {
+  try {
+    await axios.put(`${Constants.DOMAIN_API}/admin/products/${productId}`, {
+      publication_status: "published", // gửi trạng thái mới
+    });
+    toast.success("Đã xuất bản sản phẩm");
+    fetchProducts(); 
+  } catch (error) {
+    toast.error("Lỗi khi xuất bản sản phẩm");
+    console.error(error);
+  }
+};
+
 
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
-        {/* Tiêu đề */}
-        <h2 className="text-xl font-semibold mb-4">Danh sách sản phẩm</h2>
-
-        {/* Nút thêm sản phẩm và danh sách thuộc tính */}
-        <div className="flex justify-end mb-3 gap-3">
-          <Link
-            to="/admin/products/create"
-            className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
+        {/* Tiêu đề + nút nằm cùng hàng */}
+<div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+  {/* Tiêu đề và lọc theo trạng thái */}
+  <div className="flex flex-wrap items-center gap-4">
+    <h2 className="text-xl font-semibold">Danh sách sản phẩm</h2>
+    <div className="flex items-center gap-2">
+      {[
+        {
+          key: "published",
+          label: "Đã đăng",
+          color: "bg-green-300",
+          textColor: "text-green-800",
+          count: publishedCount,
+        },
+        {
+          key: "draft",
+          label: "Nháp",
+          color: "bg-yellow-300",
+          textColor: "text-yellow-800",
+          count: draftCount,
+        },
+      ].map(({ key, label, color, textColor, count }) => (
+        <button
+          key={key}
+          onClick={() => {
+            setPublicationStatus(key);
+            setCurrentPage(1);
+          }}
+          className={`flex items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold transition ${
+            publicationStatus === key
+              ? "bg-blue-900 text-white"
+              : "bg-white text-gray-700"
+          }`}
+        >
+          <span>{label}</span>
+          <span
+            className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}
           >
-            + Thêm sản phẩm
-          </Link>
+            {count || 0}
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
 
-          <Link
-            to="/admin/attribute/getall"
-            className="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition"
-            title="Danh sách thuộc tính"
-          >
-            Danh sách thuộc tính
-          </Link>
-        </div>
+  {/* Nhóm nút */}
+  <div className="flex gap-2">
+    <Link
+      to="/admin/products/create"
+      className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
+    >
+      + Thêm sản phẩm
+    </Link>
+
+    <Link
+      to="/admin/attribute/getall"
+      className="bg-indigo-500 text-white py-2 px-3 rounded hover:bg-indigo-600 transition flex items-center"
+      title="Danh sách thuộc tính"
+    >
+      <i className="fa-solid fa-list mr-1"></i>
+      <span>Danh sách thuộc tính</span>
+    </Link>
+  </div>
+</div>
+
+
 
         {/* Ô tìm kiếm */}
         <div className="mb-3 flex gap-2">
@@ -269,112 +391,125 @@ const AdminProductList = () => {
             </svg>
           </button>
         </div>
+         
+
+
 
         {/* Bảng danh sách sản phẩm */}
         <table className="w-full border-collapse border border-gray-500 mt-3">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="p-2 border whitespace-nowrap">#</th>
-              <th className="p-2 border whitespace-nowrap">Tên</th>
-              <th className="p-2 border whitespace-nowrap">Ảnh</th>
-              <th className="p-2 border whitespace-nowrap">Trạng thái</th>
-              <th className="p-2 border whitespace-nowrap">Danh mục</th>
-              <th className="p-2 border whitespace-nowrap">Thương hiệu</th>
-              <th className="p-2 border whitespace-nowrap">Biến thể</th>
-              <th className="p-2 border whitespace-nowrap">Kho</th>
-              <th className="p-2 border whitespace-nowrap">Hành động</th>
-            </tr>
-          </thead>
+         <thead className="bg-gray-200">
+  <tr>
+    <th className="p-2 border">#</th>
+    <th className="p-2 border">Tên</th>
+    <th className="p-2 border">Ảnh</th>
+    <th className="p-2 border">Trạng thái</th>
+    <th className="p-2 border">Danh mục</th>
+    <th className="p-2 border">Thương hiệu</th>
+    <th className="p-2 border">Biến thể</th>
+    <th className="p-2 border">Kho</th>
+    {publicationStatus === "draft" && (
+      <th className="p-2 border">Xuất bản</th>
+    )}
+    <th className="p-2 border">Hành động</th>
+  </tr>
+</thead>
 
           <tbody>
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="p-4 text-center">
-                  Không có sản phẩm nào.
-                </td>
-              </tr>
-            ) : (
-              products.map((product, index) => (
-                <tr key={product.id} className="border-b">
-                  <td className="p-2 border">
-                    {(currentPage - 1) * recordsPerPage + index + 1}
-                  </td>
-                  <td className="p-2 border">{product.name}</td>
-                  <td className="p-2 border">
-                    <img
-                      src={
-                        product.thumbnail || "https://via.placeholder.com/60"
-                      }
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  </td>
-                  <td className="p-2 border text-center">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        product.status === 1
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {product.status === 1 ? "Hiển thị" : "Ẩn"}
-                    </span>
-                  </td>
-                  <td className="p-2 border">
-                    {product.category?.name || "Không có"}
-                  </td>
-                  <td className="p-2 border">
-                    {product.brand?.name || "Không có"}
-                  </td>
+  {products.length === 0 ? (
+    <tr>
+      <td colSpan="9" className="p-4 text-center">
+        Không có sản phẩm nào.
+      </td>
+    </tr>
+  ) : (
+    products.map((product, index) => (
+      <tr key={product.id} className="border-b">
+        <td className="p-2 border">
+          {(currentPage - 1) * recordsPerPage + index + 1}
+        </td>
+        <td className="p-2 border">{product.name}</td>
+        <td className="p-2 border">
+          <img
+            src={product.thumbnail || "https://via.placeholder.com/60"}
+            alt={product.name}
+            className="w-16 h-16 object-cover rounded"
+          />
+        </td>
+        <td className="p-2 border text-center">
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              product.status === 1
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {product.status === 1 ? "Hiển thị" : "Ẩn"}
+          </span>
+        </td>
+        <td className="p-2 border">
+          {product.category?.name || "Không có"}
+        </td>
+        <td className="p-2 border">
+          {product.brand?.name || "Không có"}
+        </td>
+        <td className="p-2 border text-center">
+          {product.variantCount ?? product.variants?.length ?? 0}
+        </td>
+        <td className="p-2 border text-center">
+          {product.variants
+            ? product.variants.reduce(
+                (sum, variant) => sum + (variant.stock || 0),
+                0
+              )
+            : 0}
+        </td>
 
-                  <td className="p-2 border text-center">
-                    {product.variantCount ?? product.variants?.length ?? 0}
-                  </td>
-                  <td className="p-2 border text-center">
-                    {product.variants
-                      ? product.variants.reduce(
-                          (sum, variant) => sum + (variant.stock || 0),
-                          0
-                        )
-                      : 0}
-                  </td>
+        {/* Nếu là nháp thì hiển thị cột Xuất bản */}
+        {publicationStatus === "draft" && (
+          <td className="p-2 border text-center">
+            <button
+              onClick={() => handlePublish(product.id)}
+              className="bg-green-500 text-white px-2 py-1 rounded text-xs"
+            >
+              Xuất bản
+            </button>
+          </td>
+        )}
 
-                  <td className="p-2 border">
-                    <div className="flex gap-2 justify-center">
-                      {/* Nút xem chi tiết */}
-                      <Link
-                        to={`/admin/products/detail/${product.id}`}
-                        className="bg-blue-500 text-white p-2 rounded"
-                        title="Xem chi tiết"
-                      >
-                        <FaEye size={16} className="font-bold" />
-                      </Link>
+        <td className="p-2 border">
+          <div className="flex gap-2 justify-center">
+            <Link
+              to={`/admin/products/detail/${product.id}`}
+              className="bg-blue-500 text-white p-2 rounded"
+              title="Xem chi tiết"
+            >
+              <FaEye size={16} className="font-bold" />
+            </Link>
 
-                      {/* Nút thêm biến thể */}
-                      <Link
-                        to={`/admin/products/addVariant/${product.id}`}
-                        className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                        title="Thêm biến thể"
-                      >
-                        <FaEdit size={20} className="font-bold" />
-                      </Link>
+            <Link
+              to={`/admin/products/addVariant/${product.id}`}
+              className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+              title="Thêm biến thể"
+            >
+              <FaEdit size={20} className="font-bold" />
+            </Link>
 
-                      {/* Nút xoá */}
-                      {product.variants?.length === 0 && (
-                        <button
-                          onClick={() => setSelectedProduct(product)}
-                          className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                          title="Xoá sản phẩm"
-                        >
-                          <FaTrashAlt size={20} className="font-bold" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+            {(!product.variants || product.variants.length === 0) && (
+              <button
+                onClick={() => setSelectedProduct(product)}
+                className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                title="Xoá sản phẩm"
+              >
+                <FaTrashAlt size={20} className="font-bold" />
+              </button>
             )}
-          </tbody>
+          </div>
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
+
         </table>
 
         {/* Phân trang */}

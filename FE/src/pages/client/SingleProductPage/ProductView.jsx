@@ -295,23 +295,26 @@ const [ratingCount, setRatingCount] = useState(0);
               </div>
             )}
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {(selectedVariant ? variantImages : images).map((img) => (
-              <div
-                onClick={() => changeImgHandler(img.image_url)}
-                key={img.id}
-                className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer"
-              >
-                <img
-                  src={img.image_url}
-                  alt=""
-                  className={`w-full h-full object-contain ${
-                    selectedImage !== img.image_url ? "opacity-50" : ""
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
+      <div className="overflow-x-auto">
+  <div className="flex gap-2 flex-nowrap">
+    {(selectedVariant ? variantImages : images).map((img) => (
+      <div
+        onClick={() => changeImgHandler(img.image_url)}
+        key={img.id}
+        className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer flex-shrink-0"
+      >
+        <img
+          src={img.image_url}
+          alt=""
+          className={`w-full h-full object-contain ${
+            selectedImage !== img.image_url ? "opacity-50" : ""
+          }`}
+        />
+      </div>
+    ))}
+  </div>
+</div>
+
         </div>
       </div>
       <div className="flex-1">
@@ -335,12 +338,7 @@ const [ratingCount, setRatingCount] = useState(0);
   </span>
 </div>
 
-          {/* <p
-            data-aos="fade-up"
-            className="text-qgray text-sm text-normal mb-[30px] leading-7"
-          >
-            {productData.description}
-          </p> */}
+        
           <span className="block text-sm font-semibold uppercase text-gray-600 mb-4 mt-8">
             Biến thể
           </span>

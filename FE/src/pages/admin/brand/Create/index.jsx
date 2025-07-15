@@ -6,7 +6,6 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
-// Import hàm upload lên Cloudinary
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 
 const generateSlug = (text) => {
@@ -35,7 +34,7 @@ function BrandCreate({ onSuccess, isModal = false }) {
     formState: { errors },
     setError,
     clearErrors,
-    reset
+    reset,
   } = useForm({
     defaultValues: {
       name: "",
@@ -55,7 +54,9 @@ function BrandCreate({ onSuccess, isModal = false }) {
 
   const fetchCountries = async () => {
     try {
-      const res = await axios.get("https://restcountries.com/v3.1/all?fields=name ");
+      const res = await axios.get(
+        "https://restcountries.com/v3.1/all?fields=name "
+      );
       const countryNames = res.data.map((c) => c.name.common).sort();
       setCountries(countryNames);
     } catch (error) {
@@ -81,12 +82,12 @@ function BrandCreate({ onSuccess, isModal = false }) {
 
   const onSubmit = async (formData) => {
     Swal.fire({
-      title: 'Xác nhận thêm thương hiệu',
+      title: "Xác nhận thêm thương hiệu",
       text: `Bạn có chắc muốn thêm thương hiệu "${formData.name}"?`,
-      icon: 'info',
+      icon: "info",
       showCancelButton: true,
-      confirmButtonText: 'Thêm',
-      cancelButtonText: 'Hủy',
+      confirmButtonText: "Thêm",
+      cancelButtonText: "Hủy",
     }).then(async (result) => {
       if (result.isConfirmed) {
         setLoading(true);
@@ -107,19 +108,30 @@ function BrandCreate({ onSuccess, isModal = false }) {
           }
         }
 
-        // Kiểm tra dữ liệu trước khi gửi
-        if (!formData.name || formData.name.trim() === '') {
-          setError("name", { type: "required", message: "Tên không được để trống" });
+        if (!formData.name || formData.name.trim() === "") {
+          setError("name", {
+            type: "required",
+            message: "Tên không được để trống",
+          });
           setLoading(false);
           return;
         }
-        if (!formData.country || formData.country === '') {
-          setError("country", { type: "required", message: "Quốc gia là bắt buộc" });
+        if (!formData.country || formData.country === "") {
+          setError("country", {
+            type: "required",
+            message: "Quốc gia là bắt buộc",
+          });
           setLoading(false);
           return;
         }
-        if (!formData.status || !['active', 'inactive'].includes(formData.status)) {
-          setError("status", { type: "required", message: "Trạng thái không hợp lệ" });
+        if (
+          !formData.status ||
+          !["active", "inactive"].includes(formData.status)
+        ) {
+          setError("status", {
+            type: "required",
+            message: "Trạng thái không hợp lệ",
+          });
           setLoading(false);
           return;
         }
@@ -131,43 +143,38 @@ function BrandCreate({ onSuccess, isModal = false }) {
         };
 
         try {
-          const res = await axios.post(`${Constants.DOMAIN_API}/admin/brand/create`, brandData, {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
+          const res = await axios.post(
+            `${Constants.DOMAIN_API}/admin/brand/create`,
+            brandData,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
 
           if (res.status === 201) {
             toast.success("Thêm thương hiệu thành công!");
             reset();
             setLogoFile(null);
             if (isModal) {
-    onSuccess?.(); // ✅ Gọi callback để cập nhật danh sách
-  } else {
-    navigate("/admin/brand/getAll"); // ✅ Chỉ redirect nếu không phải modal
-  }
+              onSuccess?.();
+            } else {
+              navigate("/admin/brand/getAll");
+            }
           }
         } catch (error) {
-  const errRes = error?.response?.data;
-  console.error("Lỗi từ server:", errRes || error.message);
-
-  if (errRes?.errors) {
-    // Nếu có các lỗi dạng object { field: message }
-    Object.entries(errRes.errors).forEach(([key, msg]) => {
-      setError(key, { type: "server", message: msg });
-    });
-    toast.error("❌ Có lỗi xảy ra, vui lòng kiểm tra lại.");
-  } else if (errRes?.message || errRes?.error) {
-    toast.error("❌ " + (errRes.message || errRes.error));
-  } else if (error.request) {
-    // Có request gửi đi nhưng không nhận được phản hồi
-    toast.error("❌ Không nhận được phản hồi từ server.");
-  } else {
-    // Lỗi khác như network, CORS, hoặc cú pháp
-    toast.error("❌ " + error.message || "Lỗi không xác định.");
-  }
-}
- finally {
+          console.error("Lỗi từ server:", error.response?.data);
+          const errRes = error.response?.data;
+          if (errRes?.errors) {
+            Object.entries(errRes.errors).forEach(([key, msg]) => {
+              setError(key, { type: "server", message: msg });
+            });
+            toast.error("Có lỗi xảy ra, vui lòng kiểm tra lại.");
+          } else {
+            toast.error(errRes?.message || "Lỗi không xác định.");
+          }
+        } finally {
           setLoading(false);
         }
       }
@@ -176,28 +183,44 @@ function BrandCreate({ onSuccess, isModal = false }) {
 
   return (
     <div className="max-w-screen-xl mx-auto bg-white p-8 rounded shadow mt-8">
-      <h3 className="text-2xl font-bold text-gray-700 text-center mb-5 border-b pb-3">Thêm thương hiệu</h3>
+      <h3 className="text-2xl font-bold text-gray-700 text-center mb-5 border-b pb-3">
+        Thêm thương hiệu
+      </h3>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
         {/* Tên thương hiệu */}
         <div className="mb-6">
-          <label htmlFor="name" className="block font-medium mb-2 text-gray-700">Tên thương hiệu *</label>
+          <label
+            htmlFor="name"
+            className="block font-medium mb-2 text-gray-700"
+          >
+            Tên thương hiệu *
+          </label>
           <input
             id="name"
             type="text"
-            className={`w-full border ${errors.name ? 'border-red-500' : 'border-gray-300'} px-4 py-3 rounded-md focus:outline-none`}
+            className={`w-full border ${
+              errors.name ? "border-red-500" : "border-gray-300"
+            } px-4 py-3 rounded-md focus:outline-none`}
             placeholder="Ví dụ: Apple, Samsung"
             {...register("name", {
               required: "Tên không được để trống",
-              minLength: { value: 2, message: "Tối thiểu 2 ký tự" }
+              minLength: { value: 2, message: "Tối thiểu 2 ký tự" },
             })}
           />
-          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+          {errors.name && (
+            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+          )}
         </div>
 
         {/* Slug (readonly) */}
         <div className="mb-6">
-          <label htmlFor="slug" className="block font-medium mb-2 text-gray-700">Slug</label>
+          <label
+            htmlFor="slug"
+            className="block font-medium mb-2 text-gray-700"
+          >
+            Slug
+          </label>
           <input
             id="slug"
             type="text"
@@ -209,40 +232,71 @@ function BrandCreate({ onSuccess, isModal = false }) {
 
         {/* Quốc gia */}
         <div className="mb-6">
-          <label htmlFor="country" className="block font-medium mb-2 text-gray-700">Quốc gia *</label>
+          <label
+            htmlFor="country"
+            className="block font-medium mb-2 text-gray-700"
+          >
+            Quốc gia *
+          </label>
           <select
             id="country"
-            className={`w-full border ${errors.country ? 'border-red-500' : 'border-gray-300'} px-4 py-3 rounded-md`}
+            className={`w-full border ${
+              errors.country ? "border-red-500" : "border-gray-300"
+            } px-4 py-3 rounded-md`}
             {...register("country", { required: "Quốc gia là bắt buộc" })}
           >
             <option value="">-- Chọn quốc gia --</option>
             {countries.map((country, idx) => (
-              <option key={idx} value={country}>{country}</option>
+              <option key={idx} value={country}>
+                {country}
+              </option>
             ))}
           </select>
-          {errors.country && <p className="text-red-500 text-sm mt-1">{errors.country.message}</p>}
+          {errors.country && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.country.message}
+            </p>
+          )}
         </div>
 
         <div className="mb-6">
-          <label htmlFor="logo" className="block font-medium mb-2 text-gray-700">Logo:</label>
+          <label
+            htmlFor="logo"
+            className="block font-medium mb-2 text-gray-700"
+          >
+            Logo:
+          </label>
           <input
             id="logo"
             type="file"
             accept="image/*"
-            className={`w-full border ${errors.logo ? 'border-red-500' : 'border-gray-300'} px-4 py-3 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`}
+            className={`w-full border ${
+              errors.logo ? "border-red-500" : "border-gray-300"
+            } px-4 py-3 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`}
             onChange={handleLogoChange}
           />
-          {errors.logo && <p className="text-red-500 text-sm mt-1">{errors.logo.message}</p>}
+          {errors.logo && (
+            <p className="text-red-500 text-sm mt-1">{errors.logo.message}</p>
+          )}
           {logoFile && (
             <div className="mt-2 flex items-center space-x-2">
-              <img src={URL.createObjectURL(logoFile)} alt="Preview" className="w-24 h-24 object-contain border rounded" />
+              <img
+                src={URL.createObjectURL(logoFile)}
+                alt="Preview"
+                className="w-24 h-24 object-contain border rounded"
+              />
               <span className="text-sm text-gray-600">{logoFile.name}</span>
             </div>
           )}
         </div>
 
         <div className="mb-6">
-          <label htmlFor="description" className="block font-medium mb-2 text-gray-700">Mô tả</label>
+          <label
+            htmlFor="description"
+            className="block font-medium mb-2 text-gray-700"
+          >
+            Mô tả
+          </label>
           <textarea
             id="description"
             rows={4}
@@ -253,16 +307,25 @@ function BrandCreate({ onSuccess, isModal = false }) {
         </div>
 
         <div className="mb-6">
-          <label htmlFor="status" className="block font-medium mb-2 text-gray-700">Trạng thái *</label>
+          <label
+            htmlFor="status"
+            className="block font-medium mb-2 text-gray-700"
+          >
+            Trạng thái *
+          </label>
           <select
             id="status"
-            className={`w-full border ${errors.status ? 'border-red-500' : 'border-gray-300'} px-4 py-3 rounded-md`}
+            className={`w-full border ${
+              errors.status ? "border-red-500" : "border-gray-300"
+            } px-4 py-3 rounded-md`}
             {...register("status", { required: "Trạng thái là bắt buộc" })}
           >
             <option value="active">Hoạt động</option>
             <option value="inactive">Ngừng hoạt động</option>
           </select>
-          {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>}
+          {errors.status && (
+            <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>
+          )}
         </div>
       </form>
 

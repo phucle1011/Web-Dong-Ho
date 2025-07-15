@@ -31,20 +31,31 @@ static async getAllAttributes(req, res) {
 }
 
   // Lấy tất cả sản phẩm có biến thể
-  static async get(req, res) {
+static async getDraftProducts(req, res) {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const searchTerm = req.query.searchTerm || "";
 
-    // Đếm tổng số sản phẩm
-    const totalProducts = await Product.count();
+    const whereClause = {
+      publication_status: "draft",
+    };
 
-    // Lấy danh sách sản phẩm phân trang
+    // Nếu có searchTerm thì lọc theo tên sản phẩm
+    if (searchTerm) {
+      whereClause.name = { [Op.like]: `%${searchTerm}%` };
+    }
+
+    // Đếm tổng sản phẩm theo điều kiện lọc
+    const totalProducts = await Product.count({ where: whereClause });
+
+    // Lấy sản phẩm theo trang và lọc
     const products = await Product.findAll({
+      where: whereClause,
       order: [["created_at", "DESC"]],
-      limit: limit,
-      offset: offset,
+      limit,
+      offset,
       include: [
         {
           model: ProductVariant,
@@ -79,21 +90,19 @@ static async getAllAttributes(req, res) {
       ],
     });
 
-    // Thêm variantCount vào từng sản phẩm
     const productsWithVariantCount = products.map((product) => {
       const productJson = product.toJSON();
       productJson.variantCount = product.variants?.length || 0;
       return productJson;
     });
 
-    // Tổng số biến thể hiển thị
     const totalVariants = products.reduce((sum, product) => {
       return sum + (product.variants?.length || 0);
     }, 0);
 
     res.status(200).json({
       status: 200,
-      message: "Lấy danh sách sản phẩm thành công",
+      message: "Lấy danh sách sản phẩm (DRAFT) thành công",
       data: productsWithVariantCount,
       pagination: {
         currentPage: page,
@@ -106,6 +115,83 @@ static async getAllAttributes(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+
+static async getPublishedProducts(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const totalProducts = await Product.count({
+      where: { publication_status: 'published' },
+    });
+
+    const products = await Product.findAll({
+      where: { publication_status: 'published' },
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+      include: [
+        {
+          model: ProductVariant,
+          as: "variants",
+          include: [
+            {
+              model: ProductVariantAttributeValue,
+              as: "attributeValues",
+              include: [
+                {
+                  model: ProductAttribute,
+                  as: "attribute",
+                },
+              ],
+            },
+            {
+              model: VariantImage,
+              as: "images",
+            },
+          ],
+        },
+        {
+          model: CategoryModel,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BrandModel,
+          as: "brand",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    const productsWithVariantCount = products.map((product) => {
+      const productJson = product.toJSON();
+      productJson.variantCount = product.variants?.length || 0;
+      return productJson;
+    });
+
+    const totalVariants = products.reduce((sum, product) => {
+      return sum + (product.variants?.length || 0);
+    }, 0);
+
+    res.status(200).json({
+      status: 200,
+      message: "Lấy danh sách sản phẩm (PUBLISHED) thành công",
+      data: productsWithVariantCount,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+      },
+      totalVariants,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 
 
   // Lấy chi tiết theo ID
@@ -220,6 +306,7 @@ static async getAllAttributes(req, res) {
       category_id,
       thumbnail,
       status,
+      is_featured,
     } = req.body;
 
     const product = await Product.create({
@@ -230,6 +317,7 @@ static async getAllAttributes(req, res) {
       category_id,
       thumbnail: thumbnail.url,
       status,
+      publication_status:is_featured,
     });
 
     res.status(201).json({ message: "Tạo sản phẩm thành công", product });
@@ -434,6 +522,7 @@ res.status(500).json({ error: error.message });
         category_id,
         thumbnail,
         status,
+        publication_status,
       } = req.body;
 
       const product = await Product.findByPk(id);
@@ -448,6 +537,8 @@ res.status(500).json({ error: error.message });
       if (category_id !== undefined) product.category_id = category_id;
       if (thumbnail !== undefined) product.thumbnail = thumbnail;
       if (status !== undefined) product.status = status;
+      if (publication_status !== undefined) product.publication_status = publication_status;
+
 
       await product.save();
 
@@ -460,10 +551,11 @@ res.status(500).json({ error: error.message });
   }
 static async searchProducts(req, res) {
   try {
-    const { searchTerm, categoryId, brandId, page = 1, limit = 10 } = req.query;
+    const { searchTerm, categoryId, brandId, publicationStatus, page = 1, limit = 10 } = req.query;
 
     const whereConditions = [];
 
+    // Tìm theo tên sản phẩm
     if (searchTerm && searchTerm.trim() !== "") {
       whereConditions.push({
         name: {
@@ -472,23 +564,30 @@ static async searchProducts(req, res) {
       });
     }
 
+    // Tìm theo danh mục
     if (categoryId) {
       whereConditions.push({
         category_id: categoryId,
       });
     }
 
+    // Tìm theo thương hiệu
     if (brandId) {
       whereConditions.push({
         brand_id: brandId,
       });
     }
 
+    // Lọc theo publication_status
+    if (publicationStatus && publicationStatus.trim() !== "") {
+      whereConditions.push({
+        publication_status: publicationStatus,
+      });
+    }
+
     const where = {
       [Op.and]: whereConditions,
     };
-
-
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -532,7 +631,7 @@ static async searchProducts(req, res) {
     });
 
     if (products.length === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: 200,
         message: "Không tìm thấy sản phẩm nào.",
         data: [],
@@ -548,6 +647,7 @@ static async searchProducts(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
 
 
 
