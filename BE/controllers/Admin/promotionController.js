@@ -185,6 +185,12 @@ class PromotionController {
       if (!applicable_to) {
         return res.status(400).json({ success: false, message: 'Trường applicable_to không được để trống.' });
       }
+      if (discount_type === 'vnd' && Number(discount_value) >= Number(min_price_threshold)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Giá trị giảm (VNĐ) phải nhỏ hơn mức áp dụng đơn hàng từ.',
+        });
+      }
       const exists = await PromotionModel.findOne({ where: { name } });
       if (exists) {
         return res.status(409).json({ success: false, message: 'Tên khuyến mãi đã tồn tại.' });

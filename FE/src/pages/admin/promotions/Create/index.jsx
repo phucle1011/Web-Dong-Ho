@@ -195,17 +195,74 @@ function PromotionCreate() {
             <label className="block mb-1 font-medium">
               Giá trị giảm ({discountType === "percentage" ? "%" : "VNĐ"})
             </label>
-            <input
-              type="number"
-              {...register("discount_value", {
-                required: "Vui lòng nhập giá trị giảm",
-                validate: (value) =>
-                  discountType === "percentage"
-                    ? (value >= 1 && value <= 80) || "Giá trị phần trăm phải từ 1 đến 80"
-                    : value >= 0 || "Giá trị cố định phải >= 0",
-              })}
-              className="w-full border rounded px-3 py-2"
-            />
+            {discountType === "fixed" ? (
+              <Controller
+                control={control}
+                name="discount_value"
+                rules={{
+                  required: "Vui lòng nhập giá trị giảm",
+                  validate: (value) => {
+                    const minThreshold = Number(getValues("min_price_threshold") || 0);
+                    const val = Number(value);
+
+                    if (val < 0) {
+                      return "Giá trị cố định phải >= 0";
+                    }
+                    if (val >= minThreshold) {
+                      return "Giá trị giảm phải nhỏ hơn giá trị đơn hàng tối thiểu";
+                    }
+                    if (val > minThreshold * 0.8) {
+                      return `Giá trị giảm không được vượt quá 80% đơn hàng (${(minThreshold * 0.8).toLocaleString("vi-VN")}₫)`;
+                    }
+
+                    return true;
+                  },
+                }}
+                render={({ field }) => {
+                  const formatVND = (value) => {
+                    const number = parseInt(value.replace(/\D/g, "") || "0");
+                    return number.toLocaleString("vi-VN");
+                  };
+
+                  const handleChange = (e) => {
+                    const formatted = formatVND(e.target.value);
+                    e.target.value = formatted;
+                    const rawNumber = parseInt(formatted.replace(/\D/g, "") || "0");
+                    field.onChange(rawNumber);
+                  };
+
+                  const displayValue =
+                    typeof field.value === "number"
+                      ? field.value.toLocaleString("vi-VN")
+                      : "0";
+
+                  return (
+                    <input
+                      {...field}
+                      value={displayValue}
+                      onChange={handleChange}
+                      placeholder="VD: 50.000"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  );
+                }}
+              />
+            ) : (
+              <input
+                type="number"
+                {...register("discount_value", {
+                  required: "Vui lòng nhập giá trị giảm",
+                  validate: (value) => {
+                    const val = Number(value);
+                    if (val < 1 || val > 80) {
+                      return "Giá trị phần trăm phải từ 1 đến 80";
+                    }
+                    return true;
+                  },
+                })}
+                className="w-full border rounded px-3 py-2"
+              />
+            )}
             {errors.discount_value && (
               <p className="text-red-500 text-sm mt-1">{errors.discount_value.message}</p>
             )}
@@ -317,7 +374,6 @@ function PromotionCreate() {
                       {...field}
                       value={displayValue}
                       onChange={handleChange}
-                      placeholder="VD: 50.000"
                       className="w-full border rounded px-3 py-2"
                     />
                   );
