@@ -174,21 +174,19 @@ class OrderController {
         }
     }
 
-    static async cancelOrder(req, res) {
+static async cancelOrder(req, res) {
         const t = await sequelize.transaction();
         try {
             const { id } = req.params;
             const { cancellation_reason } = req.body;
 
-            const order = await OrderModel.findByPk(id, { transaction: t });
+            const order = await OrderModel.findByPk(id);
 
             if (!order) {
-                await t.rollback();
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
 
             if (order.status !== "pending") {
-                await t.rollback();
                 return res.status(400).json({
                     message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'",
                 });
@@ -211,7 +209,7 @@ class OrderController {
                 }
             }
 
-            const promo = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
+            const promo = await PromotionModel.findByPk(order.promotion_id);
             if (promo) {
                 await promo.increment('quantity', { transaction: t });
 
@@ -233,9 +231,14 @@ class OrderController {
             order.cancellation_reason = cancellation_reason || null;
             await order.save({ transaction: t });
 
-            const user = await UserModel.findByPk(order.user_id, { transaction: t });
+            const user = await UserModel.findByPk(order.user_id); 
 
-            await this.sendOrderCancellationEmail(order, user, user.email, cancellation_reason);
+            await OrderController.sendOrderCancellationEmail(
+                order,
+                user,
+                user?.email || "no-reply@example.com",
+                cancellation_reason
+            );
 
             await t.commit();
 
@@ -245,7 +248,7 @@ class OrderController {
                 data: order,
             });
         } catch (error) {
-            await t.rollback();
+            await t.rollback(); 
             res.status(500).json({ error: error.message });
         }
     }
