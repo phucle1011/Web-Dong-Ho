@@ -146,6 +146,18 @@ class CartController {
         try {
             const { userId, productVariantId, quantity } = req.body;
 
+            const productVariant = await ProductVariantsModel.findOne({
+                where: { id: productVariantId },
+                attributes: ['id', 'stock']
+            });
+
+            if (!productVariant) {
+                return res.status(404).json({
+                    status: 404,
+                    message: "Không tìm thấy biến thể sản phẩm"
+                });
+            }
+
             let cartItem = await CartModel.findOne({
                 where: {
                     user_id: userId,
@@ -153,8 +165,18 @@ class CartController {
                 }
             });
 
+            const currentQuantity = cartItem ? cartItem.quantity : 0;
+            const totalQuantity = currentQuantity + quantity;
+
+            if (totalQuantity > productVariant.stock) {
+                return res.status(400).json({
+                    status: 400,
+                    message: `Số lượng vượt quá tồn kho (${productVariant.stock})`
+                });
+            }
+
             if (cartItem) {
-                cartItem.quantity += quantity;
+                cartItem.quantity = totalQuantity;
                 await cartItem.save();
             } else {
                 cartItem = await CartModel.create({

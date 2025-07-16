@@ -111,22 +111,51 @@ export default function ProductCardStyleOne({ datas, type }) {
       toast.error("Bạn chưa chọn biến thể sản phẩm.");
       return;
     }
+
     const token = localStorage.getItem("token");
     const decoded = decodeToken(token);
     const userId = decoded?.id;
+
     if (!token || !userId) {
       toast.error("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
       return;
     }
+
     try {
-      await axios.post(
+      const response = await axios.post(
         `${Constants.DOMAIN_API}/add-to-carts`,
-        { userId, productVariantId: variantId, quantity },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          userId,
+          productVariantId: variantId,
+          quantity,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+      if (error.response?.status === 400) {
+        const message = error.response.data?.message || "";
+
+        if (message.includes("Số lượng vượt quá tồn kho")) {
+          const match = message.match(/\((\d+)\)/);
+          const stock = match ? parseInt(match[1], 10) : null;
+
+          toast.error(
+            stock
+              ? `Bạn đã có một số sản phẩm trong giỏ. Hiện chỉ còn ${stock} sản phẩm trong kho.`
+              : message
+          );
+        } else {
+          toast.error(message);
+        }
+      } else {
+        toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+      }
     }
   };
 

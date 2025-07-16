@@ -22,8 +22,8 @@ export default function ProductView({ className, reportHandler }) {
   const [selectedImage, setSelectedImage] = useState("");
   const [isInWishlist, setIsInWishlist] = useState(false);
   const { id: productId } = useParams();
-const [avgRating, setAvgRating] = useState(0);
-const [ratingCount, setRatingCount] = useState(0);
+  const [avgRating, setAvgRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -69,14 +69,14 @@ const [ratingCount, setRatingCount] = useState(0);
   }, [selectedVariant]);
 
   useEffect(() => {
-  if (selectedVariant) {
-    const avg = selectedVariant.averageRating || 0;
-    
-    const count = parseInt(selectedVariant.ratingCount || 0);
-    setAvgRating(avg);
-    setRatingCount(count);
-  }
-}, [selectedVariant]);
+    if (selectedVariant) {
+      const avg = selectedVariant.averageRating || 0;
+
+      const count = parseInt(selectedVariant.ratingCount || 0);
+      setAvgRating(avg);
+      setRatingCount(count);
+    }
+  }, [selectedVariant]);
 
 
   const checkWishlistStatus = async (variantId) => {
@@ -114,7 +114,14 @@ const [ratingCount, setRatingCount] = useState(0);
     return attr ? attr.value : null;
   };
 
-  const increment = () => setQuantity((q) => q + 1);
+  const increment = () => {
+    if (quantity < selectedVariant?.stock) {
+      setQuantity((q) => q + 1);
+    } else {
+      toast.info("Không thể tăng thêm vì đã đạt số lượng tối đa trong kho");
+    }
+  };
+
   const decrement = () => setQuantity((q) => Math.max(1, q - 1));
 
   const handleAddToWishlist = async () => {
@@ -224,9 +231,27 @@ const [ratingCount, setRatingCount] = useState(0);
           },
         }
       );
+
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+      if (error.response?.status === 400) {
+        const message = error.response.data?.message || "";
+
+        if (message.includes("Số lượng vượt quá tồn kho")) {
+          const match = message.match(/\((\d+)\)/);
+          const stock = match ? parseInt(match[1], 10) : null;
+
+          toast.error(
+            stock
+              ? `Bạn đã có một số sản phẩm trong giỏ. Hiện chỉ còn ${stock} sản phẩm trong kho.`
+              : message
+          );
+        } else {
+          toast.error(message);
+        }
+      } else {
+        toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+      }
     }
   };
 
@@ -277,9 +302,8 @@ const [ratingCount, setRatingCount] = useState(0);
 
   return (
     <div
-      className={`product-view w-full lg:flex justify-between ${
-        className || ""
-      }`}
+      className={`product-view w-full lg:flex justify-between ${className || ""
+        }`}
     >
       <div data-aos="fade-right" className="lg:w-1/2 xl:mr-[70px] lg:mr-[50px]">
         <div className="w-full">
@@ -290,30 +314,29 @@ const [ratingCount, setRatingCount] = useState(0);
                 variant.promotionProducts &&
                 variant.promotionProducts.length > 0
             ) && (
-              <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
-                <span>sale</span>
-              </div>
-            )}
+                <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
+                  <span>sale</span>
+                </div>
+              )}
           </div>
-      <div className="overflow-x-auto">
-  <div className="flex gap-2 flex-nowrap">
-    {(selectedVariant ? variantImages : images).map((img) => (
-      <div
-        onClick={() => changeImgHandler(img.image_url)}
-        key={img.id}
-        className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer flex-shrink-0"
-      >
-        <img
-          src={img.image_url}
-          alt=""
-          className={`w-full h-full object-contain ${
-            selectedImage !== img.image_url ? "opacity-50" : ""
-          }`}
-        />
-      </div>
-    ))}
-  </div>
-</div>
+          <div className="overflow-x-auto">
+            <div className="flex gap-2 flex-nowrap">
+              {(selectedVariant ? variantImages : images).map((img) => (
+                <div
+                  onClick={() => changeImgHandler(img.image_url)}
+                  key={img.id}
+                  className="w-[110px] h-[110px] p-[15px] border border-qgray-border cursor-pointer flex-shrink-0"
+                >
+                  <img
+                    src={img.image_url}
+                    alt=""
+                    className={`w-full h-full object-contain ${selectedImage !== img.image_url ? "opacity-50" : ""
+                      }`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
         </div>
       </div>
@@ -331,14 +354,14 @@ const [ratingCount, setRatingCount] = useState(0);
           >
             {productData.name}
           </p>
-         <div className="flex items-center gap-2 mb-4">
-  <div className="flex">{renderStars(avgRating)}</div>
-  <span className="text-sm text-gray-600">
-    {ratingCount} đánh giá
-  </span>
-</div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex">{renderStars(avgRating)}</div>
+            <span className="text-sm text-gray-600">
+              {ratingCount} đánh giá
+            </span>
+          </div>
 
-        
+
           <span className="block text-sm font-semibold uppercase text-gray-600 mb-4 mt-8">
             Biến thể
           </span>
@@ -360,10 +383,9 @@ const [ratingCount, setRatingCount] = useState(0);
                 <div
                   key={variant.id}
                   className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition
-                    ${
-                      inStock
-                        ? "cursor-pointer hover:shadow"
-                        : "opacity-50 cursor-not-allowed"
+                    ${inStock
+                      ? "cursor-pointer hover:shadow"
+                      : "opacity-50 cursor-not-allowed"
                     }
                     ${isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""}`}
                   onClick={() => {

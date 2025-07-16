@@ -115,31 +115,56 @@ export default function WishlistTab({ className }) {
     }
   };
 
-  // Thêm tất cả vào giỏ hàng
-  const handleAddAllToCart = async () => {
-    if (isProcessing || !userId) {
-      toast.error("Vui lòng đăng nhập để thêm vào giỏ hàng.");
+  const handleAddToCart = async (variantId, quantity) => {
+    if (!variantId) {
+      toast.error("Bạn chưa chọn biến thể sản phẩm.");
       return;
     }
 
-    if (wishlistItems.length === 0) {
-      toast.info("Danh sách yêu thích trống!");
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!token || !userId) {
+      toast.error("Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
       return;
     }
-
-    setIsProcessing(true);
 
     try {
-      await axios.post(
-        `${Constants.DOMAIN_API}/users/${userId}/wishlist/add-to-cart`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await axios.post(
+        `${Constants.DOMAIN_API}/add-to-carts`,
+        {
+          userId,
+          productVariantId: variantId,
+          quantity,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      toast.success("Đã thêm tất cả sản phẩm vào giỏ hàng!");
+
+      toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
-      toast.error("Không thể thêm sản phẩm vào giỏ hàng.");
-    } finally {
-      setIsProcessing(false);
+      if (error.response?.status === 400) {
+        const message = error.response.data?.message || "";
+
+        if (message.includes("Số lượng vượt quá tồn kho")) {
+          const match = message.match(/\((\d+)\)/);
+          const stock = match ? parseInt(match[1], 10) : null;
+
+          toast.error(
+            stock
+              ? `Bạn đã có một số sản phẩm trong giỏ. Hiện chỉ còn ${stock} sản phẩm trong kho.`
+              : message
+          );
+        } else {
+          toast.error(message);
+        }
+      } else {
+        toast.error("Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.");
+      }
     }
   };
 
@@ -238,7 +263,7 @@ export default function WishlistTab({ className }) {
           <div className="w-[180px] h-[50px]">
             <button
               type="button"
-              onClick={handleAddAllToCart}
+              onClick={handleAddToCart}
               disabled={isProcessing}
               className={`yellow-btn w-full h-full ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
             >

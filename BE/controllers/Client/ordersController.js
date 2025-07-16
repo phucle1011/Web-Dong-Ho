@@ -210,7 +210,7 @@ class OrderController {
 
             const promo = await PromotionModel.findByPk(order.promotion_id);
             if (promo) {
-                await promo.increment('quantity');
+                await promo.increment('quantity', { transaction: t });
 
                 if (promo.special_promotion) {
                     await PromotionUser.update(
@@ -219,16 +219,26 @@ class OrderController {
                             where: {
                                 promotion_id: promo.id,
                                 user_id: order.user_id
-                            }
+                            },
+                            transaction: t
                         }
                     );
                 }
             }
 
             order.status = "cancelled";
-            await this.sendOrderCancellationEmail(order, user, user.email, cancellation_reason);
             order.cancellation_reason = cancellation_reason || null;
-            await order.save();
+            await order.save({ transaction: t });
+
+            const user = await UserModel.findByPk(order.user_id); // ✅ THÊM DÒNG NÀY
+
+            await OrderController.sendOrderCancellationEmail(
+                order,
+                user,
+                user?.email || "no-reply@example.com",
+                cancellation_reason
+            );
+
             await t.commit();
 
             res.status(200).json({
@@ -237,6 +247,7 @@ class OrderController {
                 data: order,
             });
         } catch (error) {
+            await t.rollback(); // ✅ rollback nếu lỗi
             res.status(500).json({ error: error.message });
         }
     }
@@ -261,74 +272,84 @@ class OrderController {
             const formattedDiscount = new Intl.NumberFormat("vi-VN").format(order.discount_amount || 0);
 
             const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="vi">
-        <head>
-            <meta charset="UTF-8" />
-            <title>Hủy đơn hàng</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    background: #f5f5f5;
-                    padding: 20px;
-                    color: #333;
-                }
-                .container {
-                    max-width: 500px;
-                    margin: auto;
-                    background: #fff;
-                    padding: 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }
-                .title {
-                    font-size: 18px;
-                    font-weight: bold;
-                    color: #d32f2f;
-                    margin-bottom: 16px;
-                }
-                .info {
-                    font-size: 14px;
-                    margin-bottom: 12px;
-                }
-                .info span {
-                    font-weight: bold;
-                }
-                .reason {
-                    font-style: italic;
-                    color: #555;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="title">Đơn hàng của bạn đã bị hủy</div>
-
-                <div class="info"><span>Mã đơn hàng:</span> #${order.order_code}</div>
-                <div class="info"><span>Khách hàng:</span> ${user?.name || "Không xác định"}</div>
-                <div class="info"><span>Email:</span> ${user?.email || customerEmail}</div>
-                <div class="info"><span>Ngày hủy:</span> ${formattedDate}</div>
-                <div class="info"><span>Tổng tiền:</span> ${formattedTotal}₫</div>
-
-                ${order.discount_amount > 0
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+                <meta charset="UTF-8" />
+                <title>Hủy đơn hàng</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background: #f5f5f5;
+                        padding: 20px;
+                        color: #333;
+                    }
+                    .container {
+                        max-width: 500px;
+                        margin: auto;
+                        background: #fff;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                    .title {
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #d32f2f;
+                        margin-bottom: 16px;
+                    }
+                    .info {
+                        font-size: 14px;
+                        margin-bottom: 12px;
+                    }
+                    .info span {
+                        font-weight: bold;
+                    }
+                    .reason {
+                        font-style: italic;
+                        color: #555;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="title">Đơn hàng của bạn đã bị hủy</div>
+    
+                    <div class="info"><span>Mã đơn hàng:</span> #${order.order_code}</div>
+                    <div class="info"><span>Khách hàng:</span> ${user?.name || "Không xác định"}</div>
+                    <div class="info"><span>Email:</span> ${user?.email || customerEmail}</div>
+                    <div class="info"><span>Ngày hủy:</span> ${formattedDate}</div>
+                    <div class="info"><span>Tổng tiền:</span> ${formattedTotal}₫</div>
+    
+                    ${order.discount_amount > 0
                     ? `<div class="info"><span>Giảm giá:</span> -${formattedDiscount}₫</div>`
                     : ""
                 }
-
-                ${order.shipping_fee > 0
+    
+                    ${order.shipping_fee > 0
                     ? `<div class="info"><span>Phí vận chuyển:</span> +${formattedShipping}₫</div>`
                     : ""
                 }
+    
+                    <div class="info"><span>Lý do hủy:</span> <span class="reason">${cancellationReason || "Không có lý do cụ thể"}</span></div>
+    
+                    <p style="margin-top: 20px; font-size: 13px; color: #777;">
+                        Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ lại với chúng tôi. Cảm ơn bạn đã sử dụng dịch vụ.
+                    </p>
 
-                <div class="info"><span>Lý do hủy:</span> <span class="reason">${cancellationReason || "Không có lý do cụ thể"}</span></div>
+                ${["momo", "vnpay"].includes(order.payment_method?.toLowerCase?.())
+                    ? `<p style="margin-top: 12px; font-size: 13px; color: #d32f2f;">
+                                Vì đơn hàng được thanh toán bằng <strong>${order.payment_method.toUpperCase()}</strong>, vui lòng liên hệ với chúng tôi để được hoàn tiền qua:
+                                <br />Email: <a href="mailto:phuclnhpc09097@gmail.com">phuclnhpc09097@gmail.com</a>
+                                <br />Zalo: <a href="https://zalo.me/0379169731" target="_blank">0379169731</a>
+                           </p>`
+                    : ""
+                }
 
-                <p style="margin-top: 20px; font-size: 13px; color: #777;">
-                    Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ lại với chúng tôi. Cảm ơn bạn đã sử dụng dịch vụ.
-                </p>
-            </div>
-        </body>
-        </html>
-        `;
+                </div>
+            </body>
+            </html>
+            `;
 
             const mailOptions = {
                 from: `"Cửa hàng của bạn" <${process.env.EMAIL_USER}>`,
@@ -339,9 +360,10 @@ class OrderController {
 
             await transporter.sendMail(mailOptions);
         } catch (error) {
-            console.error("Lỗi gửi email hủy đơn hàng:", error);
+            console.error("Lỗi gửi email hủy đơn hàng (chi tiết):", error);
             throw new Error("Không thể gửi email hủy đơn hàng.");
         }
+
     }
 
     static async confirmDelivered(req, res) {
@@ -875,7 +897,7 @@ class OrderController {
                         await promoUser.save({ transaction: t });
                     }
 
-                    
+
 
                     finalAmount = priceAfterSpecial - discountAmount;
 
@@ -1001,6 +1023,21 @@ class OrderController {
             const orderInfo = (req.body.orderDescription || `Thanh toán đơn hàng ${orderId}`)
                 .substring(0, 255);
 
+            const extraData = {
+                user_id: req.body.user_id,
+                name: req.body.name,
+                phone: req.body.phone,
+                email: req.body.email,
+                address: req.body.address,
+                note: req.body.note,
+                products: req.body.products,
+                promotion: req.body.promotion,
+                shipping_fee: req.body.shipping_fee,
+                specialDiscount: req.body.specialDiscount,
+                discountAmount: req.body.discountAmount,
+                orderId: orderId // Thêm orderId vào extraData
+            };
+
             const vnpParams = {
                 vnp_Version: '2.1.0',
                 vnp_Command: 'pay',
@@ -1010,7 +1047,7 @@ class OrderController {
                 vnp_CurrCode: 'VND',
                 vnp_IpAddr: ipAddr,
                 vnp_Locale: 'vn',
-                vnp_OrderInfo: orderInfo,
+                vnp_OrderInfo: orderInfo, // Sử dụng orderInfo đã mã hóa
                 vnp_OrderType: req.body.orderType || 'other',
                 vnp_ReturnUrl: returnUrl,
                 vnp_TxnRef: orderId,
@@ -1049,67 +1086,215 @@ class OrderController {
     }
 
     static async handleVNPayCallback(req, res) {
+       const t = await sequelize.transaction();
+    try {
+        const vnpParams = req.query;
+        const secureHash = vnpParams.vnp_SecureHash;
+        const orderId = vnpParams.vnp_TxnRef;
+        const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
+
+        // Xác minh chữ ký
+        delete vnpParams.vnp_SecureHash;
+        delete vnpParams.vnp_SecureHashType;
+
+        const sortedParams = OrderController.sortObject(vnpParams);
+        const signData = Object.entries(sortedParams)
+            .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
+            .join('&');
+
+        const secretKey = process.env.VNPAY_HASH_SECRET.trim();
+        const hmac = crypto.createHmac('sha512', secretKey);
+        const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+
+        if (calculatedHash !== secureHash) {
+            console.error('Chữ ký không hợp lệ');
+            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
+        }
+
+        if (vnpParams.vnp_ResponseCode !== '00') {
+            console.error('Giao dịch thất bại với mã lỗi:', vnpParams.vnp_ResponseCode);
+            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
+        }
+
+        // Giải mã extraData từ vnp_OrderInfo
+        let decoded;
         try {
-            const vnpParams = req.query;
-            const secureHash = vnpParams.vnp_SecureHash;
-            const orderId = vnpParams.vnp_TxnRef;
-            const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
+            decoded = JSON.parse(Buffer.from(vnpParams.vnp_OrderInfo, 'base64').toString('utf-8'));
+            if (!decoded.user_id || !decoded.products) {
+                throw new Error('Thiếu thông tin bắt buộc trong extraData');
+            }
+        } catch (decodeError) {
+            console.error('Lỗi giải mã extraData:', decodeError);
+            await t.rollback();
+            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_order_data&orderId=${orderId}`);
+        }
 
-            // Xóa các tham số liên quan đến chữ ký để kiểm tra
-            delete vnpParams.vnp_SecureHash;
-            delete vnpParams.vnp_SecureHashType;
+        const {
+            user_id, name, phone, email, address, note,
+            products, promotion, shipping_fee,
+            specialDiscount, discountAmount
+        } = decoded;
 
-            const sortedParams = OrderController.sortObject(vnpParams);
-            const signData = Object.entries(sortedParams)
-                .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
-                .join('&');
+        // Kiểm tra và xử lý đơn hàng
+        let totalPrice = 0;
+        const detailedCart = [];
 
-            const secretKey = process.env.VNPAY_HASH_SECRET.trim();
-            const hmac = crypto.createHmac('sha512', secretKey);
-            const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-
-            if (calculatedHash !== secureHash) {
-                console.error('Chữ ký không khớp!');
-                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
+        for (const item of products) {
+            const variant = item.variant;
+            if (!variant || !variant.id || !variant.price) {
+                await t.rollback();
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_product_data&orderId=${orderId}`);
             }
 
-            if (vnpParams.vnp_ResponseCode !== '00') {
-                console.error('Giao dịch thất bại với mã:', vnpParams.vnp_ResponseCode);
-                // Lưu thông tin giao dịch thất bại vào cơ sở dữ liệu
-                await Payment.create({
-                    orderId,
-                    amount,
-                    transactionId: vnpParams.vnp_TransactionNo,
-                    responseCode: vnpParams.vnp_ResponseCode,
-                    orderInfo: vnpParams.vnp_OrderInfo,
-                    status: 'failed',
-                    ipAddr: vnpParams.vnp_IpAddr,
-                    bankCode: vnpParams.vnp_BankCode,
-                });
-
-                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
-            }
-
-            // Lưu thông tin giao dịch thành công vào cơ sở dữ liệu
-            await Payment.create({
-                orderId,
-                amount,
-                transactionId: vnpParams.vnp_TransactionNo,
-                responseCode: vnpParams.vnp_ResponseCode,
-                orderInfo: vnpParams.vnp_OrderInfo,
-                status: 'success',
-                ipAddr: vnpParams.vnp_IpAddr,
-                bankCode: vnpParams.vnp_BankCode,
+            const productVariant = await ProductVariantModel.findByPk(variant.id, {
+                transaction: t,
+                lock: t.LOCK.UPDATE
             });
 
-            return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
+            if (!productVariant) {
+                await t.rollback();
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Product_not_found&orderId=${orderId}`);
+            }
 
-        } catch (error) {
-            console.error('Lỗi callback:', error);
-            const orderId = req.query.vnp_TxnRef || 'unknown';
-            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Callback_error&orderId=${orderId}`);
+            if (productVariant.stock < item.quantity) {
+                await t.rollback();
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Out_of_stock&productId=${variant.id}&orderId=${orderId}`);
+            }
+
+            const price = parseFloat(variant.price);
+            totalPrice += price * item.quantity;
+
+            detailedCart.push({
+                product_id: variant.id,
+                name: variant.sku,
+                price: price,
+                quantity: item.quantity,
+                total: price * item.quantity,
+            });
+
+            // Cập nhật số lượng tồn kho
+            productVariant.stock -= item.quantity;
+            await productVariant.save({ transaction: t });
         }
+
+            // Xử lý mã khuyến mãi
+            if (promotion) {
+                const selectedVoucher = await PromotionModel.findByPk(promotion, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE
+                });
+
+                if (selectedVoucher) {
+                    const now = new Date();
+                    if (
+                        selectedVoucher.status !== 'active' ||
+                        now < selectedVoucher.start_date ||
+                        now > selectedVoucher.end_date ||
+                        selectedVoucher.quantity <= 0 ||
+                        totalPrice < parseFloat(selectedVoucher.min_price_threshold)
+                    ) {
+                        await t.rollback();
+                        return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_promotion&orderId=${orderId}`);
+                    }
+
+                    if (selectedVoucher.special_promotion) {
+                        const promoUser = await PromotionUser.findOne({
+                            where: {
+                                promotion_id: selectedVoucher.id,
+                                user_id,
+                                used: false,
+                                email_sent: true,
+                            },
+                            transaction: t,
+                            lock: t.LOCK.UPDATE,
+                        });
+
+                        if (!promoUser) {
+                            await t.rollback();
+                            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Unauthorized_promotion&orderId=${orderId}`);
+                        }
+
+                        promoUser.used = true;
+                        await promoUser.save({ transaction: t });
+                    }
+
+                    selectedVoucher.quantity -= 1;
+                    await selectedVoucher.save({ transaction: t });
+                }
+            }
+
+            const newOrder = await OrderModel.create({
+            user_id,
+            promotion_id: promotion || null,
+            name,
+            phone,
+            email,
+            address,
+            total_price: amount,
+            payment_method: "VNPay",
+            order_code: orderId,
+            shipping_address: address,
+            note: note || "",
+            shipping_fee: parseFloat(shipping_fee) || 0,
+            status: "pending",
+            cancellation_reason: null,
+            shipping_code: null,
+            discount_amount: parseFloat(discountAmount) || 0,
+            special_discount_amount: parseFloat(specialDiscount) || 0,
+        }, { transaction: t });
+
+        // Lưu chi tiết đơn hàng
+        const orderDetails = detailedCart.map(item => ({
+            order_id: newOrder.id,
+            product_variant_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+        }));
+
+        await OrderDetail.bulkCreate(orderDetails, { transaction: t });
+
+        // Xóa giỏ hàng
+        const successfullyOrderedProductIds = products.map(p => p.variant.id);
+        await CartModel.destroy({
+            where: {
+                user_id,
+                product_variant_id: successfullyOrderedProductIds
+            },
+            transaction: t
+        });
+
+        // Lưu lịch sử thanh toán vào MongoDB
+        await Payment.create({
+            orderId,
+            amount,
+            transactionId: vnpParams.vnp_TransactionNo,
+            responseCode: vnpParams.vnp_ResponseCode,
+            orderInfo: vnpParams.vnp_OrderInfo,
+            status: 'success',
+            ipAddr: vnpParams.vnp_IpAddr,
+            bankCode: vnpParams.vnp_BankCode,
+        });
+
+        await t.commit();
+
+        // Gửi email xác nhận
+        await OrderController.sendOrderConfirmationEmail(
+            newOrder,
+            { name, phone },
+            products,
+            email,
+            new Date()
+        );
+
+        return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
+
+    } catch (error) {
+        await t.rollback();
+        console.error('Lỗi callback VNPay:', error);
+        const orderId = req.query.vnp_TxnRef || 'unknown';
+        return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Server_error&orderId=${orderId}`);
     }
+}
 
     static async sendOrderConfirmationEmail(order, user, products, customerEmail, currentDateTime) {
         try {
@@ -1278,7 +1463,15 @@ class OrderController {
                         <span>Tổng (${products.length} mặt hàng)</span>
                         <span style="font-size: 13px; color: #555; margin-left: auto;">${new Intl.NumberFormat("vi-VN").format(total)}₫</span>
                     </div>
-                    </div>
+                </div>
+                <div style="margin-top: 24px;">
+                <div style="font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 16px">Địa chỉ vận chuyển</div>
+                <div style="font-size: 14px; color: #333;">
+                    <div>Họ và tên: ${user?.name || "Tên không xác định"}</div>
+                    <div>Số điện thoại: (+84)${(user?.phone || "")}</div>
+                    <div>Địa chỉ: ${order?.shipping_address || "Địa chỉ không có"}</div>
+                </div>
+            </div>
             </div>
         </body>
         </html>
