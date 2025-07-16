@@ -133,6 +133,7 @@ router.get('/brands/active', BrandController.getActiveBrands);
 router.get('/brands/search', BrandController.search);
 router.get('/brand/list', brandClientController.getAll);
 router.get('/brands/get-products-by-brands', BrandController.getProductsByBrands);
+router.get("/brands/top", BrandController.getTopBrands);
 
 
 //------------------[ USERS ]------------------

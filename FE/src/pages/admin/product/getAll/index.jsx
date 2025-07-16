@@ -399,20 +399,21 @@ const handlePublish = async (productId) => {
         <table className="w-full border-collapse border border-gray-500 mt-3">
          <thead className="bg-gray-200">
   <tr>
-    <th className="p-2 border">#</th>
-    <th className="p-2 border">Tên</th>
-    <th className="p-2 border">Ảnh</th>
-    <th className="p-2 border">Trạng thái</th>
-    <th className="p-2 border">Danh mục</th>
-    <th className="p-2 border">Thương hiệu</th>
-    <th className="p-2 border">Biến thể</th>
-    <th className="p-2 border">Kho</th>
+    <th className="p-2 border whitespace-nowrap">#</th>
+    <th className="p-2 border whitespace-nowrap">Tên</th>
+    <th className="p-2 border whitespace-nowrap">Ảnh</th>
+    <th className="p-2 border whitespace-nowrap">Trạng thái</th>
+    <th className="p-2 border whitespace-nowrap">Danh mục</th>
+    <th className="p-2 border whitespace-nowrap">Thương hiệu</th>
+    <th className="p-2 border whitespace-nowrap">Biến thể</th>
+    <th className="p-2 border whitespace-nowrap">Kho</th>
     {publicationStatus === "draft" && (
-      <th className="p-2 border">Xuất bản</th>
+      <th className="p-2 border whitespace-nowrap">Xuất bản</th>
     )}
-    <th className="p-2 border">Hành động</th>
+    <th className="p-2 border whitespace-nowrap">Hành động</th>
   </tr>
 </thead>
+
 
           <tbody>
   {products.length === 0 ? (

@@ -20,41 +20,43 @@ export default function HomeThree() {
     brands.push(product.brand);
   });
   const [productNew, setProductnew] = useState([]);
-    const [productSold, setProductTopsold] = useState([]);
-        const [productDiscounted, setProductTopDiscounted] = useState([]);
-
+  const [productSold, setProductTopsold] = useState([]);
+  const [productDiscounted, setProductTopDiscounted] = useState([]);
+  const [topBrands, setTopBrands] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
   // Tạo danh sách thương hiệu từ products
 
- useEffect(() => {
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [newRes, topSoldRes,topDiscounted] = await Promise.all([
-        axios.get(`${Constants.DOMAIN_API}/products/getallnew`),
-        axios.get(`${Constants.DOMAIN_API}/top-sold-products`),
-         axios.get(`${Constants.DOMAIN_API}/top-discounted-products`),
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [newRes, topSoldRes, topDiscounted, topBrandsRes] =
+          await Promise.all([
+            axios.get(`${Constants.DOMAIN_API}/products/getallnew`),
+            axios.get(`${Constants.DOMAIN_API}/top-sold-products`),
+            axios.get(`${Constants.DOMAIN_API}/top-discounted-products`),
+            axios.get(`${Constants.DOMAIN_API}/brands/top`), // 👈 gọi thêm API brand
+          ]);
 
-      ]);
+        setProductnew(newRes.data.data || []);
+        setProductTopsold(topSoldRes.data || []);
+        setProductTopDiscounted(topDiscounted.data || []);
+        setTopBrands(topBrandsRes.data.data || []); // 👈 nhớ tạo thêm state `topBrands`
+        
+      } catch (error) {
+        console.error("Lỗi khi gọi API:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setProductnew(newRes.data.data || []);
-      setProductTopsold(topSoldRes.data || []);
-      setProductTopDiscounted(topDiscounted.data || [])
-      
+    fetchData();
+  }, []);
 
-    } catch (error) {
-      console.error("Lỗi khi gọi API:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchData();
-}, []);
-
-  if (loading) return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
+  if (loading)
+    return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
 
   return (
     <>
@@ -64,7 +66,9 @@ export default function HomeThree() {
           type={3}
           sectionTitle="Shop by Brand"
           className="brand-section-wrapper mb-[60px]"
+          brands={topBrands} // 👈 truyền data brand vào props
         />
+
         <SectionStyleThree
           type={3}
           products={productNew}
@@ -72,10 +76,12 @@ export default function HomeThree() {
           seeMoreUrl="/all-products"
           className="new-products mb-[60px]"
           startLength={0}
-         endLength={productNew.length}
+          endLength={productNew.length}
         />
         <ProductsAds
-          ads={[`https://img.pikbest.com/origin/06/43/50/946pIkbEsTIUu.jpg!bwr800`]}
+          ads={[
+            `https://img.pikbest.com/origin/06/43/50/946pIkbEsTIUu.jpg!bwr800`,
+          ]}
           className="products-ads-section mb-[60px]"
         />
 

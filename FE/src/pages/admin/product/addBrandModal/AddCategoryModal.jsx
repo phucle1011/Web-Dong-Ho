@@ -63,7 +63,7 @@ export default function AddCategoryModal({ onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.2)] backdrop-blur-sm">
       <div className="bg-white max-w-md w-full rounded-lg shadow-lg relative p-6">
         <button
           type="button"

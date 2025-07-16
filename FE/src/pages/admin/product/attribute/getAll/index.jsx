@@ -133,15 +133,24 @@ function AttributeGetAll() {
 
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Danh sách thuộc tính</h2>
-        <Link
-          to="/admin/attribute/create"
-          className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
-        >
-          + Thêm thuộc tính
-        </Link>
-      </div>
+   <div className="flex justify-between items-center mb-4">
+  <h2 className="text-xl font-semibold">Danh sách thuộc tính</h2>
+  <div className="flex gap-2">
+    <Link
+      to="/admin/products/getAll"
+      className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+    >
+      ← Quay lại sản phẩm
+    </Link>
+    <Link
+      to="/admin/attribute/create"
+      className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
+    >
+      + Thêm thuộc tính
+    </Link>
+  </div>
+</div>
+
 
       <div className="mb-4 flex gap-2">
         <input

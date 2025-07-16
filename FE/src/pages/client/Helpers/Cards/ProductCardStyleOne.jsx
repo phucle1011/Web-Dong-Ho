@@ -482,14 +482,20 @@ export default function ProductCardStyleOne({ datas, type }) {
 
   // Handle navigation
   const handleNavigate = (e) => {
-    if (!product.id || product.id === "unknown") {
-      e.preventDefault();
-      console.warn("Invalid product ID, preventing navigation:", product.id);
-      toast.error("Sản phẩm không hợp lệ!");
-      return;
-    }
-    navigate(`/product/${product.id}`);
-  };
+  if (!product.id) {
+    e.preventDefault();
+    toast.error("Sản phẩm không hợp lệ!");
+    return;
+  }
+
+  // Chuyển đến trang product (không có id trong URL) và truyền state
+  navigate("/product", {
+    state: {
+      productId: product.id,
+    },
+  });
+};
+
 
   return (
     <div
@@ -532,11 +538,9 @@ export default function ProductCardStyleOne({ datas, type }) {
             Tổng Lượng Sản Phẩm: <strong>{totalStock}</strong>
           </span>
         </div>
-        <Link to={`/product/${product.id || "unknown"}`} onClick={handleNavigate}>
-          <p className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600">
+          <p className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600"onClick={handleNavigate}>
             {productName}
           </p>
-        </Link>
         {displayPrice > 0 ? (
           <div className="price-container group-hover:hidden">
             <p className="price flex items-center space-x-2">

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import axios from "axios";
 import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams,Link } from "react-router-dom";
 
 function AttributeEdit() {
     const { id } = useParams();
@@ -50,38 +50,47 @@ function AttributeEdit() {
     };
 
     return (
-        <div className="max-w-screen-md mx-auto bg-white p-8 rounded shadow mt-8">
-            <h2 className="text-2xl font-semibold mb-6">Cập nhật thuộc tính</h2>
+       <div className="max-w-screen-md mx-auto bg-white p-8 rounded shadow mt-8">
+  <h2 className="text-2xl font-semibold mb-6">Cập nhật thuộc tính</h2>
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                <div className="mb-6">
-                    <label className="block font-medium mb-2">Tên thuộc tính *</label>
-                    <input
-                        type="text"
-                        className="w-full border px-4 py-3 rounded"
-                        placeholder="VD: Màu sắc, Chất liệu dây..."
-                        {...register("name", {
-                            required: "Tên thuộc tính không được để trống",
-                            minLength: {
-                                value: 2,
-                                message: "Tên thuộc tính phải ít nhất 2 ký tự",
-                            },
-                        })}
-                    />
-                    {errors.name && (
-                        <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
-                    )}
-                </div>
+  <form onSubmit={handleSubmit(onSubmit)} noValidate>
+    <div className="mb-6">
+      <label className="block font-medium mb-2">Tên thuộc tính *</label>
+      <input
+        type="text"
+        className="w-full border px-4 py-3 rounded"
+        placeholder="VD: Màu sắc, Chất liệu dây..."
+        {...register("name", {
+          required: "Tên thuộc tính không được để trống",
+          minLength: {
+            value: 2,
+            message: "Tên thuộc tính phải ít nhất 2 ký tự",
+          },
+        })}
+      />
+      {errors.name && (
+        <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+      )}
+    </div>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
-                >
-                    {loading ? "Đang cập nhật..." : "Cập nhật thuộc tính"}
-                </button>
-            </form>
-        </div>
+    <div className="flex gap-2">
+      <Link
+        to="/admin/attribute/getall"
+        className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+      >
+        ← Quay lại
+      </Link>
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+      >
+        {loading ? "Đang cập nhật..." : "Cập nhật thuộc tính"}
+      </button>
+    </div>
+  </form>
+</div>
+
     );
 }
 

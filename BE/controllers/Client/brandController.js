@@ -8,7 +8,7 @@ const PromotionModel = require("../../models/promotionsModel");
 const VariantImage = require("../../models/variantImagesModel");
 const ProductVariantAttributeValue = require("../../models/productVariantAttributeValuesModel");
 const ProductAttribute = require("../../models/productAttributesModel");
-
+const { Sequelize } = require("sequelize");
 class BrandController {
   static async getActiveBrands(req, res) {
     try {
@@ -24,7 +24,10 @@ class BrandController {
 
       return res.status(200).json({
         status: 200,
-        message: brands.length === 0 ? "Không tìm thấy thương hiệu." : "Lấy danh sách thương hiệu thành công",
+        message:
+          brands.length === 0
+            ? "Không tìm thấy thương hiệu."
+            : "Lấy danh sách thương hiệu thành công",
         data: brands,
       });
     } catch (error) {
@@ -49,14 +52,15 @@ class BrandController {
 
       // Xử lý brandIds với cả kiểu string và array
       if (brandIds && brandIds !== "all") {
-        if (typeof brandIds === 'string') {
-          brandIdArray = brandIds.split(",")
-            .map(id => parseInt(id))
-            .filter(id => !isNaN(id));
+        if (typeof brandIds === "string") {
+          brandIdArray = brandIds
+            .split(",")
+            .map((id) => parseInt(id))
+            .filter((id) => !isNaN(id));
         } else if (Array.isArray(brandIds)) {
           brandIdArray = brandIds
-            .map(id => parseInt(id))
-            .filter(id => !isNaN(id));
+            .map((id) => parseInt(id))
+            .filter((id) => !isNaN(id));
         }
 
         if (brandIdArray.length === 0) {
@@ -130,8 +134,8 @@ class BrandController {
         offset,
       });
 
-      const result = products.map(product => {
-        const variants = product.variants.map(variant => {
+      const result = products.map((product) => {
+        const variants = product.variants.map((variant) => {
           const promo = variant.promotionProducts?.[0]?.promotion || null;
           let finalPrice = parseFloat(variant.price) || 0;
           let discountPercent = 0;
@@ -141,8 +145,13 @@ class BrandController {
               discountPercent = parseFloat(promo.discount_value);
               finalPrice = finalPrice * (1 - discountPercent / 100);
             } else if (promo.discount_type === "fixed") {
-              discountPercent = ((parseFloat(variant.price) - parseFloat(promo.discount_value)) / parseFloat(variant.price)) * 100;
-              finalPrice = parseFloat(variant.price) - parseFloat(promo.discount_value);
+              discountPercent =
+                ((parseFloat(variant.price) -
+                  parseFloat(promo.discount_value)) /
+                  parseFloat(variant.price)) *
+                100;
+              finalPrice =
+                parseFloat(variant.price) - parseFloat(promo.discount_value);
             }
             finalPrice = Math.max(0, finalPrice);
           }
@@ -151,14 +160,14 @@ class BrandController {
             ...variant.toJSON(),
             promotion: promo
               ? {
-                id: promo.id,
-                discount_type: promo.discount_type,
-                discount_value: parseFloat(promo.discount_value),
-                discounted_price: parseFloat(finalPrice.toFixed(2)),
-                discount_percent: parseFloat(discountPercent.toFixed(2)),
-              }
+                  id: promo.id,
+                  discount_type: promo.discount_type,
+                  discount_value: parseFloat(promo.discount_value),
+                  discounted_price: parseFloat(finalPrice.toFixed(2)),
+                  discount_percent: parseFloat(discountPercent.toFixed(2)),
+                }
               : null,
-            attributeValues: variant.attributeValues.map(attr => ({
+            attributeValues: variant.attributeValues.map((attr) => ({
               attribute: { id: attr.attribute.id, name: attr.attribute.name },
               value: attr.value,
             })),
@@ -179,7 +188,10 @@ class BrandController {
 
       return res.status(200).json({
         status: 200,
-        message: result.length === 0 ? "Không tìm thấy sản phẩm." : "Lấy danh sách sản phẩm thành công",
+        message:
+          result.length === 0
+            ? "Không tìm thấy sản phẩm."
+            : "Lấy danh sách sản phẩm thành công",
         data: result,
         totalPages: Math.ceil(count / currentLimit),
         currentPage,
@@ -211,11 +223,71 @@ class BrandController {
 
       return res.status(200).json({
         status: 200,
-        message: brands.length === 0 ? "Không tìm thấy thương hiệu." : "Tìm kiếm thương hiệu thành công",
+        message:
+          brands.length === 0
+            ? "Không tìm thấy thương hiệu."
+            : "Tìm kiếm thương hiệu thành công",
         data: brands,
       });
     } catch (error) {
       console.error("Lỗi khi tìm kiếm thương hiệu:", error);
+      return res.status(500).json({
+        status: 500,
+        error: error.message,
+      });
+    }
+  }
+  static async getTopBrands(req, res) {
+    try {
+      const topBrands = await ProductModel.findAll({
+        where: {
+          status: 1,
+          publication_status: "published",
+        },
+        attributes: [
+          "brand_id",
+          [Sequelize.fn("COUNT", Sequelize.col("products.id")), "productCount"], 
+        ],
+        include: [
+          {
+            model: BrandModel,
+            as: "brand",
+            attributes: [
+              "id",
+              "name",
+              "slug",
+              "country",
+              "logo",
+              "description",
+            ],
+            where: { status: "active" },
+          },
+        ],
+        group: ["brand_id", "brand.id"],
+        order: [[Sequelize.literal("productCount"), "DESC"]],
+        limit: 10,
+      });
+
+      const formatted = topBrands.map((item) => ({
+        id: item.brand.id,
+        name: item.brand.name,
+        slug: item.brand.slug,
+        country: item.brand.country,
+        logo: item.brand.logo,
+        description: item.brand.description,
+        productCount: item.dataValues.productCount,
+      }));
+
+      return res.status(200).json({
+        status: 200,
+        message:
+          formatted.length === 0
+            ? "Không tìm thấy thương hiệu."
+            : "Lấy top thương hiệu thành công",
+        data: formatted,
+      });
+    } catch (error) {
+      console.error("Lỗi khi lấy top thương hiệu:", error);
       return res.status(500).json({
         status: 500,
         error: error.message,

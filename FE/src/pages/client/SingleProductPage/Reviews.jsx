@@ -6,10 +6,8 @@ import { Filter } from "bad-words";
 import StarRating from "../Helpers/StarRating";
 import LoaderStyleOne from "../Helpers/Loaders/LoaderStyleOne";
 import { decodeToken } from "../Helpers/jwtDecode";
-
-
+import { useLocation, useNavigate } from "react-router-dom";
 const ProductReviewSection = () => {
-  const { id: productId } = useParams();
   const [orderDetailId, setOrderDetailId] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +21,15 @@ const ProductReviewSection = () => {
   const [filterType, setFilterType] = useState("all");
   const [filterRating, setFilterRating] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-
+const { state } = useLocation();
+  const navigate = useNavigate();
+useEffect(() => {
+    if (!state?.productId) {
+      toast.error("Thiếu thông tin sản phẩm!");
+      navigate("/all-products");
+    }
+  }, [state]);
+  const { productId } = state || {};
   useEffect(() => {
     const storedOrderDetailId = sessionStorage.getItem("pendingReviewOrderDetailId");
     if (storedOrderDetailId) {

@@ -11,6 +11,7 @@ import SallerInfo from "./SallerInfo";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import Constants from "../../../Constants";
+import { useLocation, useNavigate } from "react-router-dom";
 
 
 export default function SingleProductPage() {
@@ -55,19 +56,27 @@ export default function SingleProductPage() {
       review: 5,
     },
   ]);
+  const { state } = useLocation();
+  const navigate = useNavigate();
+useEffect(() => {
+    if (!state?.productId) {
+      toast.error("Thiếu thông tin sản phẩm!");
+      navigate("/all-products");
+    }
+  }, [state]);
+  const { productId } = state || {};
     const [description, setDescription] = useState([]);
 
-  const { id } = useParams();
 
   const [relatedProducts, setRelatedProducts] = useState([]);
 useEffect(() => {
   const res =  axios.get(
-        `${Constants.DOMAIN_API}/products/${id}/variants`
+        `${Constants.DOMAIN_API}/products/${productId}/variants`
       ).then((res) => { 
         setDescription(res.data.product.description)
        
     })
-  axios.get(`${Constants.DOMAIN_API}/products/${id}/similar`)
+  axios.get(`${Constants.DOMAIN_API}/products/${productId}/similar`)
     .then((res) => {
       setRelatedProducts(res.data.data);
        
@@ -75,7 +84,7 @@ useEffect(() => {
     .catch((err) => {
       console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
     });
-}, [id]);
+}, [productId]);
  
 
   const reviewAction = () => {
@@ -119,7 +128,7 @@ useEffect(() => {
                 <BreadcrumbCom
                   paths={[
                     { name: "trang chủ", path: "/" },
-                    { name: "single product", path: "/single-product" },
+                    { name: "trang sản phẩm", path: "/single-product" },
                   ]}
                 />
               </div>
@@ -201,7 +210,7 @@ useEffect(() => {
                     </h6>
                     {/* review-comments */}
                     <div className="w-full">
-                     <ProductReviewSection productId={id} />
+                     <ProductReviewSection productId={productId} />
                     </div>
                   </div>
                 )}
