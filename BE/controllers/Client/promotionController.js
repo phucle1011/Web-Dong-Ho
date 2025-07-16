@@ -150,6 +150,9 @@ class PromotionController {
                     totalAfterDiscount: Number((orderTotal - discountAmount).toFixed(2)),
                     applicableTo: promotion.applicable_to || null,
                     code,
+                    promotion_id: promotion.id,
+                    promotion_user_id: promoUser?.id || promotion_user_id || null,
+
                 };
             });
 

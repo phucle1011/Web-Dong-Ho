@@ -15,38 +15,42 @@ const OrderModel = connection.define('orders', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    promotion_user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     total_price: {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: true
     },
     status: {
-        type: DataTypes.ENUM('pending','confirmed','shipping','completed','delivered','cancelled'),
+        type: DataTypes.ENUM('pending', 'confirmed', 'shipping', 'completed', 'delivered', 'cancelled'),
         allowNull: false,
         defaultValue: 'pending'
     },
     payment_method: {
-        type: DataTypes.ENUM('COD','VnPay','Momo'),
+        type: DataTypes.ENUM('COD', 'VnPay', 'Momo'),
         allowNull: true
     },
     cancellation_reason: {
         type: DataTypes.STRING,
-        allowNull: true 
+        allowNull: true
     },
     shipping_fee: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false 
+        allowNull: false
     },
     order_code: {
         type: DataTypes.STRING,
-        allowNull: false 
+        allowNull: false
     },
     shipping_address: {
         type: DataTypes.TEXT,
-        allowNull: false 
+        allowNull: false
     },
     note: {
         type: DataTypes.TEXT,
-        allowNull: false 
+        allowNull: false
     },
     discount_amount: {
         type: DataTypes.DECIMAL(20, 2),
@@ -55,7 +59,7 @@ const OrderModel = connection.define('orders', {
     special_discount_amount: {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: true
-    }
+    },
 }, {
     tableName: 'orders',
     timestamps: true,

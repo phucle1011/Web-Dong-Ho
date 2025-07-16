@@ -5,6 +5,7 @@ const UserModel = require("../../models/usersModel");
 const CartModel = require("../../models/cartDetailsModel");
 const PromotionModel = require("../../models/promotionsModel");
 const ProductVariantModel = require("../../models/productVariantsModel");
+const PromotionUserModel = require("../../models/promotionUsersModel")
 
 const requestIp = require('request-ip');
 const moment = require('moment');
@@ -179,13 +180,15 @@ class OrderController {
             const { id } = req.params;
             const { cancellation_reason } = req.body;
 
-            const order = await OrderModel.findByPk(id);
+            const order = await OrderModel.findByPk(id, { transaction: t });
 
             if (!order) {
+                await t.rollback();
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
 
             if (order.status !== "pending") {
+                await t.rollback();
                 return res.status(400).json({
                     message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'",
                 });
@@ -208,7 +211,7 @@ class OrderController {
                 }
             }
 
-            const promo = await PromotionModel.findByPk(order.promotion_id);
+            const promo = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
             if (promo) {
                 await promo.increment('quantity', { transaction: t });
 
@@ -230,14 +233,9 @@ class OrderController {
             order.cancellation_reason = cancellation_reason || null;
             await order.save({ transaction: t });
 
-            const user = await UserModel.findByPk(order.user_id); // ✅ THÊM DÒNG NÀY
+            const user = await UserModel.findByPk(order.user_id, { transaction: t });
 
-            await OrderController.sendOrderCancellationEmail(
-                order,
-                user,
-                user?.email || "no-reply@example.com",
-                cancellation_reason
-            );
+            await this.sendOrderCancellationEmail(order, user, user.email, cancellation_reason);
 
             await t.commit();
 
@@ -247,7 +245,7 @@ class OrderController {
                 data: order,
             });
         } catch (error) {
-            await t.rollback(); // ✅ rollback nếu lỗi
+            await t.rollback();
             res.status(500).json({ error: error.message });
         }
     }
@@ -407,7 +405,8 @@ class OrderController {
             note,
             shipping_fee,
             promo_discount,
-            voucher_discount
+            voucher_discount,
+            promotion_user_id
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -462,11 +461,13 @@ class OrderController {
             }
 
             let selectedVoucher = null;
+            let promoUser = null;
             let specialDiscount = parseFloat(promo_discount) || 0;
             let discountAmount = 0;
 
             if (promotion) {
                 selectedVoucher = await PromotionModel.findByPk(promotion, { transaction: t, lock: t.LOCK.UPDATE });
+
                 if (selectedVoucher) {
                     const now = new Date();
                     if (
@@ -480,10 +481,10 @@ class OrderController {
                         return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
                     }
 
-                    if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionUserModel.findOne({
+                    if (selectedVoucher && promotion_user_id) {
+                        promoUser = await PromotionUserModel.findOne({
                             where: {
-                                promotion_id: selectedVoucher.id,
+                                id: parseInt(promotion_user_id),
                                 user_id,
                                 email_sent: true,
                                 used: { [Op.not]: true },
@@ -491,6 +492,7 @@ class OrderController {
                             transaction: t,
                             lock: t.LOCK.UPDATE,
                         });
+                        console.log("sfssdsc", promoUser);
 
                         if (!promoUser) {
                             await t.rollback();
@@ -532,6 +534,7 @@ class OrderController {
             const newOrder = await OrderModel.create({
                 user_id,
                 promotion_id: promotion || null,
+                promotion_user_id: promoUser?.id || parseInt(promotion_user_id) || null,
                 name,
                 phone,
                 email,
@@ -575,7 +578,8 @@ class OrderController {
                 message: "Đặt hàng thành công.",
                 data: {
                     order: newOrder,
-                    successfullyOrderedProductIds
+                    successfullyOrderedProductIds,
+                    promotion_user_id: promotion_user_id || null
                 },
             });
         } catch (error) {

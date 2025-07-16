@@ -111,6 +111,8 @@ export default function CheckoutPage() {
     setVoucherDiscount(savedDiscountInfo?.voucherDiscount || 0);
     const savedVoucher = localStorage.getItem("selectedVoucher");
     setSelectedVoucher(savedVoucher ? JSON.parse(savedVoucher) : null);
+    console.log(savedVoucher ? JSON.parse(savedVoucher) : null);
+
   }, [location.state]);
 
   useEffect(() => {
@@ -846,6 +848,7 @@ export default function CheckoutPage() {
         promotion: selectedVoucher ? selectedVoucher.id : null,
         promo_discount: discountInfo?.promoDiscount || 0,
         voucher_discount: discountInfo?.voucherDiscount || 0,
+        promotion_user_id: discountInfo?.promotion_user_id || null,
         payment_method: selectedPaymentMethod,
         shipping_fee: finalData.shippingFee || 0,
         amount: Math.max(0, finalData.total - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0),
@@ -853,8 +856,6 @@ export default function CheckoutPage() {
         orderDescription: `Thanh toan don hang cho ${user.name}`,
         orderType: 'other'
       };
-      console.log("Đặt hàng với payload:", payload);
-
 
       if (selectedPaymentMethod === "VNPay") {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);

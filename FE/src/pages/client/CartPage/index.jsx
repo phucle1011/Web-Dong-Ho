@@ -161,23 +161,27 @@ export default function CardPage({ cart = true }) {
       });
 
       const data = await res.json();
+      
       if (!res.ok) {
         throw new Error(data.message || "Có lỗi xảy ra khi áp dụng mã.");
       }
       if (!data.data) {
         throw new Error("Dữ liệu giảm giá không hợp lệ.");
       }
-
-      const promoDiscount = data.data.discountAmount;
+      const promoDiscount = data.data.discountAmount || 0;
+      const promotionUserId = data.data.promotion_user_id || null;
       const voucherDiscount = discountInfo?.voucherDiscount || 0;
       const totalDiscount = Math.min(voucherDiscount + promoDiscount, totalPrice);
 
       setDiscountInfo((prev) => ({
+        ...prev,
         ...data.data,
         promoDiscount,
         voucherDiscount,
+        promoDiscount,
         discountAmount: totalDiscount,
         max_price: selectedVoucher?.max_price || data.data.max_price || 0,
+        promotion_user_id: promotionUserId
       }));
 
       localStorage.setItem(
@@ -186,7 +190,8 @@ export default function CardPage({ cart = true }) {
           code: promoCode.trim(),
           discountAmount: promoDiscount,
           maxPrice: data.data.max_price,
-          appliedAt: Date.now()
+          promotion_user_id: promotionUserId,
+          appliedAt: Date.now(),
         })
       );
 
@@ -222,6 +227,7 @@ export default function CardPage({ cart = true }) {
         originalTotalPrice,
         discountInfo,
         finalTotal,
+        promotion_user_id: discountInfo?.promotion_user_id || null,
       };
       localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
     }
