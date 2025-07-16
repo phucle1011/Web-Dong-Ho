@@ -84,7 +84,7 @@ useEffect(() => {
     .catch((err) => {
       console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
     });
-}, [id]);
+}, [productId]);
  useEffect(() => {
   if (window.location.hash === "#review") {
     setTab("review");
@@ -226,7 +226,7 @@ useEffect(() => {
       ĐÁNH GIÁ SẢN PHẨM
     </h6>
     <div className="w-full">
-      <ProductReviewSection productId={id} />
+      <ProductReviewSection productId={productId} />
     </div>
   </div>
 )}
