@@ -24,7 +24,7 @@ export default function Contact() {
     e.preventDefault();
     try {
       await axios.post("http://localhost:5000/contact", formData);
-      Swal.fire("Success!", "Phản Hồi Của Bạn Đã Được Gửi ", "success");
+      Swal.fire("Gửi Thành Công!", "Chúng tôi sẽ phản hồi trong 24h tới ", "success");
 
       // Clear form
       setFormData({
@@ -89,7 +89,7 @@ export default function Contact() {
                     </svg>
                   </div>
                   <p className="text-[22px] text-black leading-[30px] text-center font-semibold">
-                    Phone
+                    Số Điện Thoại
                   </p>
                   <p className="text-[15px] text-black leading-[30px] text-center">
                     +(323) 9847 3847 383
@@ -166,7 +166,7 @@ export default function Contact() {
                   </span>
                   <div>
                     <h1 className="text-[22px] font-semibold text-qblack leading-[30px] mb-2">
-                      Address
+                      Địa Chỉ
                     </h1>
                     <p className="text-[15px] text-qblack leading-[30px]">
                       Toà nhà FPT Polytechnic, Đ. Số 22, Thường Thạnh, Cái Răng, Cần Thơ, Việt Nam
@@ -187,7 +187,7 @@ export default function Contact() {
             <div className="flex-1 bg-white sm:p-10 p-3">
               <form onSubmit={handleSubmit}>
                 <div className="title flex flex-col items-center">
-                  <h1 className="text-[34px] font-bold text-qblack">Gửi Phản Hồ Cho Chúng Tôi</h1>
+                  <h1 className="text-[34px] font-bold text-qblack">Gửi Phản Hồi Cho Chúng Tôi</h1>
                   <span className="-mt-5 block">
                     <svg
                       width="354"
@@ -208,7 +208,7 @@ export default function Contact() {
                 <div className="inputs mt-5">
                   <div className="mb-4">
                     <InputForm
-                      label="Tên Khách Hàng*"
+                      label="Tên Khách Hàng"
                       placeholder="Vui Lòng Nhập Tên Của Bạn"
                       name="first_name"
                       inputClasses="h-[50px]"
@@ -219,7 +219,7 @@ export default function Contact() {
                   </div>
                   <div className="mb-4">
                     <InputForm
-                      label="Địa Chỉ Email*"
+                      label="Địa Chỉ Email"
                       placeholder="Vui Lòng Nhập Địa Chỉ Email Của Bạn"
                       name="email"
                       inputClasses="h-[50px]"
@@ -230,7 +230,7 @@ export default function Contact() {
                   </div>
                   <div className="mb-4">
                     <InputForm
-                      label="Phản Hồi*"
+                      label="Phản Hồi"
                       placeholder="Vui Lòng Nhập Phản Hồi Của Bạn"
                       name="subject"
                       inputClasses="h-[50px]"

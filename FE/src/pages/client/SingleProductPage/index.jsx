@@ -84,8 +84,21 @@ useEffect(() => {
     .catch((err) => {
       console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
     });
-}, [productId]);
- 
+}, [id]);
+ useEffect(() => {
+  if (window.location.hash === "#review") {
+    setTab("review");
+
+    // Scroll tới phần đánh giá sau khi tab đổi
+    setTimeout(() => {
+      const element = document.getElementById("review-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 200);
+  }
+}, []);
+
 
   const reviewAction = () => {
     setLoading(true);
@@ -203,17 +216,21 @@ useEffect(() => {
                     
                   </div>
                 )}
-                {tab === "review" && (
-                  <div data-aos="fade-up" className="w-full tab-content-item">
-                    <h6 className="text-[18px] font-medium text-qblack mb-2">
-                      ĐÁNH GIÁ SẢN PHẨM
-                    </h6>
-                    {/* review-comments */}
-                    <div className="w-full">
-                     <ProductReviewSection productId={productId} />
-                    </div>
-                  </div>
-                )}
+{tab === "review" && (
+  <div
+    id="review-section"
+    data-aos="fade-up"
+    className="w-full tab-content-item"
+  >
+    <h6 className="text-[18px] font-medium text-qblack mb-2">
+      ĐÁNH GIÁ SẢN PHẨM
+    </h6>
+    <div className="w-full">
+      <ProductReviewSection productId={id} />
+    </div>
+  </div>
+)}
+
                 {tab === "info" && (
                   <div data-aos="fade-up" className="w-full tab-content-item">
                     <SallerInfo products={data.products.slice(0, 8)} />

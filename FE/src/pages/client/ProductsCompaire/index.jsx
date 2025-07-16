@@ -6,7 +6,32 @@ import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 
 const MAX_COMPARE = 4;
-const MIN_COMPARE = 2;
+
+function DescriptionToggle({ description }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!description || description === "-") return "-";
+
+  const words = description.split(" ");
+  const shortText = words.slice(0, 50).join(" ");
+  const isLong = words.length > 50;
+
+  return (
+    <div className="text-left">
+      <p className="text-sm">
+        {expanded || !isLong ? description : `${shortText}...`}
+      </p>
+      {isLong && (
+        <button
+          className="text-blue-500 text-xs mt-1 underline"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Ẩn bớt" : "Xem thêm"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function ProductsCompare() {
   const [variants, setVariants] = useState([]);
@@ -14,7 +39,6 @@ export default function ProductsCompare() {
   const [selectedVariants, setSelectedVariants] = useState(Array(MAX_COMPARE).fill(null));
   const [filteredLists, setFilteredLists] = useState(Array(MAX_COMPARE).fill([]));
   const [allAttributes, setAllAttributes] = useState([]);
-  const [bestChoice, setBestChoice] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:5000/products/compare")
@@ -60,12 +84,13 @@ export default function ProductsCompare() {
     newSearchInputs[index] = value;
     setSearchInputs(newSearchInputs);
 
-    const filtered = variants.filter(
-      (v) =>
+    const filtered = variants
+      .filter((v) =>
         v.productName.toLowerCase().includes(value.toLowerCase()) ||
         v.sku?.toLowerCase().includes(value.toLowerCase()) ||
         v.productDescription?.toLowerCase().includes(value.toLowerCase())
-    );
+      )
+      .filter((v) => !selectedVariants.some((sv) => sv?.variantId === v.variantId));
 
     const newFilteredLists = [...filteredLists];
     newFilteredLists[index] = filtered;
@@ -105,8 +130,6 @@ export default function ProductsCompare() {
     setFilteredLists(newFilteredLists);
   };
 
-  const canCompare = selectedVariants.filter(Boolean).length >= MIN_COMPARE;
-
   const renderStars = (rating) => {
     if (!rating) return null;
     const stars = [];
@@ -126,51 +149,6 @@ export default function ProductsCompare() {
     return variant.images?.[0]?.image_url || null;
   };
 
-  const calculateScore = (variant) => {
-    let score = 0;
-    if (variant.average_rating) score += variant.average_rating * 10;
-    if (variant.price) score += 10000 / variant.price;
-    if (variant.stock > 0) score += 5;
-    if (variant.brand && variant.brand !== "-") score += 2;
-    return score;
-  };
-
-  const handleCompareClick = () => {
-    if (!canCompare) {
-      Swal.fire({
-        icon: "error",
-        title: "Chưa đủ biến thể",
-        text: `Vui lòng chọn ít nhất ${MIN_COMPARE} biến thể để so sánh.`,
-      });
-      return;
-    }
-
-    const scoredVariants = selectedVariants
-      .filter(Boolean)
-      .map((v) => ({ ...v, score: calculateScore(v) }));
-
-    const bestVariant = scoredVariants.reduce((prev, current) =>
-      prev.score > current.score ? prev : current
-    );
-
-    setBestChoice(bestVariant);
-
-    Swal.fire({
-      icon: "success",
-      title: "Kết quả so sánh",
-      html: `
-        <p>Sản phẩm đáng mua nhất là:</p>
-        <p><strong>${bestVariant.productName}</strong></p>
-        <p>Giá: ${Number(bestVariant.price).toLocaleString("vi-VN", {
-          style: "currency",
-          currency: "VND",
-        })}</p>
-        <p>Đánh giá: ${bestVariant.average_rating || "Không có"}</p>
-        <img src="${bestVariant.productThumbnail}" alt="Hình ảnh" style="max-width: 150px; margin-top: 10px;" />
-      `,
-    });
-  };
-
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="products-compare-wrapper w-full bg-white pb-[40px]">
@@ -188,7 +166,6 @@ export default function ProductsCompare() {
           <div className="w-full border border-qgray-border">
             <table className="table-wrapper min-w-[900px] border-collapse border border-gray-300">
               <tbody>
-                {/* Dòng tìm kiếm + sản phẩm */}
                 <tr>
                   <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA] font-semibold">
                     So sánh sản phẩm
@@ -249,8 +226,7 @@ export default function ProductsCompare() {
                   ))}
                 </tr>
 
-                {/* Các dòng thông tin cơ bản */}
-                {[
+                {[ // Table rows
                   { label: "Tên sản phẩm", value: (v) => v?.productName || "-" },
                   {
                     label: "Hình ảnh",
@@ -261,7 +237,10 @@ export default function ProductsCompare() {
                       ) : "-";
                     },
                   },
-                  { label: "Mô tả", value: (v) => v?.productDescription || "-" },
+                  {
+                    label: "Mô tả",
+                    value: (v) => <DescriptionToggle description={v?.productDescription || "-"} />,
+                  },
                   { label: "Thương hiệu", value: (v) => v?.brand || "-" },
                   {
                     label: "Giá",
@@ -293,7 +272,6 @@ export default function ProductsCompare() {
                   </tr>
                 ))}
 
-                {/* Dòng thuộc tính động */}
                 {allAttributes.map((attr) => (
                   <tr key={attr} className="border-t border-gray-300">
                     <td className="text-sm bg-[#FAFAFA] font-semibold px-[26px] py-[20px]">{attr}</td>
@@ -320,44 +298,6 @@ export default function ProductsCompare() {
               </tbody>
             </table>
           </div>
-
-          <div className="text-center mt-6">
-            <button
-              onClick={handleCompareClick}
-              className={`px-6 py-2 rounded text-white ${canCompare ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"}`}
-              disabled={!canCompare}
-            >
-              So sánh
-            </button>
-          </div>
-
-          {!canCompare && (
-            <p className="text-center mt-6 text-red-600 font-semibold">
-              Vui lòng chọn ít nhất {MIN_COMPARE} sản phẩm để so sánh
-            </p>
-          )}
-
-          {/* Kết quả sản phẩm tốt nhất */}
-          {bestChoice && (
-            <div className="mt-8 text-center">
-              <h2 className="text-xl font-bold text-green-600 mb-4">🎉 Sản phẩm đáng mua nhất</h2>
-              <div className="inline-block p-4 border border-green-400 rounded shadow">
-                <img
-                  src={bestChoice.productThumbnail}
-                  alt={bestChoice.productName}
-                  className="w-32 h-32 mx-auto object-contain mb-2"
-                />
-                <h3 className="text-lg font-semibold">{bestChoice.productName}</h3>
-                <p className="text-qred font-medium">
-                  {Number(bestChoice.price).toLocaleString("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  })}
-                </p>
-                <p>Đánh giá: {bestChoice.average_rating || "Không có"}</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </Layout>
