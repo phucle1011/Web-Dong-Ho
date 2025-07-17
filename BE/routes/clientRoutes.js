@@ -28,6 +28,8 @@ const ProfileController = require('../controllers/Client/ProfileController');
 const HomeController = require('../controllers/Client/HomeController');
 const UserController = require('../controllers/Client/userControllers');
 const reviewController = require('../controllers/Client/reviewController');
+const SearchController = require('../controllers/Client/SearchController');
+
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -35,6 +37,10 @@ const reviewController = require('../controllers/Client/reviewController');
 router.get("/products/getallnew", HomeController.getAllNewProducts);
 router.get("/top-sold-products", HomeController.getTopSoldProducts);
 router.get("/top-discounted-products", HomeController.getDiscountedProducts);
+
+
+// ------------------[ Search ]------------------//
+router.get('/products/search', SearchController.searchProducts);
 
 //------------------[ CHATBOX ]------------------//
 router.post("/chatbox",chatWithBot.chatWithBot);

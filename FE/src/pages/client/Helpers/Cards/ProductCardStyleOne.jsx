@@ -10,7 +10,7 @@ import Star from "../icons/Star";
 import ThinLove from "../icons/ThinLove";
 import ReactDOM from "react-dom";
 
-export default function ProductCardStyleOne({ datas, type }) {
+export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -480,7 +480,7 @@ export default function ProductCardStyleOne({ datas, type }) {
     return null;
   }
 
-  // Handle navigation
+  // Handle navigation with onProductClick
   const handleNavigate = (e) => {
   if (!product.id) {
     e.preventDefault();

@@ -7,13 +7,6 @@ import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary";
 import { toast } from 'react-toastify';
 
 export default function Signup() {
-  // const [checked, setValue] = useState(false);
-  // const rememberMe = () => {
-  //   setValue(!checked);
-  // };
-
-
-
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -137,16 +130,14 @@ export default function Signup() {
     } finally {
       setLoading(false);
     }
-  }
-
-  
+  };
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="login-page-wrapper w-full py-10">
         <div className="container-x mx-auto">
           <div className="lg:flex items-center relative">
-            <div className="lg:w-[572px] w-full lg:h-[690px] bg-white flex flex-col justify-center sm:p-10 p-5 border border-[#E0E0E0]">
+            <div className="lg:w-[572px] w-full lg:h-[690px] bg-white flex flex-col justify-center sm:p-10 p-5 border border-[#E0E0E0] overflow-y-auto" style={{ minHeight: "500px", maxHeight: "90vh" }}>
               <div className="w-full">
                 <div className="title-area flex flex-col justify-center items-center relative text-center mb-7">
                   <h1 className="text-[34px] font-bold leading-[74px] text-qblack">
@@ -169,9 +160,8 @@ export default function Signup() {
                     </svg>
                   </div>
                 </div>
-                {/* <div className="input-area"> */}
                 {/* Họ tên */}
-                <div className="mb-4">
+                <div className="mb-5">
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                     Tên Người Dùng<span className="text-red-500">*</span>
                   </label>
@@ -182,8 +172,7 @@ export default function Signup() {
                     placeholder="Tên người dùng"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.name ? "border-red-500" : "border-gray-300"
-                      } rounded-md focus:outline-none focus:border-indigo-500`}
+                    className={`w-full px-4 py-2 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                   />
                   {errors.name && (
                     <p className="text-red-500 text-sm mt-1">{errors.name}</p>
@@ -191,7 +180,7 @@ export default function Signup() {
                 </div>
 
                 {/* Email */}
-                <div className="mb-4">
+                <div className="mb-5">
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                     Email<span className="text-red-500">*</span>
                   </label>
@@ -202,8 +191,7 @@ export default function Signup() {
                     placeholder="Demo@gmail.com"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"
-                      } rounded-md focus:outline-none focus:border-indigo-500`}
+                    className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                   />
                   {errors.email && (
                     <p className="text-red-500 text-sm mt-1">{errors.email}</p>
@@ -211,7 +199,7 @@ export default function Signup() {
                 </div>
 
                 {/* Số điện thoại */}
-                <div className="mb-4">
+                <div className="mb-5">
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                     Số Điện Thoại<span className="text-red-500">*</span>
                   </label>
@@ -222,8 +210,7 @@ export default function Signup() {
                     placeholder="0913 *********"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.phone ? "border-red-500" : "border-gray-300"
-                      } rounded-md focus:outline-none focus:border-indigo-500`}
+                    className={`w-full px-4 py-2 border ${errors.phone ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                   />
                   {errors.phone && (
                     <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
@@ -231,7 +218,7 @@ export default function Signup() {
                 </div>
 
                 {/* Mật khẩu */}
-                <div className="mb-4">
+                <div className="mb-5">
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                     Mật Khẩu<span className="text-red-500">*</span>
                   </label>
@@ -242,15 +229,14 @@ export default function Signup() {
                     placeholder="Mật khẩu"
                     value={formData.password}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"
-                      } rounded-md focus:outline-none focus:border-indigo-500`}
+                    className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                   />
                   {errors.password && (
                     <p className="text-red-500 text-sm mt-1">{errors.password}</p>
                   )}
                 </div>
 
-                <div className="mb-4">
+                <div className="mb-5">
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                     Xác nhận mật khẩu<span className="text-red-500">*</span>
                   </label>
@@ -269,7 +255,7 @@ export default function Signup() {
                 </div>
 
                 {/* Ảnh đại diện */}
-                <div className="mb-4">
+                <div className="mb-5">
                   <label htmlFor="fileInput" className="block text-sm font-medium text-gray-700">
                     Ảnh đại diện*
                   </label>
@@ -321,10 +307,9 @@ export default function Signup() {
                   </Link>
                 </p>
               </div>
-              {/* </div> */}
             </div>
           </div>
-          <div className="flex-1 lg:flex hidden transform scale-60 xl:scale-100   xl:justify-center">
+          <div className="flex-1 lg:flex hidden transform scale-60 xl:scale-100 xl:justify-center">
             <div
               className="absolute xl:-right-20 -right-[138px]"
               style={{ top: "calc(50% - 580px)" }}
@@ -334,6 +319,6 @@ export default function Signup() {
           </div>
         </div>
       </div>
-    </Layout >
+    </Layout>
   );
 }

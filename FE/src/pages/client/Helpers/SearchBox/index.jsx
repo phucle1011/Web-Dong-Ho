@@ -16,19 +16,27 @@ export default function SearchBox({ className, type, onSearch }) {
         });
         if (response.data.status === 200) {
           setBrands(response.data.data);
-        } else {
-          console.error("SearchBox - Lỗi khi tải danh sách thương hiệu:", response.data.message);
         }
       } catch (error) {
-        console.error("SearchBox - Lỗi khi lấy danh sách thương hiệu:", error);
+        console.error('SearchBox - Lỗi khi lấy danh sách thương hiệu:', error);
       }
     };
+
     fetchBrands();
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSearch({ keyword, brandIds: selectedBrands.length > 0 ? selectedBrands : null });
+    const trimmedKeyword = keyword.trim();
+    const isSizeSearch = /^\d+mm$/.test(trimmedKeyword); // Kiểm tra kích thước
+    const searchParams = {
+      keyword: isSizeSearch ? '' : trimmedKeyword, // Nếu là kích thước, không dùng keyword
+      brandIds: selectedBrands.length > 0 ? selectedBrands : null,
+      attributeValues: trimmedKeyword ? [trimmedKeyword] : [], // Luôn gửi attributeValues cho mọi giá trị
+      attributeIds: isSizeSearch ? [17] : [], // Chỉ gửi attributeIds=17 cho kích thước
+    };
+    console.log('Search params sent:', searchParams); // Debug
+    onSearch(searchParams);
   };
 
   const toggleBrand = (brandId) => {
@@ -52,7 +60,7 @@ export default function SearchBox({ className, type, onSearch }) {
           <input
             type="text"
             className="search-input w-full h-full px-4 py-2 text-sm focus:outline-none"
-            placeholder="Tìm sản phẩm..."
+            placeholder="Tìm sản phẩm, kích thước (39mm), chất liệu (Vàng Trắng 18k), bộ máy (Rolex Calibre 7140)..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />

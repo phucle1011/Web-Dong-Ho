@@ -1,4 +1,3 @@
-// D:\A_HocTap\DuAnTotNghiep\Web-Dong-Ho\FE\src\components\Middlebar.jsx
 import Cart from "../../Cart";
 import Compair from "../../Helpers/icons/Compair";
 import ThinBag from "../../Helpers/icons/ThinBag";
@@ -72,29 +71,55 @@ export default function Middlebar({ className, type }) {
     return () => window.removeEventListener("storage", updateCompareCount);
   }, []);
 
-  const handleSearch = useCallback(async ({ keyword, brandIds }) => {
-    if (!brandIds && !keyword) {
-      toast.warn("Vui lòng chọn ít nhất một thương hiệu hoặc nhập từ khóa tìm kiếm.");
+  const handleSearch = useCallback(async ({ keyword, brandIds, attributeValues, attributeIds }) => {
+    if (!brandIds && !keyword && !attributeValues?.length) {
+      toast.warn('Vui lòng chọn ít nhất một thương hiệu, nhập từ khóa hoặc kích thước.');
       return;
     }
     try {
       setIsLoading(true);
-      const brandIdsParam = brandIds || "all";
-      const response = await axios.get(`${Constants.DOMAIN_API}/brands/get-products-by-brands`, {
-        params: { brandIds: brandIdsParam, keyword, page: 1, limit: 10 },
+      console.log('Search params received:', { keyword, brandIds, attributeValues, attributeIds });
+      const brandIdsParam = brandIds || 'all';
+      const params = {
+        brandIds: brandIdsParam,
+        page: 1,
+        limit: 10,
+      };
+      // Gửi keyword nếu không có attributeValues, hoặc attributeValues nếu có
+      if (keyword && !attributeValues?.length) {
+        params.keyword = keyword;
+      } else if (attributeValues?.length > 0) {
+        params.attribute_values = attributeValues; // Gửi attributeValues làm từ khóa thuộc tính
+        if (attributeIds?.length > 0) {
+          params.attribute_ids = attributeIds;
+        }
+      } else if (keyword) {
+        params.attribute_values = [keyword]; // Xử lý keyword như attributeValues nếu không có giá trị cụ thể
+      }
+      const response = await axios.get(`${Constants.DOMAIN_API}/products/search`, {
+        params,
       });
+      console.log('API response (full):', response);
       if (response.data.status === 200) {
-        setProducts(response.data.data);
+        console.log('API data:', response.data.data);
+        setProducts(response.data.data || []);
         setIsSearchDialogOpen(true);
       } else {
-        toast.error(response.data.message || "Không thể tải danh sách sản phẩm.");
+        toast.error(`Lỗi từ server: ${response.data.message || 'Không thể tải danh sách sản phẩm.'}`);
+        setProducts([]);
       }
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi tải danh sách sản phẩm.");
+      console.error('Error fetching products (details):', error.response || error);
+      toast.error('Có lỗi xảy ra khi tải danh sách sản phẩm. Vui lòng thử lại.');
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const handleProductClick = () => {
+    setIsSearchDialogOpen(false);
+  };
 
   const SearchResultsDialog = () =>
     isSearchDialogOpen &&
@@ -132,7 +157,12 @@ export default function Middlebar({ className, type }) {
           ) : products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => (
-                <ProductCardStyleOne key={product.id} datas={product} type={type} />
+                <ProductCardStyleOne
+                  key={product.id}
+                  datas={product}
+                  type={type}
+                  onProductClick={handleProductClick}
+                />
               ))}
             </div>
           ) : (
@@ -190,8 +220,7 @@ export default function Middlebar({ className, type }) {
                 </Link>
                 {compareCount > 0 && (
                   <span
-                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                      }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"}`}
                   >
                     {compareCount}
                   </span>
@@ -199,14 +228,13 @@ export default function Middlebar({ className, type }) {
               </div>
               <div className="cart-wrapper group relative py-4">
                 <div className="cart relative cursor-pointer">
-                <Link to="/wishlist">
-                  <span>
-                    <ThinLove />
-                  </span>
-                </Link>
+                  <Link to="/wishlist">
+                    <span>
+                      <ThinLove />
+                    </span>
+                  </Link>
                   <span
-                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                      }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"}`}
                   >
                     {wishlistCount}
                   </span>
@@ -224,8 +252,7 @@ export default function Middlebar({ className, type }) {
                     </span>
                   </Link>
                   <span
-                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
-                      }`}
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"}`}
                   >
                     {count}
                   </span>
