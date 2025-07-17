@@ -174,7 +174,7 @@ class OrderController {
         }
     }
 
-static async cancelOrder(req, res) {
+    static async cancelOrder(req, res) {
         const t = await sequelize.transaction();
         try {
             const { id } = req.params;
@@ -231,7 +231,7 @@ static async cancelOrder(req, res) {
             order.cancellation_reason = cancellation_reason || null;
             await order.save({ transaction: t });
 
-            const user = await UserModel.findByPk(order.user_id); 
+            const user = await UserModel.findByPk(order.user_id);
 
             await OrderController.sendOrderCancellationEmail(
                 order,
@@ -248,7 +248,7 @@ static async cancelOrder(req, res) {
                 data: order,
             });
         } catch (error) {
-            await t.rollback(); 
+            await t.rollback();
             res.status(500).json({ error: error.message });
         }
     }
@@ -647,6 +647,7 @@ static async cancelOrder(req, res) {
 
             let discountAmount = 0;
             let selectedVoucher = null;
+            let promotion_user_id = null;
 
             if (promotion) {
                 selectedVoucher = await PromotionModel.findByPk(promotion);
@@ -675,6 +676,7 @@ static async cancelOrder(req, res) {
                         if (!promoUser) {
                             return res.status(403).json({ message: "Bạn không đủ điều kiện sử dụng mã khuyến mãi." });
                         }
+                        promotion_user_id = promoUser.id;
                     }
 
                     if (selectedVoucher.discount_type === 'fixed') {
@@ -713,6 +715,7 @@ static async cancelOrder(req, res) {
                 note,
                 products: simplifiedProducts,
                 promotion,
+                promotion_user_id,
                 orderId: order_code,
                 amount: finalTotalWithShipping,
                 originalAmount: totalPrice,
@@ -825,7 +828,8 @@ static async cancelOrder(req, res) {
                 promotion,
                 shipping_fee,
                 specialDiscount,
-                discountAmount
+                discountAmount,
+                promotion_user_id,
             } = decoded;
 
             let totalPrice = 0;
@@ -883,10 +887,10 @@ static async cancelOrder(req, res) {
                         return res.status(400).json({ message: "Mã khuyến mãi không hợp lệ hoặc không đủ điều kiện." });
                     }
 
-                    if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionModel.findOne({
+                    if (selectedVoucher && promotion_user_id) {
+                        promoUser = await PromotionUserModel.findOne({
                             where: {
-                                promotion_id: selectedVoucher.id,
+                                id: parseInt(promotion_user_id),
                                 user_id,
                                 email_sent: true,
                                 used: { [Op.not]: true },
@@ -894,6 +898,7 @@ static async cancelOrder(req, res) {
                             transaction: t,
                             lock: t.LOCK.UPDATE,
                         });
+                        console.log("sfssdsc", promoUser);
 
                         if (!promoUser) {
                             await t.rollback();
@@ -925,6 +930,7 @@ static async cancelOrder(req, res) {
             const newOrder = await OrderModel.create({
                 user_id,
                 promotion_id: promotion || null,
+                promotion_user_id: promoUser?.id || parseInt(promotion_user_id) || null,
                 name,
                 phone,
                 email,
@@ -961,6 +967,8 @@ static async cancelOrder(req, res) {
                 transaction: t
             });
 
+            await OrderDetail.bulkCreate(orderDetails, { transaction: t });
+
             await t.commit();
 
             await OrderController.sendOrderConfirmationEmail(
@@ -976,7 +984,8 @@ static async cancelOrder(req, res) {
                 message: "Đơn hàng đã được tạo sau khi thanh toán thành công.",
                 data: {
                     order: newOrder,
-                    successfullyOrderedProductIds
+                    successfullyOrderedProductIds,
+                    promotion_user_id: promotion_user_id || null
                 }
             });
         } catch (err) {
@@ -1093,96 +1102,96 @@ static async cancelOrder(req, res) {
     }
 
     static async handleVNPayCallback(req, res) {
-       const t = await sequelize.transaction();
-    try {
-        const vnpParams = req.query;
-        const secureHash = vnpParams.vnp_SecureHash;
-        const orderId = vnpParams.vnp_TxnRef;
-        const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
-
-        // Xác minh chữ ký
-        delete vnpParams.vnp_SecureHash;
-        delete vnpParams.vnp_SecureHashType;
-
-        const sortedParams = OrderController.sortObject(vnpParams);
-        const signData = Object.entries(sortedParams)
-            .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
-            .join('&');
-
-        const secretKey = process.env.VNPAY_HASH_SECRET.trim();
-        const hmac = crypto.createHmac('sha512', secretKey);
-        const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-
-        if (calculatedHash !== secureHash) {
-            console.error('Chữ ký không hợp lệ');
-            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
-        }
-
-        if (vnpParams.vnp_ResponseCode !== '00') {
-            console.error('Giao dịch thất bại với mã lỗi:', vnpParams.vnp_ResponseCode);
-            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
-        }
-
-        // Giải mã extraData từ vnp_OrderInfo
-        let decoded;
+        const t = await sequelize.transaction();
         try {
-            decoded = JSON.parse(Buffer.from(vnpParams.vnp_OrderInfo, 'base64').toString('utf-8'));
-            if (!decoded.user_id || !decoded.products) {
-                throw new Error('Thiếu thông tin bắt buộc trong extraData');
+            const vnpParams = req.query;
+            const secureHash = vnpParams.vnp_SecureHash;
+            const orderId = vnpParams.vnp_TxnRef;
+            const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
+
+            // Xác minh chữ ký
+            delete vnpParams.vnp_SecureHash;
+            delete vnpParams.vnp_SecureHashType;
+
+            const sortedParams = OrderController.sortObject(vnpParams);
+            const signData = Object.entries(sortedParams)
+                .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
+                .join('&');
+
+            const secretKey = process.env.VNPAY_HASH_SECRET.trim();
+            const hmac = crypto.createHmac('sha512', secretKey);
+            const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+
+            if (calculatedHash !== secureHash) {
+                console.error('Chữ ký không hợp lệ');
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
             }
-        } catch (decodeError) {
-            console.error('Lỗi giải mã extraData:', decodeError);
-            await t.rollback();
-            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_order_data&orderId=${orderId}`);
-        }
 
-        const {
-            user_id, name, phone, email, address, note,
-            products, promotion, shipping_fee,
-            specialDiscount, discountAmount
-        } = decoded;
+            if (vnpParams.vnp_ResponseCode !== '00') {
+                console.error('Giao dịch thất bại với mã lỗi:', vnpParams.vnp_ResponseCode);
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
+            }
 
-        // Kiểm tra và xử lý đơn hàng
-        let totalPrice = 0;
-        const detailedCart = [];
-
-        for (const item of products) {
-            const variant = item.variant;
-            if (!variant || !variant.id || !variant.price) {
+            // Giải mã extraData từ vnp_OrderInfo
+            let decoded;
+            try {
+                decoded = JSON.parse(Buffer.from(vnpParams.vnp_OrderInfo, 'base64').toString('utf-8'));
+                if (!decoded.user_id || !decoded.products) {
+                    throw new Error('Thiếu thông tin bắt buộc trong extraData');
+                }
+            } catch (decodeError) {
+                console.error('Lỗi giải mã extraData:', decodeError);
                 await t.rollback();
-                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_product_data&orderId=${orderId}`);
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_order_data&orderId=${orderId}`);
             }
 
-            const productVariant = await ProductVariantModel.findByPk(variant.id, {
-                transaction: t,
-                lock: t.LOCK.UPDATE
-            });
+            const {
+                user_id, name, phone, email, address, note,
+                products, promotion, shipping_fee,
+                specialDiscount, discountAmount
+            } = decoded;
 
-            if (!productVariant) {
-                await t.rollback();
-                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Product_not_found&orderId=${orderId}`);
+            // Kiểm tra và xử lý đơn hàng
+            let totalPrice = 0;
+            const detailedCart = [];
+
+            for (const item of products) {
+                const variant = item.variant;
+                if (!variant || !variant.id || !variant.price) {
+                    await t.rollback();
+                    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_product_data&orderId=${orderId}`);
+                }
+
+                const productVariant = await ProductVariantModel.findByPk(variant.id, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE
+                });
+
+                if (!productVariant) {
+                    await t.rollback();
+                    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Product_not_found&orderId=${orderId}`);
+                }
+
+                if (productVariant.stock < item.quantity) {
+                    await t.rollback();
+                    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Out_of_stock&productId=${variant.id}&orderId=${orderId}`);
+                }
+
+                const price = parseFloat(variant.price);
+                totalPrice += price * item.quantity;
+
+                detailedCart.push({
+                    product_id: variant.id,
+                    name: variant.sku,
+                    price: price,
+                    quantity: item.quantity,
+                    total: price * item.quantity,
+                });
+
+                // Cập nhật số lượng tồn kho
+                productVariant.stock -= item.quantity;
+                await productVariant.save({ transaction: t });
             }
-
-            if (productVariant.stock < item.quantity) {
-                await t.rollback();
-                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Out_of_stock&productId=${variant.id}&orderId=${orderId}`);
-            }
-
-            const price = parseFloat(variant.price);
-            totalPrice += price * item.quantity;
-
-            detailedCart.push({
-                product_id: variant.id,
-                name: variant.sku,
-                price: price,
-                quantity: item.quantity,
-                total: price * item.quantity,
-            });
-
-            // Cập nhật số lượng tồn kho
-            productVariant.stock -= item.quantity;
-            await productVariant.save({ transaction: t });
-        }
 
             // Xử lý mã khuyến mãi
             if (promotion) {
@@ -1231,77 +1240,77 @@ static async cancelOrder(req, res) {
             }
 
             const newOrder = await OrderModel.create({
-            user_id,
-            promotion_id: promotion || null,
-            name,
-            phone,
-            email,
-            address,
-            total_price: amount,
-            payment_method: "VNPay",
-            order_code: orderId,
-            shipping_address: address,
-            note: note || "",
-            shipping_fee: parseFloat(shipping_fee) || 0,
-            status: "pending",
-            cancellation_reason: null,
-            shipping_code: null,
-            discount_amount: parseFloat(discountAmount) || 0,
-            special_discount_amount: parseFloat(specialDiscount) || 0,
-        }, { transaction: t });
-
-        // Lưu chi tiết đơn hàng
-        const orderDetails = detailedCart.map(item => ({
-            order_id: newOrder.id,
-            product_variant_id: item.product_id,
-            quantity: item.quantity,
-            price: item.price,
-        }));
-
-        await OrderDetail.bulkCreate(orderDetails, { transaction: t });
-
-        // Xóa giỏ hàng
-        const successfullyOrderedProductIds = products.map(p => p.variant.id);
-        await CartModel.destroy({
-            where: {
                 user_id,
-                product_variant_id: successfullyOrderedProductIds
-            },
-            transaction: t
-        });
+                promotion_id: promotion || null,
+                name,
+                phone,
+                email,
+                address,
+                total_price: amount,
+                payment_method: "VNPay",
+                order_code: orderId,
+                shipping_address: address,
+                note: note || "",
+                shipping_fee: parseFloat(shipping_fee) || 0,
+                status: "pending",
+                cancellation_reason: null,
+                shipping_code: null,
+                discount_amount: parseFloat(discountAmount) || 0,
+                special_discount_amount: parseFloat(specialDiscount) || 0,
+            }, { transaction: t });
 
-        // Lưu lịch sử thanh toán vào MongoDB
-        await Payment.create({
-            orderId,
-            amount,
-            transactionId: vnpParams.vnp_TransactionNo,
-            responseCode: vnpParams.vnp_ResponseCode,
-            orderInfo: vnpParams.vnp_OrderInfo,
-            status: 'success',
-            ipAddr: vnpParams.vnp_IpAddr,
-            bankCode: vnpParams.vnp_BankCode,
-        });
+            // Lưu chi tiết đơn hàng
+            const orderDetails = detailedCart.map(item => ({
+                order_id: newOrder.id,
+                product_variant_id: item.product_id,
+                quantity: item.quantity,
+                price: item.price,
+            }));
 
-        await t.commit();
+            await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
-        // Gửi email xác nhận
-        await OrderController.sendOrderConfirmationEmail(
-            newOrder,
-            { name, phone },
-            products,
-            email,
-            new Date()
-        );
+            // Xóa giỏ hàng
+            const successfullyOrderedProductIds = products.map(p => p.variant.id);
+            await CartModel.destroy({
+                where: {
+                    user_id,
+                    product_variant_id: successfullyOrderedProductIds
+                },
+                transaction: t
+            });
 
-        return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
+            // Lưu lịch sử thanh toán vào MongoDB
+            await Payment.create({
+                orderId,
+                amount,
+                transactionId: vnpParams.vnp_TransactionNo,
+                responseCode: vnpParams.vnp_ResponseCode,
+                orderInfo: vnpParams.vnp_OrderInfo,
+                status: 'success',
+                ipAddr: vnpParams.vnp_IpAddr,
+                bankCode: vnpParams.vnp_BankCode,
+            });
 
-    } catch (error) {
-        await t.rollback();
-        console.error('Lỗi callback VNPay:', error);
-        const orderId = req.query.vnp_TxnRef || 'unknown';
-        return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Server_error&orderId=${orderId}`);
+            await t.commit();
+
+            // Gửi email xác nhận
+            await OrderController.sendOrderConfirmationEmail(
+                newOrder,
+                { name, phone },
+                products,
+                email,
+                new Date()
+            );
+
+            return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
+
+        } catch (error) {
+            await t.rollback();
+            console.error('Lỗi callback VNPay:', error);
+            const orderId = req.query.vnp_TxnRef || 'unknown';
+            return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Server_error&orderId=${orderId}`);
+        }
     }
-}
 
     static async sendOrderConfirmationEmail(order, user, products, customerEmail, currentDateTime) {
         try {
