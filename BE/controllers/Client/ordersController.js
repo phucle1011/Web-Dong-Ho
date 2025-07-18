@@ -997,13 +997,7 @@ class OrderController {
 
     static sortObject(obj) {
         const ordered = {};
-        const keys = [
-            'vnp_Version', 'vnp_Command', 'vnp_TmnCode',
-            'vnp_Locale', 'vnp_CurrCode', 'vnp_TxnRef',
-            'vnp_OrderInfo', 'vnp_Amount', 'vnp_ReturnUrl',
-            'vnp_IpAddr', 'vnp_CreateDate', 'vnp_BankCode',
-            'vnp_OrderType'
-        ].sort();
+        const keys = Object.keys(obj).sort(); // ✅ Sắp xếp theo alphabet
         keys.forEach(key => {
             if (obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
                 ordered[key] = obj[key];
@@ -1025,6 +1019,8 @@ class OrderController {
 
             const tmnCode = process.env.VNPAY_TMN_CODE.trim();
             const secretKey = process.env.VNPAY_HASH_SECRET.trim();
+            console.log("secretKey:", secretKey);
+
             const vnpUrl = process.env.VNPAY_PAYMENT_URL.trim();
             const returnUrl = process.env.VNPAY_RETURN_URL.trim();
 
@@ -1036,9 +1032,6 @@ class OrderController {
             const createDate = moment().format("YYYYMMDDHHmmss");
             const orderId = req.body.orderId || `VNPAY-${Date.now()}`;
 
-            const orderInfo = (req.body.orderDescription || `Thanh toán đơn hàng ${orderId}`)
-                .substring(0, 255);
-
             const extraData = {
                 user_id: req.body.user_id,
                 name: req.body.name,
@@ -1046,13 +1039,41 @@ class OrderController {
                 email: req.body.email,
                 address: req.body.address,
                 note: req.body.note,
-                products: req.body.products,
+                products: req.body.products.map(p => ({
+                    quantity: p.quantity,
+                    variant_id: p.product_variant_id || p.variant?.id,
+                    price: p.variant?.price || p.price
+                })),
                 promotion: req.body.promotion,
                 shipping_fee: req.body.shipping_fee,
                 specialDiscount: req.body.specialDiscount,
                 discountAmount: req.body.discountAmount,
-                orderId: orderId // Thêm orderId vào extraData
+                orderId: orderId
             };
+            console.log("Extra data:", extraData);
+
+            const minimalExtraData = {
+                user_id: req.body.user_id,
+                email: req.body.email,
+                products: req.body.products.map(p => ({
+                    quantity: p.quantity,
+                    variant_id: p.product_variant_id || p.variant?.id,
+                    price: p.variant?.price || p.price
+                })),
+                promotion: req.body.promotion,
+                shipping_fee: req.body.shipping_fee,
+                specialDiscount: req.body.specialDiscount,
+                discountAmount: req.body.discountAmount,
+                orderId
+            };
+            console.log("Minimal extra data:", minimalExtraData);
+
+            const orderInfo = Buffer.from(JSON.stringify(extraData)).toString('base64');
+
+            console.log("Độ dài orderInfo:", orderInfo.length);
+            if (orderInfo.length > 200) {
+                console.warn("Cảnh báo: orderInfo có thể quá dài");
+            }
 
             const vnpParams = {
                 vnp_Version: '2.1.0',
@@ -1063,12 +1084,13 @@ class OrderController {
                 vnp_CurrCode: 'VND',
                 vnp_IpAddr: ipAddr,
                 vnp_Locale: 'vn',
-                vnp_OrderInfo: orderInfo, // Sử dụng orderInfo đã mã hóa
+                vnp_OrderInfo: orderInfo,
                 vnp_OrderType: req.body.orderType || 'other',
                 vnp_ReturnUrl: returnUrl,
                 vnp_TxnRef: orderId,
                 vnp_BankCode: req.body.bankCode || ''
             };
+            console.log("VNPay params:", vnpParams);
 
             const sortedParams = OrderController.sortObject(vnpParams);
 
@@ -1104,46 +1126,60 @@ class OrderController {
     static async handleVNPayCallback(req, res) {
         const t = await sequelize.transaction();
         try {
+            console.log("Bắt đầu xử lý callback từ VNPay...");
             const vnpParams = req.query;
+
+            console.log("Dữ liệu từ VNPay:", vnpParams);
+
             const secureHash = vnpParams.vnp_SecureHash;
-            const orderId = vnpParams.vnp_TxnRef;
+            const orderId = vnpParams.vnp_TxnRef || 'unknown';
             const amount = vnpParams.vnp_Amount ? (vnpParams.vnp_Amount / 100) : 0;
 
-            // Xác minh chữ ký
+            const orderInfo = vnpParams.vnp_OrderInfo;
+
+            delete vnpParams.vnp_SecureHash;
+            delete vnpParams.vnp_SecureHashType;
+
             delete vnpParams.vnp_SecureHash;
             delete vnpParams.vnp_SecureHashType;
 
             const sortedParams = OrderController.sortObject(vnpParams);
+
             const signData = Object.entries(sortedParams)
                 .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, '+')}`)
                 .join('&');
 
             const secretKey = process.env.VNPAY_HASH_SECRET.trim();
             const hmac = crypto.createHmac('sha512', secretKey);
-            const calculatedHash = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+            const calculatedHash = hmac.update(signData, 'utf-8').digest('hex');
+
+            console.log("Dữ liệu để tính chữ ký:", signData);
+            console.log("Chữ ký đã tính:", calculatedHash);
+            console.log("Chữ ký từ VNPay:", secureHash);
 
             if (calculatedHash !== secureHash) {
-                console.error('Chữ ký không hợp lệ');
+                console.error("Chữ ký không hợp lệ. Expected:", calculatedHash, "Actual:", secureHash);
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_signature&orderId=${orderId}`);
             }
 
             if (vnpParams.vnp_ResponseCode !== '00') {
-                console.error('Giao dịch thất bại với mã lỗi:', vnpParams.vnp_ResponseCode);
+                console.error(`Giao dịch thất bại - Mã lỗi: ${vnpParams.vnp_ResponseCode}`);
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`);
             }
 
-            // Giải mã extraData từ vnp_OrderInfo
             let decoded;
             try {
-                decoded = JSON.parse(Buffer.from(vnpParams.vnp_OrderInfo, 'base64').toString('utf-8'));
-                if (!decoded.user_id || !decoded.products) {
+                decoded = JSON.parse(Buffer.from(orderInfo, 'base64').toString('utf-8'));
+                if (!decoded.user_id || !decoded.products || !Array.isArray(decoded.products)) {
                     throw new Error('Thiếu thông tin bắt buộc trong extraData');
                 }
             } catch (decodeError) {
-                console.error('Lỗi giải mã extraData:', decodeError);
+                console.error("Lỗi giải mã extraData:", decodeError.message);
                 await t.rollback();
                 return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_order_data&orderId=${orderId}`);
             }
+
+            console.log("Decoded extraData:", decoded);
 
             const {
                 user_id, name, phone, email, address, note,
@@ -1151,49 +1187,41 @@ class OrderController {
                 specialDiscount, discountAmount
             } = decoded;
 
-            // Kiểm tra và xử lý đơn hàng
             let totalPrice = 0;
             const detailedCart = [];
 
             for (const item of products) {
-                const variant = item.variant;
-                if (!variant || !variant.id || !variant.price) {
+                if (!item.variant_id || !item.price) {
+                    console.error("Sản phẩm không hợp lệ:", item);
                     await t.rollback();
                     return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_product_data&orderId=${orderId}`);
                 }
 
-                const productVariant = await ProductVariantModel.findByPk(variant.id, {
+                const productVariant = await ProductVariantModel.findByPk(item.variant_id, {
                     transaction: t,
                     lock: t.LOCK.UPDATE
                 });
 
                 if (!productVariant) {
+                    console.error(`Không tìm thấy sản phẩm: ${item.variant_id}`);
                     await t.rollback();
-                    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Product_not_found&orderId=${orderId}`);
+                    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Product_not_found&productId=${item.variant_id}&orderId=${orderId}`);
                 }
 
-                if (productVariant.stock < item.quantity) {
-                    await t.rollback();
-                    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Out_of_stock&productId=${variant.id}&orderId=${orderId}`);
-                }
-
-                const price = parseFloat(variant.price);
+                const price = parseFloat(productVariant.price);
                 totalPrice += price * item.quantity;
-
                 detailedCart.push({
-                    product_id: variant.id,
-                    name: variant.sku,
+                    product_id: item.variant_id,
+                    name: productVariant.sku,
                     price: price,
                     quantity: item.quantity,
                     total: price * item.quantity,
                 });
 
-                // Cập nhật số lượng tồn kho
                 productVariant.stock -= item.quantity;
                 await productVariant.save({ transaction: t });
             }
 
-            // Xử lý mã khuyến mãi
             if (promotion) {
                 const selectedVoucher = await PromotionModel.findByPk(promotion, {
                     transaction: t,
@@ -1209,6 +1237,7 @@ class OrderController {
                         selectedVoucher.quantity <= 0 ||
                         totalPrice < parseFloat(selectedVoucher.min_price_threshold)
                     ) {
+                        console.error("Khuyến mãi không hợp lệ");
                         await t.rollback();
                         return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Invalid_promotion&orderId=${orderId}`);
                     }
@@ -1226,6 +1255,7 @@ class OrderController {
                         });
 
                         if (!promoUser) {
+                            console.error("Người dùng không có quyền sử dụng khuyến mãi đặc biệt");
                             await t.rollback();
                             return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Unauthorized_promotion&orderId=${orderId}`);
                         }
@@ -1239,27 +1269,34 @@ class OrderController {
                 }
             }
 
+            if (!decoded.address) {
+                console.error("Thiếu địa chỉ giao hàng");
+                await t.rollback();
+                return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Missing_shipping_address&orderId=${orderId}`);
+            }
+
             const newOrder = await OrderModel.create({
                 user_id,
                 promotion_id: promotion || null,
-                name,
-                phone,
-                email,
-                address,
+                name: decoded.name || '',
+                phone: decoded.phone || '',
+                email: decoded.email,
+                address: decoded.address,
                 total_price: amount,
                 payment_method: "VNPay",
                 order_code: orderId,
-                shipping_address: address,
-                note: note || "",
-                shipping_fee: parseFloat(shipping_fee) || 0,
+                shipping_address: decoded.address,
+                note: decoded.note || "",
+                shipping_fee: parseFloat(decoded.shipping_fee) || 0,
                 status: "pending",
                 cancellation_reason: null,
                 shipping_code: null,
-                discount_amount: parseFloat(discountAmount) || 0,
-                special_discount_amount: parseFloat(specialDiscount) || 0,
+                discount_amount: parseFloat(decoded.discountAmount) || 0,
+                special_discount_amount: parseFloat(decoded.specialDiscount) || 0,
             }, { transaction: t });
 
-            // Lưu chi tiết đơn hàng
+            console.log("Đơn hàng đã tạo thành công:", newOrder.id);
+
             const orderDetails = detailedCart.map(item => ({
                 order_id: newOrder.id,
                 product_variant_id: item.product_id,
@@ -1269,7 +1306,6 @@ class OrderController {
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
-            // Xóa giỏ hàng
             const successfullyOrderedProductIds = products.map(p => p.variant.id);
             await CartModel.destroy({
                 where: {
@@ -1279,7 +1315,6 @@ class OrderController {
                 transaction: t
             });
 
-            // Lưu lịch sử thanh toán vào MongoDB
             await Payment.create({
                 orderId,
                 amount,
@@ -1292,8 +1327,8 @@ class OrderController {
             });
 
             await t.commit();
+            console.log("Giao dịch đã commit thành công");
 
-            // Gửi email xác nhận
             await OrderController.sendOrderConfirmationEmail(
                 newOrder,
                 { name, phone },
@@ -1302,11 +1337,12 @@ class OrderController {
                 new Date()
             );
 
-            return res.redirect(`${process.env.FRONTEND_URL}/payment/success?orderId=${orderId}&amount=${amount}`);
+            return res.redirect("http://localhost:3000/cart");
 
         } catch (error) {
             await t.rollback();
-            console.error('Lỗi callback VNPay:', error);
+            console.error("Lỗi callback VNPay:", error.message);
+            console.error("Chi tiết lỗi:", error.stack);
             const orderId = req.query.vnp_TxnRef || 'unknown';
             return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?error=Server_error&orderId=${orderId}`);
         }

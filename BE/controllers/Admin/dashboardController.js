@@ -7,6 +7,7 @@ const ProductModel = require('../../models/productsModel');
 const OrderModel = require('../../models/ordersModel');
 const PromotionModel = require('../../models/promotionsModel');
 const OrderDetailModel = require('../../models/orderDetailsModel');
+const ProductVariantModel = require('../../models/productVariantsModel');
 
 class DashboardController {
   static async getCounts(req, res) {
@@ -71,6 +72,31 @@ class DashboardController {
         return result?.revenue || 0;
       }
 
+const bestSellingVariant = await OrderDetailModel.findOne({
+  attributes: [
+    'product_variant_id',
+    [Sequelize.fn('SUM', Sequelize.col('quantity')), 'totalSold']
+  ],
+  include: [
+    {
+      model: ProductVariantModel,
+      as: 'variant',
+      attributes: ['id', 'sku', 'price'], 
+      include: [
+        {
+          model: ProductModel,
+          as: 'product',
+          attributes: ['id', 'name'],
+        }
+      ]
+    }
+  ],
+  group: ['product_variant_id', 'variant.id', 'variant->product.id'],
+  order: [[Sequelize.literal('totalSold'), 'DESC']],
+  raw: true,
+  nest: true, // Giữ nested structure cho dễ truy xuất
+});
+
       const revenueCurrentMonth = await getRevenueByDateRange(startOfCurrentMonth, endOfCurrentMonth);
       const revenueLastMonth = await getRevenueByDateRange(startOfLastMonth, endOfLastMonth);
       const revenueCurrentYear = await getRevenueByDateRange(startOfCurrentYear, endOfCurrentYear);
@@ -91,6 +117,8 @@ class DashboardController {
           revenueLastMonth,
           revenueCurrentYear,
           revenueLastYear,
+          best_selling_product: bestSellingVariant || null,
+
         },
       });
     } catch (error) {

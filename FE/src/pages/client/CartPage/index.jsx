@@ -216,7 +216,6 @@ export default function CardPage({ cart = true }) {
   const finalTotal = discountInfo ? totalPrice - discountInfo.discountAmount : totalPrice;
 
   useEffect(() => {
-    // Cập nhật checkoutData khi selectedProductVariants hoặc cartItems thay đổi
     if (selectedProductVariants.length > 0) {
       const checkoutData = {
         selectedProductVariants,
