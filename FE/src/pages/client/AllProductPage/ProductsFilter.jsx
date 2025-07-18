@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Constants from '../../../Constants';
 import { useLocation } from 'react-router-dom';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } from 'react-icons/fa';
 
 export default function ProductsFilter({
   initialFilters = {},
@@ -14,7 +14,6 @@ export default function ProductsFilter({
   filterToggleHandler,
   onApplyFilters = () => { },
 }) {
-  const [hasInitCategoryFromNav, setHasInitCategoryFromNav] = useState(false);
   const location = useLocation();
   const categoryIdFromNav = location.state?.categoryId;
   const [filters, setFilters] = useState(initialFilters);
@@ -45,13 +44,14 @@ export default function ProductsFilter({
     { label: 'Trên 30 triệu', min: 30000000, max: 1000000000 },
   ];
 
-  // Xử lý categoryIdFromNav mà không cập nhật filters
-useEffect(() => {
-  if (categoryIdFromNav && !hasInitCategoryFromNav) {
-    setFilters({ [categoryIdFromNav]: true });
-    setHasInitCategoryFromNav(true);
-  }
-}, [categoryIdFromNav, hasInitCategoryFromNav]);
+  useEffect(() => {
+    if (categoryIdFromNav) {
+      setFilters((prev) => ({
+        ...prev,
+        [categoryIdFromNav]: true,
+      }));
+    }
+  }, [categoryIdFromNav]);
 
   const checkboxHandler = (e) => {
     const { name, checked } = e.target;
@@ -131,13 +131,23 @@ useEffect(() => {
 
   const handlePriceRangeSelect = (min, max) => {
     setTempVolume([min, max]);
-    volumeHandler([min, max]);
-    onApplyFilters({ filters, volume: [min, max] }); // Áp dụng lọc ngay khi chọn giá
+  };
+
+  const handleApply = () => {
+    volumeHandler(tempVolume);
+    onApplyFilters({ filters, volume: tempVolume });
   };
 
   useEffect(() => {
     onApplyFilters({ filters, volume: tempVolume });
-  }, [filters, tempVolume, onApplyFilters]);
+  }, [filters]);
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setTempVolume([0, 1000000000]);
+    volumeHandler([0, 1000000000]);
+    onApplyFilters({ filters: {}, volume: [0, 1000000000] });
+  };
 
   const handleBrandPageChange = (newPage) => {
     if (newPage >= 1 && newPage <= brandPagination.totalPages) {
@@ -199,6 +209,7 @@ useEffect(() => {
               </button>
             </div>
           )}
+
         </div>
       </div>
 
@@ -278,7 +289,17 @@ useEffect(() => {
               </button>
             </div>
           )}
+
         </div>
+      </div>
+
+      <div className="mt-10">
+        <button onClick={handleApply} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-500">
+          Áp dụng
+        </button>
+        <button onClick={handleClearFilters} className="w-full bg-gray-300 text-qblack py-2 rounded hover:bg-gray-400 mt-5">
+          Xóa bộ lọc
+        </button>
       </div>
 
       <button
