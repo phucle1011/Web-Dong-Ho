@@ -72,7 +72,7 @@ export default function HomeThree() {
         <SectionStyleThree
           type={3}
           products={productNew}
-          sectionTitle="SANR PHẨM MỚI "
+          sectionTitle="SẢN PHẨM MỚI "
           seeMoreUrl="/all-products"
           className="new-products mb-[60px]"
           startLength={0}
@@ -121,7 +121,7 @@ export default function HomeThree() {
           brands={brands}
           categoryTitle="Electronics"
           sectionTitle="SẢN PHẨM GIẢM GIÁ"
-          seeMoreUrl="/all-productss"
+          seeMoreUrl="/all-products"
           className="category-products mb-[60px]"
         />
         <CampaignCountDown

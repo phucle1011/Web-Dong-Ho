@@ -1,4 +1,4 @@
-import { useRef, useState,useEffect,  } from "react";
+import { useRef, useState, useEffect } from "react";
 import data from "../../../data/products.json";
 import BreadcrumbCom from "../BreadcrumbCom";
 import ProductCardStyleOne from "../Helpers/Cards/ProductCardStyleOne";
@@ -13,7 +13,6 @@ import { useParams } from "react-router-dom";
 import Constants from "../../../Constants";
 import { useLocation, useNavigate } from "react-router-dom";
 
-
 export default function SingleProductPage() {
   const [tab, setTab] = useState("des");
   const [rating, setRating] = useState(0);
@@ -25,6 +24,8 @@ export default function SingleProductPage() {
   const [reviewLoading, setLoading] = useState(false);
   const reviewElement = useRef(null);
   const [report, setReport] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const [commnets, setComments] = useState([
     {
       id: Math.random(),
@@ -58,47 +59,44 @@ export default function SingleProductPage() {
   ]);
   const { state } = useLocation();
   const navigate = useNavigate();
-useEffect(() => {
+  useEffect(() => {
     if (!state?.productId) {
       toast.error("Thiếu thông tin sản phẩm!");
       navigate("/all-products");
     }
   }, [state]);
   const { productId } = state || {};
-    const [description, setDescription] = useState([]);
-
+  const [description, setDescription] = useState([]);
 
   const [relatedProducts, setRelatedProducts] = useState([]);
-useEffect(() => {
-  const res =  axios.get(
-        `${Constants.DOMAIN_API}/products/${productId}/variants`
-      ).then((res) => { 
-        setDescription(res.data.product.description)
-       
-    })
-  axios.get(`${Constants.DOMAIN_API}/products/${productId}/similar`)
-    .then((res) => {
-      setRelatedProducts(res.data.data);
-       
-    })
-    .catch((err) => {
-      console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
-    });
-}, [productId]);
- useEffect(() => {
-  if (window.location.hash === "#review") {
-    setTab("review");
+  useEffect(() => {
+    const res = axios
+      .get(`${Constants.DOMAIN_API}/products/${productId}/variants`)
+      .then((res) => {
+        setDescription(res.data.product.description);
+      });
+    axios
+      .get(`${Constants.DOMAIN_API}/products/${productId}/similar`)
+      .then((res) => {
+        setRelatedProducts(res.data.data);
+      })
+      .catch((err) => {
+        console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
+      });
+  }, [productId]);
+  useEffect(() => {
+    if (window.location.hash === "#review") {
+      setTab("review");
 
-    // Scroll tới phần đánh giá sau khi tab đổi
-    setTimeout(() => {
-      const element = document.getElementById("review-section");
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 200);
-  }
-}, []);
-
+      // Scroll tới phần đánh giá sau khi tab đổi
+      setTimeout(() => {
+        const element = document.getElementById("review-section");
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 200);
+    }
+  }, []);
 
   const reviewAction = () => {
     setLoading(true);
@@ -130,6 +128,7 @@ useEffect(() => {
       return false;
     }, 2000);
   };
+  const MAX_HEIGHT = 300;
 
   return (
     <>
@@ -202,34 +201,51 @@ useEffect(() => {
             </div>
             <div className="tab-contents w-full min-h-[400px] ">
               <div className="container-x mx-auto">
-                {tab === "des" && (
-                  <div data-aos="fade-up" className="w-full tab-content-item">
-                    <h6 className="text-[18px] font-medium text-qblack mb-2">
-                      MÔ TẢ
-                    </h6>
-                    <div
-  className="prose prose-img:rounded-md"
-  dangerouslySetInnerHTML={{ __html: description }}
-></div>
 
-                    
-                    
+{tab === "des" && (
+  <div data-aos="fade-up" className="w-full tab-content-item">
+  <h6 className="text-[18px] font-medium text-qblack mb-2">MÔ TẢ</h6>
+
+  <div className="relative">
+    <div
+      className="prose prose-img:rounded-md transition-all duration-300 overflow-hidden"
+      style={{ maxHeight: isExpanded ? "none" : `${MAX_HEIGHT}px` }}
+      dangerouslySetInnerHTML={{ __html: description }}
+    ></div>
+
+    {/* Gradient mờ phía dưới khi chưa mở rộng */}
+    {!isExpanded && (
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[rgb(177, 167, 167)] to-transparent pointer-events-none z-10"></div>
+    )}
+  </div>
+
+  {/* Nút Xem thêm nằm ngoài vùng mờ */}
+  <div className="text-center mt-2 z-20 relative">
+    <button
+      className="text-blue-600 font-semibold hover:underline"
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      {isExpanded ? "Thu gọn" : "Xem thêm"}
+    </button>
+  </div>
+</div>
+
+)}
+
+                {tab === "review" && (
+                  <div
+                    id="review-section"
+                    data-aos="fade-up"
+                    className="w-full tab-content-item"
+                  >
+                    <h6 className="text-[18px] font-medium text-qblack mb-2">
+                      ĐÁNH GIÁ SẢN PHẨM
+                    </h6>
+                    <div className="w-full">
+                      <ProductReviewSection productId={productId} />
+                    </div>
                   </div>
                 )}
-{tab === "review" && (
-  <div
-    id="review-section"
-    data-aos="fade-up"
-    className="w-full tab-content-item"
-  >
-    <h6 className="text-[18px] font-medium text-qblack mb-2">
-      ĐÁNH GIÁ SẢN PHẨM
-    </h6>
-    <div className="w-full">
-      <ProductReviewSection productId={productId} />
-    </div>
-  </div>
-)}
 
                 {tab === "info" && (
                   <div data-aos="fade-up" className="w-full tab-content-item">
@@ -244,20 +260,18 @@ useEffect(() => {
             <div className="container-x mx-auto">
               <div className="w-full py-[60px]">
                 <h1 className="sm:text-3xl text-xl font-600 text-qblacktext leading-none mb-[30px]">
-                  Sản Phẩm Tương Tự 
+                  Sản Phẩm Tương Tự
                 </h1>
                 <div
-  data-aos="fade-up"
-  className="grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5"
->
-  {relatedProducts.map((item) => (
-    <div key={item.id}>
-      <ProductCardStyleOne datas={item} />
-    </div>
-  ))}
-</div>
-
-
+                  data-aos="fade-up"
+                  className="grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5"
+                >
+                  {relatedProducts.map((item) => (
+                    <div key={item.id}>
+                      <ProductCardStyleOne datas={item} />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

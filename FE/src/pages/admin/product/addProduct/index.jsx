@@ -127,31 +127,45 @@ function CustomUploadAdapterPlugin(editor) {
 const onSubmit = async (formData) => {
   setLoading(true);
   setMessage("");
+
   try {
-    // Bước 1: Gửi request tạo sản phẩm chính
+    // Bước 1: Kiểm tra dữ liệu biến thể trước khi gửi
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i];
+      if (
+        !variant.sku?.trim() ||
+        !variant.stock?.toString().trim() ||
+        !variant.price?.toString().trim() ||
+        
+        !variant.attributes?.length
+      ) {
+        toast.error(` Biến thể ${i + 1} đang thiếu thông tin bắt buộc.`);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Bước 2: Gửi request tạo sản phẩm chính
     const productData = {
       ...formData,
       thumbnail: thumbnailUrl,
       description: description,
     };
-     console.log(productData);
-     
+
     const productRes = await axios.post(`${Constants.DOMAIN_API}/admin/products`, productData);
-    const newProductId = productRes.data.product.id; // 👈 Lấy id sản phẩm vừa tạo
+    const newProductId = productRes.data.product.id;
 
-    console.log("✅ Tạo sản phẩm xong, ID:", productRes);
-
-    // Bước 2: Gửi từng biến thể nếu có
+    // Bước 3: Gửi từng biến thể
     for (const variant of variants) {
       const variantData = {
         ...variant,
-        images: variant.images.map(img => img.url), // Lấy mảng ảnh URL
+        images: variant.images.map((img) => img.url),
       };
 
       await axios.post(`${Constants.DOMAIN_API}/admin/products/${newProductId}/variants`, variantData);
     }
 
-    toast.success("🎉 Thêm sản phẩm và biến thể thành công!");
+    toast.success(" Thêm sản phẩm và biến thể thành công!");
     navigate("/admin/products/getAll");
 
     // Reset form
@@ -160,11 +174,12 @@ const onSubmit = async (formData) => {
     setThumbnailUrl("");
   } catch (error) {
     console.error(error);
-    toast.error("❌ Lỗi: " + (error.response?.data?.error || "Không xác định"));
+    toast.error(" Lỗi: " + (error.response?.data?.error || "Không xác định"));
   } finally {
     setLoading(false);
   }
 };
+
 
 
 const handleThumbnailChange = async (e) => {
@@ -179,7 +194,7 @@ const handleThumbnailChange = async (e) => {
 
     } catch (err) {
       console.error("Upload failed:", err);
-      toast.error("❌ Upload ảnh thất bại");
+      toast.error(" Upload ảnh thất bại");
     }
   }
 };
@@ -407,10 +422,10 @@ const generateSlug = (text) => {
 
 
     {/* Nút submit */}
-    <div className="flex justify-end items-center gap-3 pt-2 border-t mt-auto">
+    <div className="flex justify-end items-center gap-2 pt-2 border-t mt-auto">
       <Link
         to="/admin/products/getAll"
-        className="bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300 transition"
+            className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
       >
         Quay lại
       </Link>

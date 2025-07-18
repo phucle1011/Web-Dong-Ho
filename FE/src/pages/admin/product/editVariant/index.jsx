@@ -49,7 +49,7 @@ const EditVariantForm = () => {
               id: img.id,
               url: img.image_url,
             })) || [],
-        });
+        });        
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
         toast.error("Lỗi khi tải dữ liệu!");
@@ -87,6 +87,7 @@ const EditVariantForm = () => {
       const newImages = [...formData.images];
       newImages[index] = { id: null, url };
       setFormData((prev) => ({ ...prev, images: newImages }));
+      
       toast.success("Tải ảnh lên thành công!");
     } catch (error) {
       console.error("Upload thất bại:", error);
@@ -114,28 +115,39 @@ const EditVariantForm = () => {
     newAttributes.splice(index, 1);
     setFormData((prev) => ({ ...prev, attributes: newAttributes }));
   };
+    
 
   const handleDeleteImage = async (index) => {
-    const image = formData.images[index];
-    if (!image) return;
+  const image = formData.images[index];
+  if (!image) return;
+console.log(image);
 
+  try {
+    // Nếu ảnh đã lưu trong DB (có id), xóa theo id
     if (image.id) {
-      try {
-        await axios.delete(
-          `${Constants.DOMAIN_API}/admin/variant-images/${image.id}`
-        );
-      } catch (error) {
-        console.error("Lỗi khi xóa ảnh:", error);
-        toast.error("Xoá ảnh thất bại!");
-        return;
-      }
+      await axios.delete(
+        `${Constants.DOMAIN_API}/admin/variant-images/${image.id}`
+      );
+    } else if (image.url.public_id) {
+      // Nếu ảnh chưa lưu DB nhưng đã upload lên Cloudinary thì xóa theo public_id
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id: image.url.public_id,
+      });
     }
+  } catch (error) {
+    console.error("Lỗi khi xóa ảnh:", error);
+    toast.error("Xoá ảnh thất bại!");
+    return;
+  }
 
-    const newImages = [...formData.images];
-    newImages.splice(index, 1);
-    setFormData((prev) => ({ ...prev, images: newImages }));
-    toast.success("Đã xoá ảnh.");
-  };
+  // Xóa ảnh khỏi state
+  const newImages = [...formData.images];
+  newImages.splice(index, 1);
+  setFormData((prev) => ({ ...prev, images: newImages }));
+
+  toast.success("Đã xoá ảnh.");
+};
+
 
  const addImageField = () => {
   setFormData((prev) => ({
@@ -221,9 +233,9 @@ const EditVariantForm = () => {
           />
         </div>
       </div>
-
+<div className="flex flex-col md:flex-row gap-4">
       {/* Thuộc tính */}
-      <fieldset className="border rounded p-4">
+      <fieldset className="flex-1 border rounded p-4">
         <legend className="font-semibold text-lg px-2">Thuộc tính</legend>
         <div className="space-y-4 mt-2">
           {formData.attributes.map((attr, index) => {
@@ -322,14 +334,14 @@ const EditVariantForm = () => {
       </fieldset>
 
       {/* Ảnh biến thể */}
-      <fieldset className="border rounded p-4">
+      <fieldset className="flex-1 border rounded p-4">
         <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
         <div className="space-y-4 mt-2">
           {formData.images.map((img, index) => (
             <div key={index} className="flex items-center gap-4">
               {img.url && (
                 <img
-                  src={img.url}
+                  src={img.url.url}
                   alt={`image-${index}`}
                   className="h-16 w-16 object-cover rounded"
                 />
@@ -373,6 +385,7 @@ const EditVariantForm = () => {
           </button>
         </div>
       </fieldset>
+      </div>
 
       {/* Nút submit */}
       <div className="flex gap-x-3 justify-start">
@@ -385,7 +398,7 @@ const EditVariantForm = () => {
 
   <Link
     to={`/admin/products/detail/${formData.product_id}`}
-    className="bg-gray-200 text-gray-800 py-1.5 px-4 rounded hover:bg-gray-300 transition flex items-center justify-center text-sm"
+    className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
   >
     Quay lại
   </Link>

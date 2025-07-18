@@ -58,7 +58,7 @@ export default function AddCategoryModal({ onClose, onSuccess }) {
         "Lỗi thêm danh mục:",
         error.response?.data || error.message
       );
-      toast.error("❌ Thêm danh mục thất bại");
+      toast.error(" Thêm danh mục thất bại");
     }
   };
 

@@ -217,7 +217,7 @@ function AddVariantForm() {
                 handleAttributeChange(index, "value", e.target.value)
               }
               className={`w-full border rounded ${
-                isColor ? "h-12 p-1" : "px-4 py-3"
+                isColor ? "h-10 p-1" : "px-2 py-2"
               }`}
             />
             {errors[`attr_${index}_value`] && (
@@ -286,7 +286,7 @@ function AddVariantForm() {
         setImages((prev) => [...prev, ...uploadedImages]);
         setUploading(false);
       }}
-      className="w-full border px-3 py-2 rounded"
+      className="w-full border px-2 py-1.5 rounded"
     />
 
     {/* Hiển thị ảnh */}<div className="mt-4 flex gap-4 overflow-x-auto whitespace-nowrap">
@@ -317,11 +317,11 @@ function AddVariantForm() {
 
 
         {/* Submit */}
-        <div className="flex justify-start gap-2 mt-8">
+        <div className="flex gap-2 mt-4">
           <button
             type="submit"
             disabled={uploading}
-            className={`bg-[#073272] text-white px-6 py-3 rounded transition ${
+            className={`bg-[#073272] text-white px-4 py-2 rounded transition ${
               uploading ? "opacity-50 cursor-not-allowed" : "hover:bg-[#052354]"
             }`}
           >
@@ -331,7 +331,7 @@ function AddVariantForm() {
           <button
             type="button"
             onClick={handleCancel}
-            className="bg-gray-200 text-gray-800 px-6 py-3 rounded hover:bg-gray-300 transition flex items-center justify-center"
+            className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
           >
             Quay lại
           </button>

@@ -1,7 +1,8 @@
 export default function BrandSection({ className, sectionTitle, type, brands = [] }) {
   return (
     <div data-aos="fade-up" className={`w-full ${className || ""}`}>
-      <div className="grid lg:grid-cols-5 sm:grid-cols-4 grid-cols-2 gap-4">
+      <div className="container-x mx-auto">
+      <div className="grid lg:grid-cols-5 sm:grid-cols-4 grid-cols-2 gap-1">
   {brands.map((brand) => (
     <div className="item" key={brand.id}>
       <div className="w-full h-[130px] bg-white border border-primarygray flex justify-center items-center">
@@ -13,6 +14,7 @@ export default function BrandSection({ className, sectionTitle, type, brands = [
       </div>
     </div>
   ))}
+  </div>
 </div>
 
     </div>
