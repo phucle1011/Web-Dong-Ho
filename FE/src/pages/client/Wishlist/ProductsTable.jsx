@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import InputQuantityCom from "../Helpers/InputQuantityCom";
 import { FaTrashAlt } from "react-icons/fa";
 import axios from "axios";
@@ -7,7 +7,7 @@ import { decodeToken } from "../Helpers/jwtDecode";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
-export default function ProductsTable({ products = [], onWishlistChange }) {
+export default function ProductsTable({ products = [], onWishlistChange, onSelectItems }) {
   const token = localStorage.getItem("token");
   let userId = null;
 
@@ -17,6 +17,20 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
       userId = decoded.id;
     }
   }
+
+  // Modified: State để lưu danh sách các sản phẩm được chọn
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  // Modified: Hàm xử lý khi checkbox thay đổi
+  const handleCheckboxChange = (productVariantId) => {
+    setSelectedItems((prev) => {
+      const newSelected = prev.includes(productVariantId)
+        ? prev.filter((id) => id !== productVariantId)
+        : [...prev, productVariantId];
+      onSelectItems(newSelected); // Cập nhật danh sách chọn lên component cha
+      return newSelected;
+    });
+  };
 
   const handleRemove = async (wishlistItemId, productVariantId) => {
     if (!userId) {
@@ -52,6 +66,9 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
       if (onWishlistChange) {
         onWishlistChange();
       }
+      // Modified: Xóa sản phẩm khỏi danh sách chọn nếu có
+      setSelectedItems((prev) => prev.filter((id) => id !== productVariantId));
+      onSelectItems(selectedItems.filter((id) => id !== productVariantId));
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi xóa sản phẩm khỏi danh sách yêu thích.";
@@ -68,6 +85,22 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
           <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
             <thead>
               <tr className="text-[13px] font-medium text-black bg-[#F6F6F6] uppercase border-b">
+                <th className="py-4 pl-4 w-[50px]">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.length === products.length && products.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const allVariantIds = products.map((item) => item.product_variant_id);
+                        setSelectedItems(allVariantIds);
+                        onSelectItems(allVariantIds);
+                      } else {
+                        setSelectedItems([]);
+                        onSelectItems([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th className="py-4 pl-10 w-[380px]">Sản phẩm</th>
                 <th className="py-4 text-center">Thuộc tính</th>
                 <th className="py-4 text-center">Giá</th>
@@ -92,6 +125,13 @@ export default function ProductsTable({ products = [], onWishlistChange }) {
 
                 return (
                   <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
+                    <td className="py-4 pl-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item.product_variant_id)}
+                        onChange={() => handleCheckboxChange(item.product_variant_id)}
+                      />
+                    </td>
                     <td className="pl-10 py-4 w-[380px]">
                       <div className="flex space-x-6 items-center">
                         <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">

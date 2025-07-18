@@ -76,15 +76,6 @@ export default function TopBar({ className }) {
                         isDropdownOpen ? "block" : "hidden"
                       }`}
                     >
-                      <li>
-                        <Link
-                          to="/profile"
-                          className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          Thông tin
-                        </Link>
-                      </li>
                       {decoded.role === "admin" && (
                         <li>
                           <Link

@@ -12,14 +12,13 @@ export default function Login() {
   const rememberMe = () => {
     setValue(!checked);
   };
-  const [formError, setFormError] = useState("");
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const [forgotEmail, setForgotEmail] = useState(""); // Thêm state cho email quên mật khẩu
-  const [showForgotPassword, setShowForgotPassword] = useState(false); // Thêm state để hiển thị form quên mật khẩu
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +55,17 @@ export default function Login() {
 
     setErrors(newErrors);
     return isValid;
+  };
+
+  const validateForgotEmail = () => {
+    const newErrors = {};
+    if (!forgotEmail.trim()) {
+      newErrors.forgotEmail = "Email không được để trống!";
+    } else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(forgotEmail)) {
+      newErrors.forgotEmail = "Email không đúng định dạng!";
+    }
+    setErrors((prev) => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
@@ -108,7 +118,6 @@ export default function Login() {
       }
 
       toast.success("Đăng nhập thành công!");
-
       navigate("/");
     } catch (error) {
       console.error("Lỗi khi đăng nhập:", error);
@@ -120,6 +129,7 @@ export default function Login() {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
+    if (!validateForgotEmail()) return;
     setLoading(true);
     try {
       const response = await axios.post(`${Constants.DOMAIN_API}/auth/reset-password`, {
@@ -128,11 +138,11 @@ export default function Login() {
       if (response.data.success) {
         toast.success("Kiểm tra email để đặt lại mật khẩu!");
         setShowForgotPassword(false);
+        setForgotEmail("");
       }
     } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!"
-      );
+      setErrors((prev) => ({ ...prev, forgotEmail: error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!" }));
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!");
     } finally {
       setLoading(false);
     }
@@ -170,7 +180,7 @@ export default function Login() {
       <div className="login-page-wrapper w-full py-10">
         <div className="container-x mx-auto">
           <div className="lg:flex items-center relative">
-            <div className="lg:w-[572px] w-full lg:h-[500px] bg-white flex flex-col justify-center sm:p-10 p-5 border border-[#E0E0E0]">
+            <div className="lg:w-[572px] w-full lg:h-[500px] bg-white flex flex-col justify-center sm:p-10 p-5 border border-[#E0E0E0] overflow-y-auto" style={{ minHeight: "400px", maxHeight: "90vh" }}>
               <div className="w-full">
                 <div className="title-area flex flex-col justify-center items-center relative text-center mb-7">
                   <h1 className="text-[34px] font-bold leading-[74px] text-qblack">
@@ -194,7 +204,7 @@ export default function Login() {
                   </div>
                 </div>
 
-                {formError && <div className="text-red-500 text-sm mb-4">{formError}</div>}
+                {errors.general && <div className="text-red-500 text-sm mb-4">{errors.general}</div>}
 
                 {!showForgotPassword ? (
                   <>
@@ -213,8 +223,7 @@ export default function Login() {
                         placeholder="example@gmail.com"
                         value={formData.email}
                         onChange={handleChange}
-                        className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"
-                          } rounded-md focus:outline-none focus:border-indigo-500`}
+                        className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.email && (
                         <p className="text-red-500 text-sm mt-1">{errors.email}</p>
@@ -236,8 +245,7 @@ export default function Login() {
                         placeholder="● ● ● ● ● ●"
                         value={formData.password}
                         onChange={handleChange}
-                        className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"
-                          } rounded-md focus:outline-none focus:border-indigo-500`}
+                        className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.password && (
                         <p className="text-red-500 text-sm mt-1">{errors.password}</p>
@@ -290,8 +298,7 @@ export default function Login() {
                           type="button"
                           onClick={handleSubmit}
                           disabled={loading}
-                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""
-                            }`}
+                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
                         >
                           <span>{loading ? "Đang xử lý..." : "Đăng nhập"}</span>
                         </button>
@@ -323,8 +330,11 @@ export default function Login() {
                         type="email"
                         value={forgotEmail}
                         onChange={handleForgotEmailChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500"
+                        className={`w-full px-4 py-2 border ${errors.forgotEmail ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                       />
+                      {errors.forgotEmail && (
+                        <p className="text-red-500 text-sm mt-1">{errors.forgotEmail}</p>
+                      )}
                     </div>
                     <div className="signin-area mb-3.5">
                       <div className="flex justify-center">
@@ -332,8 +342,7 @@ export default function Login() {
                           type="button"
                           onClick={handleForgotPassword}
                           disabled={loading}
-                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""
-                            }`}
+                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
                         >
                           <span>{loading ? "Đang xử lý..." : "Gửi liên kết"}</span>
                         </button>

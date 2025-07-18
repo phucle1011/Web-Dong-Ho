@@ -80,6 +80,7 @@ import AttributeCreate from "./pages/admin/product/attribute/create";
 
 // Protected Route
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
+import AdminProfile from "./components/admin/profile/index.jsx";
 
 const AppRoutes = () => {
   const navigate = useNavigate();
@@ -147,6 +148,7 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="profile"element={<AdminProfile/>}/>
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail />} />

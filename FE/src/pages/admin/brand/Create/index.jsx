@@ -5,7 +5,6 @@ import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 
 const generateSlug = (text) => {
@@ -55,7 +54,7 @@ function BrandCreate({ onSuccess, isModal = false }) {
   const fetchCountries = async () => {
     try {
       const res = await axios.get(
-        "https://restcountries.com/v3.1/all?fields=name "
+        "https://restcountries.com/v3.1/all?fields=name"
       );
       const countryNames = res.data.map((c) => c.name.common).sort();
       setCountries(countryNames);
@@ -182,42 +181,41 @@ function BrandCreate({ onSuccess, isModal = false }) {
   };
 
   return (
-    <div className="max-w-screen-xl mx-auto bg-white p-8 rounded shadow mt-8">
-      <h3 className="text-2xl font-bold text-gray-700 text-center mb-5 border-b pb-3">
-        Thêm thương hiệu
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg mt-8">
+      <h3 className="text-2xl font-semibold text-gray-800 text-center mb-6 border-b border-gray-200 pb-4">
+        Thêm Thương Hiệu Mới
       </h3>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
         {/* Tên thương hiệu */}
-        <div className="mb-6">
+        <div>
           <label
             htmlFor="name"
-            className="block font-medium mb-2 text-gray-700"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Tên thương hiệu *
+            Tên thương hiệu <span className="text-red-500">*</span>
           </label>
           <input
             id="name"
             type="text"
-            className={`w-full border ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            } px-4 py-3 rounded-md focus:outline-none`}
-            placeholder="Ví dụ: Apple, Samsung"
+            className={`w-full px-4 py-3 rounded-lg border ${errors.name ? "border-red-500" : "border-gray-300"
+              } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200`}
+            placeholder="Nhập tên thương hiệu, ví dụ: Apple, Samsung"
             {...register("name", {
               required: "Tên không được để trống",
               minLength: { value: 2, message: "Tối thiểu 2 ký tự" },
             })}
           />
           {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
           )}
         </div>
 
         {/* Slug (readonly) */}
-        <div className="mb-6">
+        <div>
           <label
             htmlFor="slug"
-            className="block font-medium mb-2 text-gray-700"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
             Slug
           </label>
@@ -225,24 +223,23 @@ function BrandCreate({ onSuccess, isModal = false }) {
             id="slug"
             type="text"
             readOnly
-            className="w-full border border-gray-300 px-4 py-3 rounded-md bg-gray-100"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
             {...register("slug")}
           />
         </div>
 
         {/* Quốc gia */}
-        <div className="mb-6">
+        <div>
           <label
             htmlFor="country"
-            className="block font-medium mb-2 text-gray-700"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Quốc gia *
+            Quốc gia <span className="text-red-500">*</span>
           </label>
           <select
             id="country"
-            className={`w-full border ${
-              errors.country ? "border-red-500" : "border-gray-300"
-            } px-4 py-3 rounded-md`}
+            className={`w-full px-4 py-3 rounded-lg border ${errors.country ? "border-red-500" : "border-gray-300"
+              } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200`}
             {...register("country", { required: "Quốc gia là bắt buộc" })}
           >
             <option value="">-- Chọn quốc gia --</option>
@@ -253,99 +250,99 @@ function BrandCreate({ onSuccess, isModal = false }) {
             ))}
           </select>
           {errors.country && (
-            <p className="text-red-500 text-sm mt-1">
-              {errors.country.message}
-            </p>
+            <p className="text-red-500 text-xs mt-1">{errors.country.message}</p>
           )}
         </div>
 
-        <div className="mb-6">
+        {/* Logo */}
+        <div>
           <label
             htmlFor="logo"
-            className="block font-medium mb-2 text-gray-700"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Logo:
+            Logo
           </label>
           <input
             id="logo"
             type="file"
             accept="image/*"
-            className={`w-full border ${
-              errors.logo ? "border-red-500" : "border-gray-300"
-            } px-4 py-3 rounded-md file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100`}
+            className={`w-full px-4 py-3 rounded-lg border ${errors.logo ? "border-red-500" : "border-gray-300"
+              } file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition duration-200`}
             onChange={handleLogoChange}
           />
           {errors.logo && (
-            <p className="text-red-500 text-sm mt-1">{errors.logo.message}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.logo.message}</p>
           )}
           {logoFile && (
-            <div className="mt-2 flex items-center space-x-2">
+            <div className="mt-3 flex items-center space-x-3">
               <img
                 src={URL.createObjectURL(logoFile)}
                 alt="Preview"
-                className="w-24 h-24 object-contain border rounded"
+                className="w-32 h-32 object-contain rounded-md border border-gray-200 shadow-sm"
               />
-              <span className="text-sm text-gray-600">{logoFile.name}</span>
+              <span className="text-sm text-gray-600 truncate max-w-xs">{logoFile.name}</span>
             </div>
           )}
         </div>
 
-        <div className="mb-6">
+        {/* Mô tả */}
+        <div>
           <label
             htmlFor="description"
-            className="block font-medium mb-2 text-gray-700"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
             Mô tả
           </label>
           <textarea
             id="description"
             rows={4}
-            className="w-full border border-gray-300 px-4 py-3 rounded-md resize-y"
-            placeholder="Nhập mô tả chi tiết (tùy chọn)"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 resize-y"
+            placeholder="Nhập mô tả chi tiết về thương hiệu (tùy chọn)"
             {...register("description")}
           ></textarea>
         </div>
 
-        <div className="mb-6">
+        {/* Trạng thái */}
+        <div>
           <label
             htmlFor="status"
-            className="block font-medium mb-2 text-gray-700"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Trạng thái *
+            Trạng thái <span className="text-red-500">*</span>
           </label>
           <select
             id="status"
-            className={`w-full border ${
-              errors.status ? "border-red-500" : "border-gray-300"
-            } px-4 py-3 rounded-md`}
+            className={`w-full px-4 py-3 rounded-lg border ${errors.status ? "border-red-500" : "border-gray-300"
+              } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200`}
             {...register("status", { required: "Trạng thái là bắt buộc" })}
           >
             <option value="active">Hoạt động</option>
             <option value="inactive">Ngừng hoạt động</option>
           </select>
           {errors.status && (
-            <p className="text-red-500 text-sm mt-1">{errors.status.message}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>
           )}
         </div>
+
+        {/* Nút hành động */}
+        <div className="mt-6 flex space-x-4">
+          <button
+            type="submit"
+            onClick={handleSubmit(onSubmit)}
+            disabled={loading}
+            className="bg-[#073272] text-white px-6 py-3 rounded-md shadow-md hover:bg-[#052354] transition w-full md:w-auto"
+          >
+            {loading ? "Đang thêm thương hiệu..." : "Thêm Thương Hiệu"}
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/brand/getAll")}
+            className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out w-full md:w-auto"
+          >
+            Quay lại
+          </button>
+        </div>
       </form>
-
-      <div className="mt-6 flex space-x-4">
-        <button
-          type="submit"
-          onClick={handleSubmit(onSubmit)}
-          disabled={loading}
-          className="bg-[#073272] text-white px-6 py-3 rounded-md shadow-md hover:bg-[#052354] transition w-full md:w-auto"
-        >
-          {loading ? "Đang thêm thương hiệu..." : "Thêm Thương Hiệu"}
-        </button>
-
-        <button
-          onClick={() => navigate("/admin/brand/getAll")}
-          className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out w-full md:w-auto"
-        >
-          Quay lại
-        </button>
-      </div>
     </div>
   );
 }

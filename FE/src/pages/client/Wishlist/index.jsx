@@ -16,6 +16,8 @@ export default function Wishlist({ wishlist = true }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]); // Modified: State để lưu các sản phẩm được chọn
+
   const token = localStorage.getItem("token");
   let userId = null;
 
@@ -38,6 +40,7 @@ export default function Wishlist({ wishlist = true }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setWishlistItems(res.data.data || []);
+      setSelectedItems([]); // Modified: Reset danh sách chọn khi làm mới wishlist
     } catch (error) {
       console.error('Lỗi khi lấy wishlist:', error);
       setError("Không thể tải danh sách yêu thích. Vui lòng thử lại.");
@@ -88,6 +91,47 @@ export default function Wishlist({ wishlist = true }) {
     }
   };
 
+  // Modified: Hàm để thêm các sản phẩm được chọn vào giỏ hàng
+  const handleAddSelectedToCart = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    if (!userId) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      setIsProcessing(false);
+      return;
+    }
+
+    if (selectedItems.length === 0) {
+      toast.info("Vui lòng chọn ít nhất một sản phẩm để thêm vào giỏ hàng!");
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      const payload = selectedItems.map((variantId) => ({
+        product_variant_id: variantId,
+        quantity: 1,
+      }));
+
+      const response = await axios.post(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist/add-to-cart`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success(response.data.message || "Đã thêm các sản phẩm được chọn vào giỏ hàng!");
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.errors?.join(", ") || // Modified: Hiển thị lỗi cụ thể từ backend
+        error.response?.data?.message ||
+        "Lỗi khi thêm sản phẩm vào giỏ hàng.";
+      toast.error(errorMessage);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleClearWishlist = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
@@ -126,6 +170,7 @@ export default function Wishlist({ wishlist = true }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setWishlistItems([]);
+      setSelectedItems([]); // Modified: Reset danh sách chọn sau khi xóa wishlist
       toast.success(response.data.message || "Đã xóa toàn bộ danh sách yêu thích!");
     } catch (error) {
       const errorMessage =
@@ -187,6 +232,7 @@ export default function Wishlist({ wishlist = true }) {
                 className="mb-[30px]"
                 products={wishlistItems}
                 onWishlistChange={fetchWishlist}
+                onSelectItems={setSelectedItems} // Modified: Truyền hàm cập nhật danh sách chọn
               />
               <div className="w-full mt-[30px] flex sm:justify-end justify-start">
                 <div className="sm:flex sm:space-x-[30px] items-center">
@@ -200,6 +246,18 @@ export default function Wishlist({ wishlist = true }) {
                       <FaTrashAlt size={18} />
                     </div>
                   </button>
+                  <div className="w-[180px] h-[50px] mr-2">
+                    <button
+                      type="button"
+                      onClick={handleAddSelectedToCart} // Modified: Nút cho thêm sản phẩm được chọn
+                      className={`yellow-btn text-sm font-semibold w-full h-full ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isProcessing}
+                    >
+                      <div className="w-full text-sm font-semibold">
+                        {isProcessing ? 'Đang xử lý...' : 'Thêm đã chọn vào giỏ hàng'}
+                      </div>
+                    </button>
+                  </div>
                   <div className="w-[180px] h-[50px]">
                     <button
                       type="button"

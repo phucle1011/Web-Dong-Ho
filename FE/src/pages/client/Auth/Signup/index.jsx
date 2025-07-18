@@ -160,102 +160,104 @@ export default function Signup() {
                     </svg>
                   </div>
                 </div>
-                {/* Họ tên */}
-                <div className="mb-5">
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Tên Người Dùng<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    placeholder="Tên người dùng"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                  )}
-                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  {/* Họ tên */}
+                  <div className="mb-5">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      Tên Người Dùng<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      placeholder="Tên người dùng"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
+                    />
+                    {errors.name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                    )}
+                  </div>
 
-                {/* Email */}
-                <div className="mb-5">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="Demo@gmail.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
-                  />
-                  {errors.email && (
-                    <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-                  )}
-                </div>
+                  {/* Email */}
+                  <div className="mb-5">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Email<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Demo@gmail.com"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                    )}
+                  </div>
 
-                {/* Số điện thoại */}
-                <div className="mb-5">
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                    Số Điện Thoại<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="text"
-                    placeholder="0913 *********"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.phone ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
-                  />
-                  {errors.phone && (
-                    <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-                  )}
-                </div>
+                  {/* Số điện thoại */}
+                  <div className="mb-5">
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                      Số Điện Thoại<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="text"
+                      placeholder="0913 *********"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border ${errors.phone ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                    )}
+                  </div>
 
-                {/* Mật khẩu */}
-                <div className="mb-5">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Mật Khẩu<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Mật khẩu"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
-                  />
-                  {errors.password && (
-                    <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                  )}
-                </div>
+                  {/* Mật khẩu */}
+                  <div className="mb-5">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Mật Khẩu<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Mật khẩu"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
+                    />
+                    {errors.password && (
+                      <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                    )}
+                  </div>
 
-                <div className="mb-5">
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                    Xác nhận mật khẩu<span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Nhập lại mật khẩu"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
-                  />
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
-                  )}
+                  <div className="mb-5 col-span-2">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                      Xác nhận mật khẩu<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Nhập lại mật khẩu"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Ảnh đại diện */}
-                <div className="mb-5">
+                <div className="mb-5 mt-5">
                   <label htmlFor="fileInput" className="block text-sm font-medium text-gray-700">
                     Ảnh đại diện*
                   </label>

@@ -42,7 +42,7 @@ function Header() {
         </ul>
         <div className="navbar-collapse justify-content-end px-0" id="navbarNav">
           <ul className="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-            <Link to="/admin/login" className="text-nowrap logo-img">
+            <Link to="/admin/profile" className="text-nowrap logo-img">
               <img
                 src="/assets/images/profile/login.png"
                 alt="Ảnh đại diện"
