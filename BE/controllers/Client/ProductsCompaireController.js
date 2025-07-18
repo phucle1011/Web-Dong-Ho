@@ -1,99 +1,96 @@
-const { Sequelize, Op } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
+const ProductModel = require("../../models/productsModel");
+const BrandModel = require("../../models/brandsModel");
+const CategoryModel = require("../../models/categoriesModel");
+const ProductVariantModel = require("../../models/productVariantsModel");
+const VariantImageModel = require("../../models/variantImagesModel");
+const AttributeValueModel = require("../../models/productVariantAttributeValuesModel");
+const AttributeModel = require("../../models/productAttributesModel");
 
-const Product = require("../../models/productsModel");
-const Brand = require("../../models/brandsModel");
-const ProductVariant = require("../../models/productVariantsModel");
-const VariantImage = require("../../models/variantImagesModel");
-const ProductVariantAttributeValue = require("../../models/productVariantAttributeValuesModel");
-const ProductAttribute = require("../../models/productAttributesModel");
-const Comment = require("../../models/commentsModel");
-
-class ProductCompareController {
-static async getAllForComparison(req, res) {
-    try {
-      const { keyword } = req.query;
-
-      const products = await Product.findAll({
-        where: {
-          status: 1,
-          ...(keyword && {
-            [Op.or]: [
-              { name: { [Op.like]: `%${keyword}%` } },
-              Sequelize.literal(`EXISTS (
-                SELECT 1 FROM product_variants AS pv
-                WHERE pv.product_id = products.id
-                AND pv.sku LIKE '%${keyword}%'
-              )`),
-            ],
-          }),
-        },
+const getAllForComparison = async (req, res) => {
+  try {
+    const products = await ProductModel.findAll({
+      where: {
+        status: 1,
+         publication_status:'published',
+      },
+      attributes: {
         include: [
-          {
-            model: Brand,
-            as: "brand",
-            attributes: ["name"],
-          },
-          {
-            model: ProductVariant,
-            as: "variants",
-            include: [
-              {
-                model: VariantImage,
-                as: "images",
-                attributes: ["image_url"],
-              },
-              {
-                model: ProductVariantAttributeValue,
-                as: "attributeValues",
-                attributes: ["value"],
-                include: [
-                  {
-                    model: ProductAttribute,
-                    as: "attribute",
-                    attributes: ["name"],
-                  },
-                ],
-              },
-            ],
-          },
+          [
+            Sequelize.literal(`(
+              SELECT ROUND(AVG(c.rating), 1)
+              FROM comments AS c
+              JOIN order_details AS od ON od.id = c.order_detail_id
+              JOIN product_variants AS pv ON pv.id = od.product_variant_id
+              WHERE pv.product_id = products.id
+            )`),
+            "average_rating",
+          ],
+          [
+            Sequelize.literal(`(
+              SELECT COUNT(c.id)
+              FROM comments AS c
+              JOIN order_details AS od ON od.id = c.order_detail_id
+              JOIN product_variants AS pv ON pv.id = od.product_variant_id
+              WHERE pv.product_id = products.id
+            )`),
+            "review_count",
+          ],
         ],
-        attributes: {
+      },
+      include: [
+        {
+          model: BrandModel,
+          as: "brand",
+          attributes: ["id", "name"],
+        },
+        {
+          model: CategoryModel,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: ProductVariantModel,
+          as: "variants",
+          attributes: ["id", "price", "stock", "sku", "product_id", "created_at", "updated_at"],
           include: [
-            [
-              Sequelize.literal(`(
-                SELECT ROUND(AVG(c.rating), 1)
-                FROM comments AS c
-                JOIN order_details AS od ON od.id = c.order_detail_id
-                JOIN product_variants AS pv ON pv.id = od.product_variant_id
-                WHERE pv.product_id = products.id
-              )`),
-              "average_rating",
-            ],
-            [
-              Sequelize.literal(`(
-                SELECT COUNT(c.id)
-                FROM comments AS c
-                JOIN order_details AS od ON od.id = c.order_detail_id
-                JOIN product_variants AS pv ON pv.id = od.product_variant_id
-                WHERE pv.product_id = products.id
-              )`),
-              "review_count",
-            ],
+            {
+              model: VariantImageModel,
+              as: "images",
+              attributes: ["id", "image_url"],
+            },
+            {
+              model: AttributeValueModel,
+              as: "attributeValues",
+              attributes: ["id", "value"],
+              include: [
+                {
+                  model: AttributeModel,
+                  as: "attribute",
+                  attributes: ["id", "name"],
+                },
+              ],
+            },
           ],
         },
-        order: [["created_at", "DESC"]],
-      });
+      ],
+      order: [["created_at", "DESC"]],
+    });
 
-      res.status(200).json({
-        success: true,
-        data: products,
-      });
-    } catch (error) {
-      console.error("Error fetching products for comparison:", error);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Lấy sản phẩm so sánh thành công",
+      data: products,
+    });
+  } catch (error) {
+    console.error("Error fetching products for comparison:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy sản phẩm so sánh",
+    });
   }
+};
 
-}
-
-module.exports = ProductCompareController;
+module.exports = {
+  getAllForComparison,
+};

@@ -79,6 +79,17 @@ export default function ProductsCompare() {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    const storedList = JSON.parse(localStorage.getItem("compareList")) || [];
+    if (storedList.length > 0) {
+      setSelectedVariants(storedList);
+      setSearchInputs(
+        storedList.map((v) => v.productName).concat(Array(MAX_COMPARE - storedList.length).fill(""))
+      );
+    }
+  }, []);
+
+
   const handleSearchInputChange = (index, value) => {
     const newSearchInputs = [...searchInputs];
     newSearchInputs[index] = value;
@@ -96,6 +107,56 @@ export default function ProductsCompare() {
     newFilteredLists[index] = filtered;
     setFilteredLists(newFilteredLists);
   };
+  // Sau khi fetch xong data từ API
+  useEffect(() => {
+    fetch("http://localhost:5000/products/compare")
+      .then((res) => res.json())
+      .then((data) => {
+        const variantList = [];
+
+        data.data.forEach((product) => {
+          product.variants.forEach((variant) => {
+            variantList.push({
+              productId: product.id,
+              productName: product.name,
+              productDescription: product.description,
+              productThumbnail: product.thumbnail,
+              brand: product.brand?.name || "-",
+              average_rating: product.average_rating,
+              variantId: variant.id,
+              price: variant.price,
+              stock: variant.stock,
+              sku: variant.sku,
+              images: variant.images || [],
+              attributeValues: variant.attributeValues || [],
+            });
+          });
+        });
+
+        setVariants(variantList);
+        setFilteredLists(Array(MAX_COMPARE).fill(variantList));
+
+
+        const storedList = JSON.parse(localStorage.getItem("compareList")) || [];
+        if (storedList.length > 0) {
+          setSelectedVariants(storedList);
+          setSearchInputs(
+            storedList.map((v) => v.productName).concat(Array(MAX_COMPARE - storedList.length).fill(""))
+          );
+        }
+
+
+        const attrSet = new Set();
+        variantList.forEach((v) => {
+          v.attributeValues?.forEach((av) => {
+            attrSet.add(av.attribute.name);
+          });
+        });
+        setAllAttributes(Array.from(attrSet));
+      })
+      .catch(console.error);
+  }, []);
+
 
   const handleSelectVariant = (index, variant) => {
     if (selectedVariants.some((v, idx) => v?.variantId === variant.variantId && idx !== index)) {
@@ -128,6 +189,10 @@ export default function ProductsCompare() {
     const newFilteredLists = [...filteredLists];
     newFilteredLists[index] = variants;
     setFilteredLists(newFilteredLists);
+
+    // ✅ Cập nhật lại localStorage
+    const updated = newSelected.filter((v) => v !== null);
+    localStorage.setItem("compareList", JSON.stringify(updated));
   };
 
   const renderStars = (rating) => {
@@ -237,10 +302,10 @@ export default function ProductsCompare() {
                       ) : "-";
                     },
                   },
-                  {
-                    label: "Mô tả",
-                    value: (v) => <DescriptionToggle description={v?.productDescription || "-"} />,
-                  },
+                  // {
+                  //   label: "Mô tả",
+                  //   value: (v) => <DescriptionToggle description={v?.productDescription || "-"} />,
+                  // },
                   { label: "Thương hiệu", value: (v) => v?.brand || "-" },
                   {
                     label: "Giá",

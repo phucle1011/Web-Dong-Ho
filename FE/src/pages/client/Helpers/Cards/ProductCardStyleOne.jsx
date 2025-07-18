@@ -159,6 +159,12 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   };
 
+ 
+
+
+
+
+
   const addToCart = () => {
     if (variants.length > 0 && !selectedVariant) {
       toast.error("Vui lòng chọn biến thể trước khi thêm vào giỏ hàng");
@@ -482,19 +488,19 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
   // Handle navigation with onProductClick
   const handleNavigate = (e) => {
-  if (!product.id) {
-    e.preventDefault();
-    toast.error("Sản phẩm không hợp lệ!");
-    return;
-  }
+    if (!product.id) {
+      e.preventDefault();
+      toast.error("Sản phẩm không hợp lệ!");
+      return;
+    }
 
-  // Chuyển đến trang product (không có id trong URL) và truyền state
-  navigate("/product", {
-    state: {
-      productId: product.id,
-    },
-  });
-};
+    // Chuyển đến trang product (không có id trong URL) và truyền state
+    navigate("/product", {
+      state: {
+        productId: product.id,
+      },
+    });
+  };
 
 
   return (
@@ -538,9 +544,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             Tổng Lượng Sản Phẩm: <strong>{totalStock}</strong>
           </span>
         </div>
-          <p className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600"onClick={handleNavigate}>
-            {productName}
-          </p>
+        <p className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600" onClick={handleNavigate}>
+          {productName}
+        </p>
         {displayPrice > 0 ? (
           <div className="price-container group-hover:hidden">
             <p className="price flex items-center space-x-2">
@@ -586,11 +592,52 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             <ThinLove className="w-5 h-5" fill={isInWishlist ? "#FF0000" : "none"} stroke={isInWishlist ? "#FF0000" : "#000000"} />
           </span>
         </a>
-        <a href="#">
-          <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-            <Compair className="w-5 h-5" />
-          </span>
-        </a>
+<a
+  href="#"
+  onClick={(e) => {
+    e.preventDefault();
+
+    const variant = product.variants?.[0];
+    if (!variant) {
+      toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
+      return;
+    }
+
+    const variantData = {
+      variantId: variant.id,
+      productId: product.id,
+      productName: product.name,
+      productDescription: product.description,
+      productThumbnail: product.thumbnail,
+      brand: product.brand?.name || "-",
+      average_rating: product.average_rating,
+      price: variant.price,
+      stock: variant.stock,
+      sku: variant.sku,
+      images: variant.images,
+      attributeValues: variant.attributeValues,
+    };
+
+    const current = JSON.parse(localStorage.getItem("compareList")) || [];
+
+    const exists = current.find((item) => item.variantId === variantData.variantId);
+    if (!exists) {
+      const updated = [...current, variantData].slice(0, 4); 
+      localStorage.setItem("compareList", JSON.stringify(updated));
+    }
+
+    navigate("/products-compaire"); 
+  }}
+>
+  <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
+    <Compair className="w-5 h-5" />
+  </span>
+</a>
+
+
+
+
+
       </div>
       <QuickViewDialog />
     </div>

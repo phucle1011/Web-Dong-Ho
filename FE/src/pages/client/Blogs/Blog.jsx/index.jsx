@@ -3,23 +3,12 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import PageTitle from "../../Helpers/PageTitle";
 import Layout from "../../Partials/LayoutHomeThree";
-import {
-  FaSearch,
-  FaRegEdit,
-  FaSpinner,
-  FaExclamationCircle,
-  FaInfoCircle,
-} from "react-icons/fa";
+import { FaRegEdit } from "react-icons/fa";
 
 export default function Blog() {
   const { id } = useParams();
-
   const [blog, setBlog] = useState(null);
   const [otherBlogs, setOtherBlogs] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState(null);
 
   useEffect(() => {
     const fetchBlog = async () => {
@@ -47,126 +36,90 @@ export default function Blog() {
     fetchOtherBlogs();
   }, [id]);
 
-  const handleSearch = async () => {
-    const trimmed = searchTerm.trim();
-    if (!trimmed) {
-      setSearchResults([]);
-      return;
-    }
-
-    setSearchLoading(true);
-    setSearchError(null);
-
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/blogs/search?q=${encodeURIComponent(trimmed)}`
-      );
-      setSearchResults(res.data.blogs || []);
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm:", error);
-      setSearchError("Lỗi khi tìm kiếm bài viết");
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
   if (!blog) return <div className="text-center p-10">Đang tải...</div>;
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="blog-page-wrapper w-full">
-        <div className="title-area mb-[60px]">
+        {/* BREADCRUMB */}
+        <div className="title-area mb-[40px]">
           <PageTitle
             title={blog.title}
             breadcrumb={[
               { name: "trang chủ", path: "/" },
-              { name: "blog details", path: `/blogs/${id}` },
+              { name: "chi tiết tin tức", path: `/blogs/${id}` },
             ]}
           />
         </div>
 
         <div className="content-area w-full">
           <div className="container-x mx-auto">
-            <div className="blog-article lg:flex lg:space-x-[30px] mb-7">
-              {/* Nội dung bài viết bên trái */}
-              <div className="flex-1">
-                <div className="img w-full h-[457px]">
+            <div className="lg:flex lg:space-x-[40px]">
+              {/* === BÀI VIẾT CHÍNH === */}
+              <main className="flex-1">
+                <div className="rounded overflow-hidden mb-6">
                   <img
                     src={blog.image_url || "/assets/images/default.jpg"}
-                    alt="blog"
-                    className="w-full h-full object-cover"
+                    alt={blog.title}
+                    className="w-full h-[420px] object-cover rounded-md"
                   />
                 </div>
-                <div className="blog pl-[24px] pt-[24px]">
-                  <div className="short-data flex space-x-9 items-center mb-3">
-                    <span className="text-base text-qgraytwo capitalize">
-                      By {blog.author || "Admin"}
-                    </span>
-                    <span className="text-base text-qgraytwo capitalize">
-                      {new Date(blog.created_at).toLocaleDateString("vi-VN")}
-                    </span>
+
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-500">
+                    {blog.author || "Tác giả"} •{" "}
+                    {new Date(blog.created_at).toLocaleDateString("vi-VN")}
                   </div>
-                  <h2 className="text-[24px] font-semibold mb-4">{blog.title}</h2>
+
+                  <h1 className="text-2xl font-bold text-gray-800 leading-snug">
+                    {blog.title}
+                  </h1>
+
                   <div
-                    className="text-base text-qgray leading-7"
-                    style={{ textAlign: "justify" }}
+                    className="prose prose-sm max-w-none text-justify leading-relaxed text-gray-700"
                     dangerouslySetInnerHTML={{ __html: blog.content }}
                   />
                 </div>
-              </div>
+              </main>
 
-              {/* Sidebar bên phải */}
-              <div className="w-full lg:w-[350px] mt-10 lg:mt-0 space-y-8">
-            
+              {/* === SIDEBAR BÀI VIẾT KHÁC === */}
+              <aside className="w-full lg:w-[340px] mt-10 lg:mt-0">
+                <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                  {/* Tiêu đề */}
+                  <div className="bg-blue-600 px-4 py-3">
+                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <FaRegEdit className="text-white" /> Bài viết khác
+                    </h2>
+                  </div>
 
-                {/* Các bài viết khác */}
-<div className="rounded-lg shadow-md border border-gray-200 overflow-hidden">
-  {/* Tiêu đề màu xanh */}
-  <div className="bg-blue-600 p-4">
-    <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-      <FaRegEdit /> Bài viết khác
-    </h2>
-  </div>
-
-  {/* Nội dung bài viết khác */}
-  <div className="bg-white p-5">
-    {otherBlogs.length === 0 ? (
-      <p className="text-sm text-qgraytwo italic">Không có bài viết nào khác.</p>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm text-left text-gray-600">
-          <tbody>
-            {otherBlogs.map((item) => (
-              <tr key={item.id} className="border-b border-gray-200">
-                <td className="py-2 pr-3">
-                  <img
-                    src={item.image_url}
-                    alt={item.title}
-                    className="w-[80px] h-[50px] object-cover rounded"
-                  />
-                </td>
-                <td className="py-2">
-                  <a
-                    href={`/blogs/${item.id}`}
-                    className="font-medium text-qblack hover:text-yellow-500 transition"
-                  >
-                    {item.title.length > 60 ? item.title.slice(0, 60) + "..." : item.title}
-                  </a>
-                  <p className="text-xs text-qgraytwo mt-1">
-                    {new Date(item.created_at).toLocaleDateString("vi-VN")}
-                  </p>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-</div>
-
-              </div>
+                  {/* Danh sách bài khác */}
+                  <div className="bg-white divide-y divide-gray-100">
+                    {otherBlogs.length === 0 ? (
+                      <div className="p-4 text-sm italic text-gray-500">Không có bài viết nào khác.</div>
+                    ) : (
+                      otherBlogs.slice(0, 6).map((item) => (
+                        <a
+                          key={item.id}
+                          href={`/blogs/${item.id}`}
+                          className="flex gap-3 p-3 hover:bg-gray-50 transition"
+                        >
+                          <img
+                            src={item.image_url}
+                            alt={item.title}
+                            className="w-[70px] h-[50px] object-cover rounded"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-800 line-clamp-2">{item.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {new Date(item.created_at).toLocaleDateString("vi-VN")}
+                            </p>
+                          </div>
+                        </a>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
         </div>
