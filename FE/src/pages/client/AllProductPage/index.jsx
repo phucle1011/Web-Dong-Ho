@@ -17,7 +17,7 @@ export default function AllProductPage() {
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    limit: 12,
+    limit: 5,
     totalProducts: 0,
   });
   const [filters, setFilter] = useState({
@@ -165,6 +165,8 @@ export default function AllProductPage() {
   const renderPagination = () => {
     const { currentPage, limit, totalProducts } = pagination;
     const totalPages = Math.ceil(totalProducts / limit);
+    console.log(totalPages);
+    
     // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ 12 sản phẩm và có sản phẩm ở trang tiếp theo
     const showNextPage = products.length === limit && totalProducts > currentPage * limit;
     // Chỉ hiển thị nút "Previous" nếu không phải trang 1
