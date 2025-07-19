@@ -9,6 +9,7 @@ import QuickViewIco from "../icons/QuickViewIco";
 import Star from "../icons/Star";
 import ThinLove from "../icons/ThinLove";
 import ReactDOM from "react-dom";
+import { FiShoppingCart } from "react-icons/fi";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -25,16 +26,14 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
   const representativeVariant = useMemo(() => product.representativeVariant || {}, [product.representativeVariant]);
 
-  // Initialize state only once
   useEffect(() => {
-    if (!product.id) return; // Skip if invalid product
+    if (!product.id) return;
 
     const firstImage = product.thumbnail || "/images/no-image.jpg";
     const validVariants = variants.filter(
       (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
     );
 
-    // Initialize states only if not set
     setSelectedImage((prev) => prev || firstImage);
     setVariantImages((prev) => prev.length === 0 ? variants.flatMap((v) => v.images || []) : prev);
 
@@ -52,7 +51,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   }, [product.id, product.thumbnail, variants, selectedVariant]);
 
-  // Memoize calculations
   const totalStock = useMemo(() =>
     product.total_stock || variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0),
     [product.total_stock, variants]
@@ -69,7 +67,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     let hasStock = true;
     let discountPercent = 0;
 
-    // Prioritize representativeVariant from AllProductPage.js
     if (representativeVariant && representativeVariant.originalPrice) {
       displayOriginalPrice = parseFloat(representativeVariant.originalPrice) || 0;
       displayPrice = parseFloat(representativeVariant.discountedPrice) || displayOriginalPrice;
@@ -92,12 +89,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       hasStock = parseInt(product.stock) > 0;
     }
 
-    // Ensure valid numbers
     displayPrice = isNaN(displayPrice) ? 0 : Math.max(0, displayPrice);
     displayOriginalPrice = isNaN(displayOriginalPrice) ? 0 : Math.max(0, displayOriginalPrice);
     discountPercent = isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100 ? 0 : Math.round(discountPercent);
-
-
 
     return { displayPrice, displayOriginalPrice, hasStock, discountPercent };
   }, [product, variants, selectedVariant, representativeVariant, totalStock]);
@@ -105,6 +99,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const { displayPrice, displayOriginalPrice, hasStock, discountPercent } = priceInfo;
   const thumbnail = selectedImage || product.thumbnail?.trim() || "/images/no-image.jpg";
   const productName = product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
+
+  const maxStock = 5;
+  const stockPercentage = totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
 
   const handleAddToCart = async (variantId, quantity) => {
     if (!variantId) {
@@ -158,12 +155,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       }
     }
   };
-
- 
-
-
-
-
 
   const addToCart = () => {
     if (variants.length > 0 && !selectedVariant) {
@@ -330,11 +321,13 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </svg>
           </button>
           <div className="overflow-hidden mt-5 relative">
-            <img
-              src={thumbnail}
-              alt={productName}
-              className="w-full max-h-56 aspect-square object-contain rounded-lg shadow-sm hover:scale-105 transition-transform duration-300"
-            />
+            <div className="w-full h-56">
+              <img
+                src={thumbnail}
+                alt={productName}
+                className="w-full h-full object-contain rounded-lg shadow-sm hover:scale-105 transition-transform duration-300"
+              />
+            </div>
             {discountPercent > 0 && displayOriginalPrice > displayPrice && (
               <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
                 -{discountPercent}%
@@ -468,8 +461,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             <button
               type="button"
               onClick={addToCart}
-              className={`w-full py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${!hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+              className={`w-full py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${!hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             >
               Thêm giỏ hàng
@@ -480,13 +472,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       document.body
     );
 
-  // Skip render if product is invalid
   if (!product.id) {
     console.warn("Skipping render for product with invalid ID:", product);
     return null;
   }
 
-  // Handle navigation with onProductClick
   const handleNavigate = (e) => {
     if (!product.id) {
       e.preventDefault();
@@ -494,7 +484,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       return;
     }
 
-    // Chuyển đến trang product (không có id trong URL) và truyền state
     navigate("/product", {
       state: {
         productId: product.id,
@@ -502,18 +491,35 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     });
   };
 
-
   return (
     <div
       className="product-card-one w-full h-full bg-white relative group overflow-hidden"
       style={{ boxShadow: "0px 15px 64px 0px rgba(0, 0, 0, 0.05)" }}
     >
       <div className="product-card-img w-full h-[300px] overflow-hidden relative">
-        <img
-          src={thumbnail}
-          alt={productName}
-          className="w-full h-full object-contain"
-        />
+        {totalStock > 0 && totalStock < 5 && (
+          <div className="absolute top-0 left-0 right-0 px-6 py-0.5 z-10">
+            <div class="progress-title flex justify-between ">
+              <span class="text-xs text-qblack font-400 leading-6">Còn lại</span>
+              <span class="text-sm text-qblack font-600 leading-6">{totalStock}</span>
+            </div>
+            <div class="progress w-full h-[5px] rounded-[22px] bg-primarygray relative overflow-hidden">
+              <div
+                className={`h-full ${type === 3 ? "bg-qyellow" : "bg-qyellow"}`}
+                style={{ width: `${stockPercentage}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
+        <div className="w-full h-full flex items-center justify-center">
+          <img
+            src={thumbnail}
+            alt={productName}
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+
         {discountPercent > 0 && displayOriginalPrice > displayPrice && (
           <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10 sm:text-sm sm:px-3 sm:py-1.5">
             -{discountPercent}%
@@ -524,11 +530,14 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
           <button
             type="button"
-            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full ${!hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${!hasStock || (variants.length > 0 && !selectedVariant)
+              ? "opacity-50 cursor-not-allowed"
+              : ""
               }`}
             disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             onClick={addToCart}
           >
+            <FiShoppingCart size={18} />
             THÊM GIỎ HÀNG
           </button>
         </div>
@@ -539,20 +548,17 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </span>
           ))}
         </div>
-        <div className="mt-2 text-[11px] text-qblack flex justify-between">
-          <span>
-            Tổng Lượng Sản Phẩm: <strong>{totalStock}</strong>
-          </span>
-        </div>
-        <p className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600" onClick={handleNavigate}>
+        <p
+          className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600"
+          onClick={handleNavigate}
+        >
           {productName}
         </p>
         {displayPrice > 0 ? (
           <div className="price-container group-hover:hidden">
             <p className="price flex items-center space-x-2">
               <span
-                className={`offer-price ${discountPercent > 0 ? "text-qred" : "text-qblack"
-                  } font-600 text-[18px]`}
+                className={`offer-price ${discountPercent > 0 ? "text-qred" : "text-qblack"} font-600 text-[18px]`}
               >
                 {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
               </span>
@@ -582,7 +588,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           </span>
         </a>
         <a
-          // href="#"
+          href="#"
           onClick={(e) => {
             e.preventDefault();
             isInWishlist ? handleRemoveFromWishlist() : handleAddToWishlist();
@@ -592,52 +598,42 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             <ThinLove className="w-5 h-5" fill={isInWishlist ? "#FF0000" : "none"} stroke={isInWishlist ? "#FF0000" : "#000000"} />
           </span>
         </a>
-<a
-  href="#"
-  onClick={(e) => {
-    e.preventDefault();
-
-    const variant = product.variants?.[0];
-    if (!variant) {
-      toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
-      return;
-    }
-
-    const variantData = {
-      variantId: variant.id,
-      productId: product.id,
-      productName: product.name,
-      productDescription: product.description,
-      productThumbnail: product.thumbnail,
-      brand: product.brand?.name || "-",
-      average_rating: product.average_rating,
-      price: variant.price,
-      stock: variant.stock,
-      sku: variant.sku,
-      images: variant.images,
-      attributeValues: variant.attributeValues,
-    };
-
-    const current = JSON.parse(localStorage.getItem("compareList")) || [];
-
-    const exists = current.find((item) => item.variantId === variantData.variantId);
-    if (!exists) {
-      const updated = [...current, variantData].slice(0, 4); 
-      localStorage.setItem("compareList", JSON.stringify(updated));
-    }
-
-    navigate("/products-compaire"); 
-  }}
->
-  <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-    <Compair className="w-5 h-5" />
-  </span>
-</a>
-
-
-
-
-
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            const variant = product.variants?.[0];
+            if (!variant) {
+              toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
+              return;
+            }
+            const variantData = {
+              variantId: variant.id,
+              productId: product.id,
+              productName: product.name,
+              productDescription: product.description,
+              productThumbnail: product.thumbnail,
+              brand: product.brand?.name || "-",
+              average_rating: product.average_rating,
+              price: variant.price,
+              stock: variant.stock,
+              sku: variant.sku,
+              images: variant.images,
+              attributeValues: variant.attributeValues,
+            };
+            const current = JSON.parse(localStorage.getItem("compareList")) || [];
+            const exists = current.find((item) => item.variantId === variantData.variantId);
+            if (!exists) {
+              const updated = [...current, variantData].slice(0, 4);
+              localStorage.setItem("compareList", JSON.stringify(updated));
+            }
+            navigate("/products-compaire");
+          }}
+        >
+          <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
+            <Compair className="w-5 h-5" />
+          </span>
+        </a>
       </div>
       <QuickViewDialog />
     </div>

@@ -293,13 +293,8 @@ export default function ProductsFilter({
         </div>
       </div>
 
-      <div className="mt-10">
-        <button onClick={handleApply} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-500">
-          Áp dụng
-        </button>
-        <button onClick={handleClearFilters} className="w-full bg-gray-300 text-qblack py-2 rounded hover:bg-gray-400 mt-5">
-          Xóa bộ lọc
-        </button>
+      <div className="w-full hidden lg:block h-[295px]">
+        <img  src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logos/smart_band_4__1.webp`} alt="Quảng cáo" className="w-full h-full object-contain" />
       </div>
 
       <button

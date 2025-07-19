@@ -1,4 +1,4 @@
-<p align="center"><img src="https://apexcharts.com/media/apexcharts-logo.png"></p>
+<p align="center"><img src="https://apexcharts.com/media/apexcharts-"></p>
 
 <p align="center">
   <a href="https://github.com/apexcharts/apexcharts.js/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-brightgreen.svg" alt="License"></a>
