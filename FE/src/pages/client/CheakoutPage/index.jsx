@@ -857,6 +857,9 @@ export default function CheckoutPage() {
         orderType: 'other'
       };
 
+      console.log("Đặt hàng với payload:", payload);
+      
+
       if (selectedPaymentMethod === "VNPay") {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
 
