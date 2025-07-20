@@ -495,7 +495,6 @@ class OrderController {
                             transaction: t,
                             lock: t.LOCK.UPDATE,
                         });
-                        console.log("sfssdsc", promoUser);
 
                         if (!promoUser) {
                             await t.rollback();
@@ -608,7 +607,8 @@ class OrderController {
             shipping_fee,
             promotion,
             promo_discount,
-            voucher_discount
+            voucher_discount,
+            promotion_user_id: promotionUserIdFromClient
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -647,7 +647,7 @@ class OrderController {
 
             let discountAmount = 0;
             let selectedVoucher = null;
-            let promotion_user_id = null;
+            let promotion_user_id = promotionUserIdFromClient || null;
 
             if (promotion) {
                 selectedVoucher = await PromotionModel.findByPk(promotion);
@@ -664,7 +664,7 @@ class OrderController {
                     }
 
                     if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionModel.findOne({
+                        const promoUser = await PromotionUserModel.findOne({
                             where: {
                                 promotion_id: selectedVoucher.id,
                                 user_id,
@@ -866,13 +866,11 @@ class OrderController {
             let priceAfterSpecial = totalPrice - finalSpecialDiscount;
 
             let selectedVoucher = null;
+            let promoUser = null;
             let finalAmount = priceAfterSpecial;
 
             if (promotion) {
-                selectedVoucher = await PromotionModel.findByPk(promotion, {
-                    transaction: t,
-                    lock: t.LOCK.UPDATE,
-                });
+                selectedVoucher = await PromotionModel.findByPk(promotion, { transaction: t, lock: t.LOCK.UPDATE });
 
                 if (selectedVoucher) {
                     const now = new Date();
@@ -898,7 +896,6 @@ class OrderController {
                             transaction: t,
                             lock: t.LOCK.UPDATE,
                         });
-                        console.log("sfssdsc", promoUser);
 
                         if (!promoUser) {
                             await t.rollback();
@@ -908,8 +905,6 @@ class OrderController {
                         promoUser.used = true;
                         await promoUser.save({ transaction: t });
                     }
-
-
 
                     finalAmount = priceAfterSpecial - discountAmount;
 
@@ -966,8 +961,6 @@ class OrderController {
                 },
                 transaction: t
             });
-
-            await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
             await t.commit();
 
