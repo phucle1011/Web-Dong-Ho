@@ -181,7 +181,8 @@ console.log(res.data?.data);
         productData
       );
       toast.success("Cập nhật sản phẩm thành công!");
-      fetchProduct(); // Cập nhật lại dữ liệu
+      navigate("/admin/products/getAll");
+      // fetchProduct(); // Cập nhật lại dữ liệu
     } catch (error) {
       console.error("Lỗi khi cập nhật sản phẩm:", error);
     } finally {

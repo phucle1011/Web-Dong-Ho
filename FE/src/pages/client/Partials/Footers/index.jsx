@@ -140,7 +140,7 @@ export default function Footer({ type }) {
         </div>
         <div className="bottom-bar border-t border-qgray-border lg:h-[82px] lg:flex justify-between items-center">
           <div className="flex lg:space-x-5 justify-between items-center mb-3">
-            <div className="flex space-x-5 items-center">
+            {/* <div className="flex space-x-5 items-center">
               <a href="#">
                 <Instagram className="fill-current text-qgray hover:text-qblack" />
               </a>
@@ -150,7 +150,7 @@ export default function Footer({ type }) {
               <a href="#">
                 <Youtube className="fill-current text-qgray hover:text-qblack" />
               </a>
-            </div>
+            </div> */}
             <span className="sm:text-base text-[10px] text-qgray font-300">
               ©2025
               <a
@@ -164,7 +164,7 @@ export default function Footer({ type }) {
               Mọi quyền được bảo lưu
             </span>
           </div>
-          <div className="">
+          {/* <div className="">
             <a href="#">
               <img
                 width="318"
@@ -173,7 +173,7 @@ export default function Footer({ type }) {
                 alt="payment-getways"
               />
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>

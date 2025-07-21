@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link,useNavigate } from "react-router-dom";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,6 +10,7 @@ const EditVariantForm = () => {
   const { id } = useParams();
   const [variant, setVariant] = useState(null);
   const [attributesList, setAttributesList] = useState([]);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     id: "",
     sku: "",
@@ -85,7 +86,6 @@ const EditVariantForm = () => {
       const url = await uploadToCloudinary(file);
       const newImages = [...formData.images];
       newImages[index] = { id: null, url };
-      console.log(newImages);
 
       setFormData((prev) => ({ ...prev, images: newImages }));
 
@@ -120,8 +120,6 @@ const EditVariantForm = () => {
   const handleDeleteImage = async (index) => {
     const image = formData.images[index];
     if (!image) return;
-    console.log(image);
-
     try {
       // Nếu ảnh đã lưu trong DB (có id), xóa theo id
       if (image.id) {
@@ -172,6 +170,7 @@ const EditVariantForm = () => {
         preparedData
       );
       toast.success("Cập nhật biến thể thành công!");
+      navigate(`/admin/products/detail/${formData.product_id}`);
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);
       toast.error("Cập nhật thất bại!");
