@@ -12,6 +12,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
+import { useLocation } from "react-router-dom";
 
 export default function AllProductPage() {
   const [products, setProducts] = useState([]);
@@ -39,6 +40,33 @@ export default function AllProductPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [brandList, setBrandList] = useState([]);
+  const location = useLocation();
+  const brandId = location.state?.brandId;
+    useEffect(() => {
+  if (brandId) {
+    const fetchByBrand = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
+          params: { brand_id: brandId },
+          headers: { "Cache-Control": "no-cache" },
+        });
+        setProducts(res.data.data || []);
+        setPagination((prev) => ({
+          ...prev,
+          totalProducts: res.data.pagination?.totalProducts || 0,
+        }));
+        setError(null);
+      } catch (error) {
+        setError("Không thể tải sản phẩm theo thương hiệu.");
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchByBrand();
+  }
+}, [brandId]);
 
   useEffect(() => {
     async function fetchBrands() {
@@ -103,28 +131,37 @@ export default function AllProductPage() {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
-  useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      try {
-        const selectedFilters = Object.keys(filters).filter(
-          (key) => filters[key]
-        );
+useEffect(() => {
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      // Xác định xem filters có đang được sử dụng không
+      const selectedFilters = Object.keys(filters).filter((key) => filters[key]);
+      const isFiltering = selectedFilters.length > 0 || volume[0] !== 0 || volume[1] !== 1000000000;
+
+      if (brandId && !isFiltering) {
+        // 👉 Trường hợp chỉ lọc theo brandId (không dùng filters hay volume)
+        const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
+          params: { brand_id: brandId },
+          headers: { "Cache-Control": "no-cache" },
+        });
+
+        setProducts(res.data.data || []);
+        setPagination((prev) => ({
+          ...prev,
+          totalProducts: res.data.pagination?.totalProducts || 0,
+        }));
+        setError(null);
+      } else {
+        // 👉 Trường hợp lọc theo filters/phạm vi giá
         const categoryFilters = selectedFilters.filter((key) =>
           [
-            "mobileLaptop",
-            "gaming",
-            "imageVideo",
-            "vehicles",
-            "furnitures",
-            "sport",
-            "foodDrinks",
-            "fashion",
-            "toilet",
-            "makeupCorner",
-            "babyItem",
+            "mobileLaptop", "gaming", "imageVideo", "vehicles", "furnitures",
+            "sport", "foodDrinks", "fashion", "toilet", "makeupCorner",
+            "babyItem"
           ].includes(key)
         );
+
         const brandFilters = selectedFilters.filter((key) =>
           brandList.some((brand) => brand.id.toString() === key)
         );
@@ -151,22 +188,27 @@ export default function AllProductPage() {
           hasNextPage: res.data.pagination?.hasNextPage || false, // Cập nhật hasNextPage
         }));
         setError(null);
-      } catch (error) {
-        console.error("API Error:", error.response?.data || error.message);
-        let errorMessage = "Không thể tải danh sách sản phẩm. Vui lòng thử lại hoặc thay đổi bộ lọc.";
-        if (error.response?.status === 400) {
-          errorMessage = "Tham số bộ lọc không hợp lệ. Vui lòng kiểm tra lại các bộ lọc.";
-        } else if (error.response?.status === 500) {
-          errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau.";
-        }
-        setProducts([]);
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
       }
+    } catch (error) {
+      console.error("API Error:", error.response?.data || error.message);
+
+      let errorMessage = "Không thể tải danh sách sản phẩm. Vui lòng thử lại hoặc thay đổi bộ lọc.";
+      if (error.response?.status === 400) {
+        errorMessage = "Tham số bộ lọc không hợp lệ. Vui lòng kiểm tra lại các bộ lọc.";
+      } else if (error.response?.status === 500) {
+        errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau.";
+      }
+
+      setProducts([]);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    fetchProducts();
-  }, [pagination.currentPage, filters, volume, brandList]);
+  };
+
+  fetchProducts();
+}, [pagination.currentPage, filters, volume, brandId, brandList]);
+
 
   const renderPagination = () => {
     const { currentPage, limit, totalProducts } = pagination;
