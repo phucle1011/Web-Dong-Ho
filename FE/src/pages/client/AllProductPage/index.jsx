@@ -18,9 +18,8 @@ export default function AllProductPage() {
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
-    limit: 5,
+    limit: 12,
     totalProducts: 0,
-    hasNextPage: false, // Thêm trường hasNextPage
   });
   const [filters, setFilter] = useState({
     mobileLaptop: false,
@@ -104,7 +103,7 @@ export default function AllProductPage() {
   };
 
   const resetFilters = () => {
-    const resetFilters = {
+    setFilter({
       mobileLaptop: false,
       gaming: false,
       imageVideo: false,
@@ -116,11 +115,7 @@ export default function AllProductPage() {
       toilet: false,
       makeupCorner: false,
       babyItem: false,
-    };
-    brandList.forEach((brand) => {
-      resetFilters[brand.id.toString()] = false;
     });
-    setFilter(resetFilters);
     setVolume([0, 1000000000]);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
@@ -175,6 +170,7 @@ useEffect(() => {
           brand_id: brandFilters.join(",") || undefined,
         };
 
+
         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
           params,
           headers: { "Cache-Control": "no-cache" },
@@ -184,8 +180,6 @@ useEffect(() => {
         setPagination((prev) => ({
           ...prev,
           totalProducts: res.data.pagination?.totalProducts || 0,
-          totalPages: res.data.pagination?.totalPages || 0,
-          hasNextPage: res.data.pagination?.hasNextPage || false, // Cập nhật hasNextPage
         }));
         setError(null);
       }
@@ -213,16 +207,11 @@ useEffect(() => {
   const renderPagination = () => {
     const { currentPage, limit, totalProducts } = pagination;
     const totalPages = Math.ceil(totalProducts / limit);
-    
     // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ 12 sản phẩm và có sản phẩm ở trang tiếp theo
     const showNextPage = products.length === limit && totalProducts > currentPage * limit;
     // Chỉ hiển thị nút "Previous" nếu không phải trang 1
     const showPreviousPage = currentPage > 1;
 
-    // Không hiển thị phân trang nếu không có sản phẩm hoặc totalPages là 0
-    if (totalPages === 0 || products.length === 0) {
-      return null;
-    }
 
     return (
       <div className="flex justify-center mt-4">
@@ -269,8 +258,8 @@ useEffect(() => {
             return null;
           })}
 
-          {/* Hiển thị nút "Next" và "Last" chỉ khi hasNextPage là true */}
-          {hasNextPage && (
+          {/* Hiển thị nút "Next" và "Last" nếu showNextPage */}
+          {showNextPage && (
             <>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
@@ -292,7 +281,7 @@ useEffect(() => {
   };
 
   const handlePageChange = (newPage) => {
-    const { totalPages } = pagination;
+    const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);
     if (newPage >= 1 && newPage <= totalPages) {
       setPagination((prev) => ({ ...prev, currentPage: newPage }));
     } else {
@@ -318,8 +307,8 @@ useEffect(() => {
                 volume={volume}
                 volumeHandler={volumeHandler}
                 onApplyFilters={applyFilters}
-                resetFilters={resetFilters} // Thêm resetFilters vào component
               />
+       
               <div className="w-full hidden lg:block h-[295px] overflow-hidden rounded-lg">
                 {/* <img
                   src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-5.png`}
@@ -406,7 +395,7 @@ useEffect(() => {
                   </DataIteration>
                 )}
               </div>
-              {renderPagination()}
+              {products.length > 0 && renderPagination()}
             </div>
           </div>
         </div>
