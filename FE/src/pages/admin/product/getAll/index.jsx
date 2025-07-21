@@ -147,7 +147,7 @@ const categoryOptions = categories.map((cat) => ({
       await axios.delete(
         `${Constants.DOMAIN_API}/admin/products/${selectedProduct.id}`
       );
-      toast.success("Xóa sản phẩm thành công");
+      toast.error("Xóa sản phẩm thành công");
       if (products.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {

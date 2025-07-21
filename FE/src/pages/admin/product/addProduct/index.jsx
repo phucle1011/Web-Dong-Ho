@@ -240,9 +240,9 @@ const generateSlug = (text) => {
     <label className="form-label">Slug</label>
   </div>
   <input
+  readOnly
     type="text"
-    className="form-control"
-    {...register("slug", { required: "Vui lòng nhập slug" })}
+    className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed "
   />
   {errors.slug && (
     <small className="text-danger">{errors.slug.message}</small>

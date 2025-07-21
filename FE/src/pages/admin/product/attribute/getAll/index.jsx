@@ -46,7 +46,7 @@ function AttributeGetAll() {
 
     try {
       await axios.delete(`${Constants.DOMAIN_API}/admin/attribute/${selectedAttribute.id}`);
-      toast.success("Xoá thuộc tính thành công");
+      toast.error("Xoá thuộc tính thành công");
       if (attributes.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {

@@ -196,7 +196,7 @@ console.log(res.data?.data);
       await axios.delete(
         `${Constants.DOMAIN_API}/admin/variants/${selectedProduct.id}`
       );
-      toast.success("Xóa sản phẩm thành công");
+      toast.error("Xóa sản phẩm thành công");
 
       // 👉 Gọi lại API để cập nhật danh sách biến thể
       fetchVariants(currentPage);
@@ -279,9 +279,10 @@ console.log(res.data?.data);
             <div>
               <label className="font-semibold mb-1 block">Slug:</label>
               <input
+              readOnly
                 type="text"
                 name="slug"
-                className="border rounded p-2 w-full"
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
                 value={formData.slug}
                 onChange={handleChange}
               />

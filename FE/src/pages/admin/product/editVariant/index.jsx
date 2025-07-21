@@ -146,7 +146,7 @@ const EditVariantForm = () => {
     newImages.splice(index, 1);
     setFormData((prev) => ({ ...prev, images: newImages }));
 
-    toast.success("Đã xoá ảnh.");
+    toast.error("Đã xoá ảnh.");
   };
 
   const addImageField = () => {
