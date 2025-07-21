@@ -1,10 +1,12 @@
 const { Op } = require('sequelize');
 const Notification = require('../../models/notificationsModel');
 const User = require('../../models/usersModel');
-const jwt = require('jsonwebtoken');
+const Promotion = require('../../models/promotionsModel');
+const Product = require('../../models/productsModel');
+const ProductVariant = require('../../models/productVariantsModel'); // Thêm model product_variants
 
-class NotificationController {
-   static async getNotifications(req, res) {
+class notificationClientController {
+  static async getNotifications(req, res) {
     try {
       const {
         user_id,
@@ -316,5 +318,4 @@ class NotificationController {
   }
 }
 
-
-module.exports = NotificationController;
+module.exports =notificationClientController;

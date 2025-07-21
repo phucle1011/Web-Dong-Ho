@@ -28,8 +28,8 @@ const ProfileController = require('../controllers/Client/ProfileController');
 const HomeController = require('../controllers/Client/HomeController');
 const UserController = require('../controllers/Client/userControllers');
 const reviewController = require('../controllers/Client/reviewController');
-const SearchController = require('../controllers/Client/SearchController');
-
+const notificationClientController = require('../controllers/Client/notificationClientController');
+const SearchController = require('../controllers/Client/SearchController')
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -111,7 +111,7 @@ router.get("/profile/new-orders/:id", ProfileController.getTotalNewOrders);
 //------------------[ PRODUCTS ]------------------//
 router.get('/products', ProductClientController.getAll);
 
-router.get('/pricerange', ProductClientController.getPrice);
+router.get('/price-range', ProductClientController.getPrice);
 
 // router.get('/stock', ProductClientController.countStockGroupByProductId);
 router.get('/:id', ProductVariantController.getProductVariantDetail);
@@ -148,5 +148,10 @@ router.put('/users/:id', UserController.updateUserInfo);
 
 //------------------[ Reviews ]------------------
 router.get('/:userId/reviews', reviewController.getAllReviews);
+
+//------------------[ Notifications ]------------------
+router.get('/notifications', notificationClientController.getNotifications);
+router.patch('/notifications/:id/read', notificationClientController.getNotificationById);
+router.patch('/notifications/mark-all-read', notificationClientController.createNotification);
 
 module.exports = router;

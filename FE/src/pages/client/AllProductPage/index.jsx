@@ -19,6 +19,7 @@ export default function AllProductPage() {
     currentPage: 1,
     limit: 5,
     totalProducts: 0,
+    hasNextPage: false, // Thêm trường hasNextPage
   });
   const [filters, setFilter] = useState({
     mobileLaptop: false,
@@ -75,7 +76,7 @@ export default function AllProductPage() {
   };
 
   const resetFilters = () => {
-    setFilter({
+    const resetFilters = {
       mobileLaptop: false,
       gaming: false,
       imageVideo: false,
@@ -87,7 +88,11 @@ export default function AllProductPage() {
       toilet: false,
       makeupCorner: false,
       babyItem: false,
+    };
+    brandList.forEach((brand) => {
+      resetFilters[brand.id.toString()] = false;
     });
+    setFilter(resetFilters);
     setVolume([0, 1000000000]);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
@@ -133,7 +138,6 @@ export default function AllProductPage() {
           brand_id: brandFilters.join(",") || undefined,
         };
 
-
         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
           params,
           headers: { "Cache-Control": "no-cache" },
@@ -143,6 +147,8 @@ export default function AllProductPage() {
         setPagination((prev) => ({
           ...prev,
           totalProducts: res.data.pagination?.totalProducts || 0,
+          totalPages: res.data.pagination?.totalPages || 0,
+          hasNextPage: res.data.pagination?.hasNextPage || false, // Cập nhật hasNextPage
         }));
         setError(null);
       } catch (error) {
@@ -171,6 +177,10 @@ export default function AllProductPage() {
     // Chỉ hiển thị nút "Previous" nếu không phải trang 1
     const showPreviousPage = currentPage > 1;
 
+    // Không hiển thị phân trang nếu không có sản phẩm hoặc totalPages là 0
+    if (totalPages === 0 || products.length === 0) {
+      return null;
+    }
 
     return (
       <div className="flex justify-center mt-4">
@@ -217,8 +227,8 @@ export default function AllProductPage() {
             return null;
           })}
 
-          {/* Hiển thị nút "Next" và "Last" nếu showNextPage */}
-          {showNextPage && (
+          {/* Hiển thị nút "Next" và "Last" chỉ khi hasNextPage là true */}
+          {hasNextPage && (
             <>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
@@ -240,7 +250,7 @@ export default function AllProductPage() {
   };
 
   const handlePageChange = (newPage) => {
-    const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);
+    const { totalPages } = pagination;
     if (newPage >= 1 && newPage <= totalPages) {
       setPagination((prev) => ({ ...prev, currentPage: newPage }));
     } else {
@@ -266,8 +276,8 @@ export default function AllProductPage() {
                 volume={volume}
                 volumeHandler={volumeHandler}
                 onApplyFilters={applyFilters}
+                resetFilters={resetFilters} // Thêm resetFilters vào component
               />
-       
               <div className="w-full hidden lg:block h-[295px] overflow-hidden rounded-lg">
                 {/* <img
                   src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-5.png`}
@@ -354,7 +364,7 @@ export default function AllProductPage() {
                   </DataIteration>
                 )}
               </div>
-              {products.length > 0 && renderPagination()}
+              {renderPagination()}
             </div>
           </div>
         </div>

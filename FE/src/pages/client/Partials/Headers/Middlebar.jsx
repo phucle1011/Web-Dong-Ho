@@ -206,6 +206,7 @@ export default function Middlebar({ className, type }) {
                     alt="logo"
                   />
                 </Link>
+                
               )}
             </div>
             <div className="w-[517px] h-[44px]">
@@ -226,6 +227,23 @@ export default function Middlebar({ className, type }) {
                   </span>
                 )}
               </div>
+
+  <div className="compaire relative">
+                <Link to="/notification">
+                  <span>
+                    <Compair />
+                  </span>
+                </Link>
+                {compareCount > 0 && (
+                  <span
+                    className={`w-[18px] h-[18px] rounded-full absolute -top-2.5 -right-2.5 flex justify-center items-center text-[9px] ${type === 3 ? "bg-qh3-blue text-white" : "bg-qyellow"
+                      }`}
+                  >
+                    {compareCount}
+                  </span>
+                )}
+              </div>
+              
               <div className="cart-wrapper group relative py-4">
                 <div className="cart relative cursor-pointer">
                   <Link to="/wishlist">

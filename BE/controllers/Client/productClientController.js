@@ -18,90 +18,117 @@ class ProductClientController {
       const limit = parseInt(req.query.limit) || 12;
       const offset = (page - 1) * limit;
 
-      const whereCondition = {};
-      // Ưu tiên lọc sản phẩm không ẩn, không bị ghi đè bởi req.query.status
-      whereCondition.status = { [Op.ne]: 'hidden' }; // Giả sử 'hidden' là trạng thái ẩn, thay bằng giá trị thực tế nếu khác
-      if (req.query.status && req.query.status !== 'hidden') whereCondition.status = req.query.status; // Chỉ áp dụng nếu không phải hidden
+    const whereCondition = {};
+    // Ưu tiên lọc sản phẩm không ẩn
+    whereCondition.status = { [Op.ne]: 'hidden' };
+    if (req.query.status && req.query.status !== 'hidden') {
+      whereCondition.status = req.query.status;
+    }
 
-      if (req.query.query) {
-        whereCondition[Op.or] = [
-          { name: { [Op.like]: `%${req.query.query}%` } },
-          { description: { [Op.like]: `%${req.query.query}%` } }, // nếu có cột description
-        ];
-      }
+    // Tìm kiếm theo tên hoặc mô tả
+    if (req.query.query) {
+      whereCondition[Op.or] = [
+        { name: { [Op.like]: `%${req.query.query}%` } },
+        { description: { [Op.like]: `%${req.query.query}%` } },
+      ];
+    }
 
-      if (req.query.category_id) {
-        whereCondition.category_id = {
-          [Op.in]: req.query.category_id.split(",").map(Number),
-        };
-      }
-      if (req.query.brand_id) {
-        whereCondition.brand_id = {
-          [Op.in]: req.query.brand_id.split(",").map(Number),
-        };
-      }
+    // Lọc theo danh mục
+    if (req.query.category_id) {
+      whereCondition.category_id = {
+        [Op.in]: req.query.category_id.split(",").map(Number),
+      };
+    }
 
-      const variantWhereCondition = {};
-      if (req.query.min_price || req.query.max_price) {
-        variantWhereCondition.price = {};
-        if (req.query.min_price && !isNaN(parseFloat(req.query.min_price))) {
-          variantWhereCondition.price[Op.gte] = parseFloat(req.query.min_price);
-        }
-        if (req.query.max_price && !isNaN(parseFloat(req.query.max_price))) {
-          variantWhereCondition.price[Op.lte] = parseFloat(req.query.max_price);
-        }
-      }
+    // Lọc theo thương hiệu
+    if (req.query.brand_id) {
+      whereCondition.brand_id = {
+        [Op.in]: req.query.brand_id.split(",").map(Number),
+      };
+    }
 
-      const { count: totalProducts, rows: products } =
-        await Product.findAndCountAll({
-          where: whereCondition,
-          order: [["created_at", "DESC"]],
-          limit,
-          offset,
+    // Điều kiện lọc biến thể (variants) theo giá
+    const variantWhereCondition = {};
+    if (req.query.min_price || req.query.max_price) {
+      variantWhereCondition.price = {};
+      if (req.query.min_price && !isNaN(parseFloat(req.query.min_price))) {
+        variantWhereCondition.price[Op.gte] = parseFloat(req.query.min_price);
+      }
+      if (req.query.max_price && !isNaN(parseFloat(req.query.max_price))) {
+        variantWhereCondition.price[Op.lte] = parseFloat(req.query.max_price);
+      }
+    }
+
+    // Truy vấn sản phẩm với điều kiện chỉ lấy sản phẩm có biến thể
+    const { count: totalProducts, rows: products } = await Product.findAndCountAll({
+      where: whereCondition,
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+      include: [
+        {
+          model: ProductVariant,
+          as: "variants",
+          where: variantWhereCondition,
           include: [
+            { model: VariantImage, as: "images" },
             {
-              model: ProductVariant,
-              as: "variants",
-              where: variantWhereCondition,
+              model: PromotionProductModel,
+              as: "promotionProducts",
               include: [
-                { model: VariantImage, as: "images" },
                 {
-                  model: PromotionProductModel,
-                  as: "promotionProducts",
-                  include: [
-                    {
-                      model: PromotionModel,
-                      as: "promotion",
-                      where: {
-                        status: "active",
-                        start_date: { [Op.lte]: new Date() },
-                        end_date: { [Op.gte]: new Date() },
-                      },
-                      required: false,
-                    },
-                  ],
+                  model: PromotionModel,
+                  as: "promotion",
+                  where: {
+                    status: "active",
+                    start_date: { [Op.lte]: new Date() },
+                    end_date: { [Op.gte]: new Date() },
+                  },
+                  required: false,
                 },
               ],
-              required: true,
             },
-            {
-              model: CategoryModel,
-              as: "category",
-              attributes: ["id", "name"],
-            },
-            { model: BrandModel, as: "brand", attributes: ["id", "name"] },
           ],
-        });
+          required: true, // Chỉ lấy sản phẩm có ít nhất 1 biến thể
+        },
+        {
+          model: CategoryModel,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BrandModel,
+          as: "brand",
+          attributes: ["id", "name"],
+        },
+      ],
+      distinct: true, // Đảm bảo đếm chính xác số sản phẩm, không tính trùng lặp
+    });
 
+    // Kiểm tra nếu không có sản phẩm nào
+    if (!products || products.length === 0) {
+      return res.status(200).json({
+        status: 200,
+        message: "Không tìm thấy sản phẩm phù hợp",
+        data: [],
+        pagination: {
+          currentPage: page,
+          limit,
+          totalPages: 0,
+          totalProducts: 0,
+        },
+        totalVariants: 0,
+      });
+    }
 
-
-      const productsWithVariantCount = products
-        .map((product) => {
-          const productJson = product.toJSON();
-          productJson.variantCount = product.variants?.length || 0;
-          productJson.total_stock = product.variants.reduce((sum, variant) => {
-            return sum + (parseInt(variant.stock) || 0);
-          }, 0);
+    // Xử lý dữ liệu sản phẩm
+    const productsWithVariantCount = products
+      .map((product) => {
+        const productJson = product.toJSON();
+        productJson.variantCount = product.variants?.length || 0;
+        productJson.total_stock = product.variants.reduce((sum, variant) => {
+          return sum + (parseInt(variant.stock) || 0);
+        }, 0);
 
           if (productJson.variants && productJson.variants.length > 0) {
             for (let variant of productJson.variants) {
@@ -119,39 +146,33 @@ class ProductClientController {
                   let finalPrice = variantPrice;
                   let currentDiscountPercent = 0;
 
-                  if (promo.discount_type === "percentage") {
-                    finalPrice -=
-                      (finalPrice * parseFloat(promo.discount_value)) / 100;
-                    currentDiscountPercent = parseFloat(promo.discount_value);
-                  } else if (promo.discount_type === "fixed") {
-                    finalPrice -= parseFloat(promo.discount_value);
-                    currentDiscountPercent =
-                      ((variantPrice - finalPrice) / variantPrice) * 100;
-                  }
-                  finalPrice = Math.max(0, finalPrice);
+                if (promo.discount_type === "percentage") {
+                  finalPrice -= (finalPrice * parseFloat(promo.discount_value)) / 100;
+                  currentDiscountPercent = parseFloat(promo.discount_value);
+                } else if (promo.discount_type === "fixed") {
+                  finalPrice -= parseFloat(promo.discount_value);
+                  currentDiscountPercent = ((variantPrice - finalPrice) / variantPrice) * 100;
+                }
+                finalPrice = Math.max(0, finalPrice);
 
-                  const newPromo = {
-                    id: promo.id,
-                    code: promo.code,
-                    discount_type: promo.discount_type,
-                    discount_value: parseFloat(promo.discount_value),
-                    discounted_price: parseFloat(finalPrice.toFixed(2)),
-                    discount_percent: parseFloat(
-                      currentDiscountPercent.toFixed(2)
-                    ),
-                    meets_conditions:
-                      promo.quantity == null || promo.quantity > 0,
-                  };
+                const newPromo = {
+                  id: promo.id,
+                  code: promo.code,
+                  discount_type: promo.discount_type,
+                  discount_value: parseFloat(promo.discount_value),
+                  discounted_price: parseFloat(finalPrice.toFixed(2)),
+                  discount_percent: parseFloat(currentDiscountPercent.toFixed(2)),
+                  meets_conditions: promo.quantity == null || promo.quantity > 0,
+                };
 
-                  if (
-                    !best ||
-                    (newPromo.meets_conditions &&
-                      newPromo.discounted_price < best.discounted_price)
-                  ) {
-                    return newPromo;
-                  }
-                  return best;
-                }, null);
+                if (
+                  !best ||
+                  (newPromo.meets_conditions && newPromo.discounted_price < best.discounted_price)
+                ) {
+                  return newPromo;
+                }
+                return best;
+              }, null);
 
                 if (bestPromotion && bestPromotion.meets_conditions) {
                   lowestPrice = bestPromotion.discounted_price;
@@ -167,34 +188,52 @@ class ProductClientController {
             }
           }
 
-          return productJson;
-        })
-        .filter((product) => product !== null);
+        return productJson;
+      })
+      .filter((product) => product !== null && product.variants?.length > 0); // Chỉ giữ sản phẩm có biến thể
 
-      const totalVariants = productsWithVariantCount.reduce((sum, product) => {
-        return sum + (product.variants?.length || 0);
-      }, 0);
+    // Tính tổng số biến thể
+    const totalVariants = productsWithVariantCount.reduce((sum, product) => {
+      return sum + (product.variants?.length || 0);
+    }, 0);
 
+    // Tính tổng số trang dựa trên số sản phẩm thực sự
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    // Kiểm tra nếu trang hiện tại không có sản phẩm hợp lệ
+    if (productsWithVariantCount.length === 0 && page > 1) {
       return res.status(200).json({
         status: 200,
-        message: "Lấy danh sách sản phẩm thành công",
-        data: productsWithVariantCount,
+        message: `Không tìm thấy sản phẩm ở trang ${page}`,
+        data: [],
         pagination: {
           currentPage: page,
           limit,
-          totalPages: Math.ceil(totalProducts / limit),
-          totalProducts: totalProducts,
+          totalPages,
+          totalProducts,
         },
-        totalVariants,
+        totalVariants: 0,
       });
-    } catch (error) {
-      console.error("Error in getAll:", error);
-      res.status(500).json({ error: error.message });
     }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Lấy danh sách sản phẩm thành công",
+      data: productsWithVariantCount,
+      pagination: {
+        currentPage: page,
+        limit,
+        totalPages,
+        totalProducts,
+        hasNextPage: productsWithVariantCount.length === limit && totalProducts > page * limit,
+      },
+      totalVariants,
+    });
+  } catch (error) {
+    console.error("Error in getAll:", error);
+    res.status(500).json({ error: error.message });
   }
-
-  // API lấy khoảng giá
-
+}
   static async getPrice(req, res) {
     try {
       const priceRange = await ProductVariant.findOne({
