@@ -103,16 +103,7 @@ function EditBlog() {
     <div className="container-fluid">
       <div className="row">
         <div className="col-md-12">
-          <div className="card mb-4 position-relative">
-            <button
-              type="button"
-              className="btn btn-outline-secondary position-absolute"
-              style={{ top: "15px", right: "15px", zIndex: 10 }}
-              onClick={() => navigate(-1)}
-            >
-              ← Quay lại
-            </button>
-
+          <div className="card mb-4">
             <div className="card-body p-4">
               <h5 className="card-title fw-semibold mb-4">Chỉnh sửa bài viết</h5>
               <form onSubmit={handleSubmit}>
@@ -206,9 +197,25 @@ function EditBlog() {
                   {uploading && <p className="text-info">Đang tải ảnh lên...</p>}
                 </div>
 
-                <button type="submit" className="btn btn-primary" disabled={uploading}>
-                  Cập nhật bài viết
-                </button>
+                <div className="d-flex justify-content-start gap-2 mt-3">
+
+                  <button type="submit" className="btn btn-primary" disabled={uploading}>
+                    Cập nhật bài viết
+                  </button>
+                <button
+  type="button"
+  className="btn"
+  style={{
+    backgroundColor: "#6c757d", 
+    color: "#fff",
+    border: "none"
+  }}
+  onClick={() => navigate(-1)}
+>
+  Quay lại
+</button>
+                </div>
+
               </form>
             </div>
           </div>

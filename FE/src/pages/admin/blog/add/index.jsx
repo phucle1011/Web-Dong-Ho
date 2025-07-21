@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { Editor } from '@tinymce/tinymce-react';
+import { Editor } from "@tinymce/tinymce-react";
 import Constants from "../../../../Constants";
-import { decodeToken } from "../../../client/Helpers/jwtDecode"; 
-import 'tinymce/skins/ui/oxide/skin.min.css';
-import 'tinymce/skins/content/default/content.min.css';
+import { decodeToken } from "../../../client/Helpers/jwtDecode";
+import "tinymce/skins/ui/oxide/skin.min.css";
+import "tinymce/skins/content/default/content.min.css";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 
 function AddBlog() {
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState(""); // đã đổi từ description -> content
+  const [content, setContent] = useState("");
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [metaDescription, setMetaDescription] = useState("");
@@ -39,10 +39,13 @@ function AddBlog() {
     setUploading(true);
 
     try {
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       const data = await response.json();
       setUploading(false);
       return data.secure_url || "";
@@ -94,17 +97,7 @@ function AddBlog() {
     <div className="container-fluid">
       <div className="row">
         <div className="col-md-12">
-          <div className="card mb-4 position-relative">
-            {/* Nút quay lại góc phải trên */}
-            <button
-              type="button"
-              className="btn btn-outline-secondary position-absolute"
-              style={{ top: "15px", right: "15px", zIndex: 10 }}
-              onClick={() => navigate(-1)}
-            >
-              ← Quay lại
-            </button>
-
+          <div className="card mb-4">
             <div className="card-body p-4">
               <h5 className="card-title fw-semibold mb-4">Thêm bài viết mới</h5>
               <form onSubmit={handleSubmit}>
@@ -151,14 +144,28 @@ function AddBlog() {
                     height: 400,
                     menubar: true,
                     plugins: [
-                      "advlist", "autolink", "lists", "link", "image", "charmap", "preview", "anchor",
-                      "searchreplace", "visualblocks", "code", "fullscreen",
-                      "insertdatetime", "media", "table", "help", "wordcount"
+                      "advlist",
+                      "autolink",
+                      "lists",
+                      "link",
+                      "image",
+                      "charmap",
+                      "preview",
+                      "anchor",
+                      "searchreplace",
+                      "visualblocks",
+                      "code",
+                      "fullscreen",
+                      "insertdatetime",
+                      "media",
+                      "table",
+                      "help",
+                      "wordcount",
                     ],
                     toolbar:
-                      "undo redo | formatselect | bold italic backcolor | \
-                       alignleft aligncenter alignright alignjustify | \
-                       bullist numlist outdent indent | image | help",
+                      "undo redo | formatselect | bold italic backcolor | " +
+                      "alignleft aligncenter alignright alignjustify | " +
+                      "bullist numlist outdent indent | image | help",
                     image_title: true,
                     automatic_uploads: true,
                     file_picker_types: "image",
@@ -194,9 +201,25 @@ function AddBlog() {
                   {uploading && <p>Đang tải ảnh lên...</p>}
                 </div>
 
-                <button type="submit" className="btn btn-primary" disabled={uploading}>
-                  Thêm bài viết
-                </button>
+                <div className="d-flex justify-content-start gap-2 mt-3">
+
+
+                  <button type="submit" className="btn btn-primary" disabled={uploading}>
+                    Thêm bài viết
+                  </button>
+                  <button
+  type="button"
+  className="btn"
+  style={{
+    backgroundColor: "#6c757d", 
+    color: "#fff",
+    border: "none"
+  }}
+  onClick={() => navigate(-1)}
+>
+  Quay lại
+</button>
+                </div>
               </form>
             </div>
           </div>

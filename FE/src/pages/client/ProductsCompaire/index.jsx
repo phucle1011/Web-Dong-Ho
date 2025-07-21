@@ -9,9 +9,7 @@ const MAX_COMPARE = 4;
 
 function DescriptionToggle({ description }) {
   const [expanded, setExpanded] = useState(false);
-
   if (!description || description === "-") return "-";
-
   const words = description.split(" ");
   const shortText = words.slice(0, 50).join(" ");
   const isLong = words.length > 50;
@@ -59,14 +57,22 @@ export default function ProductsCompare() {
               price: variant.price,
               stock: variant.stock,
               sku: variant.sku,
-              images: variant.images,
-              attributeValues: variant.attributeValues,
+              images: variant.images || [],
+              attributeValues: variant.attributeValues || [],
             });
           });
         });
 
         setVariants(variantList);
         setFilteredLists(Array(MAX_COMPARE).fill(variantList));
+
+        const storedList = JSON.parse(localStorage.getItem("compareList")) || [];
+        if (storedList.length > 0) {
+          setSelectedVariants(storedList);
+          setSearchInputs(
+            storedList.map((v) => v.productName).concat(Array(MAX_COMPARE - storedList.length).fill(""))
+          );
+        }
 
         const attrSet = new Set();
         variantList.forEach((v) => {
@@ -78,17 +84,6 @@ export default function ProductsCompare() {
       })
       .catch(console.error);
   }, []);
-
-  useEffect(() => {
-    const storedList = JSON.parse(localStorage.getItem("compareList")) || [];
-    if (storedList.length > 0) {
-      setSelectedVariants(storedList);
-      setSearchInputs(
-        storedList.map((v) => v.productName).concat(Array(MAX_COMPARE - storedList.length).fill(""))
-      );
-    }
-  }, []);
-
 
   const handleSearchInputChange = (index, value) => {
     const newSearchInputs = [...searchInputs];
@@ -107,56 +102,6 @@ export default function ProductsCompare() {
     newFilteredLists[index] = filtered;
     setFilteredLists(newFilteredLists);
   };
-  // Sau khi fetch xong data từ API
-  useEffect(() => {
-    fetch("http://localhost:5000/products/compare")
-      .then((res) => res.json())
-      .then((data) => {
-        const variantList = [];
-
-        data.data.forEach((product) => {
-          product.variants.forEach((variant) => {
-            variantList.push({
-              productId: product.id,
-              productName: product.name,
-              productDescription: product.description,
-              productThumbnail: product.thumbnail,
-              brand: product.brand?.name || "-",
-              average_rating: product.average_rating,
-              variantId: variant.id,
-              price: variant.price,
-              stock: variant.stock,
-              sku: variant.sku,
-              images: variant.images || [],
-              attributeValues: variant.attributeValues || [],
-            });
-          });
-        });
-
-        setVariants(variantList);
-        setFilteredLists(Array(MAX_COMPARE).fill(variantList));
-
-
-        const storedList = JSON.parse(localStorage.getItem("compareList")) || [];
-        if (storedList.length > 0) {
-          setSelectedVariants(storedList);
-          setSearchInputs(
-            storedList.map((v) => v.productName).concat(Array(MAX_COMPARE - storedList.length).fill(""))
-          );
-        }
-
-
-        const attrSet = new Set();
-        variantList.forEach((v) => {
-          v.attributeValues?.forEach((av) => {
-            attrSet.add(av.attribute.name);
-          });
-        });
-        setAllAttributes(Array.from(attrSet));
-      })
-      .catch(console.error);
-  }, []);
-
 
   const handleSelectVariant = (index, variant) => {
     if (selectedVariants.some((v, idx) => v?.variantId === variant.variantId && idx !== index)) {
@@ -190,7 +135,6 @@ export default function ProductsCompare() {
     newFilteredLists[index] = variants;
     setFilteredLists(newFilteredLists);
 
-    // ✅ Cập nhật lại localStorage
     const updated = newSelected.filter((v) => v !== null);
     localStorage.setItem("compareList", JSON.stringify(updated));
   };
@@ -231,8 +175,9 @@ export default function ProductsCompare() {
           <div className="w-full border border-qgray-border">
             <table className="table-wrapper min-w-[900px] border-collapse border border-gray-300">
               <tbody>
-                <tr>
-                  <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA] font-semibold">
+                {/* Hàng đầu tiên có border */}
+                <tr className="border-t border-gray-300">
+                  <td className="w-[233px] pt-[30px] px-[26px] align-top bg-[#FAFAFA] text-[16px] font-semibold leading-[26px]">
                     So sánh sản phẩm
                     <p className="text-[13px] text-qgraytwo mt-2">
                       Tìm kiếm và chọn biến thể để so sánh
@@ -291,7 +236,8 @@ export default function ProductsCompare() {
                   ))}
                 </tr>
 
-                {[ // Table rows
+                {/* Các dòng thông tin khác */}
+                {[
                   { label: "Tên sản phẩm", value: (v) => v?.productName || "-" },
                   {
                     label: "Hình ảnh",
@@ -302,10 +248,6 @@ export default function ProductsCompare() {
                       ) : "-";
                     },
                   },
-                  // {
-                  //   label: "Mô tả",
-                  //   value: (v) => <DescriptionToggle description={v?.productDescription || "-"} />,
-                  // },
                   { label: "Thương hiệu", value: (v) => v?.brand || "-" },
                   {
                     label: "Giá",
@@ -327,8 +269,8 @@ export default function ProductsCompare() {
                     ),
                   },
                 ].map(({ label, value }) => (
-                  <tr key={label} className="border-t border-gray-300">
-                    <td className="text-sm bg-[#FAFAFA] font-semibold px-[26px] py-[20px]">{label}</td>
+                  <tr key={label}>
+                    <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">{label}</td>
                     {selectedVariants.map((v, i) => (
                       <td key={i} className="text-center text-sm px-[26px] py-[20px]">
                         {v ? value(v) : "-"}
@@ -338,8 +280,8 @@ export default function ProductsCompare() {
                 ))}
 
                 {allAttributes.map((attr) => (
-                  <tr key={attr} className="border-t border-gray-300">
-                    <td className="text-sm bg-[#FAFAFA] font-semibold px-[26px] py-[20px]">{attr}</td>
+                  <tr key={attr}>
+                    <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">{attr}</td>
                     {selectedVariants.map((v, i) => {
                       const value = v ? getAttributeValue(v, attr) : "-";
                       return (
