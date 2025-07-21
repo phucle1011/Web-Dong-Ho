@@ -222,23 +222,29 @@ function PromotionGetAll() {
                 </button>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-4">
-                {statusList.map(({ key, label, color, textColor }) => (
-                    <button
-                        key={key}
-                        onClick={() => {
-                            setFilterStatus(key === "all" ? "" : key);
-                            setCurrentPage(1);
-                            getPromotions(1, searchTerm, key === "all" ? "" : key, startDate, endDate);
-                        }}
-                        className={`flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm transition-all ${filterStatus === (key === "all" ? "" : key) ? "bg-[#073272] text-white" : "bg-white text-gray-700"}`}
-                    >
-                        {label}
-                        <span className={`px-2 py-0.5 rounded ${color} ${textColor} text-xs font-semibold`}>
-                            {statusCounts[key] ?? 0}
-                        </span>
-                    </button>
-                ))}
+            <div className="overflow-x-auto">
+                <div className="flex gap-2 mb-4 whitespace-nowrap">
+                    {statusList.map(({ key, label, color, textColor }) => (
+                        <button
+                            key={key}
+                            onClick={() => {
+                                setFilterStatus(key === "all" ? "" : key);
+                                setCurrentPage(1);
+                                getPromotions(1, searchTerm, key === "all" ? "" : key, startDate, endDate);
+                            }}
+                            className={`flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm transition-all 
+                    ${filterStatus === (key === "all" ? "" : key)
+                                    ? "bg-[#073272] text-white"
+                                    : "bg-white text-gray-700"
+                                }`}
+                        >
+                            {label}
+                            <span className={`px-2 py-0.5 rounded ${color} ${textColor} text-xs font-semibold`}>
+                                {statusCounts[key] ?? 0}
+                            </span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-4 items-stretch sm:items-center flex-wrap">

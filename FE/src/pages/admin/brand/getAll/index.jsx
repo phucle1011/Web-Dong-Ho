@@ -307,14 +307,16 @@ function BrandList() {
                             <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
                                 <thead className="bg-gray-100 text-gray-600">
                                     <tr>
-                                        <th className="w-12 px-6 py-3 border border-gray-300">#</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold cursor-pointer">Tên thương hiệu</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Quốc gia</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Logo</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Mô tả</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Trạng thái</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Ngày tạo</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold">Hành động</th>
+                                        <th className="w-12 px-6 py-3 border border-gray-300 whitespace-nowrap">#</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold cursor-pointer whitespace-nowrap">
+                                            Tên thương hiệu
+                                        </th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Quốc gia</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Logo</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Mô tả</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Trạng thái</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Ngày tạo</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
