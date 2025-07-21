@@ -12,11 +12,13 @@ const PromotionProductModel = require("../../models/promotionProductsModel");
 const PromotionModel = require("../../models/promotionsModel");
 
 class ProductClientController {
-  static async getAll(req, res) {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 12;
-      const offset = (page - 1) * limit;
+
+static async getAll(req, res) {
+  try {
+    const { Op } = require('sequelize');
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const offset = (page - 1) * limit;
 
     const whereCondition = {};
     // Ưu tiên lọc sản phẩm không ẩn
@@ -24,6 +26,9 @@ class ProductClientController {
     if (req.query.status && req.query.status !== 'hidden') {
       whereCondition.status = req.query.status;
     }
+
+    // Lọc theo publication_status
+    whereCondition.publication_status = req.query.publication_status || 'published';
 
     // Tìm kiếm theo tên hoặc mô tả
     if (req.query.query) {
@@ -47,7 +52,7 @@ class ProductClientController {
       };
     }
 
-    // Điều kiện lọc biến thể (variants) theo giá
+    // Điều kiện lọc biến thể (variants) theo giá và tồn kho
     const variantWhereCondition = {};
     if (req.query.min_price || req.query.max_price) {
       variantWhereCondition.price = {};
@@ -58,6 +63,8 @@ class ProductClientController {
         variantWhereCondition.price[Op.lte] = parseFloat(req.query.max_price);
       }
     }
+    // Chỉ lấy biến thể có tồn kho
+    variantWhereCondition.stock = { [Op.gt]: 0 };
 
     // Truy vấn sản phẩm với điều kiện chỉ lấy sản phẩm có biến thể
     const { count: totalProducts, rows: products } = await Product.findAndCountAll({
@@ -65,6 +72,19 @@ class ProductClientController {
       order: [["created_at", "DESC"]],
       limit,
       offset,
+      attributes: [
+        'id',
+        'name',
+        'slug',
+        'description',
+        'brand_id',
+        'category_id',
+        'thumbnail',
+        'status',
+        'publication_status',
+        'created_at',
+        'updated_at'
+      ],
       include: [
         {
           model: ProductVariant,
@@ -89,7 +109,7 @@ class ProductClientController {
               ],
             },
           ],
-          required: true, // Chỉ lấy sản phẩm có ít nhất 1 biến thể
+          required: true, // Chỉ lấy sản phẩm có ít nhất 1 biến thể hợp lệ
         },
         {
           model: CategoryModel,
@@ -130,21 +150,21 @@ class ProductClientController {
           return sum + (parseInt(variant.stock) || 0);
         }, 0);
 
-          if (productJson.variants && productJson.variants.length > 0) {
-            for (let variant of productJson.variants) {
-              const promotions = variant.promotionProducts || [];
-              let bestPromotion = null;
-              let lowestPrice = parseFloat(variant.price) || 0;
-              let discountPercent = 0;
+        if (productJson.variants && productJson.variants.length > 0) {
+          for (let variant of productJson.variants) {
+            const promotions = variant.promotionProducts || [];
+            let bestPromotion = null;
+            let lowestPrice = parseFloat(variant.price) || 0;
+            let discountPercent = 0;
 
-              if (promotions.length > 0) {
-                bestPromotion = promotions.reduce((best, promoProduct) => {
-                  const promo = promoProduct.promotion;
-                  if (!promo) return best;
-                  const variantPrice = parseFloat(variant.price) || 0;
+            if (promotions.length > 0) {
+              bestPromotion = promotions.reduce((best, promoProduct) => {
+                const promo = promoProduct.promotion;
+                if (!promo) return best;
+                const variantPrice = parseFloat(variant.price) || 0;
 
-                  let finalPrice = variantPrice;
-                  let currentDiscountPercent = 0;
+                let finalPrice = variantPrice;
+                let currentDiscountPercent = 0;
 
                 if (promo.discount_type === "percentage") {
                   finalPrice -= (finalPrice * parseFloat(promo.discount_value)) / 100;
@@ -174,19 +194,19 @@ class ProductClientController {
                 return best;
               }, null);
 
-                if (bestPromotion && bestPromotion.meets_conditions) {
-                  lowestPrice = bestPromotion.discounted_price;
-                  discountPercent = bestPromotion.discount_percent;
-                }
+              if (bestPromotion && bestPromotion.meets_conditions) {
+                lowestPrice = bestPromotion.discounted_price;
+                discountPercent = bestPromotion.discount_percent;
               }
-
-              variant.promotion = bestPromotion || {
-                discounted_price: lowestPrice,
-                discount_percent: 0,
-                meets_conditions: true,
-              };
             }
+
+            variant.promotion = bestPromotion || {
+              discounted_price: lowestPrice,
+              discount_percent: 0,
+              meets_conditions: true,
+            };
           }
+        }
 
         return productJson;
       })

@@ -37,17 +37,16 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     setSelectedImage((prev) => prev || firstImage);
     setVariantImages((prev) => prev.length === 0 ? variants.flatMap((v) => v.images || []) : prev);
 
-    if (validVariants.length > 0 && !selectedVariant) {
+    if (validVariants.length > 0 && (!selectedVariant || parseInt(selectedVariant.stock) <= 0)) {
       const firstValid = validVariants[0];
       setSelectedVariant(firstValid);
       const firstVariantImages = firstValid.images || [];
       if (firstVariantImages.length > 0) {
         setSelectedImage(firstVariantImages[0].image_url || firstValid.thumbnail || firstImage);
       }
-
-      if (selectedVariant) {
-        checkWishlistStatus(selectedVariant.id);
-      }
+      checkWishlistStatus(firstValid.id);
+    } else if (validVariants.length === 0) {
+      setSelectedVariant(null); // No valid variants available
     }
   }, [product.id, product.thumbnail, variants, selectedVariant]);
 
@@ -64,24 +63,21 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const priceInfo = useMemo(() => {
     let displayPrice = 0;
     let displayOriginalPrice = 0;
-    let hasStock = true;
+    let hasStock = totalStock > 0;
     let discountPercent = 0;
 
     if (representativeVariant && representativeVariant.originalPrice) {
       displayOriginalPrice = parseFloat(representativeVariant.originalPrice) || 0;
       displayPrice = parseFloat(representativeVariant.discountedPrice) || displayOriginalPrice;
       discountPercent = parseFloat(representativeVariant.discountPercent) || 0;
-      hasStock = totalStock > 0;
+    } else if (validVariants.length > 0) {
+      const initialVariant = selectedVariant || validVariants[0];
+      displayOriginalPrice = parseFloat(initialVariant.price) || 0;
+      displayPrice = parseFloat(initialVariant.promotion?.discounted_price || initialVariant.price) || 0;
+      discountPercent = parseFloat(initialVariant.promotion?.discount_percent || 0);
     } else if (variants.length > 0) {
-      if (validVariants.length > 0) {
-        const initialVariant = selectedVariant || validVariants[0];
-        displayOriginalPrice = parseFloat(initialVariant.price) || 0;
-        displayPrice = parseFloat(initialVariant.promotion?.discounted_price || initialVariant.price) || 0;
-        discountPercent = parseFloat(initialVariant.promotion?.discount_percent || 0);
-        hasStock = parseInt(initialVariant.stock) > 0;
-      } else {
-        hasStock = false;
-      }
+      // All variants are out of stock
+      hasStock = false;
     } else {
       displayOriginalPrice = parseFloat(product.price) || 0;
       displayPrice = parseFloat(product.promotion?.discounted_price || product.price) || 0;
@@ -425,20 +421,26 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               </div>
             )}
             <div className="flex items-center space-x-2">
-              <span className="text-red-600 font-semibold text-sm">
-                {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-              </span>
-              {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                <span className="text-gray-400 line-through text-xs">
-                  {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                </span>
+              {hasStock ? (
+                <>
+                  <span className="text-red-600 font-semibold text-sm">
+                    {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                  </span>
+                  {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+                    <span className="text-gray-400 line-through text-xs">
+                      {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-red-600 font-semibold text-sm">Sản phẩm hết hàng</span>
               )}
             </div>
             <div className="flex items-center space-x-2">
               <button
                 className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1}
+                disabled={quantity <= 1 || !hasStock}
               >
                 -
               </button>
@@ -449,11 +451,12 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 className="w-12 text-center border border-gray-300 rounded text-sm"
                 min="1"
                 max={totalStock}
+                disabled={!hasStock}
               />
               <button
                 className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
                 onClick={() => setQuantity(Math.min(totalStock, quantity + 1))}
-                disabled={quantity >= totalStock}
+                disabled={quantity >= totalStock || !hasStock}
               >
                 +
               </button>
@@ -499,11 +502,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       <div className="product-card-img w-full h-[300px] overflow-hidden relative">
         {totalStock > 0 && totalStock < 5 && (
           <div className="absolute top-0 left-0 right-0 px-6 py-0.5 z-10">
-            <div class="progress-title flex justify-between ">
-              <span class="text-xs text-qblack font-400 leading-6">Còn lại</span>
-              <span class="text-sm text-qblack font-600 leading-6">{totalStock}</span>
+            <div className="progress-title flex justify-between">
+              <span className="text-xs text-qblack font-400 leading-6">Còn lại</span>
+              <span className="text-sm text-qblack font-600 leading-6">{totalStock}</span>
             </div>
-            <div class="progress w-full h-[5px] rounded-[22px] bg-primarygray relative overflow-hidden">
+            <div className="progress w-full h-[5px] rounded-[22px] bg-primarygray relative overflow-hidden">
               <div
                 className={`h-full ${type === 3 ? "bg-qyellow" : "bg-qyellow"}`}
                 style={{ width: `${stockPercentage}%` }}
@@ -554,7 +557,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         >
           {productName}
         </p>
-        {displayPrice > 0 ? (
+        {hasStock ? (
           <div className="price-container group-hover:hidden">
             <p className="price flex items-center space-x-2">
               <span
@@ -570,8 +573,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </p>
           </div>
         ) : (
-          <p className="price text-qgray font-600 text-[16px] group-hover:hidden">
-            Giá không khả dụng
+          <p className="price text-red-600 font-600 text-[16px] group-hover:hidden">
+            Sản phẩm hết hàng
           </p>
         )}
       </div>
@@ -598,71 +601,69 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             <ThinLove className="w-5 h-5" fill={isInWishlist ? "#FF0000" : "none"} stroke={isInWishlist ? "#FF0000" : "#000000"} />
           </span>
         </a>
-<a
-  href="#"
-  onClick={async (e) => {
-    e.preventDefault();
+        <a
+          href="#"
+          onClick={async (e) => {
+            e.preventDefault();
 
-    try {
-      const res = await fetch("http://localhost:5000/products/compare");
-      const data = await res.json();
+            try {
+              const res = await fetch("http://localhost:5000/products/compare");
+              const data = await res.json();
 
-      if (!data || !data.data) {
-        toast.error("Không thể lấy dữ liệu sản phẩm để so sánh.");
-        return;
-      }
+              if (!data || !data.data) {
+                toast.error("Không thể lấy dữ liệu sản phẩm để so sánh.");
+                return;
+              }
 
-      const allVariants = [];
+              const allVariants = [];
 
-      data.data.forEach((product) => {
-        product.variants.forEach((variant) => {
-          allVariants.push({
-            productId: product.id,
-            productName: product.name,
-            productDescription: product.description,
-            productThumbnail: product.thumbnail,
-            brand: product.brand?.name || "-",
-            average_rating: product.average_rating,
-            variantId: variant.id,
-            price: variant.price,
-            stock: variant.stock,
-            sku: variant.sku,
-            images: variant.images,
-            attributeValues: variant.attributeValues,
-          });
-        });
-      });
+              data.data.forEach((product) => {
+                product.variants.forEach((variant) => {
+                  allVariants.push({
+                    productId: product.id,
+                    productName: product.name,
+                    productDescription: product.description,
+                    productThumbnail: product.thumbnail,
+                    brand: product.brand?.name || "-",
+                    average_rating: product.average_rating,
+                    variantId: variant.id,
+                    price: variant.price,
+                    stock: variant.stock,
+                    sku: variant.sku,
+                    images: variant.images,
+                    attributeValues: variant.attributeValues,
+                  });
+                });
+              });
 
-      // Tìm biến thể đầu tiên của sản phẩm bạn đang click
-      const clickedVariant = allVariants.find(
-        (v) => v.productId === product.id && v.variantId === product.variants?.[0]?.id
-      );
+              const clickedVariant = allVariants.find(
+                (v) => v.productId === product.id && v.variantId === product.variants?.[0]?.id
+              );
 
-      if (!clickedVariant) {
-        toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
-        return;
-      }
+              if (!clickedVariant) {
+                toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
+                return;
+              }
 
-      const current = JSON.parse(localStorage.getItem("compareList")) || [];
-      const exists = current.find((item) => item.variantId === clickedVariant.variantId);
+              const current = JSON.parse(localStorage.getItem("compareList")) || [];
+              const exists = current.find((item) => item.variantId === clickedVariant.variantId);
 
-      if (!exists) {
-        const updated = [...current, clickedVariant].slice(0, 4);
-        localStorage.setItem("compareList", JSON.stringify(updated));
-      }
+              if (!exists) {
+                const updated = [...current, clickedVariant].slice(0, 4);
+                localStorage.setItem("compareList", JSON.stringify(updated));
+              }
 
-      navigate("/products-compaire");
-    } catch (error) {
-      console.error(error);
-      toast.error("Đã xảy ra lỗi khi lấy dữ liệu so sánh.");
-    }
-  }}
->
-  <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-    <Compair className="w-5 h-5" />
-  </span>
-</a>
-
+              navigate("/products-compaire");
+            } catch (error) {
+              console.error(error);
+              toast.error("Đã xảy ra lỗi khi lấy dữ liệu so sánh.");
+            }
+          }}
+        >
+          <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
+            <Compair className="w-5 h-5" />
+          </span>
+        </a>
       </div>
       <QuickViewDialog />
     </div>
