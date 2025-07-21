@@ -133,8 +133,9 @@ export default function OrderTab() {
   }, [currentPage, statusFilter]);
 
   const deleteOrder = async (reason) => {
-    if (!selectedOrder) return;
+    if (!selectedOrder || selectedOrder.isCanceling) return;
     try {
+      setSelectedOrder({ ...selectedOrder, isCanceling: true });
       await axios.put(
         `${Constants.DOMAIN_API}/orders/cancel/${selectedOrder.id}`,
         { cancellation_reason: reason }
@@ -289,12 +290,21 @@ export default function OrderTab() {
   const FormDelete = ({ isOpen, onClose, onConfirm, message = "Bạn có chắc chắn muốn xóa?" }) => {
     const [reason, setReason] = useState("");
     const [customReason, setCustomReason] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
     if (!isOpen) return null;
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
+      if (isLoading) return;
+
+      setIsLoading(true);
       const finalReason = reason === "Khác" ? customReason : reason;
-      onConfirm(finalReason);
+
+      try {
+        await onConfirm(finalReason);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     return (
@@ -338,11 +348,11 @@ export default function OrderTab() {
             </button>
             <button
               onClick={handleConfirm}
-              disabled={reason === "" || (reason === "Khác" && customReason.trim() === "")}
-              className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ${(reason === "Khác" && !customReason.trim()) ? "opacity-50 cursor-not-allowed" : ""
+              disabled={isLoading || reason === "" || (reason === "Khác" && customReason.trim() === "")}
+              className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ${isLoading || (reason === "Khác" && !customReason.trim()) ? "opacity-50 cursor-not-allowed" : ""
                 }`}
             >
-              Đồng ý
+              {isLoading ? "Đang xử lý..." : "Đồng ý"}
             </button>
           </div>
         </div>
@@ -625,49 +635,49 @@ export default function OrderTab() {
                                             })}
                                           </td>
                                           <td className="p-2">
-                                         {["delivered", "completed"].includes(order.status) ? (
-  <button
-    className="text-blue-600 hover:underline"
-    onClick={() => {
-      const product = item.variant?.product;
-      const productId = product?.id;
-      const deliveredAt = new Date(item.updated_at);
-      const currentDate = new Date();
-      const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
+                                            {["delivered", "completed"].includes(order.status) ? (
+                                              <button
+                                                className="text-blue-600 hover:underline"
+                                                onClick={() => {
+                                                  const product = item.variant?.product;
+                                                  const productId = product?.id;
+                                                  const deliveredAt = new Date(item.updated_at);
+                                                  const currentDate = new Date();
+                                                  const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
 
-      if (daysPassed > 7) {
-        toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
-        return;
-      }
+                                                  if (daysPassed > 7) {
+                                                    toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
+                                                    return;
+                                                  }
 
-      const editedOnce = item.comment && Number(item.comment.edited) === 1;
+                                                  const editedOnce = item.comment && Number(item.comment.edited) === 1;
 
-      if (item.comment) {
-        if (editedOnce) {
-          navigate(`/product/${productId}#comment-${item.comment.id}`);
-        } else {
-          sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-          navigate(`/product/${productId}#review`);
-        }
-      } else {
-        sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-        navigate(`/product/${productId}#review`);
-      }
-    }}
-  >
-    {item.comment ? (
-      Number(item.comment.edited) === 1 ? (
-        <span>Xem đánh giá</span>
-      ) : (
-        <span>Chỉnh sửa đánh giá</span>
-      )
-    ) : (
-      <span>Đánh giá</span>
-    )}
-  </button>
-) : (
-  <span className="text-gray-400 italic">Chưa thể đánh giá</span>
-)}
+                                                  if (item.comment) {
+                                                    if (editedOnce) {
+                                                      navigate(`/product/${productId}#comment-${item.comment.id}`);
+                                                    } else {
+                                                      sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+                                                      navigate(`/product/${productId}#review`);
+                                                    }
+                                                  } else {
+                                                    sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+                                                    navigate(`/product/${productId}#review`);
+                                                  }
+                                                }}
+                                              >
+                                                {item.comment ? (
+                                                  Number(item.comment.edited) === 1 ? (
+                                                    <span>Xem đánh giá</span>
+                                                  ) : (
+                                                    <span>Chỉnh sửa đánh giá</span>
+                                                  )
+                                                ) : (
+                                                  <span>Đánh giá</span>
+                                                )}
+                                              </button>
+                                            ) : (
+                                              <span className="text-gray-400 italic">Chưa thể đánh giá</span>
+                                            )}
                                           </td>
 
 
