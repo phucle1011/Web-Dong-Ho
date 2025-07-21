@@ -45,8 +45,11 @@ router.get('/wishlist', WishlistController.getAllWishlists);
 router.get('/users/:userId/wishlist', WishlistController.getWishlistByUser);
 router.post('/wishlist', WishlistController.addToWishlist);
 router.delete('/users/:userId/wishlist/:productVariantId', WishlistController.removeFromWishlist);
-router.get('/users/wishlist/search', WishlistController.searchWishlist);
+router.get('/wishlist/search', WishlistController.searchWishlist);
 router.get('/users/:userId/wishlist/search', WishlistController.searchWishlistByUserProduct);
+router.get('/wishlist/most-favorited', WishlistController.getMostFavoritedVariants);
+router.get('/wishlist/recently-favorited', WishlistController.getRecentlyFavoritedVariants);
+
 
 //------------------[ CATEGORY ]------------------\
 router.get("/category/list", categoryController.getAll);

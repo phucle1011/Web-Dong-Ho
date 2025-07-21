@@ -273,6 +273,12 @@ function AdminProfile() {
                 >
                     Quay lại
                 </button>
+                <button
+                    onClick={() => navigate("/")}
+                    className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 flex items-center"
+                >
+                    Về trang chủ
+                </button>
             </div>
         </div>
     );

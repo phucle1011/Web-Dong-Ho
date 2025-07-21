@@ -5,9 +5,8 @@ const UserModel = require('../../models/usersModel');
 const ProductVariantAttributeValueModel = require("../../models/productVariantAttributeValuesModel");
 const ProductAttributeModel = require("../../models/productAttributesModel");
 const VariantImageModel = require("../../models/variantImagesModel");
+const { Op, fn, col } = require('sequelize');
 
-
-const { Op } = require('sequelize');
 
 class WishlistController {
 
@@ -315,6 +314,88 @@ class WishlistController {
             });
         } catch (error) {
             console.error("Lỗi khi tìm kiếm sản phẩm yêu thích:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Thống kê sản phẩm biến thể được yêu thích nhiều nhất
+    static async getMostFavoritedVariants(req, res) {
+        try {
+            const limit = parseInt(req.query.limit) || 5;
+            const variants = await WishlistModel.findAll({
+                attributes: [
+                    'product_variant_id',
+                    [fn('COUNT', col('product_variant_id')), 'favoriteCount'],
+                ],
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'sku', 'price'],
+                        include: [
+                            {
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['id', 'name', 'thumbnail'],
+                            },
+                        ],
+                    },
+                ],
+                group: ['product_variant_id', 'variant.id', 'variant->product.id'],
+                order: [[fn('COUNT', col('product_variant_id')), 'DESC']],
+                limit: limit,
+                raw: true,
+                nest: true,
+            });
+
+            res.status(200).json({
+                status: 200,
+                message: 'Lấy danh sách sản phẩm biến thể yêu thích nhiều nhất thành công',
+                data: variants,
+            });
+        } catch (error) {
+            console.error("Lỗi khi lấy thống kê sản phẩm yêu thích:", error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Thống kê sản phẩm biến thể được yêu thích gần đây
+    static async getRecentlyFavoritedVariants(req, res) {
+        try {
+            const limit = parseInt(req.query.limit) || 5;
+            const variants = await WishlistModel.findAll({
+                limit: limit,
+                order: [['created_at', 'DESC']],
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'sku', 'price'],
+                        include: [
+                            {
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['id', 'name', 'thumbnail'],
+                            },
+                        ],
+                    },
+                    {
+                        model: UserModel,
+                        as: 'user',
+                        attributes: ['id', 'name'],
+                    },
+                ],
+                raw: true,
+                nest: true,
+            });
+
+            res.status(200).json({
+                status: 200,
+                message: 'Lấy danh sách sản phẩm biến thể được yêu thích gần đây thành công',
+                data: variants,
+            });
+        } catch (error) {
+            console.error("Lỗi khi lấy sản phẩm yêu thích gần đây:", error);
             res.status(500).json({ error: error.message });
         }
     }

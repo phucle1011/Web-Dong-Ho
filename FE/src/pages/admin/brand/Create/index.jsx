@@ -330,14 +330,14 @@ function BrandCreate({ onSuccess, isModal = false }) {
             type="submit"
             onClick={handleSubmit(onSubmit)}
             disabled={loading}
-            className="bg-[#073272] text-white px-6 py-3 rounded-md shadow-md hover:bg-[#052354] transition w-full md:w-auto"
+            className="bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 transition disabled:opacity-70"
           >
             {loading ? "Đang thêm thương hiệu..." : "Thêm Thương Hiệu"}
           </button>
 
           <button
             onClick={() => navigate("/admin/brand/getAll")}
-            className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out w-full md:w-auto"
+            className="bg-gray-600 text-white px-6 py-2 rounded shadow hover:bg-gray-700 transition"
           >
             Quay lại
           </button>

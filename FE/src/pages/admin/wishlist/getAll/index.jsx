@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
-import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaEye } from 'react-icons/fa';
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaEye, FaHeart, FaStar, FaClock, FaUser } from 'react-icons/fa';
 
 function WishlistList() {
   const [groupedWishlistItems, setGroupedWishlistItems] = useState([]);
+  const [mostFavoritedVariants, setMostFavoritedVariants] = useState([]);
+  const [recentlyFavoritedVariants, setRecentlyFavoritedVariants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -16,6 +19,7 @@ function WishlistList() {
 
   useEffect(() => {
     fetchGroupedWishlist(currentPage);
+    fetchStatistics();
   }, [currentPage]);
 
   const groupWishlistData = (data) => {
@@ -38,11 +42,28 @@ function WishlistList() {
   const fetchGroupedWishlist = async (page) => {
     setLoading(true);
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist?page=${page}&limit=${limit}`);
-      const groupedData = groupWishlistData(res.data.data);
-      setGroupedWishlistItems(groupedData);
-      setTotalPages(res.data.totalPages);
-      setSearchError('');
+      let url;
+      let params = { page, limit };
+
+      if (appliedSearchTerm.trim()) {
+        url = `${Constants.DOMAIN_API}/admin/wishlist/search`;
+        params.searchTerm = appliedSearchTerm.trim();
+      } else {
+        url = `${Constants.DOMAIN_API}/admin/wishlist`;
+      }
+
+      const res = await axios.get(url, { params });
+
+      if (res.data.status === 200) {
+        const groupedData = groupWishlistData(res.data.data);
+        setGroupedWishlistItems(groupedData);
+        setTotalPages(res.data.totalPages || 1);
+        setSearchError('');
+      } else {
+        setGroupedWishlistItems([]);
+        setTotalPages(1);
+        setSearchError("Không tìm thấy danh sách yêu thích nào.");
+      }
     } catch (error) {
       console.error("Lỗi khi lấy danh sách yêu thích:", error);
       toast.error("Lỗi khi tải danh sách yêu thích");
@@ -51,48 +72,33 @@ function WishlistList() {
     }
   };
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setSearchError('');
+  const fetchStatistics = async () => {
+    try {
+      // Lấy sản phẩm biến thể được yêu thích nhiều nhất
+      const mostFavoritedRes = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist/most-favorited?limit=5`);
+      if (mostFavoritedRes.data.status === 200) {
+        setMostFavoritedVariants(mostFavoritedRes.data.data);
+      }
+
+      // Lấy sản phẩm biến thể được yêu thích gần đây
+      const recentlyFavoritedRes = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist/recently-favorited?limit=5`);
+      if (recentlyFavoritedRes.data.status === 200) {
+        setRecentlyFavoritedVariants(recentlyFavoritedRes.data.data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy thống kê sản phẩm yêu thích:", error);
+      toast.error("Lỗi khi tải thống kê sản phẩm yêu thích");
+    }
   };
 
-  const handleSearchSubmit = async () => {
-  const value = searchTerm.trim();
-  if (!value) {
-    toast.warning("Vui lòng nhập từ khóa tìm kiếm.");
-    return;
-  }
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    // Không gọi API khi thay đổi input, chỉ cập nhật state
+  };
 
-  setLoading(true);
-  try {
-    const res = await axios.get(
-      `${Constants.DOMAIN_API}/admin/users/wishlist/search?searchTerm=${encodeURIComponent(value)}&page=1&limit=${limit}`
-    );
-    const groupedSearchData = groupWishlistData(res.data.data);
-
-    if (groupedSearchData.length === 0) {
-      setSearchError("Không tìm thấy kết quả phù hợp.");
-      setGroupedWishlistItems([]);
-      setTotalPages(1);
-    } else {
-      setGroupedWishlistItems(groupedSearchData);
-      setTotalPages(res.data.totalPages || 1);
-      setSearchError('');
-    }
-  } catch (error) {
-    console.error("Lỗi khi tìm kiếm:", error.response ? error.response.data : error.message);
-    setSearchError("Không thể tải kết quả tìm kiếm. Vui lòng kiểm tra backend.");
-    setGroupedWishlistItems([]);
-    setTotalPages(1);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleClearSearch = () => {
-    setSearchTerm('');
+  const handleSearchSubmit = () => {
     setCurrentPage(1);
-    fetchGroupedWishlist(1);
+    setAppliedSearchTerm(searchTerm);
   };
 
   const handlePageChange = (page) => {
@@ -106,28 +112,108 @@ function WishlistList() {
     return '';
   };
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
         <h2 className="text-xl font-semibold mb-4">Danh sách yêu thích</h2>
-        <div className="mb-4 relative flex">
+
+        {/* Thống kê sản phẩm yêu thích */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Thống kê sản phẩm yêu thích</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Sản phẩm biến thể được yêu thích nhiều nhất */}
+            <div className="border p-4 rounded-md bg-gray-50 hover:bg-gray-100 transition">
+              <h4 className="font-medium mb-2 flex items-center">
+                <FaStar className="text-gray-600 mr-2" /> Top sản phẩm được yêu thích nhiều nhất
+              </h4>
+              {mostFavoritedVariants.length > 0 ? (
+                <div className="space-y-3">
+                  {mostFavoritedVariants.slice(0, 3).map((item, index) => (
+                    <div key={item.product_variant_id} className="flex items-center space-x-3 p-3 bg-white rounded-md shadow-sm hover:shadow-md transition">
+                      {item.variant?.product?.thumbnail && (
+                        <img
+                          src={item.variant.product.thumbnail.startsWith('http') 
+                            ? item.variant.product.thumbnail 
+                            : `${Constants.DOMAIN_API}/Uploads/${item.variant.product.thumbnail}`}
+                          alt={item.variant.product.name}
+                          className="w-16 h-16 object-cover rounded-md"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800">{item.variant?.product?.name} (SKU: {item.variant?.sku})</p>
+                        <p className="text-gray-600 text-sm">Số lần: <span className="font-semibold">{item.favoriteCount}</span></p>
+                        <p className="text-gray-600 text-sm">Giá: {formatCurrency(item.variant?.price)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic text-center">Không có dữ liệu</p>
+              )}
+            </div>
+
+            {/* Sản phẩm biến thể được yêu thích gần đây */}
+            <div className="border p-4 rounded-md bg-gray-50 hover:bg-gray-100 transition">
+              <h4 className="font-medium mb-2 flex items-center">
+                <FaClock className="text-gray-600 mr-2" /> Sản phẩm được yêu thích gần đây
+              </h4>
+              {recentlyFavoritedVariants.length > 0 ? (
+                <div className="space-y-3">
+                  {recentlyFavoritedVariants.slice(0, 3).map((item, index) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-3 bg-white rounded-md shadow-sm hover:shadow-md transition">
+                      {item.variant?.product?.thumbnail && (
+                        <img
+                          src={item.variant.product.thumbnail.startsWith('http') 
+                            ? item.variant.product.thumbnail 
+                            : `${Constants.DOMAIN_API}/Uploads/${item.variant.product.thumbnail}`}
+                          alt={item.variant.product.name}
+                          className="w-16 h-16 object-cover rounded-md"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800">{item.variant?.product?.name} (SKU: {item.variant?.sku})</p>
+                        <p className="text-gray-600 text-sm">Người thêm: <span className="font-semibold">{item.user?.name}</span></p>
+                        <p className="text-gray-600 text-sm">Thời gian: {formatDate(item.created_at)}</p>
+                        <p className="text-gray-600 text-sm">Giá: {formatCurrency(item.variant?.price)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic text-center">Không có dữ liệu</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Tìm kiếm */}
+        <div className="mb-4 relative flex items-center">
           <input
             type="text"
-            placeholder="Tìm kiếm theo tên người dùng..."
+            placeholder="Tìm kiếm theo tên sản phẩm hoặc người dùng..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="button"
-            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2"
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2 flex items-center"
             onClick={handleSearchSubmit}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
-            </svg>
+            <FaSearch className="mr-1" /> Tìm kiếm
           </button>
         </div>
+
         {loading ? (
           <div className="text-center py-4">Đang tải dữ liệu...</div>
         ) : (
@@ -162,7 +248,7 @@ function WishlistList() {
                                 <div key={item.id} className="flex items-center space-x-3 p-2 border rounded-md">
                                   {product?.thumbnail && (
                                     <img
-                                      src={product.thumbnail.startsWith('http') ? product.thumbnail : `${Constants.DOMAIN_API}/uploads/${product.thumbnail}`}
+                                      src={product.thumbnail.startsWith('http') ? product.thumbnail : `${Constants.DOMAIN_API}/Uploads/${product.thumbnail}`}
                                       alt={product.name}
                                       className="w-16 h-16 object-cover rounded"
                                     />
