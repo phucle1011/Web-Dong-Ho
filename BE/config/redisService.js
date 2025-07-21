@@ -4,8 +4,7 @@ class RedisService {
     constructor() {
         this.client = redis;
         this.isConnected = false;
-        
-        // Thêm sự kiện kết nối
+
         this.client.on('connect', () => {
             console.log('Redis connected');
             this.isConnected = true;
@@ -25,10 +24,8 @@ class RedisService {
     async ensureConnection() {
         if (!this.isConnected) {
             try {
-                // Nếu sử dụng ioredis, kết nối tự động nên không cần connect()
-                // Nhưng có thể kiểm tra trạng thái
+
                 if (this.client.status !== 'ready') {
-                    // Tạo kết nối mới nếu cần
                     this.client = new Redis({
                         host: '127.0.0.1',
                         port: 6379,
