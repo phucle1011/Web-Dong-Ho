@@ -59,6 +59,7 @@ router.get('/blogs/:id', BlogController.getBlogById);
 
 //------------------[ Contact ]------------------
 router.post("/contact", ContactController.sendContactEmail);
+router.post("/contact/faq", ContactController.sendFaqEmail);
 
 //------------------[ Promotions ]------------------
 router.post('/promotions/apply',checkJWT, PromotionController.applyDiscount);

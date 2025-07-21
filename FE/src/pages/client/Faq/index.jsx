@@ -1,9 +1,53 @@
+import { useState } from "react";
+import Swal from "sweetalert2";
 import Accodion from "../Helpers/Accodion";
-import InputCom from "../Helpers/InputCom";
+import InputFaq from "../Helpers/InputFaq";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 
 export default function Faq() {
+  const [formData, setFormData] = useState({
+    first_name: "",
+    email: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const { first_name, email, message } = formData;
+
+  if (!first_name || !email || !message) {
+    Swal.fire("Thiếu thông tin", "Vui lòng điền đầy đủ các trường.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:5000/contact/faq", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      Swal.fire(" Gửi thành công!", data.message, "success");
+      setFormData({ first_name: "", email: "", message: "" });
+    } else {
+      Swal.fire(" Lỗi", data.error || "Không thể gửi email.", "error");
+    }
+  } catch (error) {
+    Swal.fire(" Lỗi hệ thống", "Không thể kết nối đến server.", "error");
+  }
+};
+
+
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="faq-page-wrapper w-full mb-10">
@@ -31,14 +75,11 @@ export default function Faq() {
                 <Accodion
                   init
                   title="02. Thời gian giao hàng mất bao lâu?"
-                  des="Khu vực nội thành: 1-3 ngày làm việc. Còn các tỉnh thành khác: 3-5 ngày làm việc
-(Một số khu vực xa có thể mất thêm thời gian)"
+                  des="Khu vực nội thành: 1-3 ngày làm việc. Còn các tỉnh thành khác: 3-5 ngày làm việc (Một số khu vực xa có thể mất thêm thời gian)"
                 />
                 <Accodion
                   title="03. Tôi có thể đổi trả sản phẩm không?"
-                  des="Có. Bạn có thể đổi hoặc trả sản phẩm trong vòng 7 ngày kể từ khi nhận hàng, với điều kiện: ản phẩm còn nguyên hộp, chưa qua sử dụng
-                  , có hóa đơn mua hàng
-Lưu ý: Không áp dụng cho các sản phẩm khuyến mãi, giảm giá."
+                  des="Có. Bạn có thể đổi hoặc trả sản phẩm trong vòng 7 ngày kể từ khi nhận hàng, với điều kiện: sản phẩm còn nguyên hộp, chưa qua sử dụng, có hóa đơn mua hàng. Lưu ý: Không áp dụng cho các sản phẩm khuyến mãi, giảm giá."
                 />
                 <Accodion
                   title="04. Đồng hồ có được bảo hành không?"
@@ -75,34 +116,41 @@ Lưu ý: Không áp dụng cho các sản phẩm khuyến mãi, giảm giá."
                 </div>
                 <div className="inputs mt-5">
                   <div className="mb-4">
-                    <InputCom
-                      label="Frist Name*"
-                      placeholder="Demo Name"
+                    <InputFaq
+                      label="Tên Khách Hàng"
+                      placeholder="Họ và tên của bạn"
                       name="first_name"
                       inputClasses="h-[50px]"
+                      value={formData.first_name}
+                      onChange={handleChange}
                     />
                   </div>
                   <div className="mb-4">
-                    <InputCom
-                      label="Email Address*"
+                    <InputFaq
+                      label="Địa Chỉ Email"
                       placeholder="info@quomodosoft.com"
                       name="email"
                       inputClasses="h-[50px]"
+                      value={formData.email}
+                      onChange={handleChange}
                     />
                   </div>
                   <div className="mb-5">
                     <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 ">
-                      Message*
+                      Nội Dung
                     </h6>
                     <textarea
-                      placeholder="Type your message here"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      placeholder="mời bạn nhập nội dung câu hỏi của mình"
                       className="w-full h-[105px] focus:ring-0 focus:outline-none p-3 border border-qgray-border placeholder:text-sm"
                     ></textarea>
                   </div>
                   <div>
-                    <a href="#">
+                    <a href="#" onClick={handleSubmit}>
                       <div className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center">
-                        <span>Send Now</span>
+                        <span>Gửi</span>
                       </div>
                     </a>
                   </div>
