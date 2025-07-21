@@ -161,7 +161,7 @@ export default function CardPage({ cart = true }) {
       });
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.message || "Có lỗi xảy ra khi áp dụng mã.");
       }

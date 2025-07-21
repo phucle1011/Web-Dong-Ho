@@ -1136,8 +1136,8 @@ class OrderController {
             };
 
             console.log("Extra data for VNPay:", extraData);
-            
-            
+
+
             const redisKey = `order:${orderId}`;
 
             const saved = await RedisService.setData(redisKey, extraData, 86400);
@@ -1293,18 +1293,18 @@ class OrderController {
                 discountAmount,
                 promotion_user_id
             } = decoded;
-            
+
             const updatedProducts = await Promise.all(
-  products.map(async (item) => {
-    const variant = await ProductVariantModel.findByPk(item.variant_id, {
-      include: ["product", "attributeValues", "images"],
-    });
-    return {
-      ...item,
-      variant, 
-    };
-  })
-);
+                products.map(async (item) => {
+                    const variant = await ProductVariantModel.findByPk(item.variant_id, {
+                        include: ["product", "attributeValues", "images"],
+                    });
+                    return {
+                        ...item,
+                        variant,
+                    };
+                })
+            );
 
             let totalPrice = 0;
             const detailedCart = [];
@@ -1370,10 +1370,10 @@ class OrderController {
                         );
                     }
 
-                    if (selectedVoucher.special_promotion) {
-                        const promoUser = await PromotionUser.findOne({
+                    if (selectedVoucher && promotion_user_id) {
+                        const promoUser = await PromotionUserModel.findOne({
                             where: {
-                                promotion_id: selectedVoucher.id,
+                                id: parseInt(promotion_user_id),
                                 user_id,
                                 used: false,
                                 email_sent: true,
