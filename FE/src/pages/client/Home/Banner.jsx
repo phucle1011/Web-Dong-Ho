@@ -71,6 +71,16 @@ export default function Banner({ className }) {
             </div>
             <SimpleSlider settings={settings} selector={sliderRef}>
               <div className="item w-full xl:h-[733px] h-[500px]">
+                 <video
+    className="absolute top-0 left-0 w-full h-full object-cover"
+    src="https://cdn.citizen-vietnam.vn/wp-content/uploads/2024/12/Series8-890Mechanical-NB6060-58L-2.mp4"
+    autoPlay
+    muted
+    loop
+    playsInline
+  ></video>
+              </div>  
+              <div className="item w-full xl:h-[733px] h-[500px]">
                 <div
                   className="w-full h-full relative"
                   style={{
@@ -140,16 +150,7 @@ export default function Banner({ className }) {
                   </div>
                 </div>
               </div>
-              <div className="item w-full xl:h-[733px] h-[500px]">
-                 <video
-    className="absolute top-0 left-0 w-full h-full object-cover"
-    src="https://cdn.citizen-vietnam.vn/wp-content/uploads/2024/12/Series8-890Mechanical-NB6060-58L-2.mp4"
-    autoPlay
-    muted
-    loop
-    playsInline
-  ></video>
-              </div>
+              
               <div className="item w-full xl:h-[733px] h-[500px]">
                   <div
                   style={{

@@ -80,7 +80,7 @@ export default function HomeThree() {
         />
         <ProductsAds
           ads={[
-            `https://img.pikbest.com/origin/06/43/50/946pIkbEsTIUu.jpg!bwr800`,
+            `https://res.cloudinary.com/disgf4yl7/image/upload/v1752939868/mquyniqauymcrkktt6wq.jpg`,
           ]}
           className="products-ads-section mb-[60px]"
         />
@@ -108,8 +108,8 @@ export default function HomeThree() {
 
         <ProductsAds
           ads={[
-            `https://img.pikbest.com/origin/06/42/90/276pIkbEsTF5w.jpg!bwr800`,
-            `https://img.pikbest.com/origin/06/39/82/38epIkbEsTCR7.jpg!bwr800`,
+            `https://res.cloudinary.com/disgf4yl7/image/upload/v1752939639/aznurov8sarxfem0ojzx.jpg`,
+            `https://res.cloudinary.com/disgf4yl7/image/upload/v1752939816/zunyjqffvb2s8lcwc9tp.jpg`,
           ]}
           sectionHeight="sm:h-[295px] h-full"
           className="products-ads-section mb-[60px]"

@@ -533,7 +533,7 @@ console.log(res.data?.data);
                         </Link>
                         {variant.canDelete && (
                           <button
-                            onClick={() => handleDeleteVariant(variant.id)}
+                            onClick={() => setSelectedProduct(variant)}
                             className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
                             title="Xoá biến thể"
                           >

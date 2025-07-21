@@ -165,7 +165,6 @@ export default function AllProductPage() {
   const renderPagination = () => {
     const { currentPage, limit, totalProducts } = pagination;
     const totalPages = Math.ceil(totalProducts / limit);
-    console.log(totalPages);
     
     // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ 12 sản phẩm và có sản phẩm ở trang tiếp theo
     const showNextPage = products.length === limit && totalProducts > currentPage * limit;

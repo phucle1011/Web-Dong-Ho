@@ -37,7 +37,7 @@ const EditVariantForm = () => {
           sku: data.sku || "",
           price: data.price || "",
           stock: data.stock || "",
-          product_id:data.product_id || "",
+          product_id: data.product_id || "",
           attributes:
             data.attributeValues?.map((attr) => ({
               id: attr.id,
@@ -49,7 +49,7 @@ const EditVariantForm = () => {
               id: img.id,
               url: img.image_url,
             })) || [],
-        });        
+        });
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
         toast.error("Lỗi khi tải dữ liệu!");
@@ -58,7 +58,6 @@ const EditVariantForm = () => {
 
     fetchData();
   }, [id]);
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -86,8 +85,10 @@ const EditVariantForm = () => {
       const url = await uploadToCloudinary(file);
       const newImages = [...formData.images];
       newImages[index] = { id: null, url };
+      console.log(newImages);
+
       setFormData((prev) => ({ ...prev, images: newImages }));
-      
+
       toast.success("Tải ảnh lên thành công!");
     } catch (error) {
       console.error("Upload thất bại:", error);
@@ -115,47 +116,47 @@ const EditVariantForm = () => {
     newAttributes.splice(index, 1);
     setFormData((prev) => ({ ...prev, attributes: newAttributes }));
   };
-    
 
   const handleDeleteImage = async (index) => {
-  const image = formData.images[index];
-  if (!image) return;
-console.log(image);
+    const image = formData.images[index];
+    if (!image) return;
+    console.log(image);
 
-  try {
-    // Nếu ảnh đã lưu trong DB (có id), xóa theo id
-    if (image.id) {
-      await axios.delete(
-        `${Constants.DOMAIN_API}/admin/variant-images/${image.id}`
-      );
-    } else if (image.url.public_id) {
-      // Nếu ảnh chưa lưu DB nhưng đã upload lên Cloudinary thì xóa theo public_id
-      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
-        public_id: image.url.public_id,
-      });
+    try {
+      // Nếu ảnh đã lưu trong DB (có id), xóa theo id
+      if (image.id) {
+        await axios.delete(
+          `${Constants.DOMAIN_API}/admin/variant-images/${image.id}`
+        );
+      } else if (image.url.public_id) {
+        // Nếu ảnh chưa lưu DB nhưng đã upload lên Cloudinary thì xóa theo public_id
+        await axios.post(
+          `${Constants.DOMAIN_API}/admin/products/imagesClauding`,
+          {
+            public_id: image.url.public_id,
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi xóa ảnh:", error);
+      toast.error("Xoá ảnh thất bại!");
+      return;
     }
-  } catch (error) {
-    console.error("Lỗi khi xóa ảnh:", error);
-    toast.error("Xoá ảnh thất bại!");
-    return;
-  }
 
-  // Xóa ảnh khỏi state
-  const newImages = [...formData.images];
-  newImages.splice(index, 1);
-  setFormData((prev) => ({ ...prev, images: newImages }));
+    // Xóa ảnh khỏi state
+    const newImages = [...formData.images];
+    newImages.splice(index, 1);
+    setFormData((prev) => ({ ...prev, images: newImages }));
 
-  toast.success("Đã xoá ảnh.");
-};
+    toast.success("Đã xoá ảnh.");
+  };
 
-
- const addImageField = () => {
-  setFormData((prev) => ({
-    ...prev,
-    images: [...prev.images, { id: null, url: "" }],
-  }));
-};
-
+  const addImageField = () => {
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, { id: null, url: "" }],
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -233,73 +234,133 @@ console.log(image);
           />
         </div>
       </div>
-<div className="flex flex-col md:flex-row gap-4">
-      {/* Thuộc tính */}
-      <fieldset className="flex-1 border rounded p-4">
-        <legend className="font-semibold text-lg px-2">Thuộc tính</legend>
-        <div className="space-y-4 mt-2">
-          {formData.attributes.map((attr, index) => {
-            const selectedAttr = attributesList.find(
-              (item) => item.id === parseInt(attr.attribute_id)
-            );
-            const isColor =
-              selectedAttr?.name.toLowerCase() === "color" ||
-              selectedAttr?.name.toLowerCase() === "màu";
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Thuộc tính */}
+        <fieldset className="flex-1 border rounded p-4">
+          <legend className="font-semibold text-lg px-2">Thuộc tính</legend>
+          <div className="space-y-4 mt-2">
+            {formData.attributes.map((attr, index) => {
+              const selectedAttr = attributesList.find(
+                (item) => item.id === parseInt(attr.attribute_id)
+              );
+              const isColor =
+                selectedAttr?.name.toLowerCase() === "color" ||
+                selectedAttr?.name.toLowerCase() === "màu";
 
-            return (
-              <div
-                key={index}
-                className="flex flex-col md:flex-row items-center gap-4"
-              >
-                <select
-                  value={attr.attribute_id}
-                  onChange={(e) =>
-                    handleAttributeChange(index, "attribute_id", e.target.value)
-                  }
-                  className="border p-2 rounded w-full md:w-1/3"
+              return (
+                <div
+                  key={index}
+                  className="flex flex-col md:flex-row items-center gap-4"
                 >
-                  <option value="">Chọn thuộc tính</option>
-                  {attributesList
-                    .filter((item) => {
-                      const isSelected = formData.attributes.some(
-                        (a, i) =>
-                          i !== index && parseInt(a.attribute_id) === item.id
-                      );
-                      return !isSelected;
-                    })
-                    .map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                </select>
-
-                {isColor ? (
-                  <input
-                    type="color"
-                    value={attr.value}
+                  <select
+                    value={attr.attribute_id}
                     onChange={(e) =>
-                      handleAttributeChange(index, "value", e.target.value)
-                    }
-                    className="border rounded w-full md:w-1/3 h-10"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Giá trị"
-                    value={attr.value}
-                    onChange={(e) =>
-                      handleAttributeChange(index, "value", e.target.value)
+                      handleAttributeChange(
+                        index,
+                        "attribute_id",
+                        e.target.value
+                      )
                     }
                     className="border p-2 rounded w-full md:w-1/3"
+                  >
+                    <option value="">Chọn thuộc tính</option>
+                    {attributesList
+                      .filter((item) => {
+                        const isSelected = formData.attributes.some(
+                          (a, i) =>
+                            i !== index && parseInt(a.attribute_id) === item.id
+                        );
+                        return !isSelected;
+                      })
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                  </select>
+
+                  {isColor ? (
+                    <input
+                      type="color"
+                      value={attr.value}
+                      onChange={(e) =>
+                        handleAttributeChange(index, "value", e.target.value)
+                      }
+                      className="border rounded w-full md:w-1/3 h-10"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Giá trị"
+                      value={attr.value}
+                      onChange={(e) =>
+                        handleAttributeChange(index, "value", e.target.value)
+                      }
+                      className="border p-2 rounded w-full md:w-1/3"
+                    />
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAttribute(attr.id)}
+                    className="text-red-600 hover:text-red-800 p-1 rounded"
+                    aria-label="Xóa thuộc tính"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
+
+            {formData.attributes.length < attributesList.length && (
+              <button
+                type="button"
+                onClick={addAttributeField}
+                className="text-blue-600 hover:underline"
+              >
+                + Thêm thuộc tính
+              </button>
+            )}
+          </div>
+        </fieldset>
+
+        {/* Ảnh biến thể */}
+        <fieldset className="flex-1 border rounded p-4">
+          <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
+          <div className="space-y-4 mt-2">
+            {formData.images.map((img, index) => (
+              <div key={index} className="flex items-center gap-4">
+                {img.url && (
+                  <img
+                    src={img?.url?.url || img?.url}
+                    alt={`image-${index}`}
+                    className="h-16 w-16 object-cover rounded"
                   />
                 )}
-
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, index)}
+                  className="flex-1 border p-2 rounded"
+                />
                 <button
                   type="button"
-                  onClick={() => handleDeleteAttribute(attr.id)}
+                  onClick={() => handleDeleteImage(index)}
                   className="text-red-600 hover:text-red-800 p-1 rounded"
-                  aria-label="Xóa thuộc tính"
+                  aria-label="Xóa ảnh"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -317,94 +378,35 @@ console.log(image);
                   </svg>
                 </button>
               </div>
-            );
-          })}
+            ))}
 
-          {formData.attributes.length < attributesList.length && (
-  <button
-    type="button"
-    onClick={addAttributeField}
-    className="text-blue-600 hover:underline"
-  >
-    + Thêm thuộc tính
-  </button>
-)}
-
-        </div>
-      </fieldset>
-
-      {/* Ảnh biến thể */}
-      <fieldset className="flex-1 border rounded p-4">
-        <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
-        <div className="space-y-4 mt-2">
-          {formData.images.map((img, index) => (
-            <div key={index} className="flex items-center gap-4">
-              {img.url && (
-                <img
-                  src={img.url.url}
-                  alt={`image-${index}`}
-                  className="h-16 w-16 object-cover rounded"
-                />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageChange(e, index)}
-                className="flex-1 border p-2 rounded"
-              />
-              <button
-                type="button"
-                onClick={() => handleDeleteImage(index)}
-                className="text-red-600 hover:text-red-800 p-1 rounded"
-                aria-label="Xóa ảnh"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4"
-                  />
-                </svg>
-              </button>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addImageField}
-            className="text-blue-600 hover:underline"
-          >
-            + Thêm ảnh
-          </button>
-        </div>
-      </fieldset>
+            <button
+              type="button"
+              onClick={addImageField}
+              className="text-blue-600 hover:underline"
+            >
+              + Thêm ảnh
+            </button>
+          </div>
+        </fieldset>
       </div>
 
       {/* Nút submit */}
       <div className="flex gap-x-3 justify-start">
-  <button
-    type="submit"
-    className="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-4 rounded text-sm"
-  >
-    Cập nhật
-  </button>
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-4 rounded text-sm"
+        >
+          Cập nhật
+        </button>
 
-  <Link
-    to={`/admin/products/detail/${formData.product_id}`}
-    className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
-  >
-    Quay lại
-  </Link>
-</div>
-
-
+        <Link
+          to={`/admin/products/detail/${formData.product_id}`}
+          className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+        >
+          Quay lại
+        </Link>
+      </div>
     </form>
   );
 };
