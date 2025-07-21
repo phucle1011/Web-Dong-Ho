@@ -75,14 +75,6 @@ export default function Navbar({ className, type }) {
 
                 <div className="category-dropdown w-full absolute left-0 top-[53px] overflow-hidden z-50" style={{ height: elementsSize }}>
                   <ul className="categories-list">
-                    <li className="category-item">
-                      <Link to="/all-products">
-                        <div className={`flex justify-between items-center px-5 h-10 bg-white transition-all duration-300 ease-in-out cursor-pointer text-qblack ${type === 3 ? "hover:bg-qh3-blue hover:text-white" : "hover:bg-qyellow"}`}>
-                          <span className="text-sm font-600 text-qblacktext">Tất cả sản phẩm</span>
-                        </div>
-                      </Link>
-                    </li>
-
                     {categories.map((category) => (
                       <li key={category.id} className="category-item">
                         <Link
@@ -110,10 +102,12 @@ export default function Navbar({ className, type }) {
                     <Link to="/all-products" className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"}`}>Sản phẩm</Link>
                   </li>
                   <li className="relative">
-                    <span className={`flex items-center text-sm font-600 cursor-pointer ${type === 3 ? "text-white" : "text-qblacktext"}`}>
+                    <Link to="#" className={`flex items-center text-sm font-600 cursor-pointer ${type === 3 ? "text-white" : "text-qblacktext"}`}>
                       Trang
-                      <span className="ml-1.5"><Arrow className="fill-current" /></span>
-                    </span>
+                      <span className="ml-1.5 flex items-center">
+                        <Arrow className="fill-current" />
+                      </span>
+                    </Link>
                     <div className="sub-menu w-[220px] absolute left-0 top-[60px]">
                       <div className="w-full bg-white" style={{ boxShadow: "0px 15px 50px 0px rgba(0, 0, 0, 0.14)" }}>
                         <div className="p-5">
