@@ -87,7 +87,7 @@ function AdminProfile() {
         } finally {
             localStorage.removeItem("token");
             toast.success("Đã đăng xuất thành công!");
-            navigate("/admin/login");
+            navigate("/");
         }
     };
 

@@ -6,7 +6,7 @@ const sendVerificationEmail = require("../../mail/verifyEmail/sendMail");
 const { successResponse, errorResponse } = require('../../helpers/response');
 const UserModel = require('../../models/usersModel');
 const AddressModel = require("../../models/addressesModel");
-
+const { Op } = require('sequelize');
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
@@ -246,12 +246,21 @@ class AuthController {
                 return errorResponse(res, "Email không tồn tại!", 404);
             }
 
-            const token = jwt.sign({ email: user.email, id: user.id }, JWT_SECRET, {
-                expiresIn: "1h",
-            });
-            const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+            const token = jwt.sign(
+                { email: user.email, id: user.id },
+                JWT_SECRET,
+                { expiresIn: "1h" }
+            );
+            const expires = new Date(Date.now() + 3600 * 1000); // 1 giờ sau
 
+            await user.update({
+                password_reset_token: token,
+                password_reset_expires: expires,
+            });
+
+            const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
             await sendResetPassword(email, resetLink);
+
             return successResponse(res, "Kiểm tra email để đặt lại mật khẩu!", null, 200);
         } catch (error) {
             console.error("Lỗi xảy ra khi reset password:", error);
@@ -266,15 +275,25 @@ class AuthController {
 
         try {
             const decoded = jwt.verify(token, JWT_SECRET);
-            const userId = decoded.id;
-
-            const user = await UserModel.findOne({ where: { id: userId } });
+            const user = await UserModel.findOne({
+                where: {
+                    id: decoded.id,
+                    password_reset_token: token,
+                    password_reset_expires: { [Op.gt]: new Date() }
+                }
+            });
             if (!user) {
-                return errorResponse(res, "Tài khoản không tồn tại!", 404);
+                return errorResponse(res, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn!", 401);
             }
 
             const hashedPassword = await bcrypt.hash(password, 10);
-            await user.update({ password: hashedPassword });
+
+            await user.update({
+                password: hashedPassword,
+                password_reset_token: null,
+                password_reset_expires: null,
+                remember_token: null,
+            });
 
             return successResponse(res, "Cập nhật mật khẩu thành công!", null, 200);
         } catch (error) {
@@ -288,6 +307,8 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
+
+
     static async getById(req, res) {
         try {
             const { id } = req.params;

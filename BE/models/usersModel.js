@@ -26,30 +26,39 @@ const UserModel = connection.define('users', {
     },
     avatar: {
         type: DataTypes.STRING,
-        allowNull: false 
+        allowNull: false
     },
     role: {
-        type: DataTypes.ENUM('user','admin'),
+        type: DataTypes.ENUM('user', 'admin'),
         allowNull: false,
         defaultValue: 'user'
     },
     email_verified_at: {
         type: DataTypes.DATE,
-        allowNull: true 
+        allowNull: true
     },
     remember_token: {
         type: DataTypes.TEXT,
-        allowNull: true 
+        allowNull: true
     },
+    password_reset_token: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    password_reset_expires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+
     status: {
-        type: DataTypes.ENUM('active','inactive','locked'),
+        type: DataTypes.ENUM('active', 'inactive', 'locked'),
         allowNull: false,
         defaultValue: 'active'
     },
     lockout_reason: {
         type: DataTypes.STRING,
         allowNull: true
-    }    
+    }
 }, {
     tableName: 'users',
     timestamps: true,

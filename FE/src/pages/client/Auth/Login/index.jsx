@@ -177,14 +177,14 @@ export default function Login() {
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
-      <div className="login-page-wrapper w-full py-10">
+      <div className="login-page-wrapper w-full py-12">
         <div className="container-x mx-auto">
           <div className="lg:flex items-center relative">
-            <div className="lg:w-[572px] w-full lg:h-[500px] bg-white flex flex-col justify-center sm:p-10 p-5 border border-[#E0E0E0] overflow-y-auto" style={{ minHeight: "400px", maxHeight: "90vh" }}>
+            <div className="lg:w-[572px] w-full bg-white flex flex-col justify-center sm:p-12 p-6 border border-[#E0E0E0]">
               <div className="w-full">
-                <div className="title-area flex flex-col justify-center items-center relative text-center mb-7">
-                  <h1 className="text-[34px] font-bold leading-[74px] text-qblack">
-                    Đăng nhập
+                <div className="title-area flex flex-col justify-center items-center relative text-center mb-8">
+                  <h1 className="text-[36px] font-bold leading-[80px] text-qblack">
+                    {showForgotPassword ? "Đặt lại mật khẩu" : "Đăng nhập"}
                   </h1>
                   <div className="shape -mt-6">
                     <svg
@@ -212,7 +212,7 @@ export default function Login() {
                     <div className="mb-4">
                       <label
                         htmlFor="email"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-gray-700 mb-2"
                       >
                         Email<span className="text-red-500">*</span>
                       </label>
@@ -220,13 +220,13 @@ export default function Login() {
                         id="email"
                         name="email"
                         type="email"
-                        placeholder="example@gmail.com"
+                        placeholder="Email"
                         value={formData.email}
                         onChange={handleChange}
                         className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.email && (
-                        <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                        <p className="text-red-500 text-sm mt-2">{errors.email}</p>
                       )}
                     </div>
 
@@ -234,7 +234,7 @@ export default function Login() {
                     <div className="mb-4">
                       <label
                         htmlFor="password"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-gray-700 mb-2"
                       >
                         Mật khẩu<span className="text-red-500">*</span>
                       </label>
@@ -248,12 +248,12 @@ export default function Login() {
                         className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.password && (
-                        <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                        <p className="text-red-500 text-sm mt-2">{errors.password}</p>
                       )}
                     </div>
 
                     {/* Ghi nhớ mật khẩu + Quên mật khẩu */}
-                    <div className="forgot-password-area flex justify-between items-center mb-7">
+                    <div className="forgot-password-area flex justify-between items-center mb-4">
                       <div className="remember-checkbox flex items-center space-x-2.5">
                         <button
                           onClick={rememberMe}
@@ -292,24 +292,22 @@ export default function Login() {
                     </div>
 
                     {/* Nút đăng nhập */}
-                    <div className="signin-area mb-3.5">
-                      <div className="flex justify-center">
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={loading}
-                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
-                        >
-                          <span>{loading ? "Đang xử lý..." : "Đăng nhập"}</span>
-                        </button>
-                      </div>
+                    <div className="signin-area mb-4">
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="w-full px-4 py-2 bg-black text-white font-semibold rounded-md hover:bg-gray-800 transition duration-300"
+                      >
+                        {loading ? "Đang xử lý..." : "Đăng nhập"}
+                      </button>
                     </div>
 
                     {/* Đăng ký mới */}
                     <div className="signup-area flex justify-center mt-4">
                       <p className="text-base text-qgraytwo font-normal">
                         Chưa có tài khoản?
-                        <Link to="/signup" className="ml-2 text-qblack">
+                        <Link to="/signup" className="ml-1 text-qblack font-medium">
                           Đăng ký ngay
                         </Link>
                       </p>
@@ -321,32 +319,32 @@ export default function Login() {
                     <div className="mb-4">
                       <label
                         htmlFor="forgotEmail"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        Nhập email của bạn<span className="text-red-500">*</span>
+                        Email<span className="text-red-500">*</span>
                       </label>
                       <input
                         id="forgotEmail"
+                        name="email"
                         type="email"
+                        placeholder="Email"
                         value={forgotEmail}
                         onChange={handleForgotEmailChange}
                         className={`w-full px-4 py-2 border ${errors.forgotEmail ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                       />
                       {errors.forgotEmail && (
-                        <p className="text-red-500 text-sm mt-1">{errors.forgotEmail}</p>
+                        <p className="text-red-500 text-sm mt-2">{errors.forgotEmail}</p>
                       )}
                     </div>
-                    <div className="signin-area mb-3.5">
-                      <div className="flex justify-center">
-                        <button
-                          type="button"
-                          onClick={handleForgotPassword}
-                          disabled={loading}
-                          className={`black-btn mb-6 text-sm text-white w-full h-[50px] font-semibold flex justify-center bg-purple items-center ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
-                        >
-                          <span>{loading ? "Đang xử lý..." : "Gửi liên kết"}</span>
-                        </button>
-                      </div>
+                    <div className="signin-area mb-4">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={loading}
+                        className="w-full px-4 py-2 bg-black text-white font-semibold rounded-md hover:bg-gray-800 transition duration-300"
+                      >
+                        {loading ? "Đang xử lý..." : "Gửi liên kết"}
+                      </button>
                     </div>
                     <div className="signup-area flex justify-center mt-4">
                       <p className="text-base text-qgraytwo font-normal">

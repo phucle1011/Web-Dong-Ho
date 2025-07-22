@@ -134,13 +134,13 @@ export default function Signup() {
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
-      <div className="login-page-wrapper w-full py-10">
+      <div className="login-page-wrapper w-full py-12">
         <div className="container-x mx-auto">
           <div className="lg:flex items-center relative">
-            <div className="lg:w-[572px] w-full lg:h-[690px] bg-white flex flex-col justify-center sm:p-10 p-5 border border-[#E0E0E0] overflow-y-auto" style={{ minHeight: "500px", maxHeight: "90vh" }}>
+            <div className="lg:w-[572px] w-full bg-white flex flex-col justify-center sm:p-12 p-6 border border-[#E0E0E0]">
               <div className="w-full">
-                <div className="title-area flex flex-col justify-center items-center relative text-center mb-7">
-                  <h1 className="text-[34px] font-bold leading-[74px] text-qblack">
+                <div className="title-area flex flex-col justify-center items-center relative text-center mb-8">
+                  <h1 className="text-[36px] font-bold leading-[80px] text-qblack">
                     Tạo tài khoản
                   </h1>
                   <div className="shape -mt-6">
@@ -160,49 +160,30 @@ export default function Signup() {
                     </svg>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Họ tên */}
-                  <div className="mb-5">
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                      Tên Người Dùng<span className="text-red-500">*</span>
+                  <div className="mb-4">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Họ và tên<span className="text-red-500">*</span>
                     </label>
                     <input
                       id="name"
                       name="name"
                       type="text"
-                      placeholder="Tên người dùng"
+                      placeholder="Họ và tên"
                       value={formData.name}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border ${errors.name ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                     />
                     {errors.name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                    )}
-                  </div>
-
-                  {/* Email */}
-                  <div className="mb-5">
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Email<span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="Demo@gmail.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
-                    />
-                    {errors.email && (
-                      <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                      <p className="text-red-500 text-sm mt-2">{errors.name}</p>
                     )}
                   </div>
 
                   {/* Số điện thoại */}
-                  <div className="mb-5">
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                      Số Điện Thoại<span className="text-red-500">*</span>
+                  <div className="mb-4">
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                      Số điện thoại<span className="text-red-500">*</span>
                     </label>
                     <input
                       id="phone"
@@ -214,52 +195,72 @@ export default function Signup() {
                       className={`w-full px-4 py-2 border ${errors.phone ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                     />
                     {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                      <p className="text-red-500 text-sm mt-2">{errors.phone}</p>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="mb-4 col-span-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Email<span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-sm mt-2">{errors.email}</p>
                     )}
                   </div>
 
                   {/* Mật khẩu */}
-                  <div className="mb-5">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                      Mật Khẩu<span className="text-red-500">*</span>
+                  <div className="mb-4">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                      Mật khẩu<span className="text-red-500">*</span>
                     </label>
                     <input
                       id="password"
                       name="password"
                       type="password"
-                      placeholder="Mật khẩu"
+                      placeholder="● ● ● ● ● ●"
                       value={formData.password}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                     />
                     {errors.password && (
-                      <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                      <p className="text-red-500 text-sm mt-2">{errors.password}</p>
                     )}
                   </div>
 
-                  <div className="mb-5 col-span-2">
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  {/* Nhập lại mật khẩu */}
+                  <div className="mb-4">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                       Xác nhận mật khẩu<span className="text-red-500">*</span>
                     </label>
                     <input
                       id="confirmPassword"
                       name="confirmPassword"
                       type="password"
-                      placeholder="Nhập lại mật khẩu"
+                      placeholder="● ● ● ● ● ●"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       className={`w-full px-4 py-2 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:border-indigo-500`}
                     />
                     {errors.confirmPassword && (
-                      <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                      <p className="text-red-500 text-sm mt-2">{errors.confirmPassword}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Ảnh đại diện */}
-                <div className="mb-5 mt-5">
-                  <label htmlFor="fileInput" className="block text-sm font-medium text-gray-700">
-                    Ảnh đại diện*
+                <div className="mb-4 mt-4">
+                  <label htmlFor="fileInput" className="block text-sm font-medium text-gray-700 mb-2">
+                    Ảnh đại diện
                   </label>
                   <div className="flex items-center space-x-4">
                     <label
@@ -302,12 +303,14 @@ export default function Signup() {
                 </button>
 
                 {/* Liên kết đăng nhập */}
-                <p className="mt-4 text-sm text-gray-500">
-                  Đã có tài khoản?{" "}
-                  <Link to="/login" className="text-qblack font-medium">
-                    Đăng nhập
-                  </Link>
-                </p>
+                <div className="signup-area col-span-2 flex justify-center mt-4">
+                  <p className="text-base text-qgraytwo font-normal">
+                    Đã có tài khoản?
+                    <Link to="/login" className="ml-1 text-qblack font-medium">
+                      Đăng nhập
+                    </Link>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

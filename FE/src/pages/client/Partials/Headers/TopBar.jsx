@@ -43,7 +43,7 @@ export default function TopBar({ className }) {
               <ul className="flex space-x-6">
                 {!decoded ? (
                   <li>
-                    <Link to="/signup">
+                    <Link to="/login">
                       <span className="text-xs leading-6 text-qblack font-500 inline-flex items-center hover:text-qgray transition-colors">
                         Tài khoản
                       </span>
