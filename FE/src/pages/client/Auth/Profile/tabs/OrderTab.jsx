@@ -654,14 +654,23 @@ export default function OrderTab() {
 
                                                   if (item.comment) {
                                                     if (editedOnce) {
-                                                      navigate(`/product/${productId}#comment-${item.comment.id}`);
+                                                      navigate(`/product#comment-${item.comment.id}`, {
+                                                        state: { productId: product.id },
+                                                      });
+
                                                     } else {
                                                       sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-                                                      navigate(`/product/${productId}#review`);
+                                                      navigate(`/product#review`, {
+                                                        state: { productId: product.id },
+                                                      });
+
                                                     }
                                                   } else {
                                                     sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-                                                    navigate(`/product/${productId}#review`);
+                                                    navigate(`/product#review`, {
+                                                      state: { productId: product.id },
+                                                    });
+
                                                   }
                                                 }}
                                               >

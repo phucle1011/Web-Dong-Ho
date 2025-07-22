@@ -6,6 +6,10 @@ import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 
 const MAX_COMPARE = 4;
+function capitalizeFirstLetter(string) {
+  if (!string) return "";
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
 function DescriptionToggle({ description }) {
   const [expanded, setExpanded] = useState(false);
@@ -279,29 +283,38 @@ export default function ProductsCompare() {
                   </tr>
                 ))}
 
-                {allAttributes.map((attr) => (
-                  <tr key={attr}>
-                    <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">{attr}</td>
-                    {selectedVariants.map((v, i) => {
-                      const value = v ? getAttributeValue(v, attr) : "-";
-                      return (
-                        <td key={i} className="text-center text-sm px-[26px] py-[20px]">
-                          {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
-                            value !== "-" ? (
-                              <div
-                                className="w-6 h-6 rounded-full mx-auto border"
-                                style={{ backgroundColor: value }}
-                                title={value}
-                              />
-                            ) : "-"
-                          ) : (
-                            value
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
+{allAttributes
+  .filter((attr) =>
+   
+    selectedVariants.some((v) => v && getAttributeValue(v, attr) !== "-")
+  )
+  .map((attr) => (
+    <tr key={attr}>
+      <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">
+        {capitalizeFirstLetter(attr)}
+      </td>
+      {selectedVariants.map((v, i) => {
+        const value = v ? getAttributeValue(v, attr) : "-";
+        return (
+          <td key={i} className="text-center text-sm px-[26px] py-[20px]">
+            {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
+              value !== "-" ? (
+                <div
+                  className="w-6 h-6 rounded-full mx-auto border"
+                  style={{ backgroundColor: value }}
+                  title={value}
+                />
+              ) : "-"
+            ) : (
+              value
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  ))}
+
+
               </tbody>
             </table>
           </div>

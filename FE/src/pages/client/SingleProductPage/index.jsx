@@ -88,7 +88,7 @@ export default function SingleProductPage() {
     if (window.location.hash === "#review") {
       setTab("review");
 
-      // Scroll tới phần đánh giá sau khi tab đổi
+     
       setTimeout(() => {
         const element = document.getElementById("review-section");
         if (element) {
@@ -97,6 +97,29 @@ export default function SingleProductPage() {
       }, 200);
     }
   }, []);
+
+useEffect(() => {
+  if (window.location.hash.startsWith("#comment-")) {
+    setTab("review"); 
+    setTimeout(() => {
+      const commentId = window.location.hash.replace("#", "");
+      const element = document.getElementById(commentId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 400); 
+  }
+}, []);
+
+
+  useEffect(() => {
+  if (tab === "review") {
+    const element = document.getElementById("review-section");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+}, [tab]);
 
   const reviewAction = () => {
     setLoading(true);
