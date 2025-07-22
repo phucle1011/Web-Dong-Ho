@@ -14,6 +14,7 @@ function PromotionCreate() {
   const [users, setUsers] = useState([]);
   const [showUserList, setShowUserList] = useState(false);
   const [promoCode, setPromoCode] = useState("");
+  const [selectAllUsers, setSelectAllUsers] = useState(false);
 
   const {
     control,
@@ -47,7 +48,7 @@ function PromotionCreate() {
     const fetchUsers = async () => {
       try {
         const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/getusers`);
-        setUsers(res.data.data); // Không sắp xếp lại, sử dụng thứ tự từ backend
+        setUsers(res.data.data);
       } catch (err) {
         console.error("Lỗi khi lấy danh sách người dùng:", err);
         toast.error("Không thể lấy danh sách người dùng. Vui lòng thử lại.");
@@ -92,6 +93,21 @@ function PromotionCreate() {
       </div>
     ),
   }));
+
+  useEffect(() => {
+    const allUserIds = users.map((u) => u.id);
+    const selectedIds = getValues("user_ids") || [];
+    setSelectAllUsers(selectedIds.length === allUserIds.length);
+  }, [watch("user_ids"), users]);
+
+  const handleSelectAllUsers = () => {
+    if (selectAllUsers) {
+      setValue("user_ids", []);
+    } else {
+      setValue("user_ids", users.map((u) => u.id));
+    }
+    setSelectAllUsers(!selectAllUsers);
+  };
 
   function formatDateToLocalISO(date) {
     const year = date.getFullYear();
@@ -142,26 +158,6 @@ function PromotionCreate() {
   };
 
   const startDate = watch("start_date");
-
-  const handleUserToggle = (userId) => {
-    const currentUserIds = getValues("user_ids") || [];
-    const updated = currentUserIds.includes(userId)
-      ? currentUserIds.filter((id) => id !== userId)
-      : [...currentUserIds, userId];
-    setValue("user_ids", updated);
-  };
-
-  const addUser = (userId) => {
-    const currentUserIds = getValues("user_ids") || [];
-    if (!currentUserIds.includes(userId)) {
-      setValue("user_ids", [...currentUserIds, userId]);
-    }
-  };
-
-  const removeUser = (userId) => {
-    const currentUserIds = getValues("user_ids") || [];
-    setValue("user_ids", currentUserIds.filter((id) => id !== userId));
-  };
 
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
@@ -473,9 +469,23 @@ function PromotionCreate() {
                     checked={showUserList}
                     onChange={() => setShowUserList((prev) => !prev)}
                   />
-                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600 peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600"></div>
+                  <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-green-600 peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </label>
+
+              {showUserList && (
+                <div className="mb-2">
+                  <input
+                    type="checkbox"
+                    id="selectAll"
+                    checked={selectAllUsers}
+                    onChange={handleSelectAllUsers}
+                    className="mr-2"
+                  />
+                  <label htmlFor="selectAll" className="text-sm">Chọn tất cả khách hàng</label>
+                </div>
+              )}
+
               <Controller
                 name="user_ids"
                 control={control}

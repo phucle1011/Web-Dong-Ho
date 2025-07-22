@@ -125,6 +125,68 @@ class PromotionUserController {
       res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
   }
+
+  static async getUsersNotInPromotion(req, res) {
+    try {
+      const { promotionId } = req.query;
+
+      if (!promotionId) {
+        return res.status(400).json({ message: 'Thiếu promotionId' });
+      }
+
+      // Tìm danh sách userId đã có mã này
+      const existingEntries = await PromotionUserModel.findAll({
+        where: { promotion_id: promotionId },
+        attributes: ['user_id'],
+      });
+
+      const existingUserIds = existingEntries.map((entry) => entry.user_id);
+
+      // Lấy những user KHÔNG nằm trong danh sách trên
+      const users = await UserModel.findAll({
+        where: {
+          id: { [Op.notIn]: existingUserIds },
+        },
+        attributes: ['id', 'name', 'email'],
+        order: [['name', 'ASC']],
+      });
+
+      return res.status(200).json({
+        status: 200,
+        message: 'Lấy danh sách người dùng chưa được áp dụng mã thành công',
+        data: users,
+      });
+    } catch (error) {
+      console.error('Lỗi getUsersNotInPromotion:', error);
+      return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+  }
+
+  static async addUsersToPromotion(req, res) {
+    try {
+      const { promotionId, userIds } = req.body;
+
+      if (!promotionId || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: 'Thiếu promotionId hoặc danh sách userIds không hợp lệ' });
+      }
+
+      const newEntries = userIds.map((userId) => ({
+        user_id: userId,
+        promotion_id: promotionId,
+      }));
+
+      await PromotionUserModel.bulkCreate(newEntries, { ignoreDuplicates: true });
+
+      return res.status(200).json({
+        status: 200,
+        message: 'Thêm người dùng vào mã giảm giá thành công',
+      });
+    } catch (error) {
+      console.error('Lỗi khi thêm người dùng vào mã:', error);
+      return res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+  }
+
 }
 
 module.exports = PromotionUserController;

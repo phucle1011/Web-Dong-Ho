@@ -139,6 +139,8 @@ router.delete('/brand/delete/:id', BrandController.delete);
 router.get('/promotionusers/list', PromotionUserController.get);
 router.post('/promotionusers/check-emails', PromotionUserController.checkPromotionExpiry);
 router.post('/send-promotion-emails', EmailController.sendPromotionEmails);
+router.get('/users/not-in-promotion', PromotionUserController.getUsersNotInPromotion);
+router.post('/promotionusers/add', PromotionUserController.addUsersToPromotion);
 
 //------------------[ DASHBOARD ]------------------\
 router.get('/dashboard/counts', DashboardController.getCounts);

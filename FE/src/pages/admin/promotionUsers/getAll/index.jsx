@@ -6,6 +6,8 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 import Swal from 'sweetalert2';
+import Select from "react-select";
+import { FaUserPlus } from 'react-icons/fa';
 
 function PromotionList() {
   const [promotions, setPromotions] = useState([]);
@@ -27,6 +29,12 @@ function PromotionList() {
   const [promotionPage, setPromotionPage] = useState(1);
   const [promotionSearchTerm, setPromotionSearchTerm] = useState("");
   const [promotionSearchInput, setPromotionSearchInput] = useState("");
+
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [usersNotInPromo, setUsersNotInPromo] = useState([]);
+  const [selectedUsersToAdd, setSelectedUsersToAdd] = useState([]);
+  const [selectedPromoForAddUser, setSelectedPromoForAddUser] = useState(null);
+
 
   const ITEMS_PER_PAGE = 10;
   const PROMOTIONS_PER_PAGE = 5;
@@ -57,6 +65,43 @@ function PromotionList() {
     setSearchTerm("");
     setSearchInput("");
   }, [selectedPromotionId]);
+
+  const openAddUserModal = async (promotionId) => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/users/not-in-promotion`, {
+        params: { promotionId },
+      });
+      const userList = res.data.data.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }));
+      setUsersNotInPromo(userList);
+      setSelectedPromoForAddUser(promotionId);
+      setSelectedUsersToAdd([]);
+      setIsAddUserModalOpen(true);
+    } catch (error) {
+      toast.error("Không thể lấy danh sách người dùng chưa được áp dụng mã.");
+    }
+  };
+
+  const handleAddUsersToPromotion = async () => {
+    if (!selectedPromoForAddUser || selectedUsersToAdd.length === 0) return;
+    try {
+      const userIds = selectedUsersToAdd.map((u) => u.value);
+      await axios.post(`${Constants.DOMAIN_API}/admin/promotionusers/add`, {
+        promotionId: selectedPromoForAddUser,
+        userIds,
+      });
+
+      toast.success("Đã thêm người dùng vào mã giảm!");
+
+      setIsAddUserModalOpen(false);
+      setSelectedUsersToAdd([]);
+      if (selectedPromotionId === selectedPromoForAddUser) {
+        fetchCustomersByPromotion(selectedPromoForAddUser); // chỉ reload nếu đang ở mã đó
+      }
+    } catch {
+      toast.error("Không thể thêm người dùng.");
+    }
+  };
+
 
   const fetchPromotions = async () => {
     setLoadingPromotions(true);
@@ -372,8 +417,7 @@ function PromotionList() {
                 <li
                   key={promo.id}
                   onClick={() => setSelectedPromotionId(promo.id)}
-                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? "bg-blue-100 shadow" : "hover:bg-blue-50"
-                    } ${promo.status === 'expired' || promo.status === 'inactive' ? "opacity-60" : ""}`}
+                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? "bg-blue-100 shadow" : "hover:bg-blue-50"} ${promo.status === 'expired' || promo.status === 'inactive' ? "opacity-60" : ""}`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -404,59 +448,46 @@ function PromotionList() {
                         </div>
                       </div>
                     </div>
-                    {promo.status === 'expired' && (
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                        Hết hạn
-                      </span>
-                    )}
+                    <div className="text-right">
+                      <button
+                        className="text-blue-700 hover:text-purple-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAddUserModal(promo.id);
+                        }}
+                        disabled={promo.status !== 'active'}
+                        title="Thêm người dùng"
+                      >
+                        <FaUserPlus className="inline-block text-base" />
+                      </button>
+                    </div>
                   </div>
                 </li>
               ))}
             </ul>
             <div className="flex justify-center mt-4">
               <div className="flex items-center space-x-1">
-                <button
-                  disabled={promotionPage === 1}
-                  onClick={() => setPromotionPage(1)}
-                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
-                >
+                <button disabled={promotionPage === 1} onClick={() => setPromotionPage(1)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
                   <FaAngleDoubleLeft />
                 </button>
-                <button
-                  disabled={promotionPage === 1}
-                  onClick={() => setPromotionPage((prev) => prev - 1)}
-                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
-                >
+                <button disabled={promotionPage === 1} onClick={() => setPromotionPage((prev) => prev - 1)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
                   <FaChevronLeft />
                 </button>
                 {[...Array(totalPromotionPages)].map((_, i) => {
                   const page = i + 1;
                   if (page >= promotionPage - 1 && page <= promotionPage + 1) {
                     return (
-                      <button
-                        key={page}
-                        onClick={() => setPromotionPage(page)}
-                        className={`px-3 py-1 border rounded-md text-sm ${page === promotionPage ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100"
-                          }`}
-                      >
+                      <button key={page} onClick={() => setPromotionPage(page)} className={`px-3 py-1 border rounded-md text-sm ${page === promotionPage ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100"}`}>
                         {page}
                       </button>
                     );
                   }
                   return null;
                 })}
-                <button
-                  disabled={promotionPage === totalPromotionPages}
-                  onClick={() => setPromotionPage((prev) => prev + 1)}
-                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
-                >
+                <button disabled={promotionPage === totalPromotionPages} onClick={() => setPromotionPage((prev) => prev + 1)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
                   <FaChevronRight />
                 </button>
-                <button
-                  disabled={promotionPage === totalPromotionPages}
-                  onClick={() => setPromotionPage(totalPromotionPages)}
-                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
-                >
+                <button disabled={promotionPage === totalPromotionPages} onClick={() => setPromotionPage(totalPromotionPages)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
                   <FaAngleDoubleRight />
                 </button>
               </div>
@@ -464,6 +495,7 @@ function PromotionList() {
           </>
         )}
       </div>
+
 
       <div className="w-2/3 flex flex-col">
         <div className="flex justify-between items-center mb-4">
@@ -756,6 +788,46 @@ function PromotionList() {
                   }
                 >
                   {sendingEmail ? "Đang gửi..." : "Gửi email"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {isAddUserModalOpen && (
+          <div className="fixed inset-0 backdrop-blur-sm bg-white/30 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg">
+              <h2 className="text-lg font-semibold mb-4">Chọn người dùng để thêm vào mã</h2>
+              <div className="flex items-center mb-3">
+                <input
+                  type="checkbox"
+                  id="selectAllUsers"
+                  className="mr-2"
+                  checked={selectedUsersToAdd.length === usersNotInPromo.length && usersNotInPromo.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedUsersToAdd(usersNotInPromo);
+                    } else {
+                      setSelectedUsersToAdd([]);
+                    }
+                  }}
+                />
+                <label htmlFor="selectAllUsers" className="text-sm text-gray-700">
+                  Chọn tất cả người dùng
+                </label>
+              </div>
+              <Select
+                isMulti
+                options={usersNotInPromo}
+                value={selectedUsersToAdd}
+                onChange={setSelectedUsersToAdd}
+                placeholder="Chọn người dùng..."
+              />
+              <div className="flex justify-end mt-4 gap-3">
+                <button onClick={() => setIsAddUserModalOpen(false)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+                  Hủy
+                </button>
+                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" disabled={selectedUsersToAdd.length === 0} onClick={handleAddUsersToPromotion}>
+                  Thêm
                 </button>
               </div>
             </div>

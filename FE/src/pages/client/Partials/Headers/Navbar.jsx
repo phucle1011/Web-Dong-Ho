@@ -8,6 +8,8 @@ export default function Navbar({ className, type }) {
   const [categoryToggle, setToggle] = useState(false);
   const [elementsSize, setSize] = useState("0px");
   const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handler = () => {
     setToggle(!categoryToggle);
@@ -15,16 +17,21 @@ export default function Navbar({ className, type }) {
 
   useEffect(() => {
     const fetchCategories = async () => {
+      setLoading(true);
       try {
         const res = await axios.get(`${Constants.DOMAIN_API}/category/list`);
         if (Array.isArray(res.data.data)) {
           setCategories(res.data.data);
         } else {
           setCategories([]);
+          setError("Dữ liệu danh mục không hợp lệ");
         }
       } catch (error) {
         console.error("Lỗi khi lấy danh mục:", error);
+        setError("Không thể tải danh mục");
         setCategories([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -75,13 +82,16 @@ export default function Navbar({ className, type }) {
 
                 <div className="category-dropdown w-full absolute left-0 top-[53px] overflow-hidden z-50" style={{ height: elementsSize }}>
                   <ul className="categories-list">
+                    {loading && <li className="text-sm text-qblack">Đang tải...</li>}
+                    {error && <li className="text-sm text-red-500">{error}</li>}
+                    {!loading && categories.length === 0 && <li className="text-sm text-qblack">Không có danh mục nào</li>}
                     {categories.map((category) => (
                       <li key={category.id} className="category-item">
                         <Link
                           to={{
                             pathname: "/all-products",
+                            state: { categoryId: category.id },
                           }}
-                          state={{ categoryId: category.id }}
                         >
                           <div className={`flex justify-between items-center px-5 h-10 bg-white transition-all duration-300 ease-in-out cursor-pointer text-qblack ${type === 3 ? "hover:bg-qh3-blue hover:text-white" : "hover:bg-qyellow"}`}>
                             <span className="text-sm font-600 text-qblacktext">{category.name}</span>

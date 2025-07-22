@@ -8,7 +8,6 @@ import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } 
 export default function ProductsFilter({
   initialFilters = {},
   volume,
-  volumeHandler,
   className,
   filterToggle,
   filterToggleHandler,
@@ -25,6 +24,9 @@ export default function ProductsFilter({
     totalPages: 1,
     limit: 5,
   });
+  const [categoryFilters, setCategoryFilters] = useState({});
+const [brandFilters, setBrandFilters] = useState({});
+
 
   const [brandList, setBrandList] = useState([]);
   const [brandPagination, setBrandPagination] = useState({
@@ -33,16 +35,6 @@ export default function ProductsFilter({
     limit: 5,
   });
 
-  const formatVND = (vnd) =>
-    vnd.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-
-  const priceRanges = [
-    { label: 'Dưới 5 triệu', min: 0, max: 5000000 },
-    { label: '5 - 10 triệu', min: 5000000, max: 10000000 },
-    { label: '10 - 20 triệu', min: 10000000, max: 20000000 },
-    { label: '20 - 30 triệu', min: 20000000, max: 30000000 },
-    { label: 'Trên 30 triệu', min: 30000000, max: 1000000000 },
-  ];
 
   useEffect(() => {
     if (categoryIdFromNav) {
@@ -60,6 +52,29 @@ export default function ProductsFilter({
       [name]: checked,
     }));
   };
+  const handleCategoryChange = (e) => {
+  const { name, checked } = e.target;
+  setCategoryFilters((prev) => ({
+    ...prev,
+    [name]: checked,
+  }));
+};
+
+const handleBrandChange = (e) => {
+  const { name, checked } = e.target;
+  setBrandFilters((prev) => ({
+    ...prev,
+    [name]: checked,
+  }));
+};
+ useEffect(() => {
+  onApplyFilters({
+    categoryFilters,
+    brandFilters,
+    volume: tempVolume,
+  });
+}, [categoryFilters, brandFilters]);
+
 
   useEffect(() => {
     async function fetchCategories() {
@@ -114,40 +129,7 @@ export default function ProductsFilter({
     fetchBrands();
   }, [brandPagination.currentPage, brandPagination.limit]);
 
-  useEffect(() => {
-    async function fetchPriceRange() {
-      try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/products/price-range`);
-        const minPrice = parseFloat(res.data.data.minPrice) || 0;
-        const maxPrice = parseFloat(res.data.data.maxPrice) || 1000000000;
-        setTempVolume([minPrice, maxPrice]);
-      } catch (error) {
-        console.error('Error fetching price range:', error);
-        setTempVolume([0, 1000000000]);
-      }
-    }
-    fetchPriceRange();
-  }, []);
 
-  const handlePriceRangeSelect = (min, max) => {
-    setTempVolume([min, max]);
-  };
-
-  const handleApply = () => {
-    volumeHandler(tempVolume);
-    onApplyFilters({ filters, volume: tempVolume });
-  };
-
-  useEffect(() => {
-    onApplyFilters({ filters, volume: tempVolume });
-  }, [filters]);
-
-  const handleClearFilters = () => {
-    setFilters({});
-    setTempVolume([0, 1000000000]);
-    volumeHandler([0, 1000000000]);
-    onApplyFilters({ filters: {}, volume: [0, 1000000000] });
-  };
 
   const handleBrandPageChange = (newPage) => {
     if (newPage >= 1 && newPage <= brandPagination.totalPages) {
@@ -177,8 +159,8 @@ export default function ProductsFilter({
                   <Checkbox
                     id={cat.id}
                     name={cat.id.toString()}
-                    handleChange={checkboxHandler}
-                    checked={!!filters[cat.id]}
+                    handleChange={handleCategoryChange}
+                    checked={!!categoryFilters[cat.id]}
                   />
                   <label htmlFor={cat.id} className="text-xs font-black font-400 capitalize">
                     {cat.name}
@@ -215,35 +197,6 @@ export default function ProductsFilter({
 
       <div className="filter-subject-item pb-10 border-b border-qgray-border mt-10">
         <div className="subject-title mb-[30px]">
-          <h1 className="text-black text-base font-500">Khoảng giá</h1>
-        </div>
-        <div className="filter-items">
-          <ul>
-            {priceRanges.map((range, index) => (
-              <li key={index} className="item flex justify-between items-center mb-5">
-                <div className="flex space-x-[14px] items-center">
-                  <input
-                    type="radio"
-                    id={`priceRange${index}`}
-                    name="priceRange"
-                    checked={tempVolume[0] === range.min && tempVolume[1] === range.max}
-                    onChange={() => handlePriceRangeSelect(range.min, range.max)}
-                  />
-                  <label htmlFor={`priceRange${index}`} className="text-xs font-black font-400 capitalize">
-                    {range.label}
-                  </label>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="text-xs text-qblack font-400">
-          Giá: {formatVND(tempVolume[0])} - {formatVND(tempVolume[1])}
-        </p>
-      </div>
-
-      <div className="filter-subject-item pb-10 border-b border-qgray-border mt-10">
-        <div className="subject-title mb-[30px]">
           <h1 className="text-black text-base font-500">Thương hiệu</h1>
         </div>
         <div className="filter-items">
@@ -255,9 +208,10 @@ export default function ProductsFilter({
                     <Checkbox
                       id={brand.id}
                       name={brand.id.toString()}
-                      handleChange={checkboxHandler}
-                      checked={!!filters[brand.id.toString()]}
+                      handleChange={handleBrandChange}
+                      checked={!!brandFilters[brand.id.toString()]}
                     />
+                    
                     <label htmlFor={brand.id} className="text-xs font-black font-400 capitalize">
                       {brand.name}
                     </label>
@@ -294,7 +248,7 @@ export default function ProductsFilter({
       </div>
 
       <div className="w-full hidden lg:block h-[295px]">
-        <img  src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logos/smart_band_4__1.webp`} alt="Quảng cáo" className="w-full h-full object-contain" />
+        <img src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/logos/smart_band_4__1.webp`} alt="Quảng cáo" className="w-full h-full object-contain" />
       </div>
 
       <button
