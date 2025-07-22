@@ -433,7 +433,7 @@ export default function OrderTab() {
               />
             </div>
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded mr-2"
               onClick={() => fetchOrders(1)}
             >
               Lọc theo ngày
@@ -474,7 +474,7 @@ export default function OrderTab() {
             <table className="w-full text-sm text-left text-gray-500">
               <thead>
                 <tr>
-                  <th className="text-center py-3 px-2 whitespace-nowrap">STT</th>
+                  <th className="text-center py-3 px-2 whitespace-nowrap">#</th>
                   <th className="text-center py-3 px-2 whitespace-nowrap">Mã đơn</th>
                   <th className="text-center py-3 px-2 whitespace-nowrap">Tên khách hàng</th>
                   <th className="text-center py-3 px-2 whitespace-nowrap">Ngày tạo</th>
@@ -489,7 +489,7 @@ export default function OrderTab() {
                   <React.Fragment key={order.id}>
                     <tr className="bg-white border-b hover:bg-gray-50">
                       <td className="text-center py-4">{index + 1}</td>
-                      <td className="text-center py-4">#{order.order_code}</td>
+                      <td className="text-center py-4">{order.order_code}</td>
                       <td className="text-center py-4">{order.user?.name || "N/A"}</td>
                       <td className="text-center py-4 px-2 whitespace-nowrap">
                         {new Date(order.created_at).toLocaleDateString("vi-VN")}

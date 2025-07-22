@@ -260,40 +260,38 @@ function OrderGetAll() {
       <div className="bg-white p-4 shadow rounded-md">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Danh sách đơn hàng</h2>
-        </div>
 
-        <div className="mb-6 flex flex-wrap items-center gap-4 justify-start">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <span className="italic text-gray-600">Chọn khoảng thời gian:</span>
             <DatePicker
               selected={startDate}
               onChange={(date) => setStartDate(date)}
               dateFormat="yyyy-MM-dd"
               className="border px-3 py-2 rounded w-40"
-              placeholderText="Chọn ngày bắt đầu"
+              placeholderText="Ngày bắt đầu"
             />
-          </div>
-          <div className="flex items-center gap-2">
             <DatePicker
               selected={endDate}
               onChange={(date) => setEndDate(date)}
               dateFormat="yyyy-MM-dd"
               className="border px-3 py-2 rounded w-40"
-              placeholderText="Chọn ngày kết thúc"
+              placeholderText="Ngày kết thúc"
             />
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              onClick={() => fetchOrders(1)}
+            >
+              Lọc theo ngày
+            </button>
+            <button
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              onClick={handleExcelExport}
+            >
+              Xuất Excel
+            </button>
           </div>
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-            onClick={() => fetchOrders(1)}
-          >
-            Lọc theo ngày
-          </button>
-          <button
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            onClick={handleExcelExport}
-          >
-            Xuất Excel
-          </button>
         </div>
+
 
         <div className="flex flex-nowrap items-center gap-6 border-b border-gray-200 px-6 py-4 overflow-x-auto mb-4">
           {[
@@ -345,7 +343,7 @@ function OrderGetAll() {
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="text-center py-3 px-2 whitespace-nowrap">STT</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">#</th>
                 <th className="text-center py-3 px-2 whitespace-nowrap">Mã đơn</th>
                 <th className="text-center py-3 px-2 whitespace-nowrap">Tên khách hàng</th>
                 <th className="text-center py-3 px-2 whitespace-nowrap">Ngày tạo</th>
