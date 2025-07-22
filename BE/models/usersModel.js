@@ -45,11 +45,6 @@ const UserModel = connection.define('users', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    password_reset_expires: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
-
     status: {
         type: DataTypes.ENUM('active', 'inactive', 'locked'),
         allowNull: false,

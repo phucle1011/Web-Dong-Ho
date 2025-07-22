@@ -148,65 +148,44 @@ class BrandController {
 
     static async update(req, res) {
         try {
-            const { id } = req.params;
-            const { name, slug, country, description, status, logo } = req.body;
+            const id = req.params.id;
+            const { name, country, description, status } = req.body;
 
-            const brand = await BrandModel.findByPk(id);
-            if (!brand) {
-                return res.status(404).json({ message: "Không tìm thấy thương hiệu với ID này" });
+            // build object để update
+            const updateData = { name, country, description, status };
+
+            // nếu có upload file mới, req.file.filename là string => hợp lệ với DataTypes.STRING
+            if (req.file) {
+                updateData.logo = `/uploads/brands/${req.file.filename}`;
             }
 
-            const updatedData = {};
-
-            if (name !== undefined) {
-                updatedData.name = name.trim();
-                updatedData.slug = slugify(slug || name.trim(), { lower: true, locale: 'vi' });
-            }
-
-            if (country !== undefined) {
-                updatedData.country = country.trim();
-            }
-
-            if (description !== undefined) {
-                updatedData.description = description.trim();
-            }
-
-            if (status !== undefined && ['active', 'inactive'].includes(status)) {
-                updatedData.status = status;
-            }
-
-            // Chỉ cập nhật logo nếu có giá trị được gửi lên
-            if (logo !== undefined) {
-                updatedData.logo = logo; // <-- Có thể là URL từ Cloudinary
-            }
-
-            await BrandModel.update(updatedData, {
-                where: { id }
+            // chạy update
+            const [affectedRows] = await BrandModel.update(updateData, {
+                where: { id },
+                returning: true
             });
 
+            if (affectedRows === 0) {
+                return res.status(404).json({
+                    status: 404,
+                    message: 'Không tìm thấy thương hiệu'
+                });
+            }
+
+            // lấy lại bản ghi mới
             const updatedBrand = await BrandModel.findByPk(id);
 
-            const allStatuses = ['active', 'inactive'];
-            const countPromises = allStatuses.map(s =>
-                BrandModel.count({ where: { status: s } })
-            );
-            const countsByStatus = await Promise.all(countPromises);
-
-            const counts = {
-                all: await BrandModel.count(),
-                active: countsByStatus[0],
-                inactive: countsByStatus[1],
-            };
-
-            res.status(200).json({
+            return res.status(200).json({
                 status: 200,
-                message: "Cập nhật thương hiệu thành công",
-                data: updatedBrand,
-                counts
+                message: 'Cập nhật thương hiệu thành công!',
+                data: updatedBrand
             });
         } catch (error) {
-            console.error("Lỗi khi cập nhật thương hiệu:", error);
-            res.status(500).json({ error: error.message });
+            console.error('Lỗi khi cập nhật thương hiệu:', error);
+            return res.status(500).json({
+                status: 500,
+                message: error.message
+            });
         }
     }
 

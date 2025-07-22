@@ -343,7 +343,7 @@ export default function Login() {
                         disabled={loading}
                         className="w-full px-4 py-2 bg-black text-white font-semibold rounded-md hover:bg-gray-800 transition duration-300"
                       >
-                        {loading ? "Đang xử lý..." : "Gửi liên kết"}
+                        {loading ? "Đang xử lý..." : "Gửi"}
                       </button>
                     </div>
                     <div className="signup-area flex justify-center mt-4">

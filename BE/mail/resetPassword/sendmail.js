@@ -26,7 +26,7 @@ const sendResetPassword = async (email, resetLink) => {
             <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
               <!-- Header -->
               <tr>
-                <td style="background-color: #6c5ce7; padding: 20px; text-align: center;">
+                <td style="background-color: #003366; padding: 20px; text-align: center;">
                   <img src="${process.env.REACT_APP_PUBLIC_URL}/assets/images/logos/logo.png" alt="TIMEMASTERS" width="120" style="display: block; margin: 0 auto 10px;" />
                   <h1 style="color: #ffffff; font-size: 24px; margin: 0;">Đặt lại mật khẩu</h1>
                 </td>
@@ -43,7 +43,7 @@ const sendResetPassword = async (email, resetLink) => {
                   <p style="text-align: center; margin: 30px 0;">
                     <a href="${resetLink}"
                        style="
-                         background-color: #6c5ce7;
+                         background-color: #003366;
                          color: #ffffff;
                          text-decoration: none;
                          padding: 12px 28px;
@@ -83,6 +83,7 @@ const sendResetPassword = async (email, resetLink) => {
     throw new Error("Không thể gửi email đặt lại mật khẩu");
   }
 };
+
 
 
 module.exports = sendResetPassword;

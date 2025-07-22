@@ -50,9 +50,7 @@ export default function ResetPassword() {
         setTimeout(() => navigate("/login"), 2000);
       }
     } catch (error) {
-      setErrors({
-        general: error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!",
-      });
+      setErrors({ general: error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại!" });
     } finally {
       setLoading(false);
     }
@@ -70,13 +68,7 @@ export default function ResetPassword() {
                     Đặt lại mật khẩu
                   </h1>
                   <div className="shape -mt-6">
-                    <svg
-                      width="354"
-                      height="30"
-                      viewBox="0 0 354 30"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                    <svg width="354" height="30" viewBox="0 0 354 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M1 28.8027C17.6508 20.3626 63.9476 8.17089 113.509 17.8802C166.729 28.3062 341.329 42.704 353 1"
                         stroke="#FFBB38"
@@ -87,15 +79,14 @@ export default function ResetPassword() {
                   </div>
                 </div>
 
-                {errors.general && <div className="text-red-500 text-sm mb-4">{errors.general}</div>}
+                {errors.general && (
+                  <p className="text-red-500 text-sm mb-4">{errors.general}</p>
+                )}
 
                 <form onSubmit={handleSubmit}>
                   {/* Mật khẩu mới */}
                   <div className="mb-4">
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                       Mật khẩu mới<span className="text-red-500">*</span>
                     </label>
                     <input
@@ -114,10 +105,7 @@ export default function ResetPassword() {
 
                   {/* Xác nhận mật khẩu */}
                   <div className="mb-4">
-                    <label
-                      htmlFor="confirmPassword"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                       Xác nhận mật khẩu<span className="text-red-500">*</span>
                     </label>
                     <input
@@ -149,7 +137,7 @@ export default function ResetPassword() {
                 {/* Quay lại đăng nhập */}
                 <div className="signup-area flex justify-center mt-4">
                   <p className="text-base text-qgraytwo font-normal">
-                    Quay lại{" "}
+                    Quay lại{' '}
                     <Link to="/login" className="ml-2 text-qblack font-medium">
                       Đăng nhập
                     </Link>
@@ -160,10 +148,7 @@ export default function ResetPassword() {
 
             {/* Hình ảnh bên phải */}
             <div className="flex-1 lg:flex hidden transform scale-60 xl:scale-100 xl:justify-center">
-              <div
-                className="absolute xl:-right-20 -right-[138px]"
-                style={{ top: "calc(50% - 258px)" }}
-              >
+              <div className="absolute xl:-right-20 -right-[138px]" style={{ top: "calc(50% - 258px)" }}>
                 <Thumbnail />
               </div>
             </div>

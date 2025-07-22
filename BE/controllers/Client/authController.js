@@ -251,12 +251,8 @@ class AuthController {
                 JWT_SECRET,
                 { expiresIn: "1h" }
             );
-            const expires = new Date(Date.now() + 3600 * 1000); // 1 giờ sau
 
-            await user.update({
-                password_reset_token: token,
-                password_reset_expires: expires,
-            });
+            await user.update({ password_reset_token: token });
 
             const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
             await sendResetPassword(email, resetLink);
@@ -268,31 +264,28 @@ class AuthController {
         }
     }
 
-    // Cập nhật mật khẩu với token
     static async updatePassword(req, res) {
         const { token } = req.params;
         const { password } = req.body;
 
         try {
             const decoded = jwt.verify(token, JWT_SECRET);
+
             const user = await UserModel.findOne({
                 where: {
                     id: decoded.id,
-                    password_reset_token: token,
-                    password_reset_expires: { [Op.gt]: new Date() }
+                    password_reset_token: token
                 }
             });
             if (!user) {
-                return errorResponse(res, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn!", 401);
+                return errorResponse(res, "Liên kết không hợp lệ hoặc đã dùng rồi!", 401);
             }
 
             const hashedPassword = await bcrypt.hash(password, 10);
-
             await user.update({
                 password: hashedPassword,
                 password_reset_token: null,
-                password_reset_expires: null,
-                remember_token: null,
+                remember_token: null
             });
 
             return successResponse(res, "Cập nhật mật khẩu thành công!", null, 200);
@@ -307,6 +300,7 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
+
 
 
     static async getById(req, res) {
