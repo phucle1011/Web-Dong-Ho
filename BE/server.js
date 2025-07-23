@@ -15,6 +15,10 @@ const cron = require('node-cron');
 const { Sequelize, Op } = require('sequelize');
 const OrderModel = require('./models/ordersModel');
 const cleanupRememberTokens = require('./controllers/Client/rememberTokenCleanup');
+const authenticate = require('./services/Middleware');
+const updateLastActive = require('./config/middleware/updateLastActive');
+const { authAdmin} = require('./services/authCheck');
+
 
 
 cron.schedule('* * * * *', async () => {
@@ -63,8 +67,8 @@ app.use(cors({
 }));
 
 app.use(clientRoutes);
-app.use('/admin', adminRoutes);
-app.use('/', clientRoutes);
+app.use('/admin', authenticate, authAdmin, updateLastActive, adminRoutes);
+app.use('/', authenticate, updateLastActive, clientRoutes);
 app.use(apiRoutes);
 
 const port = 5000;

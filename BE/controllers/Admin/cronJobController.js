@@ -1,6 +1,10 @@
 const cron = require('node-cron');
 const { Op } = require('sequelize');
 const PromotionModel = require('../../models/promotionsModel');
+const UserModel = require('../../models/usersModel');
+const nodemailer     = require('nodemailer');
+const getEmailTemplate = require('../../utils/emailTemplate');
+
 
 async function updatePromotionStatuses() {
     try {
@@ -50,6 +54,49 @@ async function updatePromotionStatuses() {
     }
 }
 
+async function deactivateStaleUsers() {
+    try {
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        const usersToDeactivate = await UserModel.findAll({
+            where: {
+                status: 'active',
+                last_active_at: { [Op.lte]: threeMonthsAgo }
+            }
+        });
+
+        if (usersToDeactivate.length === 0) return;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        for (const user of usersToDeactivate) {
+            user.status = 'inactive';
+            user.lockout_reason = 'Không hoạt động trong thời gian dài';
+            await user.save();
+
+            const html = getEmailTemplate(user.name, 'inactive', user.lockout_reason);
+            await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: 'Tài khoản của bạn đã bị vô hiệu hóa',
+                html
+            });
+        }
+
+        console.log(`Deactivated ${usersToDeactivate.length} stale users.`);
+    } catch (err) {
+        console.error('Lỗi khi deactive stale users:', err);
+    }
+}
+
+
 cron.schedule('0 0 * * *', () => {
     updatePromotionStatuses();
 });
@@ -57,5 +104,10 @@ cron.schedule('0 0 * * *', () => {
 cron.schedule('59 23 * * *', () => {
     updatePromotionStatuses();
 });
+
+// cron.schedule('0 0 * * *', deactivateStaleUsers);
+
+cron.schedule('* * * * *', deactivateStaleUsers);
+
 
 module.exports = updatePromotionStatuses;

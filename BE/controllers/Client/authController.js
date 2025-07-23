@@ -128,6 +128,15 @@ class AuthController {
                 return errorResponse(res, "Mật khẩu không chính xác!", 400);
             }
 
+            if (user.status === 'inactive') {
+                await user.update({
+                    status: 'active',
+                    lockout_reason: null
+                });
+            }
+
+            await user.update({ last_active_at: new Date() });
+
             const now = new Date();
             if (user.remember_token) {
                 const tokenExpiry = new Date(user.updated_at);

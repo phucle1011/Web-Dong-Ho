@@ -53,6 +53,10 @@ const UserModel = connection.define('users', {
     lockout_reason: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    last_active_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
     }
 }, {
     tableName: 'users',
