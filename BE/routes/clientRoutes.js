@@ -114,7 +114,7 @@ router.get('/products', ProductClientController.getAll);
 router.get('/price-range', ProductClientController.getPrice);
 
 // router.get('/stock', ProductClientController.countStockGroupByProductId);
-router.get('/:id', ProductVariantController.getProductVariantDetail);
+// router.get('/:id', ProductVariantController.getProductVariantDetail);
 
 router.get('/product-variants/:id', ProductVariantController.getProductVariantDetail);
 router.get('/products/discounted', ProductVariantController.getDiscountedProducts);

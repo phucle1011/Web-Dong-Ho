@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants.jsx";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
@@ -30,8 +30,10 @@ const PromotionProductList = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteItem, setDeleteItem] = useState({ id: null, name: "" });
   const dialogRef = useRef(null);
+  const navigate = useNavigate();
 
-  const getPromotionStatus = (startDate, endDate) => {
+  const getPromotionStatus = (startDate, endDate, quantity) => {
+    if (quantity === 0) return "exhausted";
     if (!startDate || !endDate) return "inactive";
     const currentDate = new Date();
     const start = new Date(startDate);
@@ -41,37 +43,49 @@ const PromotionProductList = () => {
     return "expired";
   };
 
-  const getStatusDisplayName = (status) => ({
-    active: "Đang diễn ra",
-    upcoming: "Sắp diễn ra",
-    expired: "Đã hết hạn",
-    inactive: "Vô hiệu hóa",
-    exhausted: "Hết lượt sử dụng",
-  }[status] || "Vô hiệu hóa");
+  const getStatusDisplayName = (status) =>
+    ({
+      active: "Đang diễn ra",
+      upcoming: "Sắp diễn ra",
+      expired: "Đã hết hạn",
+      inactive: "Vô hiệu hóa",
+      exhausted: "Hết lượt sử dụng",
+    }[status] || "Vô hiệu hóa");
 
-  const getStatusBadgeClass = (status) => ({
-    active: "bg-green-100 text-green-800",
-    upcoming: "bg-blue-100 text-blue-800",
-    expired: "bg-red-100 text-red-800",
-    inactive: "bg-gray-200 text-gray-800",
-    exhausted: "bg-yellow-100 text-yellow-800",
-  }[status] || "bg-gray-200 text-gray-800");
+  const getStatusBadgeClass = (status) =>
+    ({
+      active: "bg-green-100 text-green-800",
+      upcoming: "bg-blue-100 text-blue-800",
+      expired: "bg-red-100 text-red-800",
+      inactive: "bg-gray-200 text-gray-800",
+      exhausted: "bg-yellow-100 text-yellow-800 font-bold",
+    }[status] || "bg-gray-200 text-gray-800");
+
+  const formatDiscountValue = (discountValue, discountType) => {
+    if (!discountValue || discountValue === null || discountValue === undefined)
+      return "-";
+    return discountType === "percentage"
+      ? `${parseFloat(discountValue).toFixed(2)}%`
+      : `${parseFloat(discountValue).toLocaleString("vi-VN")} VNĐ`;
+  };
 
   const fetchPromotions = async (page = 1, search = "") => {
     setLoading(true);
     setError(null);
     try {
-      const offset = (page - 1) * pagination.limit;
-      const response = await axios.get(`${Constants.DOMAIN_API}/admin/promotion`, {
-        params: { page: 1, limit: offset + pagination.limit * 100, searchTerm: search }, // Tăng limit để lấy nhiều dữ liệu hơn
-      });
+      const response = await axios.get(
+        `${Constants.DOMAIN_API}/admin/promotion`,
+        {
+          params: { page, limit: pagination.limit, searchTerm: search },
+        }
+      );
       const data = Array.isArray(response.data?.data) ? response.data.data : [];
 
       if (!data.length) {
         console.warn("API trả về dữ liệu rỗng!");
       }
 
-      // Nhóm dữ liệu theo tên khuyến mãi
+      // Group promotions by name to count unique promotions
       const grouped = {};
       data.forEach((item) => {
         if (item.promotion_id && item.product_variant_id) {
@@ -81,18 +95,18 @@ const PromotionProductList = () => {
         }
       });
 
-      // Lấy danh sách tên khuyến mãi duy nhất và chọn cho trang hiện tại
-      const groupedKeys = Object.keys(grouped);
-      const startIndex = (page - 1) * pagination.limit;
-      const selectedPromotions = groupedKeys.slice(startIndex, startIndex + pagination.limit);
-      const selectedProducts = selectedPromotions.flatMap((key) => grouped[key]);
+      // Calculate total number of unique promotions from API response
+      const totalPromotions = response.data.pagination?.total || 0;
 
-      setPromotionProducts(selectedProducts);
+      setPromotionProducts(data);
       setPagination({
-        total: groupedKeys.length,
-        page,
-        limit: pagination.limit,
-        totalPages: Math.ceil(groupedKeys.length / pagination.limit) || 1,
+        total: totalPromotions,
+        page: response.data.pagination?.page || page,
+        limit: response.data.pagination?.limit || pagination.limit,
+        totalPages:
+          response.data.pagination?.totalPages ||
+          Math.ceil(totalPromotions / pagination.limit) ||
+          1,
       });
     } catch (err) {
       console.error("Lỗi khi lấy dữ liệu:", err);
@@ -131,12 +145,17 @@ const PromotionProductList = () => {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`${Constants.DOMAIN_API}/admin/promotions/${deleteItem.id}`);
-      toast.success("Xóa thành công!");
-      fetchPromotions(1, searchTerm);
+      await axios.delete(
+        `${Constants.DOMAIN_API}/admin/promotions/${deleteItem.id}`
+      );
+      toast.success("Xóa thành công! Đã hoàn lại 1 lượt sử dụng.");
+      fetchPromotions(pagination.page, searchTerm);
+      setExpanded(deleteItem.name); // Tự động mở lại phần mở rộng
     } catch (err) {
       console.error("Lỗi khi xóa:", err);
-      toast.error(`Xóa thất bại: ${err.response?.data?.message || err.message}`);
+      toast.error(
+        `Xóa thất bại: ${err.response?.data?.message || err.message}`
+      );
     } finally {
       setShowDeleteDialog(false);
       setDeleteItem({ id: null, name: "" });
@@ -158,6 +177,17 @@ const PromotionProductList = () => {
     setExpanded(expanded === promoName ? null : promoName);
   };
 
+  const handleEditClick = (promotionId, promoName, quantity) => {
+    if (quantity === 0) {
+      toast.warn(`Khuyến mãi ${promoName} đã hết lượt sử dụng.`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+    navigate(`/admin/promotion-products/edit/${promotionId}`);
+  };
+
   const groupByPromotionName = (products) => {
     const grouped = {};
     products.forEach((item) => {
@@ -169,11 +199,12 @@ const PromotionProductList = () => {
     });
 
     return Object.entries(grouped).map(([name, items]) => {
-      const variantCount = [...new Set(
-        items.map(item => item.product_variant_id)
-      )].length; // Đếm số biến thể duy nhất
+      const variantCount = [
+        ...new Set(items.map((item) => item.product_variant_id)),
+      ].length;
       const promotionId = items[0]?.promotion?.id || null;
-      return [name, items, variantCount, promotionId];
+      const quantity = items[0]?.promotion?.quantity || 0;
+      return [name, items, variantCount, promotionId, quantity];
     });
   };
 
@@ -229,6 +260,9 @@ const PromotionProductList = () => {
           <FaChevronLeft />
         </button>
         {pagesToShow}
+        {totalPages > maxPages && page < totalPages - 1 && (
+          <span className="px-2 py-1">...</span>
+        )}
         {showNextPage && (
           <>
             <button
@@ -266,7 +300,7 @@ const PromotionProductList = () => {
       <div className="mb-4 flex gap-2">
         <input
           type="text"
-          className="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none"
+          className="border w-full py-2 px-3 text-gray-700 focus:outline-none"
           placeholder="Tìm kiếm theo tên, SKU, trạng thái..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -293,6 +327,13 @@ const PromotionProductList = () => {
             />
           </svg>
         </button>
+        <button
+          onClick={handleClearSearch}
+          className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-1.5 rounded"
+          title="Xóa tìm kiếm"
+        >
+          Xóa
+        </button>
       </div>
 
       {loading && <div className="text-center py-4">Đang tải...</div>}
@@ -301,135 +342,197 @@ const PromotionProductList = () => {
       {!loading && !error && (
         <table className="w-full table-auto border border-collapse border-gray-300">
           <thead>
-            <tr>
+            <tr className="bg-gray-100">
+              <th className="border p-2 text-center">#</th>
               <th className="border p-2">Tên khuyến mãi</th>
+              <th className="border p-2">Phần trăm</th>
               <th className="border p-2">Ngày bắt đầu</th>
               <th className="border p-2">Ngày kết thúc</th>
               <th className="border p-2">Trạng thái</th>
               <th className="border p-2">Số lượng biến thể</th>
-              <th className="border p-2">Hành động</th>
+              <th className="border p-2">Số lượt khuyến mãi</th>
+              <th className="border p-2"></th>
             </tr>
           </thead>
           <tbody>
             {groupedProducts.length > 0 ? (
-              groupedProducts.map(([promoName, items, variantCount, promotionId]) => {
-                const promo = items[0]?.promotion || {};
-                const isExpanded = expanded === promoName;
-                const status = getPromotionStatus(promo.start_date, promo.end_date);
+              groupedProducts.map(
+                (
+                  [promoName, items, variantCount, promotionId, quantity],
+                  index
+                ) => {
+                  const promo = items[0]?.promotion || {};
+                  const isExpanded = expanded === promoName;
+                  const status = getPromotionStatus(
+                    promo.start_date,
+                    promo.end_date,
+                    quantity
+                  );
+                  const stt =
+                    (pagination.page - 1) * pagination.limit + index + 1;
 
-                return (
-                  <React.Fragment key={promoName}>
-                    <tr className="bg-gray-100">
-                      <td className="border p-2 font-bold">{promoName}</td>
-                      <td className="border p-2">
-                        {promo.start_date
-                          ? new Date(promo.start_date).toLocaleDateString("vi-VN")
-                          : "-"}
-                      </td>
-                      <td className="border p-2">
-                        {promo.end_date
-                          ? new Date(promo.end_date).toLocaleDateString("vi-VN")
-                          : "-"}
-                      </td>
-                      <td className="border p-2 text-center">
-                        <span
-                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                            status
-                          )}`}
-                        >
-                          {getStatusDisplayName(status)}
-                        </span>
-                      </td>
-                      <td className="border p-2 text-center">{variantCount}</td>
-                      <td className="border p-2 text-right space-x-2">
-                        {promotionId ? (
-                          <Link
-                            to={`/admin/promotion-products/edit/${promotionId}`}
-                            className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                            title="Sửa"
-                          >
-                            <FaEdit size={20} className="font-bold" />
-                          </Link>
-                        ) : (
-                          <span
-                            className="bg-gray-400 text-white py-1 px-3 rounded cursor-not-allowed"
-                            title="Không thể sửa do thiếu ID khuyến mãi"
-                          >
-                            <i className="fa-solid fa-pen-to-square"></i>
-                          </span>
-                        )}
-                        <button
-                          onClick={() => toggleExpand(promoName)}
-                          className="bg-blue-500 text-white p-2 rounded"
-                        >
-                          {isExpanded ? (
-                            <FaChevronUp size={16} className="font-bold" />
-                          ) : (
-                            <FaChevronDown size={16} className="font-bold" />
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-
-                    {isExpanded && (
+                  return (
+                    <React.Fragment key={promoName}>
                       <tr>
-                        <td colSpan={6}>
-                          <table className="w-full table-auto border border-collapse border-gray-300">
-                            <thead>
-                              <tr>
-                                <th className="border p-2">ID</th>
-                                <th className="border p-2">Tên khuyến mãi</th>
-                                <th className="border p-2">SKU biến thể</th>
-                                <th className="border p-2">Trạng thái</th>
-                                <th className="border p-2">Hành động</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {items.map((item) => {
-                                const itemStatus = getPromotionStatus(
-                                  item.promotion?.start_date,
-                                  item.promotion?.end_date
-                                );
-                                return (
-                                  <tr key={item.id}>
-                                    <td className="border p-2">{item.id || "-"}</td>
-                                    <td className="border p-2">{promoName}</td>
-                                    <td className="border p-2">
-                                      {item.variant?.sku || item.product_variant_id || "-"}
-                                    </td>
-                                    <td className="border p-2 text-center">
-                                      <span
-                                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                                          itemStatus
-                                        )}`}
-                                      >
-                                        {getStatusDisplayName(itemStatus)}
-                                      </span>
-                                    </td>
-                                    <td className="border p-2 text-center">
-                                      <button
-                                        onClick={() => handleDelete(item.id, promoName)}
-                                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                                        title="Xóa"
-                                        aria-label={`Xóa ${promoName}`}
-                                      >
-                                        <FaTrashAlt size={20} className="font-bold" />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                        <td className="border p-2 text-center">{stt}</td>
+                        <td className="border p-2 font-bold">{promoName}</td>
+                        <td className="border p-2">
+                          {formatDiscountValue(
+                            promo.discount_value,
+                            promo.discount_type
+                          )}
+                        </td>
+                        <td className="border p-2">
+                          {promo.start_date
+                            ? new Date(promo.start_date).toLocaleDateString(
+                                "vi-VN"
+                              )
+                            : "-"}
+                        </td>
+                        <td className="border p-2">
+                          {promo.end_date
+                            ? new Date(promo.end_date).toLocaleDateString(
+                                "vi-VN"
+                              )
+                            : "-"}
+                        </td>
+                        <td className="border p-2 text-center">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                              status
+                            )}`}
+                          >
+                            {getStatusDisplayName(status)}
+                          </span>
+                        </td>
+                        <td className="border p-2 text-center">
+                          {variantCount}
+                        </td>
+                        <td className="border p-2 text-center">
+                          {quantity === 0 ? "Hết lượt" : quantity}
+                        </td>
+
+                        <td className="p-2 flex items-center justify-end space-x-2">
+                          {promotionId ? (
+                            <button
+                              onClick={() =>
+                                handleEditClick(
+                                  promotionId,
+                                  promoName,
+                                  quantity
+                                )
+                              }
+                              className="p-2 rounded w-8 h-8 inline-flex items-center justify-center bg-yellow-500 text-white hover:bg-yellow-600"
+                              title="Sửa"
+                            >
+                              <FaEdit size={20} />
+                            </button>
+                          ) : (
+                            <span
+                              className="bg-gray-400 text-gray-200 py-1 px-3 rounded cursor-not-allowed"
+                              title="Không thể sửa do thiếu ID khuyến mãi"
+                            >
+                              <FaEdit size={20} />
+                            </span>
+                          )}
+                          <button
+                            onClick={() => toggleExpand(promoName)}
+                            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                          >
+                            {isExpanded ? (
+                              <FaChevronUp size={16} />
+                            ) : (
+                              <FaChevronDown size={16} />
+                            )}
+                          </button>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
+
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={9}>
+                            <table className="w-full table-auto border border-collapse border-gray-300">
+                              <thead>
+                                <tr>
+                                  <th className="border p-2 text-center">#</th>
+                                  <th className="border p-2">Tên sản phẩm</th>
+                                  <th className="border p-2">Phần trăm</th>
+                                  <th className="border p-2">SKU biến thể</th>
+                                  <th className="border p-2">
+                                    Số lượt khuyến mãi
+                                  </th>
+                                  <th className="border p-2">Trạng thái</th>
+                                  <th className="border p-2"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {items.map((item, subIndex) => {
+                                  const itemStatus = getPromotionStatus(
+                                    item.promotion?.start_date,
+                                    item.promotion?.end_date,
+                                    item.promotion?.quantity
+                                  );
+                                  return (
+                                    <tr key={item.id}>
+                                      <td className="border p-2 text-center">
+                                        {subIndex + 1}
+                                      </td>
+                                      <td className="border p-2">
+                                        {item.variant?.product?.name ||
+                                          item.product_name ||
+                                          "-"}
+                                      </td>
+                                      <td className="border p-2">
+                                        {formatDiscountValue(
+                                          item.promotion?.discount_value,
+                                          item.promotion?.discount_type
+                                        )}
+                                      </td>
+                                      <td className="border p-2">
+                                        {item.variant?.sku ||
+                                          item.product_variant_id ||
+                                          "-"}
+                                      </td>
+                                      <td className="border p-2 text-center">
+                                        {quantity === 0 ? "Hết lượt" : quantity}
+                                      </td>
+
+                                      <td className="border p-2 text-center">
+                                        <span
+                                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
+                                            itemStatus
+                                          )}`}
+                                        >
+                                          {getStatusDisplayName(itemStatus)}
+                                        </span>
+                                      </td>
+                                      <td className="border p-2 text-center">
+                                        <button
+                                          onClick={() =>
+                                            handleDelete(item.id, promoName)
+                                          }
+                                          className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                                          title="Xóa"
+                                          aria-label={`Xóa ${promoName}`}
+                                        >
+                                          <FaTrashAlt size={20} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                }
+              )
             ) : (
               <tr>
-                <td colSpan={6} className="text-center py-4">
+                <td colSpan={9} className="text-center py-4">
                   Không có dữ liệu
                 </td>
               </tr>
@@ -438,7 +541,7 @@ const PromotionProductList = () => {
         </table>
       )}
 
-      {renderPagination()}
+      {pagination.total > 0 && renderPagination()}
 
       {showDeleteDialog && (
         <div
@@ -455,7 +558,8 @@ const PromotionProductList = () => {
               Xác nhận xóa
             </h3>
             <p className="mb-6 text-gray-700">
-              Bạn có chắc chắn muốn xóa <strong>{deleteItem.name || "khuyến mãi"}</strong>?
+              Bạn có chắc chắn muốn xóa{" "}
+              <strong>{deleteItem.name || "khuyến mãi"}</strong>?
             </p>
             <div className="flex justify-end gap-2">
               <button

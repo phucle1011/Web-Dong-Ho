@@ -29,7 +29,7 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const getPromotionStatus = (startDate, endDate) => {
     if (!startDate || !endDate) return { status: "Không xác định", className: "text-gray-500" };
-    const currentDate = new Date(); // 02:15 PM +07, 01/07/2025
+    const currentDate = new Date();
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (currentDate < start) {
@@ -41,71 +41,101 @@ const PromotionProductForm = ({ onSuccess }) => {
     return { status: "Đã kết thúc", className: "text-gray-500" };
   };
 
+  const fetchPromotions = async () => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`);
+      const data = Array.isArray(res.data.data) ? res.data.data : [];
+      setPromotions(data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách promotion:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error("Không thể tải danh sách khuyến mãi!");
+    }
+  };
+
+  const fetchProductVariants = async () => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
+      setProductVariants(res.data.data || []);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách biến thể sản phẩm:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error("Không thể tải danh sách biến thể sản phẩm!");
+    }
+  };
+
+  const fetchUsedVariantsAndPromotions = async () => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotion`, {
+        params: { limit: 1000 },
+      });
+      const promotionProducts = Array.isArray(res.data.data) ? res.data.data : [];
+      const usedVariantIds = [
+        ...new Set(
+          promotionProducts
+            .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
+            .map((item) => item.product_variant_id)
+        ),
+      ];
+      const usedPromotionIds = [
+        ...new Set(
+          promotionProducts
+            .filter((item) => item.promotion_id && !isNaN(item.promotion_id))
+            .map((item) => item.promotion_id)
+        ),
+      ];
+
+      setUsedVariantIds(usedVariantIds);
+      setUsedPromotionIds(usedPromotionIds);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách biến thể hoặc khuyến mãi đã sử dụng:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error("Không thể tải danh sách đã sử dụng!");
+    }
+  };
+
   useEffect(() => {
-    const fetchPromotions = async () => {
+    const initializeData = async () => {
+      setIsFetching(true);
       try {
-        const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/promotions/ss/all`
-        );
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        setPromotions(data);
+        await Promise.all([
+          fetchPromotions(),
+          fetchProductVariants(),
+          fetchUsedVariantsAndPromotions(),
+        ]);
       } catch (error) {
-        console.error("Lỗi khi tải danh sách promotion:", error);
-        toast.error("Không thể tải danh sách khuyến mãi!");
+        console.error("Lỗi khi khởi tạo dữ liệu:", error);
       }
+      setIsFetching(false);
     };
-
-    const fetchProductVariants = async () => {
-      try {
-        const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/product-variants`
-        );
-        setProductVariants(res.data.data || []);
-      } catch (error) {
-        console.error("Lỗi khi tải danh sách biến thể sản phẩm:", error);
-        toast.error("Không thể tải danh sách biến thể sản phẩm!");
-      }
-    };
-
-    const fetchUsedVariantsAndPromotions = async () => {
-      try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotion`, {
-          params: { limit: 1000 },
-        });
-        const promotionProducts = Array.isArray(res.data.data)
-          ? res.data.data
-          : [];
-        const usedVariantIds = [
-          ...new Set(
-            promotionProducts
-              .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
-              .map((item) => item.product_variant_id)
-          ),
-        ];
-        const usedPromotionIds = [
-          ...new Set(
-            promotionProducts
-              .filter((item) => item.promotion_id && !isNaN(item.promotion_id))
-              .map((item) => item.promotion_id)
-          ),
-        ];
-
-        setUsedVariantIds(usedVariantIds);
-        setUsedPromotionIds(usedPromotionIds);
-      } catch (error) {
-        console.error("Lỗi khi tải danh sách biến thể hoặc khuyến mãi đã sử dụng:", error);
-        toast.error("Không thể tải danh sách đã sử dụng!");
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    fetchPromotions();
-    fetchProductVariants();
-    fetchUsedVariantsAndPromotions();
+    initializeData();
   }, []);
 
   const onSubmit = async (data) => {
+    if (isLoading) return; // Ngăn gửi trùng lặp
+
+    const selectedPromotion = promotions.find((p) => p.id === parseInt(data.promotion_id));
+    if (!selectedPromotion) {
+      toast.error("Khuyến mãi không hợp lệ!");
+      return;
+    }
+
+    if (data.product_variant_id.length > selectedPromotion.quantity) {
+      toast.error(
+        `Không thể thêm ${data.product_variant_id.length} biến thể. Khuyến mãi chỉ còn ${selectedPromotion.quantity} lượt khả dụng.`
+      );
+      return;
+    }
+
     const usedVariants = data.product_variant_id.filter((id) =>
       usedVariantIds.includes(parseInt(id))
     );
@@ -120,7 +150,7 @@ const PromotionProductForm = ({ onSuccess }) => {
         })
         .join(", ");
       toast.error(
-        `Không thể thêm các biến thể sau vì chúng đã được sử dụng trong khuyến mãi khác: ${variantDetails}. Mỗi biến thể chỉ được áp dụng cho một khuyến mãi.`
+        `Không thể thêm các biến thể sau vì chúng đã được sử dụng trong khuyến mãi khác: ${variantDetails}.`
       );
       return;
     }
@@ -132,15 +162,25 @@ const PromotionProductForm = ({ onSuccess }) => {
 
     setIsLoading(true);
     try {
-
-      await axios.post(
+      console.log("Sending payload:", payload);
+      const response = await axios.post(
         `${Constants.DOMAIN_API}/admin/promotion-products`,
         payload
       );
+      console.log("Response:", response.data);
       toast.success("Thêm sản phẩm khuyến mãi thành công!");
-      reset();
+
+      // Cập nhật lại dữ liệu
+      await Promise.all([
+        fetchPromotions(),
+        fetchUsedVariantsAndPromotions(),
+      ]);
+
+      // Cập nhật danh sách đã sử dụng
       setUsedVariantIds((prev) => [...new Set([...prev, ...data.product_variant_id])]);
       setUsedPromotionIds((prev) => [...new Set([...prev, parseInt(data.promotion_id)])]);
+
+      reset();
       setSelectedPromotionId(null);
       setSelectedVariantIds([]);
       if (onSuccess) onSuccess();
@@ -148,12 +188,19 @@ const PromotionProductForm = ({ onSuccess }) => {
         navigate("/admin/promotion-products/getAll");
       }, 1000);
     } catch (err) {
-      console.error("Lỗi khi thêm sản phẩm khuyến mãi:", err);
+      console.error("Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        payload,
+      });
       let errorMessage = "Lỗi khi thêm sản phẩm khuyến mãi!";
       if (err.response?.status === 400) {
-        errorMessage = err.response.data.message || "Dữ liệu không hợp lệ!";
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
+        errorMessage = err.response.data.error || "Dữ liệu không hợp lệ!";
+      } else if (err.response?.status === 409) {
+        errorMessage = err.response.data.error || "Cặp promotion-product đã tồn tại!";
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
       }
       toast.error(errorMessage);
     } finally {
@@ -162,7 +209,7 @@ const PromotionProductForm = ({ onSuccess }) => {
   };
 
   const availablePromotions = promotions.filter(
-    (promo) => !usedPromotionIds.includes(promo.id)
+    (promo) => !usedPromotionIds.includes(promo.id) && promo.quantity > 0
   );
 
   const availableVariants = productVariants
@@ -183,6 +230,7 @@ const PromotionProductForm = ({ onSuccess }) => {
     >
       <span>{data.name}</span>
       <span className={`ml-2 ${data.statusClass}`}>{data.status}</span>
+      <span className="ml-2 text-gray-500">(Còn: {data.quantity})</span>
     </div>
   );
 
@@ -190,6 +238,7 @@ const PromotionProductForm = ({ onSuccess }) => {
     <div {...innerProps} className="flex items-center">
       <span>{data.name}</span>
       <span className={`ml-2 ${data.statusClass}`}>{data.status}</span>
+      <span className="ml-2 text-gray-500">(Còn: {data.quantity})</span>
     </div>
   );
 
@@ -197,16 +246,17 @@ const PromotionProductForm = ({ onSuccess }) => {
     const { status, className } = getPromotionStatus(promo.start_date, promo.end_date);
     return {
       value: promo.id,
-      label: `${promo.name} (${status})`,
+      label: `${promo.name} (${status}, Còn: ${promo.quantity})`,
       name: promo.name,
       status,
       statusClass: className,
+      quantity: promo.quantity,
     };
   });
 
   return (
-    <div className="card p-4">
-      <h4>Thêm mới sản phẩm khuyến mãi</h4>
+    <div className="font mb-4">
+      <h4>Thêm khuyến mãi</h4>
       {isFetching && <div className="text-center">Đang tải dữ liệu...</div>}
       {isLoading && <div className="text-center">Đang xử lý...</div>}
       {!isFetching && (
@@ -223,6 +273,8 @@ const PromotionProductForm = ({ onSuccess }) => {
                 setSelectedPromotionId(value);
                 setValue("promotion_id", value);
                 trigger("promotion_id");
+                setSelectedVariantIds([]);
+                setValue("product_variant_id", []);
               }}
               placeholder="Chọn khuyến mãi..."
               isClearable
@@ -232,6 +284,7 @@ const PromotionProductForm = ({ onSuccess }) => {
               type="hidden"
               {...register("promotion_id", {
                 required: "Vui lòng chọn khuyến mãi",
+                validate: (value) => !isNaN(value) || "ID khuyến mãi không hợp lệ",
               })}
             />
             {errors.promotion_id && (
@@ -255,6 +308,15 @@ const PromotionProductForm = ({ onSuccess }) => {
                 const selectedIds = selectedOptions
                   ? selectedOptions.map((opt) => opt.value)
                   : [];
+                const selectedPromotion = promotions.find(
+                  (p) => p.id === parseInt(selectedPromotionId)
+                );
+                if (selectedPromotion && selectedIds.length > selectedPromotion.quantity) {
+                  toast.error(
+                    `Không thể chọn ${selectedIds.length} biến thể. Khuyến mãi chỉ còn ${selectedPromotion.quantity} lượt khả dụng.`
+                  );
+                  return;
+                }
                 setSelectedVariantIds(selectedIds);
                 setValue("product_variant_id", selectedIds);
                 trigger("product_variant_id");
@@ -267,8 +329,9 @@ const PromotionProductForm = ({ onSuccess }) => {
               {...register("product_variant_id", {
                 required: "Vui lòng chọn ít nhất một biến thể sản phẩm",
                 validate: (value) =>
-                  value && value.length > 0 ||
-                  "Vui lòng chọn ít nhất một biến thể sản phẩm",
+                  value && value.length > 0 && value.every((id) => !isNaN(id))
+                    ? true
+                    : "Vui lòng chọn ít nhất một biến thể sản phẩm hợp lệ",
               })}
             />
             {errors.product_variant_id && (
@@ -281,6 +344,10 @@ const PromotionProductForm = ({ onSuccess }) => {
             )}
             <p className="text-xs text-gray-600 mt-2">
               Chỉ có thể chọn các biến thể chưa được sử dụng trong bất kỳ khuyến mãi nào.
+              {selectedPromotionId &&
+                ` Số lượng biến thể tối đa: ${
+                  promotions.find((p) => p.id === parseInt(selectedPromotionId))?.quantity
+                }`}
             </p>
           </div>
 

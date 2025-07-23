@@ -19,6 +19,7 @@ const PromotionProductEdit = () => {
   const [customFormState, setCustomFormState] = useState({ product_variant_id: [] });
   const [variantPromotions, setVariantPromotions] = useState({});
   const [selectedPromotion, setSelectedPromotion] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(null);
 
   const {
     register,
@@ -31,7 +32,7 @@ const PromotionProductEdit = () => {
   const getPromotionStatus = (startDate, endDate) => {
     if (!startDate || !endDate) return "Không xác định";
     try {
-      const currentDate = new Date(); // 02:07 AM +07, 13/07/2025
+      const currentDate = new Date();
       const start = new Date(startDate);
       const end = new Date(endDate);
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -44,6 +45,40 @@ const PromotionProductEdit = () => {
       console.error("Lỗi khi tính trạng thái khuyến mãi:", err);
       return "Không xác định";
     }
+  };
+
+  const getStatusDisplayName = (status) => ({
+    "Đang hoạt động": "Đang diễn ra",
+    "Sắp bắt đầu": "Sắp diễn ra",
+    "Đã kết thúc": "Đã hết hạn",
+    "Không xác định": "Vô hiệu hóa",
+  }[status] || "Vô hiệu hóa");
+
+  const getStatusBadgeClass = (status) => ({
+    "Đang hoạt động": "bg-green-100 text-green-800",
+    "Sắp bắt đầu": "bg-blue-100 text-blue-800",
+    "Đã kết thúc": "bg-red-100 text-red-800",
+    "Không xác định": "bg-gray-200 text-gray-800",
+  }[status] || "bg-gray-200 text-gray-800");
+
+  const formatDiscountValue = (discountValue, discountType) => {
+    if (discountValue === null || discountValue === undefined) return "-";
+    try {
+      const value = parseFloat(discountValue);
+      if (isNaN(value)) return "-";
+      return discountType === "percentage"
+        ? `${value.toFixed(2)}%`
+        : `${value.toLocaleString("vi-VN")} VNĐ`;
+    } catch (err) {
+      console.error("Lỗi khi định dạng discountValue:", err);
+      return "-";
+    }
+  };
+
+  const truncateProductName = (name, maxLength = 30) => {
+    if (!name || typeof name !== "string") return "Không xác định";
+    if (name.length <= maxLength) return name;
+    return `${name.substring(0, maxLength)}...`;
   };
 
   useEffect(() => {
@@ -83,7 +118,7 @@ const PromotionProductEdit = () => {
         const usedIds = [...new Set(
           promotionProducts
             .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
-            .map((item) => item.product_variant_id)
+            .map((item) => item.product_variant_id),
         )];
         setUsedVariantIds(usedIds);
 
@@ -96,6 +131,8 @@ const PromotionProductEdit = () => {
               start_date: item.promotion.start_date,
               end_date: item.promotion.end_date,
               status: getPromotionStatus(item.promotion.start_date, item.promotion.end_date),
+              discount_value: item.promotion.discount_value,
+              discount_type: item.promotion.discount_type,
             };
           }
         });
@@ -132,7 +169,6 @@ const PromotionProductEdit = () => {
         const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotion?promotion_id=${id}`);
         const data = Array.isArray(res.data.data) ? res.data.data : [];
         console.log("fetchDetail - raw API response:", res.data);
-        console.log("fetchDetail - filtered data:", data);
 
         if (!data.length) {
           throw new Error("Không tìm thấy dữ liệu khuyến mãi!");
@@ -144,16 +180,10 @@ const PromotionProductEdit = () => {
             .map((item) => item.product_variant_id.toString())
         )];
 
-        console.log("fetchDetail - productVariantIds:", productVariantIds);
-
-        if (productVariantIds.length === 0) {
-          console.log(`Không tìm thấy biến thể nào cho promotion_id ${id}`);
-        }
-
         const expectedVariantCount = data[0]?.promotion?.variant_count || 0;
         if (productVariantIds.length !== expectedVariantCount && expectedVariantCount > 0) {
-          console.log(
-            `Cảnh báo: Số lượng biến thể (${productVariantIds.length}) không khớp với variant_count (${expectedVariantCount}) cho promotion_id ${id}`
+          console.warn(
+            `Số lượng biến thể (${productVariantIds.length}) không khớp với variant_count (${expectedVariantCount}) cho promotion_id ${id}`
           );
         }
 
@@ -161,12 +191,12 @@ const PromotionProductEdit = () => {
         setCustomFormState({ product_variant_id: productVariantIds });
         setValue("product_variant_id", productVariantIds);
 
-        const promotion = promotions.find((p) => p.id === parseInt(id));
+        const promotion = promotions.find((p) => p.id === parseInt(id)) || data[0]?.promotion;
         if (promotion) {
-          setSelectedPromotion(promotion);
-          setValue("promotion_id", id.toString());
-        } else if (data[0]?.promotion) {
-          setSelectedPromotion(data[0].promotion);
+          setSelectedPromotion({
+            ...promotion,
+            variant_count: expectedVariantCount
+          });
           setValue("promotion_id", id.toString());
         } else {
           throw new Error(`Không tìm thấy khuyến mãi với ID ${id}`);
@@ -175,9 +205,10 @@ const PromotionProductEdit = () => {
         trigger("product_variant_id");
 
         console.log("fetchDetail - promotion_id:", id);
-        console.log("fetchDetail - existingVariantIds:", productVariantIds);
+        console.log("fetchDetail - productVariantIds:", productVariantIds);
+        console.log("fetchDetail - expectedVariantCount:", expectedVariantCount);
         console.log("fetchDetail - customFormState:", { product_variant_id: productVariantIds });
-        console.log("fetchDetail - promotion status:", getPromotionStatus(promotion?.start_date || data[0]?.promotion?.start_date, promotion?.end_date || data[0]?.promotion?.end_date));
+        console.log("fetchDetail - selectedPromotion:", promotion);
       } catch (err) {
         console.error("Lỗi khi tải chi tiết khuyến mãi:", err);
         let errorMessage = "Không thể tải thông tin khuyến mãi!";
@@ -198,23 +229,31 @@ const PromotionProductEdit = () => {
     fetchDetail();
   }, [productVariants, setValue, id, trigger, promotions]);
 
-  // Đồng bộ customFormState với existingVariantIds
   useEffect(() => {
     if (existingVariantIds.length !== customFormState.product_variant_id.length) {
-      const newVariantIds = [...existingVariantIds];
-      setCustomFormState({ product_variant_id: newVariantIds });
-      setValue("product_variant_id", newVariantIds);
+      setCustomFormState({ product_variant_id: existingVariantIds });
+      setValue("product_variant_id", existingVariantIds);
       trigger("product_variant_id");
       console.log("Sync - existingVariantIds:", existingVariantIds);
-      console.log("Sync - customFormState:", { product_variant_id: newVariantIds });
+      console.log("Sync - customFormState:", { product_variant_id: existingVariantIds });
     }
   }, [existingVariantIds, setValue, trigger]);
 
   const onSubmit = async (formData) => {
     const selectedVariants = formData.product_variant_id || [];
+    const selectedPromotion = promotions.find(p => p.id === parseInt(formData.promotion_id));
+
+    const existingVariantCount = existingVariantIds.length;
+    const newVariantCount = selectedVariants.length;
+    const variantCountChange = newVariantCount - existingVariantCount;
+
+    if (variantCountChange > 0 && selectedPromotion.quantity < variantCountChange) {
+      toast.error(`Không thể thêm ${variantCountChange} biến thể. Khuyến mãi chỉ còn ${selectedPromotion.quantity} lượt khả dụng.`);
+      return;
+    }
 
     const usedVariantsInOther = selectedVariants.filter(
-      (variantId) => !existingVariantIds.includes(variantId) && usedVariantIds.includes(parseInt(variantId))
+      (variantId) => !existingVariantIds.includes(variantId) && usedVariantIds.includes(parseInt(variantId)),
     );
 
     if (usedVariantsInOther.length > 0) {
@@ -227,7 +266,7 @@ const PromotionProductEdit = () => {
         })
         .join(", ");
       const confirmAdd = window.confirm(
-        `Các biến thể sau đã được sử dụng trong khuyến mãi khác: ${variantDetails}. Bạn có muốn xóa chúng khỏi các khuyến mãi khác và thêm vào khuyến mãi này không?`
+        `Các biến thể sau đã được sử dụng trong khuyến mãi khác: ${variantDetails}. Bạn có muốn xóa chúng khỏi các khuyến mãi khác và thêm vào khuyến mãi này không?`,
       );
       if (!confirmAdd) return;
     }
@@ -246,7 +285,6 @@ const PromotionProductEdit = () => {
       console.log("Submitting payload:", payload);
       await axios.put(`${Constants.DOMAIN_API}/admin/promotion/${id}`, payload);
 
-      // Cập nhật existingVariantIds sau khi gửi thành công
       setExistingVariantIds(selectedVariants);
       setCustomFormState({ product_variant_id: selectedVariants });
       setValue("product_variant_id", selectedVariants);
@@ -259,13 +297,13 @@ const PromotionProductEdit = () => {
       console.error("Lỗi khi gửi dữ liệu:", err);
       let errorMessage = "Lỗi khi cập nhật khuyến mãi!";
       if (err.response?.status === 400) {
-        errorMessage = err.response.data.message || "Dữ liệu không hợp lệ! Vui lòng kiểm tra lại.";
+        errorMessage = err.response.data.error || "Dữ liệu không hợp lệ! Vui lòng kiểm tra lại.";
       } else if (err.response?.status === 404) {
         errorMessage = "Không tìm thấy khuyến mãi để chỉnh sửa!";
       } else if (err.response?.status === 409) {
         errorMessage = "Một hoặc nhiều biến thể đã được sử dụng trong khuyến mãi khác!";
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
       }
       toast.error(errorMessage);
       setError(errorMessage);
@@ -276,7 +314,7 @@ const PromotionProductEdit = () => {
 
   const availableVariants = productVariants.map((variant) => ({
     value: variant.id.toString(),
-    label: `${variant.sku} (${variant.product?.name || 'Tên sản phẩm không xác định'}) - ${
+    label: `${variant.sku} (${truncateProductName(variant.product?.name, 30)}) - ${
       variantPromotions[variant.id]
         ? `Đang áp dụng cho ${variantPromotions[variant.id].name} (${variantPromotions[variant.id].status})`
         : 'Chưa được sử dụng'
@@ -284,17 +322,44 @@ const PromotionProductEdit = () => {
     isDisabled: usedVariantIds.includes(variant.id) && !existingVariantIds.includes(variant.id.toString()),
   }));
 
-  // Debug trước khi render
   console.log("Render - customFormState:", customFormState);
   console.log("Render - existingVariantIds:", existingVariantIds);
   console.log("Render - availableVariants:", availableVariants);
-  console.log("Render - selected values for Select:", availableVariants.filter((option) =>
-    customFormState.product_variant_id?.includes(option.value)
-  ));
+  console.log("Render - selectedPromotion:", selectedPromotion);
 
   return (
     <div className="card p-4">
-      <h4>Cập nhật sản phẩm khuyến mãi</h4>
+      <style>
+        {`
+          .truncate-text {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+          }
+          .tooltip {
+            visibility: hidden;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 8px;
+            position: absolute;
+            z-index: 10;
+            top: 100%;
+            left: 0;
+            min-width: 200px;
+            opacity: 0;
+            transition: opacity 0.2s;
+          }
+          .truncate-text:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+          }
+        `}
+      </style>
+      <h4>Cập nhật khuyến mãi</h4>
       {isLoading && <div className="text-center">Đang tải...</div>}
       {error && (
         <div className="alert alert-danger">
@@ -310,7 +375,7 @@ const PromotionProductEdit = () => {
       {!isLoading && !error && (
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="mb-3">
-            <label className="form-label">Khuyến mãi</label>
+            <label className="form-label">Khuyến mãi *</label>
             <select
               className="form-select"
               {...register("promotion_id", { required: "Vui lòng chọn chương trình khuyến mãi" })}
@@ -329,13 +394,17 @@ const PromotionProductEdit = () => {
             )}
             {selectedPromotion && (
               <p className="mt-2 text-sm text-gray-600">
-                Tên khuyến mãi: <strong>{selectedPromotion.name}</strong> (Trạng thái: {getPromotionStatus(selectedPromotion.start_date, selectedPromotion.end_date)})
+                Tên khuyến mãi: <strong>{selectedPromotion.name}</strong> (Trạng thái: {getStatusDisplayName(getPromotionStatus(selectedPromotion.start_date, selectedPromotion.end_date))})
+                <br />
+                Số lượt khả dụng: <strong>{selectedPromotion.quantity}</strong>
+                <br />
+                Số lượng biến thể: <strong>{selectedPromotion.variant_count || 0}</strong>
               </p>
             )}
           </div>
 
           <div className="mb-4">
-            <label className="form-label mb-2">Chọn các biến thể sản phẩm</label>
+            <label className="form-label mb-2">Chọn các biến thể sản phẩm *</label>
             <Select
               isMulti
               options={availableVariants}
@@ -349,10 +418,9 @@ const PromotionProductEdit = () => {
                 setCustomFormState({ product_variant_id: selectedIds });
                 trigger("product_variant_id");
                 console.log("Select onChange - selectedIds:", selectedIds);
-                console.log("Select onChange - updatedVariantIds:", selectedIds);
               }}
               value={availableVariants.filter((option) =>
-                customFormState.product_variant_id?.includes(option.value)
+                customFormState.product_variant_id?.includes(option.value),
               )}
               placeholder="Chọn hoặc thêm biến thể sản phẩm..."
             />
@@ -363,7 +431,6 @@ const PromotionProductEdit = () => {
             {errors.product_variant_id && (
               <small className="text-danger">{errors.product_variant_id.message}</small>
             )}
-         
           </div>
 
           <div className="mb-4">
@@ -371,10 +438,11 @@ const PromotionProductEdit = () => {
             {customFormState.product_variant_id?.length > 0 ? (
               <table className="w-full table-auto border border-collapse border-gray-300">
                 <thead>
-                  <tr>
+                  <tr className="bg-gray-100">
                     <th className="border p-2">SKU biến thể</th>
                     <th className="border p-2">Tên sản phẩm</th>
                     <th className="border p-2">Khuyến mãi liên quan</th>
+                    <th className="border p-2">Phần trăm</th>
                     <th className="border p-2">Trạng thái</th>
                     <th className="border p-2">Ngày bắt đầu</th>
                     <th className="border p-2">Ngày kết thúc</th>
@@ -384,32 +452,62 @@ const PromotionProductEdit = () => {
                   {customFormState.product_variant_id.map((variantId) => {
                     const variant = productVariants.find((v) => v.id === parseInt(variantId));
                     const promo = variantPromotions[variantId];
+                    const isCurrentPromotion = !promo || promo.promotion_id === parseInt(id);
+                    const status = isCurrentPromotion
+                      ? getPromotionStatus(selectedPromotion?.start_date, selectedPromotion?.end_date)
+                      : promo?.status || "Không xác định";
+                    const productName = variant?.product?.name || "Không xác định";
+                    const isTruncated = productName.length > 30;
                     return (
                       <tr key={variantId}>
                         <td className="border p-2">{variant?.sku || "Không xác định"}</td>
-                        <td className="border p-2">{variant?.product?.name || "Không xác định"}</td>
-                        <td className="border p-2">
-                          {promo && promo.promotion_id !== parseInt(id)
-                            ? promo.name
-                            : selectedPromotion?.name || "Khuyến mãi hiện tại"}
+                        <td
+                          className="border p-2 truncate-text"
+                          onMouseEnter={() => isTruncated && setShowTooltip(variantId)}
+                          onMouseLeave={() => setShowTooltip(null)}
+                        >
+                          {truncateProductName(productName)}
+                          {isTruncated && (
+                            <span
+                              className="tooltip"
+                              style={{ visibility: showTooltip === variantId ? "visible" : "hidden", opacity: showTooltip === variantId ? 1 : 0 }}
+                            >
+                              {productName}
+                            </span>
+                          )}
                         </td>
                         <td className="border p-2">
-                          {promo && promo.promotion_id !== parseInt(id)
-                            ? promo.status
-                            : getPromotionStatus(selectedPromotion?.start_date, selectedPromotion.end_date)}
+                          {isCurrentPromotion ? selectedPromotion?.name || "Khuyến mãi hiện tại" : promo?.name || "Không xác định"}
                         </td>
                         <td className="border p-2">
-                          {promo && promo.promotion_id !== parseInt(id)
-                            ? new Date(promo.start_date).toLocaleDateString("vi-VN")
-                            : selectedPromotion?.start_date
+                          {formatDiscountValue(
+                            isCurrentPromotion ? selectedPromotion?.discount_value : promo?.discount_value,
+                            isCurrentPromotion ? selectedPromotion?.discount_type : promo?.discount_type,
+                          )}
+                        </td>
+                        <td className="border p-2 text-center">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(status)}`}
+                          >
+                            {getStatusDisplayName(status)}
+                          </span>
+                        </td>
+                        <td className="border p-2">
+                          {isCurrentPromotion
+                            ? selectedPromotion?.start_date
                               ? new Date(selectedPromotion.start_date).toLocaleDateString("vi-VN")
+                              : "-"
+                            : promo?.start_date
+                              ? new Date(promo.start_date).toLocaleDateString("vi-VN")
                               : "-"}
                         </td>
                         <td className="border p-2">
-                          {promo && promo.promotion_id !== parseInt(id)
-                            ? new Date(promo.end_date).toLocaleDateString("vi-VN")
-                              : selectedPromotion?.end_date
+                          {isCurrentPromotion
+                            ? selectedPromotion?.end_date
                               ? new Date(selectedPromotion.end_date).toLocaleDateString("vi-VN")
+                              : "-"
+                            : promo?.end_date
+                              ? new Date(promo.end_date).toLocaleDateString("vi-VN")
                               : "-"}
                         </td>
                       </tr>

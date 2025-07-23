@@ -34,19 +34,39 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
     );
 
-    setSelectedImage((prev) => prev || firstImage);
-    setVariantImages((prev) => prev.length === 0 ? variants.flatMap((v) => v.images || []) : prev);
+    // If no valid variants, reset states
+    if (validVariants.length === 0) {
+      setSelectedVariant(null);
+      setSelectedImage(firstImage);
+      setVariantImages([]);
+      setIsInWishlist(false);
+      return;
+    }
 
-    if (validVariants.length > 0 && (!selectedVariant || parseInt(selectedVariant.stock) <= 0)) {
-      const firstValid = validVariants[0];
-      setSelectedVariant(firstValid);
-      const firstVariantImages = firstValid.images || [];
-      if (firstVariantImages.length > 0) {
-        setSelectedImage(firstVariantImages[0].image_url || firstValid.thumbnail || firstImage);
+    // If selectedVariant is invalid or out of stock, select the next valid variant
+    if (!selectedVariant || parseInt(selectedVariant.stock) <= 0 || !variants.some(v => v.id === selectedVariant.id)) {
+      const currentIndex = selectedVariant ? variants.findIndex(v => v.id === selectedVariant.id) : -1;
+      // Try to select the next valid variant after the current one
+      let nextValidVariant = null;
+      for (let i = currentIndex + 1; i < variants.length; i++) {
+        if (validVariants.some(v => v.id === variants[i].id)) {
+          nextValidVariant = validVariants.find(v => v.id === variants[i].id);
+          break;
+        }
       }
-      checkWishlistStatus(firstValid.id);
-    } else if (validVariants.length === 0) {
-      setSelectedVariant(null); // No valid variants available
+      // If no next valid variant, fall back to the first valid variant
+      const targetVariant = nextValidVariant || validVariants[0];
+      setSelectedVariant(targetVariant);
+      const targetVariantImages = targetVariant.images || [];
+      setSelectedImage(targetVariantImages.length > 0 ? targetVariantImages[0].image_url || targetVariant.thumbnail || firstImage : firstImage);
+      setVariantImages(targetVariantImages);
+      checkWishlistStatus(targetVariant.id);
+    } else {
+      // Update images for current valid variant
+      const currentVariantImages = selectedVariant.images || [];
+      setSelectedImage(currentVariantImages.length > 0 ? currentVariantImages[0].image_url || selectedVariant.thumbnail || firstImage : firstImage);
+      setVariantImages(currentVariantImages);
+      checkWishlistStatus(selectedVariant.id);
     }
   }, [product.id, product.thumbnail, variants, selectedVariant]);
 
@@ -75,14 +95,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       displayOriginalPrice = parseFloat(initialVariant.price) || 0;
       displayPrice = parseFloat(initialVariant.promotion?.discounted_price || initialVariant.price) || 0;
       discountPercent = parseFloat(initialVariant.promotion?.discount_percent || 0);
-    } else if (variants.length > 0) {
-      // All variants are out of stock
-      hasStock = false;
     } else {
+      hasStock = false;
       displayOriginalPrice = parseFloat(product.price) || 0;
       displayPrice = parseFloat(product.promotion?.discounted_price || product.price) || 0;
       discountPercent = parseFloat(product.promotion?.discount_percent || 0);
-      hasStock = parseInt(product.stock) > 0;
     }
 
     displayPrice = isNaN(displayPrice) ? 0 : Math.max(0, displayPrice);
@@ -133,11 +150,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     } catch (error) {
       if (error.response?.status === 400) {
         const message = error.response.data?.message || "";
-
         if (message.includes("Số lượng vượt quá tồn kho")) {
           const match = message.match(/\((\d+)\)/);
           const stock = match ? parseInt(match[1], 10) : null;
-
           toast.error(
             stock
               ? `Bạn đã có một số sản phẩm trong giỏ. Hiện chỉ còn ${stock} sản phẩm trong kho.`
@@ -208,10 +223,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         (item) => item.product_variant_id === variantId
       );
       setIsInWishlist(isInWishlist);
-      console.log("Wishlist status checked, isInWishlist:", isInWishlist);
     } catch (error) {
       setIsInWishlist(false);
-      console.error("Lỗi khi kiểm tra trạng thái wishlist:", error);
       toast.error("Không thể kiểm tra trạng thái danh sách yêu thích.");
     }
   };
@@ -334,8 +347,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 <div
                   key={img.id || img.image_url}
                   onClick={() => setSelectedImage(img.image_url)}
-                  className={`w-[55px] h-[55px] p-1 border rounded-md cursor-pointer ${selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
-                    } hover:border-blue-400 transition-colors`}
+                  className={`w-[55px] h-[55px] p-1 border rounded-md cursor-pointer ${
+                    selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
+                  } hover:border-blue-400 transition-colors`}
                 >
                   <img
                     src={img.image_url}
@@ -373,8 +387,13 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                     return (
                       <button
                         key={variant.id}
-                        className={`border rounded-md p-2 text-xs text-center transition ${inStock ? "cursor-pointer hover:bg-gray-100" : "opacity-50 cursor-not-allowed"
-                          } ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
+                        className={`border rounded-md p-2 text-xs text-center transition relative ${
+                          inStock
+                            ? isSelected
+                              ? "border-blue-500 bg-blue-50 text-gray-800"
+                              : "border-gray-300 hover:bg-gray-100 text-gray-800"
+                            : "border-gray-300 opacity-60 cursor-not-allowed text-gray-500"
+                        }`}
                         onClick={() => inStock && handleVariantSelect(variant)}
                         disabled={!inStock}
                       >
@@ -392,7 +411,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                             </span>
                           </div>
                         )}
-                        <p className="text-[10px]">{inStock ? `Còn: ${variant.stock}` : "Hết hàng"}</p>
+                        <p className="text-[10px] font-medium">
+                          {inStock ? `Còn: ${variant.stock}` : "Hết hàng"}
+                        </p>
                       </button>
                     );
                   })}
@@ -436,39 +457,56 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 <span className="text-red-600 font-semibold text-sm">Sản phẩm hết hàng</span>
               )}
             </div>
+            {hasStock && (
+              <div className="flex items-center space-x-2">
+                <button
+                  className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1 || !hasStock}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))))}
+                  className="w-12 text-center border border-gray-300 rounded text-sm"
+                  min="1"
+                  max={selectedVariant?.stock || totalStock}
+                  disabled={!hasStock}
+                />
+                <button
+                  className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
+                  onClick={() => setQuantity(Math.min(selectedVariant?.stock || totalStock, quantity + 1))}
+                  disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
+                >
+                  +
+                </button>
+              </div>
+            )}
             <div className="flex items-center space-x-2">
               <button
-                className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1 || !hasStock}
+                type="button"
+                onClick={addToCart}
+                className={`flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${
+                  !hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
               >
-                -
+                <FiShoppingCart size={18} className="inline mr-2" />
+                Thêm giỏ hàng
               </button>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Math.min(totalStock, Number(e.target.value))))}
-                className="w-12 text-center border border-gray-300 rounded text-sm"
-                min="1"
-                max={totalStock}
-                disabled={!hasStock}
-              />
               <button
-                className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
-                onClick={() => setQuantity(Math.min(totalStock, quantity + 1))}
-                disabled={quantity >= totalStock || !hasStock}
+                onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+                className="px-3 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
               >
-                +
+                <ThinLove
+                  className="w-5 h-5 inline"
+                  fill={isInWishlist ? "#FF0000" : "none"}
+                  stroke={isInWishlist ? "#FF0000" : "#000000"}
+                />
               </button>
             </div>
-            <button
-              type="button"
-              onClick={addToCart}
-              className={`w-full py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${!hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
-            >
-              Thêm giỏ hàng
-            </button>
           </div>
         </div>
       </div>,
@@ -533,10 +571,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
           <button
             type="button"
-            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${!hasStock || (variants.length > 0 && !selectedVariant)
-              ? "opacity-50 cursor-not-allowed"
-              : ""
-              }`}
+            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${
+              !hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+            }`}
             disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             onClick={addToCart}
           >
@@ -605,7 +642,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           href="#"
           onClick={async (e) => {
             e.preventDefault();
-
             try {
               const res = await fetch("http://localhost:5000/products/compare");
               const data = await res.json();
@@ -616,7 +652,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               }
 
               const allVariants = [];
-
               data.data.forEach((product) => {
                 product.variants.forEach((variant) => {
                   allVariants.push({
@@ -637,7 +672,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               });
 
               const clickedVariant = allVariants.find(
-                (v) => v.productId === product.id && v.variantId === product.variants?.[0]?.id
+                (v) => v.productId === product.id && v.variantId === (selectedVariant?.id || product.variants?.[0]?.id)
               );
 
               if (!clickedVariant) {
