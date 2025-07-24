@@ -28,6 +28,7 @@ function BrandDetail() {
     const fetchBrandDetail = async () => {
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/${id}`);
+            console.log("[fetchBrandDetail] API trả về:", res.data.data);
             if (res.data.data) {
                 setBrand(res.data.data);
                 setOriginalBrand(res.data.data);
@@ -46,7 +47,7 @@ function BrandDetail() {
 
     const fetchCountries = async () => {
         try {
-            const res = await axios.get("https://restcountries.com/v3.1/all?fields=name ");
+            const res = await axios.get("https://restcountries.com/v3.1/all?fields=name");
             const countryNames = res.data.map(country => country.name.common).sort();
             setCountries(countryNames);
         } catch (error) {
@@ -73,7 +74,7 @@ function BrandDetail() {
 
         setIsUploading(true);
         try {
-            const url = await uploadToCloudinary(logoFile);
+            const { url } = await uploadToCloudinary(logoFile);
             setIsUploading(false);
             setLogoFile(null);
             return url;
@@ -100,11 +101,12 @@ function BrandDetail() {
 
         // Upload ảnh trước khi gửi dữ liệu
         const newLogoUrl = await uploadLogo();
+        const updatedData = { ...editableBrand, logo: newLogoUrl };
+        const url = `${Constants.DOMAIN_API}/admin/brand/update/${id}`;
 
-        const updatedData = {
-            ...editableBrand,
-            logo: newLogoUrl
-        };
+        // Log URL và payload để debug
+        console.log("[handleUpdate] PUT →", url);
+        console.log("[handleUpdate] payload:", updatedData);
 
         Swal.fire({
             title: 'Xác nhận cập nhật',
@@ -118,25 +120,20 @@ function BrandDetail() {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    // Upload ảnh mới nếu có
-                    const newLogoUrl = await uploadLogo();
-
-                    // Gửi dữ liệu về backend
-                    const updatedData = {
-                        ...editableBrand,
-                        logo: newLogoUrl
-                    };
-
-                    const res = await axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${id}`, updatedData); if (res.status === 200) {
-                        toast.success("Cập nhật thông tin thương hiệu thành công!");
-                        setBrand(res.data.data);
-                        setOriginalBrand(res.data.data);
-                        setEditableBrand(res.data.data);
-                    } else {
-                        toast.error("Có lỗi xảy ra khi cập nhật.");
-                    }
+                    const res = await axios.put(url, updatedData);
+                    console.log("[handleUpdate] response:", res);
+                    toast.success("Cập nhật thông tin thương hiệu thành công!");
+                    setBrand(res.data.data);
+                    setOriginalBrand(res.data.data);
+                    setEditableBrand(res.data.data);
                 } catch (error) {
-                    console.error("Lỗi khi cập nhật thương hiệu:", error);
+                    console.error("[handleUpdate] AxiosError:", {
+                        message: error.message,
+                        status: error.response?.status,
+                        url: error.config?.url,
+                        data: error.config?.data,
+                        responseData: error.response?.data
+                    });
                     toast.error(error.response?.data?.message || "Lỗi khi cập nhật thương hiệu.");
                 }
             }
@@ -157,13 +154,20 @@ function BrandDetail() {
             cancelButtonText: 'Hủy'
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${id}`, { status: newStatus })
+                const url = `${Constants.DOMAIN_API}/admin/brand/update/${id}`;
+                console.log("[handleStatusChange] PUT →", url, { status: newStatus });
+                axios.put(url, { status: newStatus })
                     .then(response => {
-                        toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
+                        console.log("[handleStatusChange] response:", response);
+                        toast.success(`Cập nhật trạng thái thành công: ${getVietnameseStatus(newStatus)}`);
                         fetchBrandDetail();
                     })
                     .catch(error => {
-                        console.error("Lỗi khi cập nhật trạng thái thương hiệu:", error);
+                        console.error("[handleStatusChange] AxiosError:", {
+                            message: error.message,
+                            status: error.response?.status,
+                            responseData: error.response?.data
+                        });
                         toast.error(error.response?.data?.message || "Lỗi khi cập nhật trạng thái thương hiệu.");
                     });
             }
@@ -184,11 +188,9 @@ function BrandDetail() {
                 <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-md">
                     <h3 className="text-2xl font-bold text-gray-700 mb-5 border-b pb-3">Chi tiết thương hiệu</h3>
 
-                    {/* Logo Section - Nâng cao */}
+                    {/* Logo Section */}
                     <div className="mb-8 flex flex-col items-center">
                         <h4 className="text-lg font-semibold text-gray-700 mb-3">Logo thương hiệu</h4>
-
-                        {/* Preview ảnh hiện tại hoặc ảnh mới nếu có */}
                         <div className="relative w-40 h-40 mb-4 overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-white flex items-center justify-center">
                             {logoFile ? (
                                 <img
@@ -206,8 +208,6 @@ function BrandDetail() {
                                 <span className="text-sm text-gray-400 text-center px-4">Không có logo</span>
                             )}
                         </div>
-
-                        {/* Upload button */}
                         <div className="flex items-center gap-3">
                             <input
                                 type="file"
@@ -222,35 +222,26 @@ function BrandDetail() {
                             >
                                 {logoFile ? "Đổi ảnh khác" : "Chọn ảnh"}
                             </label>
-
                             {(logoFile || editableBrand.logo) && (
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setLogoFile(null);
-                                        if (!editableBrand.logo) {
-                                            toast.info("Logo sẽ bị xóa sau khi lưu.");
-                                        }
-                                    }}
+                                    onClick={() => setLogoFile(null)}
                                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded shadow text-sm transition"
                                 >
                                     Hủy
                                 </button>
                             )}
-
                             {isUploading && <span className="text-blue-600 text-sm">Đang tải lên...</span>}
                         </div>
-
-                        {/* Cảnh báo định dạng ảnh */}
                         <p className="mt-2 text-xs text-gray-500 text-center max-w-xs">
                             Hỗ trợ các định dạng: JPG, PNG, WEBP. Kích thước tối đa 5MB.
                         </p>
                     </div>
 
-                    {/* Thông tin chia làm 2 cột */}
+                    {/* Form fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 mb-6">
-                        {/* Tên */}
-                        <div className="relative">
+                        {/* Name */}
+                        <div>
                             <strong className="text-gray-600 block mb-1">Tên:</strong>
                             <input
                                 type="text"
@@ -273,8 +264,8 @@ function BrandDetail() {
                             />
                         </div>
 
-                        {/* Quốc gia */}
-                        <div className="relative">
+                        {/* Country */}
+                        <div>
                             <strong className="text-gray-600 block mb-1">Quốc gia:</strong>
                             <select
                                 name="country"
@@ -283,23 +274,22 @@ function BrandDetail() {
                                 className={`w-full px-3 py-2 border ${errors.country ? 'border-red-500' : 'border-gray-200'} rounded focus:outline-none focus:ring-2 focus:ring-blue-500`}
                             >
                                 <option value="">Chọn quốc gia</option>
-                                {countries.map((country, index) => (
-                                    <option key={index} value={country}>{country}</option>
+                                {countries.map((c, i) => (
+                                    <option key={i} value={c}>{c}</option>
                                 ))}
                             </select>
                             {errors.country && <p className="mt-1 text-xs text-red-500">{errors.country}</p>}
                         </div>
 
-                        {/* Trạng thái */}
+                        {/* Status */}
                         <div>
                             <strong className="text-gray-600 block mb-1">Trạng thái:</strong>
                             <div className="flex items-center space-x-2">
-                                <span
-                                    className={`capitalize px-2 py-1 rounded-full text-xs font-medium ${editableBrand.status === 'active'
+                                <span className={`capitalize px-2 py-1 rounded-full text-xs font-medium ${
+                                    editableBrand.status === 'active'
                                         ? 'bg-green-100 text-green-800'
                                         : 'bg-red-100 text-red-800'
-                                        }`}
-                                >
+                                }`}>
                                     {getVietnameseStatus(editableBrand.status)}
                                 </span>
                                 <select
@@ -313,7 +303,7 @@ function BrandDetail() {
                             </div>
                         </div>
 
-                        {/* Ngày tạo */}
+                        {/* Created At */}
                         <div>
                             <strong className="text-gray-600 block mb-1">Ngày tạo:</strong>
                             <input
@@ -324,7 +314,7 @@ function BrandDetail() {
                             />
                         </div>
 
-                        {/* Ngày cập nhật */}
+                        {/* Updated At */}
                         <div>
                             <strong className="text-gray-600 block mb-1">Ngày cập nhật:</strong>
                             <input
@@ -336,7 +326,7 @@ function BrandDetail() {
                         </div>
                     </div>
 
-                    {/* Mô tả */}
+                    {/* Description */}
                     <div className="mb-6">
                         <strong className="text-gray-600 block mb-1">Mô tả:</strong>
                         <textarea
@@ -345,10 +335,10 @@ function BrandDetail() {
                             value={editableBrand.description || ''}
                             onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                        ></textarea>
+                        />
                     </div>
 
-                    {/* Nút hành động */}
+                    {/* Actions */}
                     <div className="flex justify-start gap-2 mt-6">
                         <button
                             onClick={handleUpdate}

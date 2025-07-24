@@ -148,44 +148,37 @@ class BrandController {
 
     static async update(req, res) {
         try {
-            const id = req.params.id;
-            const { name, country, description, status } = req.body;
+            const id = req.params.id
+            const { name, country, description, status, logo } = req.body
 
-            // build object để update
-            const updateData = { name, country, description, status };
+            const updateData = { name, country, description, status }
 
-            // nếu có upload file mới, req.file.filename là string => hợp lệ với DataTypes.STRING
-            if (req.file) {
-                updateData.logo = `/uploads/brands/${req.file.filename}`;
+            if (logo) {
+                updateData.logo = logo
             }
 
-            // chạy update
-            const [affectedRows] = await BrandModel.update(updateData, {
+            if (req.file) {
+                updateData.logo = `/uploads/brands/${req.file.filename}`
+            }
+
+            const [affected] = await BrandModel.update(updateData, {
                 where: { id },
                 returning: true
-            });
+            })
 
-            if (affectedRows === 0) {
-                return res.status(404).json({
-                    status: 404,
-                    message: 'Không tìm thấy thương hiệu'
-                });
+            if (!affected) {
+                return res.status(404).json({ status: 404, message: 'Không tìm thấy thương hiệu' })
             }
 
-            // lấy lại bản ghi mới
-            const updatedBrand = await BrandModel.findByPk(id);
-
+            const updatedBrand = await BrandModel.findByPk(id)
             return res.status(200).json({
                 status: 200,
                 message: 'Cập nhật thương hiệu thành công!',
                 data: updatedBrand
-            });
+            })
         } catch (error) {
-            console.error('Lỗi khi cập nhật thương hiệu:', error);
-            return res.status(500).json({
-                status: 500,
-                message: error.message
-            });
+            console.error('Lỗi khi cập nhật thương hiệu:', error)
+            return res.status(500).json({ status: 500, message: error.message })
         }
     }
 
@@ -223,7 +216,7 @@ class BrandController {
 
     static async search(req, res) {
         try {
-            const { searchTerm, page = 1, limit = 10, status } = req.query; // Thêm status vào req.query
+            const { searchTerm, page = 1, limit = 10, status } = req.query;
             const currentPage = parseInt(page);
             const currentLimit = parseInt(limit);
             const offset = (currentPage - 1) * currentLimit;
@@ -235,7 +228,6 @@ class BrandController {
                 });
             }
 
-            // Điều kiện where cho tìm kiếm
             const whereClause = {
                 [Op.or]: [
                     { name: { [Op.like]: `%${searchTerm}%` } },
@@ -243,7 +235,6 @@ class BrandController {
                 ]
             };
 
-            // Nếu có status, thêm vào điều kiện tìm kiếm
             if (status === 'active' || status === 'inactive') {
                 whereClause.status = status;
             }
@@ -267,7 +258,6 @@ class BrandController {
                 });
             }
 
-            // Tính tổng số lượng theo trạng thái
             const allCount = await BrandModel.count();
             const activeCount = await BrandModel.count({ where: { status: 'active' } });
             const inactiveCount = await BrandModel.count({ where: { status: 'inactive' } });

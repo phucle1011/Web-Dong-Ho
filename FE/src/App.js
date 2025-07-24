@@ -80,6 +80,7 @@ import WashletGetAll from "./pages/admin/washlet/getAll";
 import WalletDetail from "./pages/admin/washlet/detail";
 
 // Protected Route
+import GuestRoute from "./components/Auth/GuestRoute/index.jsx";
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
 import AdminProfile from "./components/admin/profile/index.jsx";
 
@@ -101,8 +102,10 @@ const AppRoutes = () => {
         <Route index element={<HomeThree />} />
         <Route path="about" element={<About />} />
         <Route path="/all-products" element={<AllProductPage />} />
-        <Route path="/login" element={!token ? <Login /> : <Navigate to="/" />} />
-        <Route path="/signup" element={!token ? <Signup /> : <Navigate to="/" />} />
+        <Route element={<GuestRoute />}>
+          <Route path="login" element={<Login />} />
+          <Route path="signup" element={<Signup />} />
+        </Route>
         <Route
           path="/profile"
           element={
@@ -129,6 +132,9 @@ const AppRoutes = () => {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/auth/verify-email" element={<VerifyEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+
+
       </Route>
 
       {/*--------------------ADMIN-------------------- */}
@@ -149,7 +155,7 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="profile"element={<AdminProfile/>}/>
+        <Route path="profile" element={<AdminProfile />} />
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail />} />

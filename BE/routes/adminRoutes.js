@@ -19,8 +19,9 @@ const EmailController = require('../controllers/Admin/nodemailerController')
 const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
-const AuthController = require('../controllers/Admin/authController');
 const ProductAttributeController = require('../controllers/Admin/product_attributesController');
+
+const { notifyWishlistPromotions } = require('../controllers/Admin/cronJobController');
 const FlashSaleController = require('../controllers/Admin/flashSaleController');
 const WalletsController = require('../controllers/Admin/walletsController');
 
@@ -176,7 +177,17 @@ router.delete('flashSale/:id', FlashSaleController.delete);
 router.get('/active-products', FlashSaleController.getActiveProductPromotions);
 
 
-//------------------[ AUTH ]------------------\
-router.post('/login', AuthController.loginAdmin);
+// TEST: gọi manual notifyWishlistPromotions
+router.get('/cron/test-wishlist', async (req, res) => {
+  try {
+    await notifyWishlistPromotions();
+    res.json({ ok: true, message: 'notifyWishlistPromotions executed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
 
 module.exports = router;

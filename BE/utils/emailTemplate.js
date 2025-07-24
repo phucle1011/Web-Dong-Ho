@@ -100,4 +100,30 @@ const getEmailTemplate = (userName, newStatus, reason) => `
 </html>
 `;
 
-module.exports = getEmailTemplate;
+const getWishlistPromoTemplate = (
+    userName,
+    productName,
+    discountValue,
+    discountType,
+    promoName,
+    code,
+    startDate,
+    endDate
+) => `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;">
+  <h2>Xin chào ${userName},</h2>
+  <p>
+    Sản phẩm bạn yêu thích <strong>${productName}</strong> đang có chương trình khuyến mãi:
+  </p>
+  <ul>
+    <li><strong>${promoName}</strong> - Giảm ${discountValue}${discountType}</li>
+    <li>Mã giảm giá: <strong>${code}</strong></li>
+    <li>Thời gian áp dụng: ${startDate} → ${endDate}</li>
+  </ul>
+  <p>Nhanh tay vào mua nhé!</p>
+  <hr/>
+  <p style="font-size:12px;color:#555;">Đây là email tự động, vui lòng không trả lời.</p>
+</div>
+`;
+
+module.exports = { getEmailTemplate, getWishlistPromoTemplate };

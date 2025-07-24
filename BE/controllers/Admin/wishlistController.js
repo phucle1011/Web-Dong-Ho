@@ -10,7 +10,6 @@ const { Op, fn, col } = require('sequelize');
 
 class WishlistController {
 
-    // Lấy toàn bộ wishlist (có thể dùng ở admin để xem tổng quan wishlist hệ thống)
     static async getAllWishlists(req, res) {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -55,7 +54,6 @@ class WishlistController {
         }
     }
 
-    // Lấy danh sách sản phẩm yêu thích của một người dùng
     static async getWishlistByUser(req, res) {
         try {
             const { userId } = req.params;
@@ -72,7 +70,7 @@ class WishlistController {
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
-                        attributes: ['id', 'price', 'sku', 'stock'], // Thêm sku, stock nếu có
+                        attributes: ['id', 'price', 'sku', 'stock'],
                         include: [
                             {
                                 model: ProductModel,
@@ -117,7 +115,6 @@ class WishlistController {
         }
     }
 
-    // Thêm sản phẩm vào danh sách yêu thích của người dùng
     static async addToWishlist(req, res) {
         try {
             const { userId, productVariantId } = req.body;
@@ -152,7 +149,6 @@ class WishlistController {
         }
     }
 
-    // Xóa sản phẩm khỏi danh sách yêu thích của người dùng
     static async removeFromWishlist(req, res) {
         try {
             const { userId, productVariantId } = req.params;
@@ -180,19 +176,26 @@ class WishlistController {
         }
     }
 
-    // Tìm kiếm (có thể tìm kiếm danh sách yêu thích của người dùng theo tên sản phẩm)
     static async searchWishlist(req, res) {
         try {
-            const { searchTerm } = req.query;
+            const { searchTerm = '' } = req.query;
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
             const offset = (page - 1) * limit;
 
-            if (!searchTerm || searchTerm.trim() === '') {
-                return res.status(400).json({ message: 'Vui lòng nhập từ khóa tìm kiếm.' });
+            if (!searchTerm.trim()) {
+                return this.getAllWishlists(req, res);
             }
 
+            const whereClause = {
+                [Op.or]: [
+                    { '$user.name$': { [Op.like]: `%${searchTerm}%` } },
+                    { '$variant.product.name$': { [Op.like]: `%${searchTerm}%` } }
+                ]
+            };
+
             const wishlists = await WishlistModel.findAndCountAll({
+                where: whereClause,
                 limit,
                 offset,
                 order: [['id', 'DESC']],
@@ -200,61 +203,35 @@ class WishlistController {
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
-                        attributes: ['id', 'price', 'stock', 'sku'],
-                        include: [
-                            {
-                                model: ProductModel,
-                                as: 'product',
-                                attributes: ['id', 'name', 'slug', 'thumbnail'],
-                                where: {
-                                    name: { [Op.like]: `%${searchTerm}%` }
-                                },
-                                required: true
-                            },
-                            {
-                                model: ProductVariantAttributeValueModel,
-                                as: 'attributeValues',
-                                attributes: ['value'],
-                                include: [
-                                    {
-                                        model: ProductAttributeModel,
-                                        as: 'attribute',
-                                        attributes: ['name']
-                                    }
-                                ]
-                            },
-                            {
-                                model: VariantImageModel,
-                                as: 'images',
-                                attributes: ['image_url']
-                            }
-                        ]
+                        attributes: ['id', 'price'],
+                        include: [{
+                            model: ProductModel,
+                            as: 'product',
+                            attributes: ['id', 'name', 'slug', 'thumbnail']
+                        }]
                     },
                     {
                         model: UserModel,
                         as: 'user',
-                        attributes: ['id', 'name', 'email'],
-                        where: {
-                            name: { [Op.like]: `%${searchTerm}%` }
-                        }
+                        attributes: ['id', 'name', 'email']
                     }
-                ]
+                ],
+                subQuery: false
             });
 
             res.status(200).json({
                 status: 200,
-                message: "Lấy danh sách yêu thích thành công",
+                message: "Tìm kiếm wishlist thành công",
                 data: wishlists.rows,
                 totalPages: Math.ceil(wishlists.count / limit),
-                currentPage: page,
+                currentPage: page
             });
         } catch (error) {
-            console.error("Lỗi khi lấy danh sách yêu thích:", error);
+            console.error("Lỗi khi tìm kiếm wishlist:", error);
             res.status(500).json({ error: error.message });
         }
     }
 
-    // Tìm kiếm sản phẩm yêu thích của người dùng cụ thể
     static async searchWishlistByUserProduct(req, res) {
         try {
             const { userId } = req.params;
@@ -318,7 +295,6 @@ class WishlistController {
         }
     }
 
-    // Thống kê sản phẩm biến thể được yêu thích nhiều nhất
     static async getMostFavoritedVariants(req, res) {
         try {
             const limit = parseInt(req.query.limit) || 5;
@@ -359,7 +335,6 @@ class WishlistController {
         }
     }
 
-    // Thống kê sản phẩm biến thể được yêu thích gần đây
     static async getRecentlyFavoritedVariants(req, res) {
         try {
             const limit = parseInt(req.query.limit) || 5;
