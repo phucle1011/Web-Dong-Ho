@@ -18,6 +18,7 @@ const PromotionProductModel = require('../models/promotionProductsModel');
 const Promotion = require('../models/promotionsModel');
 const CommentImageModel = require('../models/commentImagesModel');
 const PromotionUserModel = require('./promotionUsersModel');
+const FlashSaleModel = require('./FlashSaleModel');
 const WithdrawRequestsModel = require('../models/withdrawRequestsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
@@ -26,9 +27,7 @@ const WithdrawRequestsModel = require('../models/withdrawRequestsModel');
 UserModel.hasMany(AddressesModel, { foreignKey: 'user_id', as: 'addresses' });
 AddressesModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
-// User - Notification
-UserModel.hasMany(NotificationModel, { foreignKey: 'user_id', as: 'notifications' });
-NotificationModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
+
 
 // Product - Comment
 ProductModel.hasMany(CommentModel, { foreignKey: 'product_id', as: 'comments' });
@@ -139,9 +138,29 @@ PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 
 
 OrderModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
 
+// FlashSale belongsTo Promotion
+FlashSaleModel.belongsTo(PromotionModel, {
+  foreignKey: 'promotion_id',
+  as: 'promotion'
+});
+PromotionModel.hasOne(FlashSaleModel, {
+  foreignKey: 'promotion_id',
+  as: 'flashSale'
+});
+
+// FlashSale belongsTo Notification
+FlashSaleModel.belongsTo(NotificationModel, {
+  foreignKey: 'notification_id',
+  as: 'notification'
+});
+NotificationModel.hasOne(FlashSaleModel, {
+  foreignKey: 'notification_id',
+  as: 'flashSale'
+});
+
 /* --------- User - WithdrawRequests --------- */
-UserModel.hasMany(WithdrawRequestsModel, {foreignKey: 'user_id', as: 'withdrawRequests',});
-WithdrawRequestsModel.belongsTo(UserModel, {foreignKey: 'user_id', as: 'user',});
+UserModel.hasMany(WithdrawRequestsModel, { foreignKey: 'user_id', as: 'withdrawRequests', });
+WithdrawRequestsModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user', });
 
 // WithdrawRequest belongsTo Order
 WithdrawRequestsModel.belongsTo(OrderModel, {
@@ -174,5 +193,6 @@ module.exports = {
   ProductVariantAttributeValueModel,
   VariantImageModel,
   CommentImageModel,
+  FlashSaleModel,
   WithdrawRequestsModel,
 };

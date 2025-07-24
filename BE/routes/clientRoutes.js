@@ -30,6 +30,7 @@ const UserController = require('../controllers/Client/userControllers');
 const reviewController = require('../controllers/Client/reviewController');
 const notificationClientController = require('../controllers/Client/notificationClientController');
 const SearchController = require('../controllers/Client/SearchController')
+const FlashSaleController = require('../controllers/Client/flashSaleController');
 const WalletsController = require('../controllers/Client/walletsController');
 
 //------------------[ CLIENT ROUTES ]------------------
@@ -158,5 +159,10 @@ router.get('/:userId/reviews', reviewController.getAllReviews);
 router.get('/notifications', notificationClientController.getNotifications);
 router.patch('/notifications/:id/read', notificationClientController.getNotificationById);
 router.patch('/notifications/mark-all-read', notificationClientController.createNotification);
+
+router.get('/client/flashSale', FlashSaleController.getAll);
+router.get('/client/flashSale/list/:promotion_id', FlashSaleController.getDiscountedProducts);
+
+
 
 module.exports = router;

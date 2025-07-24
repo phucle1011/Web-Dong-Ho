@@ -1,57 +1,48 @@
-/* eslint-disable no-underscore-dangle */
 import { useEffect, useState } from "react";
 
-function CountDown(lastDate) {
-  const [showDate, setDate] = useState(0);
-  const [showHour, setHour] = useState(0);
-  const [showMinute, setMinute] = useState(0);
-  const [showSecound, setDateSecound] = useState(0);
-  // count Down
-  const provideDate = new Date(lastDate);
-  // format date
-  const year = provideDate.getFullYear();
-  const month = provideDate.getMonth();
+export default function useCountDown(lastDate) {
+  const [timeLeft, setTimeLeft] = useState({
+    showDate: "00",
+    showHour: "00",
+    showMinute: "00",
+    showSecound: "00",
+  });
+  
 
-  const date = provideDate.getDate();
+  useEffect(() => {
+  if (!lastDate) return;
 
-  const hours = provideDate.getHours();
+  const target = new Date(lastDate).getTime();
+  let timer; // ✅ đặt ở đây
 
-  const minutes = provideDate.getMinutes();
+  const updateCountdown = () => {
+    const now = new Date().getTime();
+    const distance = target - now;
 
-  const seconds = provideDate.getSeconds();
+    if (distance < 0) {
+      clearInterval(timer); // ✅ timer đã được khai báo
+      return;
+    }
 
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((distance / (1000 * 60)) % 60);
+    const seconds = Math.floor((distance / 1000) % 60);
 
-  // date calculation logic
-  const _seconds = 1000;
-  const _minutes = _seconds * 60;
-  const _hours = _minutes * 60;
-  const _date = _hours * 24;
-
-  // interval function
-  const startInterval = () => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const distance =
-        new Date(year, month, date, hours, minutes, seconds).getTime() -
-        now.getTime();
-      if (distance < 0) {
-        clearInterval(timer);
-        return;
-      }
-      setDate(Math.floor(distance / _date));
-      setMinute(Math.floor((distance % _hours) / _minutes));
-      setHour(Math.floor((distance % _date) / _hours));
-      setDateSecound(Math.floor((distance % _minutes) / _seconds));
-    }, 1000);
+    setTimeLeft({
+      showDate: String(days).padStart(2, "0"),
+      showHour: String(hours).padStart(2, "0"),
+      showMinute: String(minutes).padStart(2, "0"),
+      showSecound: String(seconds).padStart(2, "0"),
+    });
   };
 
-  // effect
-  useEffect(() => {
-    if (lastDate !== "") {
-      startInterval();
-    }
-  });
-  return { showDate, showHour, showMinute, showSecound };
-}
+  updateCountdown();
+  timer = setInterval(updateCountdown, 1000); // ✅ gán sau cùng
 
-export default CountDown;
+  return () => clearInterval(timer);
+}, [lastDate]);
+
+
+  return timeLeft;
+}

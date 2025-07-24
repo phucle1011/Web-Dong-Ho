@@ -53,7 +53,7 @@ const AdminLayout = () => {
           <Aside />
           <div className="body-wrapper">
             <Header />
-            <div className="container-fluid">
+            <div className="container-fluid bg-gray-50">
               <div className="row mt-2 rounded-1">
                 <Outlet />
               </div>

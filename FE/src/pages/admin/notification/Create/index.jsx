@@ -1,214 +1,265 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Constants from "../../../../Constants.jsx";
 import Select from "react-select";
 import { io } from "socket.io-client";
+import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+const socket = io(Constants.DOMAIN_API);
 
 const CreateNotification = () => {
+  const [title, setTitle] = useState("");
+  const [thumbnail, setThumbnail] = useState("");
+  const [selectedPromotions, setSelectedPromotions] = useState([]);
+  const [promotions, setPromotions] = useState([]);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [status, setStatus] = useState(true);
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    user_ids: [],
-    discount_id: "",
-    type: "info",
-    data: {
-      title: "",
-      message: "",
-    },
-  });
-  const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [discounts, setDiscounts] = useState([]);
-  const userId = localStorage.getItem("userId");
 
-  // Initialize socket with reconnection options
-  const socket = io(Constants.DOMAIN_API, {
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-  });
-
-  // Fetch users & discounts
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPromotions = async () => {
       try {
-        const [userRes, discountRes] = await Promise.all([
-          axios.get(`${Constants.DOMAIN_API}/admin/user/list`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          }),
-          axios.get(`${Constants.DOMAIN_API}/admin/promotion`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          }),
-        ]);
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/admin/active-products`
+        );
+        const now = new Date();
 
-        const usersData = Array.isArray(userRes.data)
-          ? userRes.data
-          : userRes.data?.data || [];
-        const discountsData = Array.isArray(discountRes.data)
-          ? discountRes.data
-          : discountRes.data?.data || [];
+        const mapped = res.data.data.map((p) => {
+          const start = new Date(p.start_date);
+          const daysLeft = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
 
-        setUsers(usersData);
-        setDiscounts(discountsData);
-      } catch (error) {
-        console.error("Error fetching users/discounts:", error.response?.data || error.message);
-        toast.error(error.response?.data?.message || "Lỗi khi tải người dùng hoặc mã giảm giá");
+          const timeText =
+            daysLeft > 0 ? `${daysLeft} ngày nữa` : "Đang diễn ra";
+
+          return {
+            value: p.id,
+            name: p.name,
+            timeText,
+            variant_count: p.variant_count,
+          };
+        });
+
+        setPromotions(mapped);
+      } catch (err) {
+        console.error("Lỗi khi lấy danh sách khuyến mãi:", err);
+        toast.error("Không thể tải chương trình khuyến mãi.");
       }
     };
-    fetchData();
 
-    // Join socket room for admin user
-    if (userId) {
-      socket.emit("join", userId.toString());
-    }
+    fetchPromotions();
+  }, []);
 
-    // Handle socket connection errors
-    socket.on('connect_error', (error) => {
-      console.error('Socket.IO connection error:', error);
-      toast.error('Không thể kết nối tới server thông báo');
-    });
-
-    // Cleanup socket on unmount
-    return () => {
-      socket.disconnect();
-    };
-  }, [userId]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name.startsWith("data.")) {
-      const key = name.split(".")[1];
-      setFormData((prev) => ({
-        ...prev,
-        data: { ...prev.data, [key]: value },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
-
-  const handleUserIdsChange = (selectedOptions) => {
-    setFormData((prev) => ({
-      ...prev,
-      user_ids: selectedOptions.map((opt) => String(opt.value)), // Ensure strings
-    }));
+  const validate = () => {
+    const errs = {};
+    if (!title) errs.title = "Bắt buộc.";
+    if (!thumbnail) errs.thumbnail = "Bắt buộc.";
+    if (!selectedPromotions.length) errs.promotionIds = "Chọn ít nhất 1.";
+    if (!startDate) errs.startDate = "Bắt buộc.";
+    if (!endDate) errs.endDate = "Bắt buộc.";
+    if (startDate && endDate && startDate > endDate)
+      errs.date = "Khoảng thời gian không hợp lệ.";
+    return errs;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) return setErrors(errs);
     try {
-      setLoading(true);
-      const response = await axios.post(`${Constants.DOMAIN_API}/admin/notification`, formData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      await axios.post(`${Constants.DOMAIN_API}/admin/flashSale`, {
+        title,
+        thumbnail,
+        promotion_id: selectedPromotions.map((p) => p.value),
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        status: status ? 1 : 0,
       });
-      toast.success("Tạo thông báo thành công");
-
-      // Emit socket event for new notification
-      const eventData = {
-        user_ids: formData.user_ids, // Already strings
-        discount_id: formData.discount_id,
-        type: formData.type,
-        data: formData.data,
-        created_at: new Date().toISOString(),
-      };
-      socket.emit("createNotification", eventData);
-
-      navigate("/admin/notification/getAll");
-    } catch (error) {
-      console.error("Error creating notification:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Lỗi khi tạo thông báo");
-    } finally {
-      setLoading(false);
+      socket.emit("new_notification");
+      toast.success("Thành công!");
+      navigate("/admin/notifications");
+    } catch {
+      toast.error("Thất bại.");
     }
   };
 
+  // Helpers to return Date objects for time boundaries
+  const getDateBounds = (date) => {
+    const min = date ? new Date(date) : new Date();
+    min.setHours(0, 0, 0, 0);
+    const max = new Date(min);
+    max.setHours(23, 59, 59, 999);
+    return { min, max };
+  };
+
+  // Compute bounds
+  const { min: startMin, max: startMax } = getDateBounds(
+    startDate || new Date()
+  );
+  const { min: endMin, max: endMax } = getDateBounds(endDate || new Date());
+
   return (
-    <div className="p-4 max-w-xl mx-auto bg-white rounded-lg shadow">
-      <h2 className="text-lg font-bold mb-4">Tạo Thông Báo Mới</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium">Người nhận</label>
-          <Select
-            isMulti
-            options={users.map((user) => ({
-              value: user.id,
-              label: user.name || `User ${user.id}`,
-            }))}
-            onChange={handleUserIdsChange}
-            placeholder="Chọn người nhận"
-            className="basic-multi-select"
-            classNamePrefix="select"
+    <div className="p-6 max-w-4xl mx-auto bg-white rounded shadow">
+      <h2 className="text-2xl font-semibold mb-6">Tạo Thông Báo</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Card 1 */}
+        {/* Card 1 */}
+        {/* Card: Tiêu đề + Select */}
+        <div className="flex flex-col md:flex-row gap-4">
+  {/* Card 1: Thông tin chung */}
+  <div className="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
+    <h3 className="text-lg font-medium mb-4">Thông tin chung</h3>
+
+    <div className="mb-4">
+      <label className="block mb-1 font-medium">Tiêu đề</label>
+      <input
+        className="w-full border rounded px-3 py-2"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      {errors.title && (
+        <p className="text-sm text-red-500">{errors.title}</p>
+      )}
+    </div>
+
+    <div>
+      <label className="block mb-1 font-medium">Chương trình khuyến mãi</label>
+      <Select
+        options={promotions}
+        value={selectedPromotions}
+        onChange={setSelectedPromotions}
+        isMulti
+        getOptionLabel={(e) => (
+          <div className="flex items-center">
+            <span className="font-medium mr-1">{e.name}</span>
+            <span className="text-sm">
+              (<span className="text-yellow-500">{e.timeText}</span>
+              {" - "}
+              <span className="text-green-500">{e.variant_count} biến thể</span>
+              )
+            </span>
+          </div>
+        )}
+      />
+      {errors.promotionIds && (
+        <p className="text-sm text-red-500">{errors.promotionIds}</p>
+      )}
+    </div>
+  </div>
+
+  {/* Card 2: Ảnh */}
+  
+
+  {/* Card 3: Ngày bắt đầu / kết thúc */}
+  <div className="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
+    <h3 className="text-lg font-medium mb-4">Thời gian diễn ra</h3>
+
+    <div className="grid grid-cols-1 gap-4">
+      <div>
+        <label className="block mb-1 font-medium">Ngày bắt đầu</label>
+        <DatePicker
+          selected={startDate}
+          onChange={setStartDate}
+          showTimeSelect
+          className="w-full border rounded px-3 py-2"
+          minDate={new Date()}
+          maxDate={endDate || null}
+          minTime={startMin}
+          maxTime={startMax}
+        />
+        {errors.startDate && (
+          <p className="text-sm text-red-500">{errors.startDate}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Ngày kết thúc</label>
+        <DatePicker
+          selected={endDate}
+          onChange={setEndDate}
+          showTimeSelect
+          className="w-full border rounded px-3 py-2"
+          minDate={startDate || new Date()}
+          minTime={endMin}
+          maxTime={endMax}
+        />
+        {errors.endDate && (
+          <p className="text-sm text-red-500">{errors.endDate}</p>
+        )}
+      </div>
+    </div>
+
+    {errors.date && (
+      <p className="text-sm text-red-500 mt-4">{errors.date}</p>
+    )}
+  </div>
+  <div className="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
+    <h3 className="text-lg font-medium mb-4">Ảnh thông báo</h3>
+
+    <div>
+      <label className="block mb-1 font-medium">Tải ảnh</label>
+      <input
+        type="file"
+        className="block mb-2"
+        onChange={(e) =>
+          e.target.files[0] &&
+          uploadToCloudinary(e.target.files[0]).then((u) =>
+            setThumbnail(u.url)
+          )
+        }
+      />
+      {thumbnail && (
+        <div className="border rounded overflow-hidden">
+          <img
+            src={thumbnail}
+            alt="Thumbnail Preview"
+            className="w-full h-48 object-cover"
           />
         </div>
+      )}
+      {errors.thumbnail && (
+        <p className="text-sm text-red-500 mt-1">{errors.thumbnail}</p>
+      )}
+    </div>
+  </div>
+</div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium">Mã giảm giá (nếu có)</label>
-          <select
-            name="discount_id"
-            value={formData.discount_id}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
+
+
+
+        <div className="flex justify-start items-center gap-4 mt-6">
+          <button
+            type="button"
+            className="px-6 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            onClick={() => navigate(-1)}
           >
-            <option value="">-- Không áp dụng --</option>
-            {discounts.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name || `Giảm giá ${d.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
+            Quay lại
+          </button>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium">Loại thông báo</label>
-          <select
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
+          <button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 text-white rounded"
           >
-            <option value="info">Thông tin</option>
-            <option value="success">Thành công</option>
-            <option value="warning">Cảnh báo</option>
-            <option value="danger">Nguy hiểm</option>
-          </select>
+            Gửi
+          </button>
+          <div className="form-check form-switch flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="status"
+              className="form-check-input h-5 w-5"
+              checked={status}
+              onChange={() => setStatus((s) => !s)}
+            />
+            <label htmlFor="status" className="select-none">
+              Kích hoạt
+            </label>
+          </div>
         </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium">Tiêu đề</label>
-          <input
-            type="text"
-            name="data.title"
-            value={formData.data.title}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-            placeholder="Nhập tiêu đề"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium">Nội dung</label>
-          <textarea
-            name="data.message"
-            value={formData.data.message}
-            onChange={handleChange}
-            className="w-full p-2 border rounded"
-            placeholder="Nhập nội dung thông báo"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="bg-[#073272] text-white px-4 py-2 rounded disabled:bg-gray-400"
-          disabled={loading}
-        >
-          {loading ? "Đang tạo..." : "Tạo Thông Báo"}
-        </button>
       </form>
     </div>
   );

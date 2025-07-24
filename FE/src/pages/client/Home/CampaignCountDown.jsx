@@ -1,180 +1,150 @@
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import CountDown from "../Helpers/CountDown";
+import useCountDown from "../Helpers/CountDown";
 
-export default function CampaignCountDown({
-  className,
-  lastDate,
-  counterbg,
-  appscreen,
-}) {
-  const { showDate, showHour, showMinute, showSecound } = CountDown(lastDate);
+export default function CampaignCountDown({ flashSales = [], className }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [fade, setFade] = useState(true);
+  const timer = useRef(null);
+
+  if (!flashSales.length) return null;
+
+  const { promotion, notification } = flashSales[selectedIndex];
+  const isUpcoming = promotion?.status === "upcoming";
+  const isActive = promotion?.status === "active";
+
+  // Nếu là upcoming thì đếm đến start_date, còn active thì đếm đến end_date
+  const { showDate, showHour, showMinute, showSecound } = useCountDown(
+    isUpcoming ? promotion?.start_date : promotion?.end_date
+  );
+
+  const startAuto = useCallback(() => {
+    clearInterval(timer.current);
+    timer.current = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setSelectedIndex((p) => (p + 1) % flashSales.length);
+        setFade(true);
+      }, 300);
+    }, 5000);
+  }, [flashSales.length]);
+
+  useEffect(() => {
+    startAuto();
+    return () => clearInterval(timer.current);
+  }, [startAuto]);
+
+  const prev = () => {
+    clearInterval(timer.current);
+    setFade(false);
+    setTimeout(() => {
+      setSelectedIndex((p) => (p === 0 ? flashSales.length - 1 : p - 1));
+      setFade(true);
+      startAuto();
+    }, 300);
+  };
+
+  const next = () => {
+    clearInterval(timer.current);
+    setFade(false);
+    setTimeout(() => {
+      setSelectedIndex((p) => (p + 1) % flashSales.length);
+      setFade(true);
+      startAuto();
+    }, 300);
+  };
 
   return (
-    <div>
-      <div className={`w-full lg:h-[460px] ${className || ""}`}>
-        <div className="container-x mx-auto h-full">
-          <div className="lg:flex xl:space-x-[30px] lg:space-x-5 items-center h-full">
-            <div
-              data-aos="fade-right"
-              className="campaign-countdown lg:w-1/2 h-full w-full mb-5 lg:mb-0"
-              style={{
-                background: `url(${
-                  process.env.REACT_APP_PUBLIC_URL
-                }/assets/images/campaign-cover-countdown.jpg) no-repeat`,
-                backgroundSize: "cover",
-              }}
-            >
-              <Link to="/flash-sale">
-                <div className="w-full xl:p-12 p-5">
-                  <div className="countdown-wrapper w-full flex lg:justify-between justify-evenly mb-10">
-                    <div className="countdown-item">
-                      <div className="countdown-number sm:w-[100px] sm:h-[100px] w-[50px] h-[50px] rounded-full bg-white flex justify-center items-center">
-                        <span className="font-700 sm:text-[30px] text-[14px] text-[#EB5757]">
-                          {showDate}
-                        </span>
-                      </div>
-                      <p className="sm:text-[18px] text-[12px] font-500 text-center leading-8">
-                        Days
-                      </p>
-                    </div>
-                    <div className="countdown-item">
-                      <div className="countdown-number sm:w-[100px] sm:h-[100px] w-[50px] h-[50px] rounded-full bg-white flex justify-center items-center">
-                        <span className="font-700 sm:text-[30px] text-[14px] text-[#2F80ED]">
-                          {showHour}
-                        </span>
-                      </div>
-                      <p className="sm:text-[18px] text-[12px] font-500 text-center leading-8">
-                        Hours
-                      </p>
-                    </div>
-                    <div className="countdown-item">
-                      <div className="countdown-number sm:w-[100px] sm:h-[100px] w-[50px] h-[50px] rounded-full bg-white flex justify-center items-center">
-                        <span className="font-700 sm:text-[30px] text-[14px] text-[#219653]">
-                          {showMinute}
-                        </span>
-                      </div>
-                      <p className="sm:text-[18px] text-[12px] font-500 text-center leading-8">
-                        Minutes
-                      </p>
-                    </div>
-                    <div className="countdown-item">
-                      <div className="countdown-number sm:w-[100px] sm:h-[100px] w-[50px] h-[50px] rounded-full bg-white flex justify-center items-center">
-                        <span className="font-700 sm:text-[30px] text-[14px] text-[#EF5DA8]">
-                          {showSecound}
-                        </span>
-                      </div>
-                      <p className="sm:text-[18px] text-[12px] font-500 text-center leading-8">
-                        Seconds
-                      </p>
-                    </div>
-                  </div>
-                  <div className="countdown-title mb-4">
-                    <h1 className="text-[44px] text-qblack font-600">
-                      WOO! Flash Sale
-                    </h1>
-                  </div>
-                  <div className="inline-flex space-x-2 items-center border-b border-qyellow">
-                    <span className="text-sm font-600 tracking-wide leading-7">
-                      Shop Now
-                    </span>
-                    <span>
-                      <svg
-                        width="7"
-                        height="11"
-                        viewBox="0 0 7 11"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <rect
-                          x="2.08984"
-                          y="0.636719"
-                          width="6.94219"
-                          height="1.54271"
-                          transform="rotate(45 2.08984 0.636719)"
-                          fill="#1D1D1D"
-                        />
-                        <rect
-                          x="7"
-                          y="5.54492"
-                          width="6.94219"
-                          height="1.54271"
-                          transform="rotate(135 7 5.54492)"
-                          fill="#1D1D1D"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                </div>
+    <div className={`w-full ${className || ""}`}>
+      <div className="relative w-full h-[300px] sm:h-[450px] overflow-hidden">
+        <div
+          key={selectedIndex}
+          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-200 ${
+            fade ? "opacity-100" : "opacity-75"
+          }`}
+          style={{ backgroundImage: `url(${notification?.thumbnail})` }}
+        />
+
+        <div className="absolute inset-0 bg-black/30" />
+
+        <Nav pos="left" onClick={prev} />
+        <Nav pos="right" onClick={next} />
+
+        <div className="absolute top-4 right-4 sm:top-8 sm:right-10 z-20 flex items-center gap-2 sm:gap-3 text-white">
+          <h2 className="text-2xl sm:text-4xl font-bold drop-shadow mb-3 break-words">
+            {isActive ? "Kết thúc sau:" : "Bắt đầu sau:"}
+          </h2>
+          <div className="flex gap-2 sm:gap-3">
+            <Circle label="Ngày" value={showDate} color="#EB5757" />
+            <Circle label="Giờ" value={showHour} color="#2F80ED" />
+            <Circle label="Phút" value={showMinute} color="#219653" />
+            <Circle label="Giây" value={showSecound} color="#EF5DA8" />
+          </div>
+        </div>
+
+        <div className="absolute inset-0 flex flex-col justify-center pl-6 sm:pl-20 z-20 text-white">
+          <div className="max-w-[420px]">
+            <h2 className="text-2xl sm:text-4xl font-bold drop-shadow mb-3 break-words">
+              {promotion?.name}
+            </h2>
+
+            {isActive ? (
+              <Link
+                to="/flash-sale"
+                state={{ flashSales: [flashSales[selectedIndex]] }} // ✅ Truyền đúng phần tử đang hiển thị
+                className="inline-flex bg-yellow-400 text-black font-semibold px-4 py-2 rounded hover:bg-yellow-300 transition text-sm sm:text-base"
+              >
+                Xem ngay
               </Link>
-            </div>
-            <div
-              data-aos="fade-left"
-              className="download-app flex-1 lg:h-full h-[430px] xl:p-12 p-5"
-              style={{
-                background: `url(${
-                  counterbg ||
-                  `${
-                    process.env.REACT_APP_PUBLIC_URL
-                  }/assets/images/download-app-cover.png`
-                }) no-repeat`,
-                backgroundSize: "cover",
-              }}
-            >
-              <div className="flex flex-col h-full justify-between">
-                <div className="get-app">
-                  <p className="text-[13px] font-600 text-qblack mb-3">
-                    MOBILE APP VERSION
-                  </p>
-                  <h1 className="text-[30px] font-600 text-qblack leading-10 mb-8">
-                    Get Our
-                    <span className="text-qred border-b-2 border-qred mx-2">
-                      Mobile App
-                    </span>
-                    <br /> It’s Make easy for you life !
-                  </h1>
-                  <div className="flex space-x-5 items-center">
-                    <div>
-                      <a href="#">
-                        <img
-                          width="170"
-                          height="69"
-                          src={`${
-                            process.env.REACT_APP_PUBLIC_URL
-                          }/assets/images/play-store.png`}
-                          alt=""
-                        />
-                      </a>
-                    </div>
-                    <div>
-                      <a href="#">
-                        <img
-                          width="170"
-                          height="69"
-                          src={`${
-                            process.env.REACT_APP_PUBLIC_URL
-                          }/assets/images/apple-store.png`}
-                          alt=""
-                        />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                <div className="app-screen">
-                  <img
-                    src={
-                      appscreen ||
-                      `${
-                        process.env.REACT_APP_PUBLIC_URL
-                      }/assets/images/app-screen.png`
-                    }
-                    alt=""
-                  />
-                </div>
-              </div>
-            </div>
+            ) : (
+              <p className="text-yellow-300 font-medium text-sm sm:text-base italic">
+                Khuyến mãi sắp diễn ra
+              </p>
+            )}
           </div>
         </div>
       </div>
+
+      <div className="flex justify-center mt-3 gap-2">
+        {flashSales.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              i === selectedIndex ? "w-8 bg-black" : "w-3 bg-gray-400"
+            }`}
+          />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function Circle({ value, label, color }) {
+  return (
+    <div className="text-center">
+      <div
+        className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center bg-white/90 shadow"
+        style={{ borderColor: color }}
+      >
+        <span className="text-base sm:text-xl font-bold" style={{ color }}>
+          {value}
+        </span>
+      </div>
+      <p className="text-[10px] sm:text-xs font-medium text-white drop-shadow">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function Nav({ pos, onClick }) {
+  const side = pos === "left" ? "left-2 sm:left-5" : "right-2 sm:right-5";
+  return (
+    <button
+      onClick={onClick}
+      className={`absolute ${side} top-1/2 -translate-y-1/2 z-30 bg-white/70 hover:bg-white rounded-full p-2 shadow`}
+    >
+      {pos === "left" ? "❮" : "❯"}
+    </button>
   );
 }

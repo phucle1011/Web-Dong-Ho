@@ -23,6 +23,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
   // Memoize product and variants
   const product = useMemo(() => datas || {}, [datas]);
+  
   const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
   const representativeVariant = useMemo(() => product.representativeVariant || {}, [product.representativeVariant]);
 

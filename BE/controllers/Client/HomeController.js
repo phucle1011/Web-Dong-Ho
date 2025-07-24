@@ -15,7 +15,9 @@ class HomeController {
   static async getAllNewProducts(req, res) {
     try {
       const newProducts = await Product.findAll({
-        where: { status: 1 },
+        where: { status: 1,
+          publication_status: 'published'
+         },
         include: [
           {
             model: ProductVariant,
@@ -210,7 +212,7 @@ class HomeController {
       const enrichedTopProducts = await Promise.all(
         topProducts.map(async (product) => {
           const fullProduct = await Product.findOne({
-            where: { id: product.id, status: 1 },
+            where: { id: product.id, status: 1,publication_status: 'published' },
             attributes: ["id", "name", "thumbnail", "created_at"],
             include: [
               {
@@ -347,7 +349,7 @@ class HomeController {
         {
           model: Product,
           as: "product",
-          where: { status: 1 },
+          where: { status: 1,publication_status: 'published' },
           attributes: ["id", "name", "thumbnail", "createdAt"],
         },
         {

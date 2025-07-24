@@ -21,6 +21,7 @@ const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
 const AuthController = require('../controllers/Admin/authController');
 const ProductAttributeController = require('../controllers/Admin/product_attributesController');
+const FlashSaleController = require('../controllers/Admin/flashSaleController');
 const WalletsController = require('../controllers/Admin/walletsController');
 
 //------------------[ ADMIN ROUTES ]------------------
@@ -162,6 +163,18 @@ router.post('/notification', NotificationController.createNotification);
 router.delete('/notification/:id', NotificationController.deleteNotification);
 router.patch('/notification/:id/read', NotificationController.markAsRead);
 router.patch('/notification/mark-all-read', NotificationController.markAllAsRead);
+
+
+// ✅ Lấy danh sách tất cả Flash Sale đang hoạt động
+router.get('/flashSale', FlashSaleController.getAll);
+
+// ✅ Tạo mới Flash Sale (chỉ khi chưa tồn tại cho promotion_id)
+router.post('/flashSale', FlashSaleController.create);
+
+// ✅ Xoá Flash Sale theo ID (tuỳ chọn)
+router.delete('flashSale/:id', FlashSaleController.delete);
+router.get('/active-products', FlashSaleController.getActiveProductPromotions);
+
 
 //------------------[ AUTH ]------------------\
 router.post('/login', AuthController.loginAdmin);

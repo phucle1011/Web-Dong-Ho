@@ -23,37 +23,47 @@ export default function HomeThree() {
   const [productSold, setProductTopsold] = useState([]);
   const [productDiscounted, setProductTopDiscounted] = useState([]);
   const [topBrands, setTopBrands] = useState([]);
+  const [flashSaleDate, setFlashSaleDate] = useState(null);
+const [flashSaleNotification, setFlashSaleNotification] = useState(null);
+const [flashSales, setFlashSales] = useState([]);
+
 
   const [loading, setLoading] = useState(true);
 
   // Tạo danh sách thương hiệu từ products
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [newRes, topSoldRes, topDiscounted, topBrandsRes] =
-          await Promise.all([
-            axios.get(`${Constants.DOMAIN_API}/products/getallnew`),
-            axios.get(`${Constants.DOMAIN_API}/top-sold-products`),
-            axios.get(`${Constants.DOMAIN_API}/top-discounted-products`),
-            axios.get(`${Constants.DOMAIN_API}/brands/top`), // 👈 gọi thêm API brand
-          ]);
 
-        setProductnew(newRes.data.data || []);
-        setProductTopsold(topSoldRes.data || []);
-        setProductTopDiscounted(topDiscounted.data || []);
-        setTopBrands(topBrandsRes.data.data || []); // 👈 nhớ tạo thêm state `topBrands`
-        
-      } catch (error) {
-        console.error("Lỗi khi gọi API:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [newRes, topSoldRes, topDiscounted, topBrandsRes] = await Promise.all([
+        axios.get(`${Constants.DOMAIN_API}/products/getallnew`),
+        axios.get(`${Constants.DOMAIN_API}/top-sold-products`),
+        axios.get(`${Constants.DOMAIN_API}/top-discounted-products`),
+        axios.get(`${Constants.DOMAIN_API}/brands/top`),
+      ]);
 
-    fetchData();
-  }, []);
+      setProductnew(newRes.data.data || []);
+      setProductTopsold(topSoldRes.data || []);
+      setProductTopDiscounted(topDiscounted.data || []);
+      setTopBrands(topBrandsRes.data.data || []);
+
+      const flashSaleRes = await axios.get(`${Constants.DOMAIN_API}/client/flashSale`);
+      const flashSalesData = flashSaleRes.data?.data || [];
+      setFlashSales(flashSalesData); // ✅ gán mảng đầy đủ
+
+    } catch (error) {
+      console.error("Lỗi khi gọi API:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
+
 
   if (loading)
     return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
@@ -68,6 +78,9 @@ export default function HomeThree() {
           className="brand-section-wrapper mb-[60px]"
           brands={topBrands} // 👈 truyền data brand vào props
         />
+
+                <CampaignCountDown flashSales={flashSales} className="mb-[60px]" />
+
 
         <SectionStyleThree
           type={3}
@@ -124,10 +137,10 @@ export default function HomeThree() {
           seeMoreUrl="/all-products"
           className="category-products mb-[60px]"
         />
-        <CampaignCountDown
-          className="mb-[60px]"
-          lastDate="2025-10-04 4:00:00"
-        />
+
+
+
+
         {/* <SectionStyleFour
           products={productSold} 
           sectionTitle="Popular Sales"

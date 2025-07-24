@@ -45,7 +45,7 @@ const [description, setDescription] = useState("");
 const status = watch("status");
 const [showBrandModal, setShowBrandModal] = useState(false);
 const [showCategoryModal, setShowCategoryModal] = useState(false);
-
+const [slugEdit, setSlugEdit] = useState(false); // Có đang chỉnh slug thủ công không?
 
 const [variants, setVariants] = useState([]);
   const [attributes, setAttributes] = useState([]);
@@ -112,11 +112,14 @@ useEffect(() => {
     fetchAttributes();
   }, []);
 useEffect(() => {
-  const name = watch("name");
-  const slug = generateSlug(name || "");
-  setValue("slug", slug); // cập nhật giá trị slug
-  trigger("slug"); // xác thực lại trường slug nếu cần
+  if (!slugEdit) {
+    const name = watch("name");
+    const slug = generateSlug(name || "");
+    setValue("slug", slug);
+    trigger("slug");
+  }
 }, [watch("name")]);
+
 
 
 function CustomUploadAdapterPlugin(editor) {
@@ -239,11 +242,21 @@ const generateSlug = (text) => {
 <div className="flex items-center justify-between mb-1 pt-4">
     <label className="form-label">Slug</label>
   </div>
-  <input
+<input
+  type="text"
   readOnly
-    type="text"
-    className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed "
-  />
+  className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+  value={watch("slug") || ""}
+  {...register("slug")}
+  onFocus={() => setSlugEdit(true)}
+  onBlur={() => setSlugEdit(false)}
+  onChange={e => {
+    setValue("slug", e.target.value);
+    trigger("slug");
+  }}
+  disabled={false} // hoặc cho phép chỉnh sửa nếu cần
+/>
+
   {errors.slug && (
     <small className="text-danger">{errors.slug.message}</small>
   )}

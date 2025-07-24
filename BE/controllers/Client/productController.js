@@ -18,7 +18,10 @@ class ProductController {
 
       // Tìm thông tin sản phẩm kèm các quan hệ
       const product = await Product.findOne({
-        where: { id: productId },
+        where: { id: productId, 
+          publication_status: 'published',
+          status: 1,
+        },
         include: [
           { model: Brand, as: "brand", attributes: ["id", "name"] },
           { model: Category, as: "category", attributes: ["id", "name"] },
@@ -203,7 +206,8 @@ static async getSimilarProducts(req, res) {
     const productId = req.params.id;
 
     const product = await Product.findOne({
-      where: { id: productId },
+      where: { id: productId,status: 1,
+          publication_status: 'published' },
       attributes: ["id", "category_id", "brand_id"],
     });
 
