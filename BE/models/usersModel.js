@@ -57,6 +57,10 @@ const UserModel = connection.define('users', {
     last_active_at: {
         type: DataTypes.DATE,
         allowNull: true,
+    },
+        balance: {
+        type: DataTypes.DECIMAL(20, 0),
+        allowNull: true
     }
 }, {
     tableName: 'users',

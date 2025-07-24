@@ -60,6 +60,10 @@ const OrderModel = connection.define('orders', {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: true
     },
+    wallet_balance: {
+        type: DataTypes.DECIMAL(20, 2),
+        allowNull: true
+    },
 }, {
     tableName: 'orders',
     timestamps: true,

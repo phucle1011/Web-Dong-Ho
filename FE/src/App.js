@@ -76,8 +76,8 @@ import PromotionList from "./pages/admin/promotionUsers/getAll";
 import Attribute from "./pages/admin/product/attribute/getAll";
 import AttributeEdit from "./pages/admin/product/attribute/detail";
 import AttributeCreate from "./pages/admin/product/attribute/create";
-
-
+import WashletGetAll from "./pages/admin/washlet/getAll";
+import WalletDetail from "./pages/admin/washlet/detail";
 
 // Protected Route
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
@@ -153,6 +153,10 @@ const AppRoutes = () => {
         <Route path="orders">
           <Route path="getAll" element={<OrderGetAll />} />
           <Route path="detail/:id" element={<OrderDetail />} />
+        </Route>
+        <Route path="washlets">
+          <Route path="getAll" element={<WashletGetAll />} />
+          <Route path="detail/:id" element={<WalletDetail />} />
         </Route>
         <Route path="user">
           <Route path="getAll" element={<UserList />} />

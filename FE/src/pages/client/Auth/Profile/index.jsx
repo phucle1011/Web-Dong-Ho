@@ -100,18 +100,18 @@ export default function Profile() {
                       </Link>
                     </div>
 
-                    {/* <div className="item group">
+                    <div className="item group">
                       <Link to="/profile#payment">
                         <div className="flex space-x-3 items-center text-qgray hover:text-qblack">
                           <span>
                             <IcoPayment />
                           </span>
                           <span className=" font-normal text-base">
-                            Payment Method
+                            Ví tiền
                           </span>
                         </div>
                       </Link>
-                    </div> */}
+                    </div>
                     <div className="item group">
                       <Link to="/profile#order">
                         <div className="flex space-x-3 items-center text-qgray hover:text-qblack">

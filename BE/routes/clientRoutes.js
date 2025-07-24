@@ -30,6 +30,7 @@ const UserController = require('../controllers/Client/userControllers');
 const reviewController = require('../controllers/Client/reviewController');
 const notificationClientController = require('../controllers/Client/notificationClientController');
 const SearchController = require('../controllers/Client/SearchController')
+const WalletsController = require('../controllers/Client/walletsController');
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -38,6 +39,10 @@ router.get("/products/getallnew", HomeController.getAllNewProducts);
 router.get("/top-sold-products", HomeController.getTopSoldProducts);
 router.get("/top-discounted-products", HomeController.getDiscountedProducts);
 
+//------------------[ Wallets ]------------------
+router.get('/wallets', checkJWT, WalletsController.get);
+router.post('/wallets/transactions', checkJWT, WalletsController.requestWithdraw);
+router.post('/wallets/request-refund',checkJWT, WalletsController.requestRefund);
 
 // ------------------[ Search ]------------------//
 router.get('/products/search', SearchController.searchProducts);

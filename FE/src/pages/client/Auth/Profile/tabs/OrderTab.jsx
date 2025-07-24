@@ -16,6 +16,7 @@ import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { useParams, useNavigate } from "react-router-dom";
 import { decodeToken } from "../../../Helpers/jwtDecode.jsx";
+import Swal from 'sweetalert2';
 
 export default function OrderTab() {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ export default function OrderTab() {
   const [orderDetailsMap, setOrderDetailsMap] = useState({});
   const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState(null);
   const [user, setUser] = useState(null);
+
 
   const translateStatus = (status) => {
     switch (status) {
@@ -408,6 +410,132 @@ export default function OrderTab() {
     );
   };
 
+  const handleRefundRequest = async (orderId) => {
+  const confirm = await Swal.fire({
+  title: "Xác nhận thông tin",
+  icon: "warning",
+html: `
+  <div style="text-align:left; font-size:14px; padding: 4px 2px;">
+    <div style="margin-bottom:16px;">
+      <label for="swal-bank-name" style="font-weight:600; margin-bottom:6px; display:block; color:#333;">
+        Tên ngân hàng: <span style="color:red">*</span>
+      </label>
+      <select id="swal-bank-name"
+        class="swal2-select"
+        style="
+          width: 100%;
+          padding: 8px 10px;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          background-color: #f9f9f9;
+          font-size: 14px;
+          box-sizing: border-box;
+          margin-left: 0px;
+        "
+      >
+        <option value="">-- Chọn ngân hàng --</option>
+        <option value="vietcombank">Vietcombank (VCB)</option>
+        <option value="techcombank">Techcombank (TCB)</option>
+        <option value="vpbank">VPBank</option>
+        <option value="mbbank">MBBank</option>
+        <option value="bidv">BIDV</option>
+        <option value="acb">ACB</option>
+        <option value="agribank">Agribank</option>
+        <option value="sacombank">Sacombank</option>
+        <option value="shb">SHB</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label for="swal-bank-account" style="font-weight:600; margin-bottom:6px; display:block; color:#333;">
+        Số tài khoản: <span style="color:red">*</span>
+      </label>
+      <input id="swal-bank-account"
+        class="swal2-input"
+        placeholder="Nhập số tài khoản"
+        style="
+          width: 100%;
+          padding: 8px 10px;
+          border: 1px solid #ccc;
+          margin-left: 0px;
+          border-radius: 6px;
+          background-color: #fff;
+          font-size: 14px;
+          box-sizing: border-box;
+        "
+      />
+    </div>
+
+    <div>
+      <label for="swal-note" style="font-weight:600; margin-bottom:6px; display:block; color:#333;">
+        Ghi chú (không bắt buộc):
+      </label>
+      <textarea id="swal-note"
+        class="swal2-textarea"
+        placeholder="Ví dụ: Tôi không nhận được sản phẩm đúng"
+        rows="3"
+        style="
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          background-color: #fff;
+          font-size: 14px;
+          resize: vertical;
+          box-sizing: border-box;
+          margin-left: 0px;
+        "
+      ></textarea>
+    </div>
+  </div>
+`,
+  preConfirm: () => {
+    const bankName = document.getElementById("swal-bank-name").value.trim();
+    const bankAccount = document.getElementById("swal-bank-account").value.trim();
+    const note = document.getElementById("swal-note").value.trim();
+
+    if (!bankName || !bankAccount) {
+      Swal.showValidationMessage("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    if (!/^\d{6,20}$/.test(bankAccount)) {
+      Swal.showValidationMessage("Số tài khoản không hợp lệ. Phải là số và từ 6-20 chữ số.");
+      return;
+    }
+
+    return { bankName, bankAccount, note };
+  },
+  showCancelButton: true,
+  confirmButtonText: "Xác nhận",
+  cancelButtonText: "Hủy",
+  reverseButtons: true,
+});
+
+  if (confirm.isConfirmed && confirm.value) {
+    const { bankName, bankAccount, note } = confirm.value;
+
+    try {
+      const res = await axios.post(`${Constants.DOMAIN_API}/wallets/request-refund`, {
+        orderId,
+        bank_name: bankName,
+        bank_account: bankAccount,
+        note: note || 'Tôi muốn hoàn tiền vì sản phẩm không đúng mô tả'
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+
+      toast.success(res.data.message || "Đã gửi yêu cầu hoàn tiền");
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.response?.data?.error || "Không thể gửi yêu cầu hoàn tiền";
+      toast.error(message);
+    }
+  }
+};
+
   return (
     <div className="w-full p-2">
       <div className="bg-white p-4 shadow rounded-md">
@@ -472,7 +600,7 @@ export default function OrderTab() {
             </div>
 
             <table className="w-full text-sm text-left text-gray-500">
-              <thead>
+              <thead className="bg-gray-100">
                 <tr>
                   <th className="text-center py-3 px-2 whitespace-nowrap">#</th>
                   <th className="text-center py-3 px-2 whitespace-nowrap">Mã đơn</th>
@@ -514,54 +642,58 @@ export default function OrderTab() {
                         })}
                       </td>
                       <td className="text-center py-4 px-2 whitespace-nowrap">{order.payment_method}</td>
-                      <td className="text-center py-4 flex flex-row items-center justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            const isOpeningNew = expandedOrderId !== order.id;
-                            if (isOpeningNew) {
-                              fetchOrderDetails(order.id);
-                            }
-                            setExpandedOrderId(isOpeningNew ? order.id : null);
-                          }}
-                          className="w-[40px] h-[36px] bg-yellow-400 text-black font-bold flex items-center justify-center rounded text-sm"
-                          type="button"
-                        >
-                          {expandedOrderId === order.id ? (
-                            <FaEyeSlash className="text-red-500" />
-                          ) : (
-                            <FaEye />
+                      <td className="py-4 text-center">
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          <button
+                            onClick={() => {
+                              const isOpeningNew = expandedOrderId !== order.id;
+                              if (isOpeningNew) fetchOrderDetails(order.id);
+                              setExpandedOrderId(isOpeningNew ? order.id : null);
+                            }}
+                            className="w-8 h-8 bg-yellow-300 hover:bg-yellow-400 text-black rounded-full flex items-center justify-center shadow transition"
+                            title={expandedOrderId === order.id ? "Ẩn chi tiết" : "Xem chi tiết"}
+                            type="button"
+                          >
+                            {expandedOrderId === order.id ? (
+                              <FaEyeSlash className="text-red-600" />
+                            ) : (
+                              <FaEye />
+                            )}
+                          </button>
+
+                          {order.status === "pending" && (
+                            <button
+                              onClick={() => setSelectedOrder(order)}
+                              className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow transition"
+                              title="Huỷ đơn"
+                              type="button"
+                            >
+                              <FaTrashAlt />
+                            </button>
                           )}
-                        </button>
 
-                        {order.status === "pending" && (
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="w-[40px] h-[36px] flex items-center justify-center bg-red-500 hover:bg-red-600 text-white font-medium rounded text-sm"
-                            type="button"
-                          >
-                            <FaTrashAlt />
-                          </button>
-                        )}
+                          {["cancelled", "completed"].includes(order.status) && (
+                            <button
+                              onClick={() => handleReorder(order)}
+                              className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow transition"
+                              title="Đặt lại đơn"
+                              type="button"
+                            >
+                              <FaRedo />
+                            </button>
+                          )}
 
-                        {order.status === "cancelled" && (
-                          <button
-                            onClick={() => handleReorder(order)}
-                            className="w-[40px] h-[36px] flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm"
-                            type="button"
-                          >
-                            <FaRedo />
-                          </button>
-                        )}
-
-                        {order.status === "completed" && (
-                          <button
-                            onClick={() => handleReorder(order)}
-                            className="w-[40px] h-[36px] flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm"
-                            type="button"
-                          >
-                            <FaRedo />
-                          </button>
-                        )}
+                          {["completed", "delivered"].includes(order.status) && (
+                            <button
+                              onClick={() => handleRefundRequest(order.id)}
+                              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm shadow transition"
+                              title="Yêu cầu hoàn tiền"
+                              type="button"
+                            >
+                              Hoàn tiền
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
 

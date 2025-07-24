@@ -18,6 +18,7 @@ const PromotionProductModel = require('../models/promotionProductsModel');
 const Promotion = require('../models/promotionsModel');
 const CommentImageModel = require('../models/commentImagesModel');
 const PromotionUserModel = require('./promotionUsersModel');
+const WithdrawRequestsModel = require('../models/withdrawRequestsModel');
 
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
@@ -33,7 +34,7 @@ NotificationModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 ProductModel.hasMany(CommentModel, { foreignKey: 'product_id', as: 'comments' });
 CommentModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'commentedProduct' });
 
- // OrderDetails - Product
+// OrderDetails - Product
 // OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' });
 // ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
 
@@ -53,7 +54,7 @@ WishlistModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
 // Wishlist - ProductVariant
 ProductVariantsModel.hasMany(WishlistModel, { foreignKey: 'product_variant_id', as: 'wishlists' });
-WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' }); 
+WishlistModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id', as: 'variant' });
 
 // Category - Product
 CategoriesModel.hasMany(ProductModel, { foreignKey: 'category_id', as: 'products' });
@@ -105,7 +106,7 @@ ProductVariantsModel.hasMany(OrderDetailModel, { foreignKey: 'product_variant_id
 
 // PromotionProduct - ProductVariant
 PromotionProductModel.belongsTo(ProductVariantsModel, { foreignKey: 'product_variant_id' });
-PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });  
+PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id' });
 
 UserModel.belongsToMany(PromotionModel, { through: PromotionUserModel, foreignKey: 'user_id', otherKey: 'promotion_id' });
 PromotionModel.belongsToMany(UserModel, { through: PromotionUserModel, foreignKey: 'promotion_id', otherKey: 'user_id' });
@@ -138,6 +139,22 @@ PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 
 
 OrderModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
 
+/* --------- User - WithdrawRequests --------- */
+UserModel.hasMany(WithdrawRequestsModel, {foreignKey: 'user_id', as: 'withdrawRequests',});
+WithdrawRequestsModel.belongsTo(UserModel, {foreignKey: 'user_id', as: 'user',});
+
+// WithdrawRequest belongsTo Order
+WithdrawRequestsModel.belongsTo(OrderModel, {
+  foreignKey: 'order_id',
+  as: 'order',
+});
+
+// Order hasMany WithdrawRequests (nếu bạn cần dùng chiều ngược)
+OrderModel.hasMany(WithdrawRequestsModel, {
+  foreignKey: 'order_id',
+  as: 'withdrawRequests',
+});
+
 module.exports = {
   UserModel,
   AddressesModel,
@@ -156,5 +173,6 @@ module.exports = {
   ProductAttributeModel,
   ProductVariantAttributeValueModel,
   VariantImageModel,
-  CommentImageModel
+  CommentImageModel,
+  WithdrawRequestsModel,
 };

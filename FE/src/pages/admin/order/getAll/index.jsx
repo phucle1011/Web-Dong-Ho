@@ -350,7 +350,7 @@ function OrderGetAll() {
                 <th className="text-center py-3 px-2 whitespace-nowrap">Tổng tiền</th>
                 <th className="text-center py-3 px-2 whitespace-nowrap">Trạng thái</th>
                 <th className="text-center py-3 px-2 whitespace-nowrap">Thanh toán</th>
-                <th className="text-center py-3 px-2 whitespace-nowrap">Xem chi tiết</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap"></th>
               </tr>
             </thead>
             <tbody>
@@ -358,13 +358,13 @@ function OrderGetAll() {
                 orders.map((order, index) => (
                   <React.Fragment key={order.id}>
                     <tr>
-                      <td className="p-2 border border-gray-300">{index + 1}</td>
-                      <td className="p-2 border border-gray-300">{order.order_code}</td>
-                      <td className="p-2 border border-gray-300">{order.user?.name || "N/A"}</td>
-                      <td className="p-2 border border-gray-300">
+                      <td className="p-2 border border-gray-300 text-center">{index + 1}</td>
+                      <td className="p-2 border border-gray-300 text-center">{order.order_code}</td>
+                      <td className="p-2 border border-gray-300 text-center">{order.user?.name || "N/A"}</td>
+                      <td className="p-2 border border-gray-300 text-center">
                         {new Date(order.created_at).toLocaleString("vi-VN", { hour12: false })}
                       </td>
-                      <td className="p-2 border border-gray-300">
+                      <td className="p-2 border border-gray-300 text-center">
                         {Number(order.total_price).toLocaleString("vi-VN", {
                           style: "currency",
                           currency: "VND",
@@ -385,8 +385,8 @@ function OrderGetAll() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-2 border border-gray-300">{order.payment_method}</td>
-                      <td className="p-2 border border-gray-300 flex gap-2">
+                      <td className="p-2 border border-gray-300 text-center">{order.payment_method}</td>
+                      <td className="p-2 border border-gray-300 flex gap-2 text-center">
                         <Link
                           to={`/admin/orders/detail/${order.id}`}
                           className="bg-blue-500 text-white p-2 rounded"

@@ -21,6 +21,7 @@ const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
 const AuthController = require('../controllers/Admin/authController');
 const ProductAttributeController = require('../controllers/Admin/product_attributesController');
+const WalletsController = require('../controllers/Admin/walletsController');
 
 //------------------[ ADMIN ROUTES ]------------------
 
@@ -33,6 +34,12 @@ router.get('/orders/list', OrderController.get);
 router.get('/orders/:id', OrderController.getById);
 router.put('/orders/edit/:id', OrderController.update);
 router.delete("/orders/delete/:id", OrderController.delete);
+
+//------------------[ ORDERS ]------------------\
+router.get('/wallets', WalletsController.getAll);
+router.put('/wallets/withdraw/:id', WalletsController.updateWithdrawStatus);
+router.put('/wallets/refund/:id', WalletsController.updateWithdrawStatus);
+router.get('/wallets/withdraw/:id', WalletsController.getId);
 
 //------------------[ USERS ]------------------\
 router.get('/user/list', UserController.get);
