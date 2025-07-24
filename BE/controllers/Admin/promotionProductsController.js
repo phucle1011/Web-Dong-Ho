@@ -132,7 +132,7 @@ class PromotionProductController {
   static async create(req, res) {
     try {
       const { product_variant_id, promotion_id } = req.body;
-      console.log("Received payload:", { product_variant_id, promotion_id });
+      // console.log("Received payload:", { product_variant_id, promotion_id });
 
       const variantIds = Array.isArray(product_variant_id) ? product_variant_id : [product_variant_id];
       const promotionIds = Array.isArray(promotion_id) ? promotion_id : [promotion_id];

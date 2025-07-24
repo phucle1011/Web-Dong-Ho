@@ -162,12 +162,12 @@ const PromotionProductForm = ({ onSuccess }) => {
 
     setIsLoading(true);
     try {
-      console.log("Sending payload:", payload);
+    
       const response = await axios.post(
         `${Constants.DOMAIN_API}/admin/promotion-products`,
         payload
       );
-      console.log("Response:", response.data);
+
       toast.success("Thêm sản phẩm khuyến mãi thành công!");
 
       // Cập nhật lại dữ liệu

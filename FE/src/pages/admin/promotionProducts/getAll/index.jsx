@@ -32,8 +32,7 @@ const PromotionProductList = () => {
   const dialogRef = useRef(null);
   const navigate = useNavigate();
 
-  const getPromotionStatus = (startDate, endDate, quantity) => {
-    if (quantity === 0) return "exhausted";
+  const getPromotionStatus = (startDate, endDate) => {
     if (!startDate || !endDate) return "inactive";
     const currentDate = new Date();
     const start = new Date(startDate);
@@ -49,7 +48,6 @@ const PromotionProductList = () => {
       upcoming: "Sắp diễn ra",
       expired: "Đã hết hạn",
       inactive: "Vô hiệu hóa",
-      exhausted: "Hết lượt sử dụng",
     }[status] || "Vô hiệu hóa");
 
   const getStatusBadgeClass = (status) =>
@@ -58,7 +56,6 @@ const PromotionProductList = () => {
       upcoming: "bg-blue-100 text-blue-800",
       expired: "bg-red-100 text-red-800",
       inactive: "bg-gray-200 text-gray-800",
-      exhausted: "bg-yellow-100 text-yellow-800 font-bold",
     }[status] || "bg-gray-200 text-gray-800");
 
   const formatDiscountValue = (discountValue, discountType) => {
@@ -105,8 +102,7 @@ const PromotionProductList = () => {
         limit: response.data.pagination?.limit || pagination.limit,
         totalPages:
           response.data.pagination?.totalPages ||
-          Math.ceil(totalPromotions / pagination.limit) ||
-          1,
+          Math.ceil(totalPromotions / pagination.limit) || 1,
       });
     } catch (err) {
       console.error("Lỗi khi lấy dữ liệu:", err);
@@ -219,68 +215,54 @@ const PromotionProductList = () => {
 
   const renderPagination = () => {
     const { page, totalPages } = pagination;
-    const showPreviousPage = page > 1;
-    const showNextPage = page < totalPages;
-
-    const pagesToShow = [];
-    const maxPages = 3;
-    const startPage = Math.max(1, page - 1);
-    const endPage = Math.min(totalPages, startPage + maxPages - 1);
-
-    for (let i = startPage; i <= endPage; i++) {
-      pagesToShow.push(
-        <button
-          key={i}
-          onClick={() => handlePageChange(i)}
-          className={`px-3 py-1 border rounded ${
-            i === page ? "bg-blue-600 text-white" : "bg-white"
-          }`}
-        >
-          {i}
-        </button>
-      );
-    }
 
     return (
-      <div className="flex justify-center items-center gap-1 mt-4 flex-wrap">
-        <button
-          disabled={!showPreviousPage}
-          onClick={() => handlePageChange(1)}
-          className="px-2 py-1 border rounded disabled:opacity-50"
-          title="Trang đầu"
-        >
-          <FaAngleDoubleLeft />
-        </button>
-        <button
-          disabled={!showPreviousPage}
-          onClick={() => handlePageChange(page - 1)}
-          className="px-2 py-1 border rounded disabled:opacity-50"
-          title="Trang trước"
-        >
-          <FaChevronLeft />
-        </button>
-        {pagesToShow}
-        {totalPages > maxPages && page < totalPages - 1 && (
-          <span className="px-2 py-1">...</span>
-        )}
-        {showNextPage && (
-          <>
-            <button
-              onClick={() => handlePageChange(page + 1)}
-              className="px-2 py-1 border rounded"
-              title="Trang sau"
-            >
-              <FaChevronRight />
-            </button>
-            <button
-              onClick={() => handlePageChange(totalPages)}
-              className="px-2 py-1 border rounded"
-              title="Trang cuối"
-            >
-              <FaAngleDoubleRight />
-            </button>
-          </>
-        )}
+      <div className="flex justify-center mt-6">
+        <div className="flex items-center space-x-1">
+          <button
+            disabled={page === 1}
+            onClick={() => handlePageChange(1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaAngleDoubleLeft />
+          </button>
+          <button
+            disabled={page === 1}
+            onClick={() => handlePageChange(page - 1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaChevronLeft />
+          </button>
+          {[...Array(totalPages)].map((_, i) => {
+            const pageNum = i + 1;
+            if (pageNum >= page - 1 && pageNum <= page + 1) {
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`px-3 py-1 border rounded ${pageNum === page ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"}`}
+                >
+                  {pageNum}
+                </button>
+              );
+            }
+            return null;
+          })}
+          <button
+            disabled={page === totalPages}
+            onClick={() => handlePageChange(page + 1)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaChevronRight />
+          </button>
+          <button
+            disabled={page === totalPages}
+            onClick={() => handlePageChange(totalPages)}
+            className="px-2 py-1 border rounded disabled:opacity-50"
+          >
+            <FaAngleDoubleRight />
+          </button>
+        </div>
       </div>
     );
   };
@@ -365,8 +347,7 @@ const PromotionProductList = () => {
                   const isExpanded = expanded === promoName;
                   const status = getPromotionStatus(
                     promo.start_date,
-                    promo.end_date,
-                    quantity
+                    promo.end_date
                   );
                   const stt =
                     (pagination.page - 1) * pagination.limit + index + 1;
@@ -411,7 +392,6 @@ const PromotionProductList = () => {
                         <td className="border p-2 text-center">
                           {quantity === 0 ? "Hết lượt" : quantity}
                         </td>
-
                         <td className="p-2 flex items-center justify-end space-x-2">
                           {promotionId ? (
                             <button
@@ -469,8 +449,7 @@ const PromotionProductList = () => {
                                 {items.map((item, subIndex) => {
                                   const itemStatus = getPromotionStatus(
                                     item.promotion?.start_date,
-                                    item.promotion?.end_date,
-                                    item.promotion?.quantity
+                                    item.promotion?.end_date
                                   );
                                   return (
                                     <tr key={item.id}>
@@ -496,7 +475,6 @@ const PromotionProductList = () => {
                                       <td className="border p-2 text-center">
                                         {quantity === 0 ? "Hết lượt" : quantity}
                                       </td>
-
                                       <td className="border p-2 text-center">
                                         <span
                                           className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(

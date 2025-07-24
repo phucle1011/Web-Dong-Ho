@@ -163,7 +163,7 @@ useEffect(() => {
                 <BreadcrumbCom
                   paths={[
                     { name: "trang chủ", path: "/" },
-                    { name: "trang sản phẩm", path: "/single-product" },
+                    { name: "trang sản phẩm", path: "/all-products" },
                   ]}
                 />
               </div>
