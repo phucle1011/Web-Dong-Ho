@@ -6,6 +6,7 @@ const CartModel = require("../../models/cartDetailsModel");
 const PromotionModel = require("../../models/promotionsModel");
 const ProductVariantModel = require("../../models/productVariantsModel");
 const PromotionUserModel = require("../../models/promotionUsersModel");
+const WithdrawRequestsModel = require('../../models/withdrawRequestsModel');
 const RedisService = require("../../config/redisService");
 
 const requestIp = require("request-ip");
@@ -173,12 +174,6 @@ class OrderController {
                 return res.status(404).json({ message: "Id không tồn tại" });
             }
 
-            if (order.status !== "pending") {
-                return res.status(400).json({
-                    message: "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'",
-                });
-            }
-
             const orderDetails = await OrderDetail.findAll({
                 where: { order_id: order.id },
                 transaction: t,
@@ -223,23 +218,156 @@ class OrderController {
 
             const user = await UserModel.findByPk(order.user_id);
 
-            await OrderController.sendOrderCancellationEmail(
-                order,
-                user,
-                user?.email || "no-reply@example.com",
-                cancellation_reason
+            const isOnlinePayment = ["vnpay", "momo"].includes(
+                order.payment_method?.toLowerCase()
             );
+            if (!isOnlinePayment) {
+                await OrderController.sendOrderCancellationEmail(
+                    order,
+                    user,
+                    user?.email || "no-reply@example.com",
+                    cancellation_reason
+                );
+            }
 
             await t.commit();
 
             res.status(200).json({
                 status: 200,
-                message: "Hủy đơn hàng thành công",
+                message: 'Hủy đơn hàng thành công',
                 data: order,
+                isOnlinePayment
             });
         } catch (error) {
             await t.rollback();
             res.status(500).json({ error: error.message });
+        }
+    }
+
+    static async requestRefund(req, res) {
+        const t = await sequelize.transaction();
+        try {
+            const { orderId } = req.body;
+            const userId = req.user.id;
+
+            if (!orderId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Thiếu thông tin đơn hàng để hoàn tiền"
+                });
+            }
+
+            const order = await OrderModel.findOne({
+                where: { id: orderId, user_id: userId },
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+
+            if (!order) {
+                await t.rollback();
+                return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+            }
+
+            const paymentMethod = order.payment_method?.toLowerCase();
+            const walletBalance = Number(order.wallet_balance) || 0;
+
+            if (paymentMethod === 'cod') {
+                if (walletBalance <= 0) {
+                    await t.rollback();
+                    return res.status(400).json({ message: "Đơn hàng COD không có phần thanh toán ví để hoàn tiền" });
+                }
+            }
+
+            if (order.status !== 'pending') {
+                await t.rollback();
+                return res.status(400).json({ message: `Chỉ có thể hoàn tiền cho đơn hàng đang 'Chờ xác nhận'` });
+            }
+
+            const existingRefund = await WithdrawRequestsModel.findOne({
+                where: {
+                    user_id: userId,
+                    type: 'refund',
+                    status: { [Op.in]: ['pending', 'approved'] },
+                    order_id: orderId
+                },
+                transaction: t,
+            });
+
+            if (existingRefund) {
+                await t.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: "Đơn hàng này đã được hoàn tiền hoặc đang chờ xử lý."
+                });
+            }
+
+            const user = await UserModel.findByPk(userId, {
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+
+            if (!user) {
+                await t.rollback();
+                return res.status(404).json({ message: "Không tìm thấy người dùng." });
+            }
+
+            const refundAmount = parseFloat(order.wallet_balance) > 0
+                ? parseFloat(order.wallet_balance)
+                : parseFloat(order.total_price || 0);
+
+            const oldBalance = parseFloat(user.balance || 0);
+            const newBalance = oldBalance + refundAmount;
+
+            if (isNaN(newBalance)) {
+                await t.rollback();
+                return res.status(500).json({ message: "Lỗi tính toán số dư ví." });
+            }
+
+            user.balance = newBalance;
+            await user.save({ transaction: t });
+
+            await WithdrawRequestsModel.create({
+                user_id: userId,
+                amount: refundAmount,
+                method: 'bank',
+                bank_account: '',
+                bank_name: '',
+                note: 'Hoàn tiền đơn hàng thanh toán online',
+                status: 'approved',
+                type: 'refund',
+                order_id: order.id
+            }, { transaction: t });
+
+            order.status = 'cancelled';
+            await order.save({ transaction: t });
+
+            try {
+                await OrderController.sendOrderCancellationEmail(
+                    order,
+                    user,
+                    user.email || "no-reply@example.com",
+                    "Hoàn tiền tự động vào ví"
+                );
+            } catch (emailError) {
+                console.warn("Không gửi được email:", emailError);
+            }
+
+            await t.commit();
+
+            return res.status(200).json({
+                success: true,
+                message: `Đã hoàn tiền ${refundAmount.toLocaleString()} VNĐ vào ví và hủy đơn hàng.`,
+                refundedAmount: refundAmount,
+                orderStatus: order.status,
+            });
+
+        } catch (err) {
+            await t.rollback();
+            console.error("Lỗi khi hoàn tiền:", err);
+            res.status(500).json({
+                success: false,
+                message: "Lỗi máy chủ khi hoàn tiền"
+            });
         }
     }
 
@@ -273,91 +401,100 @@ class OrderController {
                 order.discount_amount || 0
             );
 
+            const isOnlinePayment = ["vnpay", "momo"].includes(
+                order.payment_method?.toLowerCase()
+            );
+
             const htmlContent = `
-            <!DOCTYPE html>
-            <html lang="vi">
-            <head>
-                <meta charset="UTF-8" />
-                <title>Hủy đơn hàng</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        background: #f5f5f5;
-                        padding: 20px;
-                        color: #333;
-                    }
-                    .container {
-                        max-width: 500px;
-                        margin: auto;
-                        background: #fff;
-                        padding: 20px;
-                        border-radius: 8px;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                    }
-                    .title {
-                        font-size: 18px;
-                        font-weight: bold;
-                        color: #d32f2f;
-                        margin-bottom: 16px;
-                    }
-                    .info {
-                        font-size: 14px;
-                        margin-bottom: 12px;
-                    }
-                    .info span {
-                        font-weight: bold;
-                    }
-                    .reason {
-                        font-style: italic;
-                        color: #555;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="title">Đơn hàng của bạn đã bị hủy</div>
-    
-                    <div class="info"><span>Mã đơn hàng:</span> #${order.order_code
-                }</div>
-                    <div class="info"><span>Khách hàng:</span> ${user?.name || "Không xác định"
-                }</div>
-                    <div class="info"><span>Email:</span> ${user?.email || customerEmail
-                }</div>
-                    <div class="info"><span>Ngày hủy:</span> ${formattedDate}</div>
-                    <div class="info"><span>Tổng tiền:</span> ${formattedTotal}₫</div>
-    
-                    ${order.discount_amount > 0
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Hủy đơn hàng</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f5f5f5;
+                padding: 20px;
+                color: #333;
+            }
+            .container {
+                max-width: 500px;
+                margin: auto;
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                color: #d32f2f;
+                margin-bottom: 16px;
+            }
+            .info {
+                font-size: 14px;
+                margin-bottom: 12px;
+            }
+            .info span {
+                font-weight: bold;
+            }
+            .reason {
+                font-style: italic;
+                color: #555;
+            }
+            .refund-info {
+                background: #fff8e1;
+                padding: 12px;
+                border-radius: 4px;
+                margin: 16px 0;
+                border-left: 4px solid #ffc107;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="title">Đơn hàng của bạn đã bị hủy</div>
+
+            <div class="info"><span>Mã đơn hàng:</span> #${order.order_code}</div>
+            <div class="info"><span>Khách hàng:</span> ${user?.name || "Không xác định"}</div>
+            <div class="info"><span>Email:</span> ${user?.email || customerEmail}</div>
+            <div class="info"><span>Ngày hủy:</span> ${formattedDate}</div>
+            <div class="info"><span>Tổng tiền:</span> ${formattedTotal}₫</div>
+
+            ${order.discount_amount > 0
                     ? `<div class="info"><span>Giảm giá:</span> -${formattedDiscount}₫</div>`
                     : ""
                 }
-    
-                    ${order.shipping_fee > 0
+
+            ${order.shipping_fee > 0
                     ? `<div class="info"><span>Phí vận chuyển:</span> +${formattedShipping}₫</div>`
                     : ""
                 }
-    
-                    <div class="info"><span>Lý do hủy:</span> <span class="reason">${cancellationReason || "Không có lý do cụ thể"
-                }</span></div>
-    
-                    <p style="margin-top: 20px; font-size: 13px; color: #777;">
-                        Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ lại với chúng tôi. Cảm ơn bạn đã sử dụng dịch vụ.
-                    </p>
 
-                ${["momo", "vnpay"].includes(
-                    order.payment_method?.toLowerCase?.()
-                )
-                    ? `<p style="margin-top: 12px; font-size: 13px; color: #d32f2f;">
-                                Vì đơn hàng được thanh toán bằng <strong>${order.payment_method.toUpperCase()}</strong>, vui lòng liên hệ với chúng tôi để được hoàn tiền qua:
-                                <br />Email: <a href="mailto:phuclnhpc09097@gmail.com">phuclnhpc09097@gmail.com</a>
-                                <br />Zalo: <a href="https://zalo.me/0379169731" target="_blank">0379169731</a>
-                           </p>`
+            <div class="info"><span>Lý do hủy:</span> <span class="reason">${cancellationReason || "Không có lý do cụ thể"}</span></div>
+
+            ${isOnlinePayment
+                    ? `<div class="refund-info">
+                  <p><strong>Thông tin hoàn tiền:</strong></p>
+                  <p>Đơn hàng này đã được thanh toán qua <strong>${order.payment_method.toUpperCase()}</strong>.</p>
+                  <p>Số tiền ${formattedTotal}₫ sẽ được hoàn trả vào tài khoản của bạn trễ nhất trong vòng 3-5 ngày tới.</p>
+                  <p>Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua:</p>
+                  <ul>
+                    <li>Email: <a href="mailto:phuclnhpc09097@gmail.com">phuclnhpc09097@gmail.com</a></li>
+                    <li>Zalo: <a href="https://zalo.me/0379169731" target="_blank">0379169731</a></li>
+                  </ul>
+                </div>`
                     : ""
                 }
 
-                </div>
-            </body>
-            </html>
-            `;
+            <p style="margin-top: 20px; font-size: 13px; color: #777;">
+                Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ lại với chúng tôi. Cảm ơn bạn đã sử dụng dịch vụ.
+            </p>
+        </div>
+    </body>
+    </html>
+    `;
 
             const mailOptions = {
                 from: `"Cửa hàng của bạn" <${process.env.EMAIL_USER}>`,
@@ -417,6 +554,7 @@ class OrderController {
             promo_discount,
             voucher_discount,
             promotion_user_id,
+            wallet_balance
         } = req.body;
 
         if (!products || products.length === 0) {
@@ -556,9 +694,30 @@ class OrderController {
                 totalPrice -= voucherDiscount;
             }
 
+            const usedFromWallet = Number(wallet_balance || 0);
+            if (usedFromWallet > 0) {
+                const user = await UserModel.findByPk(user_id, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE
+                });
+
+                const currentBalance = Number(user.balance || 0);
+                if (currentBalance < usedFromWallet) {
+                    await t.rollback();
+                    return res.status(400).json({ message: "Số dư ví không đủ." });
+                }
+
+                user.balance = currentBalance - usedFromWallet;
+                await user.save({ transaction: t });
+            }
+            console.log("Total Price after discounts:", totalPrice, "Used from wallet:", usedFromWallet);
+
+
             const order_code = `ORD-${Date.now()}`;
             const currentDateTime = new Date(Date.now() + 7 * 60 * 60 * 1000);
-            const finalTotal = totalPrice + (shipping_fee || 0);
+            const finalTotal = totalPrice + (shipping_fee || 0) - usedFromWallet;
+            console.log("Final Total Price:", finalTotal);
+
 
             const newOrder = await OrderModel.create(
                 {
@@ -581,6 +740,7 @@ class OrderController {
                     shipping_code: null,
                     discount_amount: voucherDiscount || 0,
                     special_discount_amount: specialDiscount || 0,
+                    wallet_balance: wallet_balance || 0,
                 },
                 { transaction: t }
             );
@@ -738,9 +898,11 @@ class OrderController {
                 }
             }
 
-            const finalAmount = priceAfterSpecial - discountAmount;
-            const shipping = parseFloat(shipping_fee) || 0;
-            const finalTotalWithShipping = finalAmount + shipping;
+            const usedFromWallet = Number(req.body.wallet_balance || 0);
+const finalAmount = priceAfterSpecial - discountAmount;
+const shipping = parseFloat(shipping_fee) || 0;
+const finalTotalWithShipping = finalAmount + shipping;
+const amountAfterWallet = Math.max(0, finalTotalWithShipping - usedFromWallet);
 
             const simplifiedProducts = products.map((item) => ({
                 variant: {
@@ -771,6 +933,7 @@ class OrderController {
                     specialDiscount: specialDiscount,
                     shipping_fee: shipping_fee || 0,
                     voucher_discount,
+                    wallet_balance: usedFromWallet 
                 })
             ).toString("base64");
 
@@ -778,7 +941,7 @@ class OrderController {
             const partnerCode = "MOMOBKUN20180529";
             const accessKey = "klm05TvNBzhg7h7j";
             const secretKey = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa";
-            const amount = finalTotalWithShipping.toString();
+            const amount = amountAfterWallet.toString();
             const orderId = order_code;
             const requestId = Date.now().toString();
 
@@ -870,6 +1033,24 @@ class OrderController {
             const decoded = JSON.parse(
                 Buffer.from(extraData, "base64").toString("utf-8")
             );
+
+            const usedFromWallet = Number(decoded.wallet_balance || 0); 
+
+if (usedFromWallet > 0) {
+    const user = await UserModel.findByPk(user_id, {
+        transaction: t,
+        lock: t.LOCK.UPDATE
+    });
+
+    const currentBalance = Number(user.balance || 0);
+    if (currentBalance < usedFromWallet) {
+        await t.rollback();
+        return res.status(400).json({ message: "Số dư ví không đủ." });
+    }
+
+    user.balance = currentBalance - usedFromWallet;
+    await user.save({ transaction: t });
+}
 
             const {
                 user_id,
@@ -1018,6 +1199,7 @@ class OrderController {
                     shipping_code: null,
                     discount_amount: discountAmount || 0,
                     special_discount_amount: finalSpecialDiscount || 0,
+                       wallet_balance: usedFromWallet,
                 },
                 { transaction: t }
             );
@@ -1105,7 +1287,10 @@ class OrderController {
             const vnpUrl = process.env.VNPAY_PAYMENT_URL.trim();
             const returnUrl = process.env.VNPAY_RETURN_URL.trim();
 
-            const amount = Math.floor(Number(req.body.amount));
+            const rawAmount = Number(req.body.amount || 0);
+            const usedFromWallet = Number(req.body.wallet_balance || 0);
+            const amount = Math.floor(rawAmount - usedFromWallet);
+
             if (isNaN(amount) || amount <= 0 || amount > 9999999999) {
                 return res
                     .status(400)
@@ -1132,11 +1317,9 @@ class OrderController {
                 shipping_fee: req.body.shipping_fee,
                 specialDiscount: req.body.promo_discount,
                 discountAmount: req.body.voucher_discount,
+                wallet_balance: req.body.wallet_balance || 0,
                 orderId: orderId,
             };
-
-            console.log("Extra data for VNPay:", extraData);
-
 
             const redisKey = `order:${orderId}`;
 
@@ -1294,6 +1477,26 @@ class OrderController {
                 promotion_user_id
             } = decoded;
 
+            const usedFromWallet = Number(decoded.wallet_balance || 0);
+
+            if (usedFromWallet > 0) {
+                const user = await UserModel.findByPk(user_id, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE
+                });
+
+                const currentBalance = Number(user.balance || 0);
+                if (currentBalance < usedFromWallet) {
+                    await t.rollback();
+                    return res.redirect(
+                        `${process.env.FRONTEND_URL}/payment/failed?error=Insufficient_wallet_balance&orderId=${orderId}`
+                    );
+                }
+
+                user.balance = currentBalance - usedFromWallet;
+                await user.save({ transaction: t });
+            }
+
             const updatedProducts = await Promise.all(
                 products.map(async (item) => {
                     const variant = await ProductVariantModel.findByPk(item.variant_id, {
@@ -1429,6 +1632,7 @@ class OrderController {
                     shipping_code: null,
                     discount_amount: parseFloat(decoded.discountAmount) || 0,
                     special_discount_amount: parseFloat(decoded.specialDiscount) || 0,
+                    wallet_balance: usedFromWallet,
                 },
                 { transaction: t }
             );
@@ -1694,6 +1898,25 @@ class OrderController {
         } catch (error) {
             console.error("Lỗi gửi email xác nhận đơn hàng:", error);
             throw new Error("Không thể gửi email xác nhận đơn hàng.");
+        }
+    }
+
+    static async getBalance(req, res) {
+        try {
+            const userId = req.user.id;
+
+            const user = await UserModel.findByPk(userId);
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+            }
+
+            return res.status(200).json({
+                success: true,
+                balance: user.balance || 0,
+            });
+        } catch (error) {
+            console.error('Lỗi khi lấy balance:', error);
+            return res.status(500).json({ success: false, message: 'Lỗi server' });
         }
     }
 }

@@ -14,6 +14,7 @@ import {
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
+import FormDelete from "../../../../components/formDelete/index.jsx";
 
 function WashletGetAll() {
   const [wallets, setWallets] = useState([]);
@@ -29,6 +30,11 @@ function WashletGetAll() {
     pending: 0,
     approved: 0,
     rejected: 0,
+  });
+    const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    id: null,
+    action: null,
   });
   const recordsPerPage = 10;
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -116,6 +122,21 @@ function WashletGetAll() {
     }
   };
 
+  const openConfirmModal = (id, action) => {
+    setConfirmModal({ isOpen: true, id, action });
+  };
+
+  const handleConfirmAction = async () => {
+    const { id, action } = confirmModal;
+    setConfirmModal({ isOpen: false, id: null, action: null });
+
+    if (action === "approve") {
+      await handleApprove(id);
+    } else if (action === "reject") {
+      await handleReject(id);
+    }
+  };
+
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
@@ -195,11 +216,10 @@ function WashletGetAll() {
                         >
                           <FaEye size={18} />
                         </Link>
-
                         {item.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleApprove(item.id)}
+                              onClick={() => openConfirmModal(item.id, "approve")}
                               className="bg-green-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                               title="Duyệt yêu cầu"
                             >
@@ -207,7 +227,7 @@ function WashletGetAll() {
                             </button>
 
                             <button
-                              onClick={() => handleReject(item.id)}
+                              onClick={() => openConfirmModal(item.id, "reject")}
                               className="bg-red-100 text-red-600 p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                               title="Từ chối yêu cầu"
                             >
@@ -215,6 +235,7 @@ function WashletGetAll() {
                             </button>
                           </>
                         )}
+
                       </div>
                     </td>
                   </tr>
@@ -258,6 +279,20 @@ function WashletGetAll() {
           onClose={() => setSelectedRequest(null)}
         />
       )}
+<FormDelete
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null, action: null })}
+        onConfirm={handleConfirmAction}
+        title={confirmModal.action === "approve" ? "Xác nhận duyệt yêu cầu" : "Xác nhận từ chối yêu cầu"}
+        message={
+          confirmModal.action === "approve"
+            ? "Bạn có chắc chắn muốn duyệt yêu cầu rút tiền này?"
+            : "Bạn có chắc chắn muốn từ chối yêu cầu rút tiền này và hoàn tiền về ví?"
+        }
+        confirmText={confirmModal.action === "approve" ? "Duyệt" : "Từ chối"}
+        type={confirmModal.action}
+      />
+
 
     </div>
   );

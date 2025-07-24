@@ -249,40 +249,6 @@ class WalletsController {
       const currentBalance = parseFloat(user.balance || 0);
 
       if (status === 'approved') {
-        user.balance = currentBalance - amount;
-        await user.save();
-        await request.update({ status: 'approved' });
-      } else if (status === 'rejected') {
-        await request.update({ status: 'rejected' });
-      }
-
-      return res.json({ message: `Yêu cầu đã được cập nhật.` });
-    } catch (err) {
-      console.error("Lỗi xử lý yêu cầu:", err);
-      return res.status(500).json({ error: 'Đã xảy ra lỗi.' });
-    }
-  }
-
-  static async updateWithdrawStatus(req, res) {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Trạng thái không hợp lệ.' });
-    }
-
-    try {
-      const request = await WithdrawRequestsModel.findByPk(id);
-      if (!request) return res.status(404).json({ error: 'Yêu cầu không tồn tại.' });
-      if (request.status !== 'pending') return res.status(400).json({ error: 'Chỉ xử lý yêu cầu đang chờ duyệt.' });
-
-      const user = await UserModel.findByPk(request.user_id);
-      if (!user) return res.status(404).json({ error: 'Người dùng không tồn tại.' });
-
-      const amount = parseFloat(request.amount);
-      const currentBalance = parseFloat(user.balance || 0);
-
-      if (status === 'approved') {
         if (request.type === 'withdraw') {
           if (amount > currentBalance) {
             return res.status(400).json({ error: 'Số dư không đủ để thực hiện rút tiền.' });

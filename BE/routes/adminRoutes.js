@@ -40,7 +40,6 @@ router.delete("/orders/delete/:id", OrderController.delete);
 //------------------[ ORDERS ]------------------\
 router.get('/wallets', WalletsController.getAll);
 router.put('/wallets/withdraw/:id', WalletsController.updateWithdrawStatus);
-router.put('/wallets/refund/:id', WalletsController.updateWithdrawStatus);
 router.get('/wallets/withdraw/:id', WalletsController.getId);
 
 //------------------[ USERS ]------------------\

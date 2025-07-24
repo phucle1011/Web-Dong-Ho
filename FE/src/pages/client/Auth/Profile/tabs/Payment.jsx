@@ -12,7 +12,7 @@ export default function Payment() {
   const [showBalance, setShowBalance] = useState(false);
   const [balance, setBalance] = useState(0);
   const [pending, setPending] = useState(0);
-
+  const [hasPendingWithdraw, setHasPendingWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [selectedBank, setSelectedBank] = useState("");
   const [bankAccount, setBankAccount] = useState("");
@@ -38,6 +38,11 @@ export default function Payment() {
           .reduce((sum, req) => sum + parseInt(req.amount || 0), 0);
 
         setPending(pendingAmount || 0);
+
+        const pendingWithdraw = wallet.withdrawRequests?.find(
+          (req) => req.status === "pending" && req.type === "withdraw"
+        );
+        setHasPendingWithdraw(!!pendingWithdraw);
       }
     } catch (err) {
       console.error("Lỗi khi tải ví:", err);
@@ -159,8 +164,7 @@ export default function Payment() {
         </div>
       </header>
 
-      <section className="bg-white shadow-lg rounded-xl -mt-4 mx-4 sm:mx-auto max-w-2xl grid grid-cols-2 divide-x">
-        <ActionButton icon={<FiPlusCircle size={22} />} label="Nạp tiền" />
+      <section className="bg-white shadow-lg rounded-xl -mt-4 mx-4 sm:mx-auto max-w-2xl flex justify-center text-center">
         <ActionButton icon={<BiMoneyWithdraw size={22} />} label="Rút tiền" />
       </section>
 
@@ -200,19 +204,21 @@ export default function Payment() {
 
 
           <hr className="my-6" />
-
-          <h3 className="text-base font-medium mb-3">Yêu cầu rút tiền</h3>
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-gray-700 text-sm mb-3">Yêu cầu rút tiền <span className="text-red-500">*</span>
+            </span>
+          </div>
           <div className="space-y-3">
             <input
               type="number"
               placeholder="Nhập số tiền cần rút..."
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-[#1868D5]"
+              className="w-full rounded-lg border px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#1868D5]"
             />
 
             <select
-              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1868D5]"
+              className="w-full rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#1868D5]"
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
             >
@@ -235,7 +241,7 @@ export default function Payment() {
               placeholder="Nhập số tài khoản ngân hàng"
               value={bankAccount}
               onChange={(e) => setBankAccount(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-[#1868D5]"
+              className="w-full rounded-lg border px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#1868D5]"
             />
 
             <textarea
@@ -243,16 +249,29 @@ export default function Payment() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-[#1868D5]"
+              className="w-full rounded-lg border px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#1868D5]"
             />
 
             <button
-              className="w-full rounded-lg bg-[#1868D5] text-white px-4 py-2 hover:bg-[#1456b0]"
+              className={`w-full rounded-lg px-4 py-1.5 text-white ${hasPendingWithdraw
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#1868D5] hover:bg-[#1456b0]"
+                }`}
               onClick={handleWithdraw}
-              disabled={isSubmitting}
+              disabled={isSubmitting || hasPendingWithdraw}
             >
-              {isSubmitting ? "Đang gửi..." : "Rút"}
+              {hasPendingWithdraw
+                ? "Đang chờ duyệt..."
+                : isSubmitting
+                  ? "Đang gửi..."
+                  : "Rút"}
             </button>
+            {hasPendingWithdraw && (
+              <p className="text-red-500 text-sm text-center mt-2">
+                Bạn đã gửi yêu cầu rút tiền và đang chờ xử lý. Vui lòng chờ duyệt trước khi gửi yêu cầu mới.
+              </p>
+            )}
+
           </div>
         </div>
       </main>

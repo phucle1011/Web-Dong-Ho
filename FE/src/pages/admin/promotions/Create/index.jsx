@@ -15,7 +15,7 @@ function PromotionCreate() {
   const [showUserList, setShowUserList] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [selectAllUsers, setSelectAllUsers] = useState(false);
-
+const [enabled, setEnabled] = useState(false);
   const {
     control,
     register,

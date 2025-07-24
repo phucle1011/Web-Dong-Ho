@@ -136,30 +136,54 @@ export default function OrderTab() {
 
   const deleteOrder = async (reason) => {
     if (!selectedOrder || selectedOrder.isCanceling) return;
+
     try {
       setSelectedOrder({ ...selectedOrder, isCanceling: true });
+
+      const paymentMethod = selectedOrder.payment_method?.toLowerCase();
+      const isOnlinePayment = ["vnpay", "momo"].includes(paymentMethod);
+      const hasWalletUsed = Number(selectedOrder.wallet_balance || 0) > 0;
+
+      // Nếu thanh toán online hoặc dùng ví thì hỏi xác nhận hoàn tiền
+      if (isOnlinePayment || hasWalletUsed) {
+        const confirm = await Swal.fire({
+          title: "Xác nhận hoàn tiền về ví",
+          icon: "warning",
+          text: "Số tiền sẽ được hoàn trực tiếp vào ví điện tử của bạn.",
+          showCancelButton: true,
+          confirmButtonText: "Xác nhận",
+          cancelButtonText: "Hủy",
+        });
+
+        if (!confirm.isConfirmed) {
+          toast.info("Bạn đã huỷ thao tác hoàn tiền.");
+          return;
+        }
+
+        // Gửi yêu cầu hoàn tiền
+        await axios.post(`${Constants.DOMAIN_API}/wallets/request-refund`, {
+          orderId: selectedOrder.id,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
+      }
+
+      // Tiến hành hủy đơn
       await axios.put(
         `${Constants.DOMAIN_API}/orders/cancel/${selectedOrder.id}`,
         { cancellation_reason: reason }
       );
-      toast.success("Hủy đơn hàng thành công");
-      setSelectedOrder(null);
+
+      toast.success("Đơn hàng đã được hủy thành công.");
       fetchOrders(currentPage);
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         "Không thể hủy đơn hàng";
-
-      if (
-        message === "Chỉ được hủy đơn hàng có trạng thái là 'Chờ xác nhận'"
-      ) {
-        toast.warning("Chỉ được hủy những đơn hàng có trạng thái là 'Chờ xác nhận'");
-      } else if (message === "Id không tồn tại") {
-        toast.error("Đơn hàng không tồn tại");
-      } else {
-        toast.error(message);
-      }
+      toast.error(message);
     } finally {
       setSelectedOrder(null);
     }
@@ -411,130 +435,35 @@ export default function OrderTab() {
   };
 
   const handleRefundRequest = async (orderId) => {
-  const confirm = await Swal.fire({
-  title: "Xác nhận thông tin",
-  icon: "warning",
-html: `
-  <div style="text-align:left; font-size:14px; padding: 4px 2px;">
-    <div style="margin-bottom:16px;">
-      <label for="swal-bank-name" style="font-weight:600; margin-bottom:6px; display:block; color:#333;">
-        Tên ngân hàng: <span style="color:red">*</span>
-      </label>
-      <select id="swal-bank-name"
-        class="swal2-select"
-        style="
-          width: 100%;
-          padding: 8px 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          background-color: #f9f9f9;
-          font-size: 14px;
-          box-sizing: border-box;
-          margin-left: 0px;
-        "
-      >
-        <option value="">-- Chọn ngân hàng --</option>
-        <option value="vietcombank">Vietcombank (VCB)</option>
-        <option value="techcombank">Techcombank (TCB)</option>
-        <option value="vpbank">VPBank</option>
-        <option value="mbbank">MBBank</option>
-        <option value="bidv">BIDV</option>
-        <option value="acb">ACB</option>
-        <option value="agribank">Agribank</option>
-        <option value="sacombank">Sacombank</option>
-        <option value="shb">SHB</option>
-      </select>
-    </div>
+    const confirm = await Swal.fire({
+      title: "Xác nhận hoàn tiền về ví",
+      icon: "warning",
+      text: "Vì bạn đã thanh toán online, số tiền sẽ được hoàn trực tiếp vào ví điện tử của bạn.",
+      showCancelButton: true,
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy",
+    });
 
-    <div style="margin-bottom:16px;">
-      <label for="swal-bank-account" style="font-weight:600; margin-bottom:6px; display:block; color:#333;">
-        Số tài khoản: <span style="color:red">*</span>
-      </label>
-      <input id="swal-bank-account"
-        class="swal2-input"
-        placeholder="Nhập số tài khoản"
-        style="
-          width: 100%;
-          padding: 8px 10px;
-          border: 1px solid #ccc;
-          margin-left: 0px;
-          border-radius: 6px;
-          background-color: #fff;
-          font-size: 14px;
-          box-sizing: border-box;
-        "
-      />
-    </div>
+    if (confirm.isConfirmed) {
+      try {
+        const res = await axios.post(`${Constants.DOMAIN_API}/wallets/request-refund`, {
+          orderId,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
 
-    <div>
-      <label for="swal-note" style="font-weight:600; margin-bottom:6px; display:block; color:#333;">
-        Ghi chú (không bắt buộc):
-      </label>
-      <textarea id="swal-note"
-        class="swal2-textarea"
-        placeholder="Ví dụ: Tôi không nhận được sản phẩm đúng"
-        rows="3"
-        style="
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          background-color: #fff;
-          font-size: 14px;
-          resize: vertical;
-          box-sizing: border-box;
-          margin-left: 0px;
-        "
-      ></textarea>
-    </div>
-  </div>
-`,
-  preConfirm: () => {
-    const bankName = document.getElementById("swal-bank-name").value.trim();
-    const bankAccount = document.getElementById("swal-bank-account").value.trim();
-    const note = document.getElementById("swal-note").value.trim();
+        toast.success(res.data.message || "Đã gửi yêu cầu hoàn tiền");
+        fetchOrders(currentPage);
 
-    if (!bankName || !bankAccount) {
-      Swal.showValidationMessage("Vui lòng điền đầy đủ thông tin");
-      return;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.response?.data?.error || "Không thể gửi yêu cầu hoàn tiền";
+        toast.error(message);
+      }
     }
-
-    if (!/^\d{6,20}$/.test(bankAccount)) {
-      Swal.showValidationMessage("Số tài khoản không hợp lệ. Phải là số và từ 6-20 chữ số.");
-      return;
-    }
-
-    return { bankName, bankAccount, note };
-  },
-  showCancelButton: true,
-  confirmButtonText: "Xác nhận",
-  cancelButtonText: "Hủy",
-  reverseButtons: true,
-});
-
-  if (confirm.isConfirmed && confirm.value) {
-    const { bankName, bankAccount, note } = confirm.value;
-
-    try {
-      const res = await axios.post(`${Constants.DOMAIN_API}/wallets/request-refund`, {
-        orderId,
-        bank_name: bankName,
-        bank_account: bankAccount,
-        note: note || 'Tôi muốn hoàn tiền vì sản phẩm không đúng mô tả'
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
-      });
-
-      toast.success(res.data.message || "Đã gửi yêu cầu hoàn tiền");
-    } catch (error) {
-      const message =
-        error.response?.data?.message || error.response?.data?.error || "Không thể gửi yêu cầu hoàn tiền";
-      toast.error(message);
-    }
-  }
-};
+  };
 
   return (
     <div className="w-full p-2">
@@ -680,17 +609,6 @@ html: `
                               type="button"
                             >
                               <FaRedo />
-                            </button>
-                          )}
-
-                          {["completed", "delivered"].includes(order.status) && (
-                            <button
-                              onClick={() => handleRefundRequest(order.id)}
-                              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm shadow transition"
-                              title="Yêu cầu hoàn tiền"
-                              type="button"
-                            >
-                              Hoàn tiền
                             </button>
                           )}
                         </div>

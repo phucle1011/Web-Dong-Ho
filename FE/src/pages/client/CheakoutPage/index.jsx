@@ -49,6 +49,8 @@ export default function CheckoutPage() {
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const decoded = decodeToken(token);
   const id = decoded?.id;
+  const [enabled, setEnabled] = useState(false);
+  const [balance, setBalance] = useState(null);
 
   useEffect(() => {
     if (!location.state && !localStorage.getItem("checkoutData")) {
@@ -850,15 +852,21 @@ export default function CheckoutPage() {
         voucher_discount: discountInfo?.voucherDiscount || 0,
         promotion_user_id: discountInfo?.promotion_user_id || null,
         payment_method: selectedPaymentMethod,
+        wallet_balance: enabled && balance !== null
+          ? Math.min(
+            balance,
+            totalPrice - (discountInfo?.promoDiscount || 0) - (discountInfo?.voucherDiscount || 0) + (finalData.shippingFee || 0)
+          )
+          : 0,
         shipping_fee: finalData.shippingFee || 0,
-        amount: Math.max(0, finalData.total - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0),
+        amount: (Math.max(0, finalData.total - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0)) || finalData.amount,
         orderId: `ORD-${Date.now()}`,
         orderDescription: `Thanh toan don hang cho ${user.name}`,
         orderType: 'other'
       };
 
       console.log("Đặt hàng với payload:", payload);
-      
+
 
       if (selectedPaymentMethod === "VNPay") {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);
@@ -918,6 +926,48 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleToggle = async () => {
+    const newEnabled = !enabled;
+    setEnabled(newEnabled);
+
+    if (newEnabled) {
+      try {
+        const response = await axios.get(`${Constants.DOMAIN_API}/wallet/balance`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        if (response.data.success) {
+          const walletBalance = Number(response.data.balance);
+          setBalance(walletBalance);
+
+          const totalBeforeWallet = Math.max(0, totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0);
+
+          const adjustedAmount = Math.max(0, totalBeforeWallet - walletBalance);
+
+          setFinalData((prev) => ({
+            ...prev,
+            formattedAmount: adjustedAmount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+            amount: adjustedAmount, 
+          }));
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy balance:", error);
+        setBalance(null);
+      }
+    } else {
+      setBalance(null);
+
+      const totalOriginal = Math.max(0, totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) + (finalData.shippingFee || 0);
+      setFinalData((prev) => ({
+        ...prev,
+        formattedAmount: totalOriginal.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+        amount: totalOriginal,
+      }));
+    }
+  };
+
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="checkout-page-wrapper w-full bg-white pb-[60px]">
@@ -940,7 +990,8 @@ export default function CheckoutPage() {
                 <div className="form-area">
                   <form className="w-full px-10 py-[30px] border border-[#EDEDED]">
                     <div className="mb-5">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên*</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên <span className="text-red-500">*</span>
+</label>
                       <div className="relative">
                         <input
                           type="text"
@@ -955,7 +1006,8 @@ export default function CheckoutPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email*</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span>
+</label>
                         <input
                           type="email"
                           placeholder="example@example.com"
@@ -966,7 +1018,8 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại*</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại <span className="text-red-500">*</span>
+</label>
                         <input
                           type="tel"
                           placeholder="0909xxxxxx"
@@ -989,7 +1042,8 @@ export default function CheckoutPage() {
                     </div>
 
                     <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ*</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ <span className="text-red-500">*</span>
+</label>
 
                       <div className="w-full p-4 border border-gray-200 rounded-lg bg-white shadow-sm relative">
                         <button
@@ -1262,6 +1316,52 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     )}
+                    <div className="flex items-start justify-between gap-4">
+                      <label className="flex items-center cursor-pointer">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={enabled}
+                            onChange={handleToggle}
+                          />
+                          <div className={`w-10 h-6 bg-gray-300 rounded-full transition-colors duration-300 ${enabled ? 'bg-green-500' : ''}`}></div>
+                          <div className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 transform ${enabled ? 'translate-x-4' : ''}`}></div>
+                        </div>
+                        <span className="ml-3">Ví tiền</span>
+                      </label>
+
+                      {enabled && balance !== null && (
+                        <div className="text-right text-sm space-y-1">
+                          <div className="text-gray-500 text-sm mr-2">
+                            Số dư ví: <strong>{Number(balance).toLocaleString()}đ</strong>
+                          </div>
+                          <div className="text-gray-600">
+                            Đã sử dụng: <strong className="text-green-600">
+                              {Number(
+                                Math.min(
+                                  balance,
+                                  totalPrice - (discountInfo?.promoDiscount || 0) - (discountInfo?.voucherDiscount || 0) + (finalData.shippingFee || 0)
+                                )
+                              ).toLocaleString()}đ
+                            </strong>
+                          </div>
+
+                          <div className="text-gray-600">
+                            Còn lại trong ví: <strong>
+                              {Number(
+                                balance -
+                                Math.min(
+                                  balance,
+                                  totalPrice - (discountInfo?.promoDiscount || 0) - (discountInfo?.voucherDiscount || 0) + (finalData.shippingFee || 0)
+                                )
+                              ).toLocaleString()}đ
+                            </strong>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex justify-between items-center pt-2 border-t mt-2">
                       <span className="text-lg font-bold">Tổng cộng:</span>
                       <span className="text-xl font-bold text-qred">

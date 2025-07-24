@@ -43,7 +43,7 @@ router.get("/top-discounted-products", HomeController.getDiscountedProducts);
 //------------------[ Wallets ]------------------
 router.get('/wallets', checkJWT, WalletsController.get);
 router.post('/wallets/transactions', checkJWT, WalletsController.requestWithdraw);
-router.post('/wallets/request-refund',checkJWT, WalletsController.requestRefund);
+
 
 // ------------------[ Search ]------------------//
 router.get('/products/search', SearchController.searchProducts);
@@ -96,6 +96,8 @@ router.post("/orders-vnpay", OrderController.createVNPayUrl);
 router.get("/vnpay-callback", OrderController.handleVNPayCallback);
 router.put("/orders/cancel/:id", OrderController.cancelOrder);
 router.put("/orders/confirm-delivered/:id", OrderController.confirmDelivered);
+router.post('/wallets/request-refund', checkJWT, OrderController.requestRefund);
+router.get('/wallet/balance', checkJWT, OrderController.getBalance);
 
 //------------------[ SHIPPING ]------------------
 router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);
