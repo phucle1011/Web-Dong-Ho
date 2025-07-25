@@ -135,7 +135,7 @@ function BlogList() {
                       <th>Tiêu đề</th>
                       <th>Hình ảnh</th>
                       <th>Nội dung</th>
-                      <th>ID người viết</th>
+                      <th>Tên người viết</th>
                       <th>Ngày tạo</th>
                       <th>Hành động</th>
                     </tr>
@@ -161,7 +161,7 @@ function BlogList() {
                               return text.length > 20 ? text.slice(0, 20) + "..." : text;
                             })()}
                           </td>
-                          <td>{blog.user_id}</td>
+                          <td>{blog.user?.name || "Không xác định"}</td>
                           <td>{new Date(blog.created_at).toLocaleDateString("vi-VN")}</td>
                           <td>
                             <div className="d-flex gap-2">

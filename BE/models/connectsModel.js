@@ -18,6 +18,7 @@ const PromotionProductModel = require('../models/promotionProductsModel');
 const Promotion = require('../models/promotionsModel');
 const CommentImageModel = require('../models/commentImagesModel');
 const PromotionUserModel = require('./promotionUsersModel');
+const BlogModel = require('../models/blogsModel');
 const FlashSaleModel = require('./FlashSaleModel');
 const WithdrawRequestsModel = require('../models/withdrawRequestsModel');
 
@@ -36,6 +37,15 @@ CommentModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'commentedP
 // OrderDetails - Product
 // OrderDetailModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'orderedProduct' });
 // ProductModel.hasMany(OrderDetailModel, { foreignKey: 'product_id', as: 'orderItems' });
+
+// Blog - User
+BlogModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
+UserModel.hasMany(BlogModel, { foreignKey: 'user_id', as: 'blogs' });
+
+BlogReviewModel.belongsTo(UserModel, { as: "user", foreignKey: "user_id" });
+UserModel.hasMany(BlogReviewModel, { foreignKey: "user_id", as: "blogReviews" });
+
+
 
 // User - Comment
 CommentModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });

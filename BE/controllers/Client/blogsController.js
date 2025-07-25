@@ -1,18 +1,40 @@
 const { Op } = require("sequelize"); 
 const Blog = require("../../models/blogsModel");
-
+const User = require("../../models/usersModel");
 class BlogController {
-  static async getAllBlogs(req, res) {
-    try {
-      const blogs = await Blog.findAll({
-        order: [["created_at", "DESC"]],
-      });
-      res.status(200).json({ blogs });
-    } catch (error) {
-      console.error("Error fetching blogs:", error);
-      res.status(500).json({ message: "Internal Server Error" });
-    }
+ static async getAllBlogs(req, res) {
+  try {
+    const blogs = await Blog.findAll({
+      order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: User,
+          as: "user", 
+          attributes: ["id", "name"], 
+        },
+      ],
+    });
+
+   
+    const result = blogs.map((blog) => ({
+      id: blog.id,
+      user_id: blog.user_id,
+      user_name: blog.user ? blog.user.name : "",
+      title: blog.title,
+      image_url: blog.image_url,
+      content: blog.content,
+      created_at: blog.created_at,
+      updated_at: blog.updated_at,
+      meta_description: blog.meta_description,
+      focus_keyword: blog.focus_keyword,
+    }));
+
+    res.status(200).json({ blogs: result });
+  } catch (error) {
+    console.error("Error fetching blogs:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
+}
 
   static async getBlogById(req, res) {
     const { id } = req.params;

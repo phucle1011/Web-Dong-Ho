@@ -81,8 +81,9 @@ function BlogDetail() {
                                     </tr>
 
                                     <tr>
-                                        <th>Người viết (ID):</th>
-                                        <td>{blog.user_id}</td>
+                                        <th>Tên người viết:</th>
+                                        <td>{blog.user?.name || "Không xác định"}</td>
+
                                     </tr>
                                     <tr>
                                         <th>Ngày tạo:</th>

@@ -14,7 +14,7 @@ function AddBlog() {
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [metaDescription, setMetaDescription] = useState("");
-  const [focusKeyword, setFocusKeyword] = useState("");
+  // const [focusKeyword, setFocusKeyword] = useState("");
   const [userId, setUserId] = useState("");
   const navigate = useNavigate();
   const editorRef = useRef(null);
@@ -78,7 +78,7 @@ function AddBlog() {
           image_url: imageUrl,
           user_id: userId,
           meta_description: metaDescription,
-          focus_keyword: focusKeyword,
+          // focus_keyword: focusKeyword,
         }),
       });
 
@@ -124,7 +124,7 @@ function AddBlog() {
                   />
                 </div>
 
-                <div className="mb-3">
+                {/* <div className="mb-3">
                   <label className="form-label fw-bold">Từ khóa trọng tâm (Focus Keyword)</label>
                   <input
                     type="text"
@@ -133,7 +133,7 @@ function AddBlog() {
                     onChange={(e) => setFocusKeyword(e.target.value)}
                     placeholder="Nhập từ khóa trọng tâm"
                   />
-                </div>
+                </div> */}
 
                 <label className="form-label fw-bold">Nội dung bài viết</label>
                 <Editor
@@ -202,25 +202,26 @@ function AddBlog() {
                 </div>
 
                 <div className="d-flex justify-content-start gap-2 mt-3">
-
-
                   <button type="submit" className="btn btn-primary" disabled={uploading}>
                     Thêm bài viết
                   </button>
                   <button
-  type="button"
-  className="btn"
-  style={{
-    backgroundColor: "#6c757d", 
-    color: "#fff",
-    border: "none"
-  }}
-  onClick={() => navigate(-1)}
->
-  Quay lại
-</button>
+                    type="button"
+                    className="btn"
+                    style={{
+                      backgroundColor: "#6c757d",
+                      color: "#fff",
+                      border: "none"
+                    }}
+                    onClick={() => navigate(-1)}
+                  >
+                    Quay lại
+                  </button>
                 </div>
               </form>
+
+              
+
             </div>
           </div>
         </div>

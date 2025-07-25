@@ -33,7 +33,7 @@ function EditBlog() {
         setUserId(data.user_id);
         setImagePreview(data.image_url);
         setMetaDescription(data.meta_description || "");
-        setFocusKeyword(data.focus_keyword || "");
+        // setFocusKeyword(data.focus_keyword || "");
       })
       .catch(() => {
         Swal.fire("Lỗi", "Không thể tải dữ liệu bài viết", "error");
@@ -84,7 +84,7 @@ function EditBlog() {
           image_url: imageUrl,
           user_id: userId,
           meta_description: metaDescription,
-          focus_keyword: focusKeyword,
+          // focus_keyword: focusKeyword,
         }),
       });
 
@@ -130,7 +130,7 @@ function EditBlog() {
                   />
                 </div>
 
-                <div className="mb-3">
+                {/* <div className="mb-3">
                   <label className="form-label fw-bold">Từ khóa trọng tâm (Focus Keyword)</label>
                   <input
                     type="text"
@@ -139,7 +139,7 @@ function EditBlog() {
                     onChange={(e) => setFocusKeyword(e.target.value)}
                     placeholder="Nhập từ khóa trọng tâm"
                   />
-                </div>
+                </div> */}
 
                 <label className="form-label fw-bold">Nội dung bài viết</label>
                 <Editor

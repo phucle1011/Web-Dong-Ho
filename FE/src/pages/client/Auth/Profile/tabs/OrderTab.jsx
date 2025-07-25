@@ -684,60 +684,60 @@ export default function OrderTab() {
                                               currency: "VND",
                                             })}
                                           </td>
-                                          <td className="p-2">
-                                            {["delivered", "completed"].includes(order.status) ? (
-                                              <button
-                                                className="text-blue-600 hover:underline"
-                                                onClick={() => {
-                                                  const product = item.variant?.product;
-                                                  const productId = product?.id;
-                                                  const deliveredAt = new Date(item.updated_at);
-                                                  const currentDate = new Date();
-                                                  const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
+<td className="p-2">
+  {order.status === "completed" ? (
+    <button
+      className="text-blue-500 hover:text-blue-900 transition-colors"
+      onClick={() => {
+        const product = item.variant?.product;
+        const productId = product?.id;
+        const deliveredAt = new Date(item.updated_at);
+        const currentDate = new Date();
+        const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
 
-                                                  if (daysPassed > 7) {
-                                                    toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
-                                                    return;
-                                                  }
+        if (daysPassed > 7) {
+          toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
+          return;
+        }
 
-                                                  const editedOnce = item.comment && Number(item.comment.edited) === 1;
+        const editedOnce = item.comment && Number(item.comment.edited) === 1;
 
-                                                  if (item.comment) {
-                                                    if (editedOnce) {
-                                                      navigate(`/product#comment-${item.comment.id}`, {
-                                                        state: { productId: product.id },
-                                                      });
+        if (item.comment) {
+          if (editedOnce) {
+            navigate(`/product#comment-${item.comment.id}`, {
+              state: { productId: product.id },
+            });
+          } else {
+            sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+            navigate(`/product#review`, {
+              state: { productId: product.id },
+            });
+          }
+        } else {
+          sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+          navigate(`/product#review`, {
+            state: { productId: product.id },
+          });
+        }
+      }}
+    >
+      {item.comment ? (
+        Number(item.comment.edited) === 1 ? (
+          <span>Xem đánh giá</span>
+        ) : (
+          <span>Chỉnh sửa đánh giá</span>
+        )
+      ) : (
+        <span>Đánh giá</span>
+      )}
+    </button>
+  ) : (
+    <span className="text-gray-400 italic">Chưa thể đánh giá</span>
+  )}
+</td>
 
-                                                    } else {
-                                                      sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-                                                      navigate(`/product#review`, {
-                                                        state: { productId: product.id },
-                                                      });
 
-                                                    }
-                                                  } else {
-                                                    sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-                                                    navigate(`/product#review`, {
-                                                      state: { productId: product.id },
-                                                    });
 
-                                                  }
-                                                }}
-                                              >
-                                                {item.comment ? (
-                                                  Number(item.comment.edited) === 1 ? (
-                                                    <span>Xem đánh giá</span>
-                                                  ) : (
-                                                    <span>Chỉnh sửa đánh giá</span>
-                                                  )
-                                                ) : (
-                                                  <span>Đánh giá</span>
-                                                )}
-                                              </button>
-                                            ) : (
-                                              <span className="text-gray-400 italic">Chưa thể đánh giá</span>
-                                            )}
-                                          </td>
 
 
                                         </tr>

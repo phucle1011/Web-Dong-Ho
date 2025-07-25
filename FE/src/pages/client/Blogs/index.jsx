@@ -1,30 +1,67 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
-import { Link } from "react-router-dom";
+import { 
+  FaChevronLeft, 
+  FaChevronRight, 
+  FaAngleDoubleLeft, 
+  FaAngleDoubleRight 
+} from "react-icons/fa";
+
+// Dummy categories
+const DUMMY_CATEGORIES = [
+  { name: "Trang chủ", path: "/" },
+  { name: "Sản phẩm", path: "/all-products" },
+  { name: "Tin tức", path: "/blogs" },
+  { name: "Liên hệ", path: "/contact" },
+  { name: "Giới thiệu", path: "/about" },
+  { name: "Câu hỏi thường gặp", path: "/faq" },
+];
+
+const PAGE_SIZE = 6;
 
 export default function Blogs() {
-  const [blogData, setBlogData] = useState({ blogs: [] });
+  const [blogs, setBlogs] = useState([]);
+  const [page, setPage] = useState(1);
 
+  // Fetch blogs
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
         const response = await fetch("http://localhost:5000/blogs");
         const data = await response.json();
-        setBlogData({ blogs: data.blogs });
+        setBlogs(data.blogs || []);
       } catch (error) {
         console.error("Error fetching blogs:", error);
       }
     };
-
     fetchBlogs();
   }, []);
 
-  const blogs = blogData.blogs;
-  const mainBlog = blogs[0];
-  const highlightBlogs = blogs.slice(1, 3);
-  const gridBlogs = blogs.slice(3, 9);
-  const otherBlogs = blogs.slice(9);
+  // Chủ đề hot: top 4
+  const hotBlogs = blogs.slice(0, 4);
+
+  // Tính paging
+  const totalPages = Math.ceil(blogs.length / PAGE_SIZE);
+  const pagedBlogs = blogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Hàm đổi ngày
+  const formatDateVN = (d) => {
+    const date = new Date(d);
+    const weekday = [
+      "Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư",
+      "Thứ Năm", "Thứ Sáu", "Thứ Bảy"
+    ];
+    return `${weekday[date.getDay()]}, ${date.toLocaleDateString("vi-VN")}`;
+  };
+
+  // Đảm bảo không bấm ngoài range
+  const goToPage = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <Layout childrenClasses="pt-0 pb-0">
@@ -39,102 +76,152 @@ export default function Blogs() {
           />
         </div>
       </div>
-
-      <div className="w-full py-[60px]">
+      <div className="w-full py-[60px] bg-white">
         <div className="container-x mx-auto">
-          <div className="w-full flex flex-col lg:flex-row gap-8">
-            {/* Nội dung chính */}
-            <main className="flex-1">
-              {/* === BÀI VIẾT NỔI BẬT === */}
-              {mainBlog && (
-                <Link to={`/blogs/${mainBlog.id}`}>
-                  <article className="mb-6 group">
-                    <div className="relative overflow-hidden rounded-lg">
-                      <img
-                        src={mainBlog.image_url}
-                        alt={mainBlog.title}
-                        className="w-full h-[320px] object-cover transition-transform group-hover:scale-105 duration-300"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white">
-                        <h2 className="text-xl font-bold leading-snug line-clamp-2">{mainBlog.title}</h2>
-                        <p className="text-sm mt-1 text-gray-300 line-clamp-2">{mainBlog.meta_description}</p>
-                      </div>
-                    </div>
-                  </article>
-                </Link>
-              )}
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* SIDEBAR */}
+            <aside className="w-full lg:w-[230px] flex-shrink-0">
+              <div className="mb-7">
+                <h3 className="text-[15px] font-bold mb-2">DANH MỤC TIN TỨC</h3>
+                <ul className="border-b pb-3 mb-3">
+                  {DUMMY_CATEGORIES.map((cat, idx) => (
+                    <li key={cat.name} className="mb-1">
+                      <Link
+                        to={cat.path}
+                        className={`block text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${idx === 2 ? "text-primary font-semibold" : ""}`}
+                      >
+                        {cat.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <div>
+                  <h4 className="font-bold text-xs text-gray-700 uppercase mb-3">Chủ đề hot</h4>
+                  <ul>
+                    {hotBlogs.map((blog) => (
+                      <li key={blog.id} className="flex gap-2 mb-4">
+                        <Link to={`/blogs/${blog.id}`} className="flex gap-2 group">
+                          <img
+                            src={blog.image_url}
+                            alt={blog.title}
+                            className="w-[60px] h-[50px] object-cover rounded-md flex-shrink-0"
+                          />
+                          <div>
+                            <div className="text-[13px] font-semibold leading-snug line-clamp-2 group-hover:text-primary">
+                              {blog.title}
+                            </div>
+                            <div className="text-[12px] text-gray-400 mt-1 flex items-center gap-1">
+                              <span>{formatDateVN(blog.created_at)}</span>
+                              <span className="text-[13px] text-gray-400 font-normal">|</span>
+                              <span>{blog.user_name}</span>
+                            </div>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </aside>
 
-              {/* === 2 bài viết vừa dưới bài lớn === */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-                {highlightBlogs.map((blog) => (
-                  <Link to={`/blogs/${blog.id}`} key={blog.id}>
-                    <article className="flex gap-3 rounded-md border hover:shadow-md transition overflow-hidden">
-                      <img
-                        src={blog.image_url}
-                        alt={blog.title}
-                        className="w-[120px] h-[90px] object-cover"
-                      />
-                      <div className="flex flex-col justify-between p-2">
-                        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2">{blog.title}</h3>
-                        <p className="text-[12px] text-gray-500">
-                          {blog.author || "Tác giả"} • {new Date(blog.created_at).toLocaleDateString("vi-VN")}
-                        </p>
+            {/* MAIN BLOG LIST */}
+            <main className="flex-1 min-w-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
+                {pagedBlogs.map((blog) => (
+                  <Link
+                    to={`/blogs/${blog.id}`}
+                    key={blog.id}
+                    className="block group h-full border-b border-gray-100 hover:bg-gray-50 transition"
+                  >
+                    <img
+                      src={blog.image_url}
+                      alt={blog.title}
+                      className="w-full h-[180px] object-cover rounded-t-2xl"
+                      style={{ borderRadius: "18px 18px 0 0" }}
+                    />
+                    <div className="pt-3 pb-3 px-2">
+                      {/* DATE + USER */}
+                      <div className="flex items-center gap-2 text-[14px] font-semibold mb-1">
+                        <span className="text-gray-500">{formatDateVN(blog.created_at)}</span>
+                        <span className="text-[16px] text-gray-300 font-normal">|</span>
+                        <span className="text-gray-500">{blog.user_name}</span>
                       </div>
-                    </article>
+                      {/* TITLE */}
+                      <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-2 group-hover:text-primary transition">
+                        {blog.title}
+                      </h3>
+                      {/* DESCRIPTION */}
+                      <p className="text-sm text-gray-600 line-clamp-3">
+                        {blog.meta_description ||
+                          (blog.content || "")
+                            .replace(/<[^>]+>/g, "")
+                            .slice(0, 130) + "..."}
+                      </p>
+                    </div>
                   </Link>
                 ))}
               </div>
 
-              {/* === Danh sách các bài viết mới === */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {gridBlogs.map((blog) => (
-                  <Link to={`/blogs/${blog.id}`} key={blog.id}>
-                    <article className="rounded-md border hover:shadow-md transition overflow-hidden h-full flex flex-col">
-                      <img
-                        src={blog.image_url}
-                        alt={blog.title}
-                        className="w-full h-[180px] object-cover"
-                      />
-                      <div className="p-3 flex-1 flex flex-col">
-                        <p className="text-[12px] text-gray-400 mb-1">
-                          {blog.author || "Tác giả"} • {new Date(blog.created_at).toLocaleDateString("vi-VN")}
-                        </p>
-                        <h4 className="text-base font-semibold text-gray-800 line-clamp-2 mb-1">{blog.title}</h4>
-                        <p className="text-sm text-gray-600 line-clamp-3 mt-auto">
-                          {blog.meta_description || "Không có mô tả"}
-                        </p>
-                      </div>
-                    </article>
-                  </Link>
-                ))}
+              {/* PAGINATION */}
+              <div className="flex justify-center gap-2 mt-10">
+                {/* Trang đầu */}
+                <button
+                  disabled={page === 1}
+                  onClick={() => goToPage(1)}
+                  className="px-2 py-1 border rounded disabled:opacity-50 flex items-center justify-center"
+                  title="Trang đầu"
+                >
+                  <FaAngleDoubleLeft />
+                </button>
+
+                {/* Lùi 1 trang */}
+                <button
+                  disabled={page === 1}
+                  onClick={() => goToPage(page - 1)}
+                  className="px-2 py-1 border rounded disabled:opacity-50 flex items-center justify-center"
+                  title="Trước"
+                >
+                  <FaChevronLeft />
+                </button>
+
+                {/* Số trang */}
+               {Array.from({ length: totalPages }, (_, i) => (
+  <button
+    key={i}
+    onClick={() => goToPage(i + 1)}
+    className={`px-3 py-1 rounded border-2 mx-0.5 transition-all duration-150
+      ${page === i + 1
+        ? "bg-blue-600 text-white border-blue-600 font-bold shadow"
+        : "bg-white text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white"}
+    `}
+    style={{ minWidth: "40px" }}
+  >
+    {i + 1}
+  </button>
+))}
+
+
+                {/* Tới 1 trang */}
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => goToPage(page + 1)}
+                  className="px-2 py-1 border rounded disabled:opacity-50 flex items-center justify-center"
+                  title="Tiếp"
+                >
+                  <FaChevronRight />
+                </button>
+
+                {/* Trang cuối */}
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => goToPage(totalPages)}
+                  className="px-2 py-1 border rounded disabled:opacity-50 flex items-center justify-center"
+                  title="Trang cuối"
+                >
+                  <FaAngleDoubleRight />
+                </button>
               </div>
             </main>
-
-            {/* === Sidebar bài viết khác === */}
-            <aside className="w-full lg:w-72 flex-shrink-0">
-              <h2 className="text-gray-700 text-sm font-semibold mt-8 lg:mt-0 mb-3 border-b border-gray-300 pb-2">
-                BÀI VIẾT KHÁC
-              </h2>
-              <ul className="space-y-4 text-xs text-gray-700 font-normal">
-                {otherBlogs.map((blog) => (
-                  <li key={blog.id} className="flex gap-3">
-                    <Link to={`/blogs/${blog.id}`} className="flex gap-3">
-                      <img
-                        src={blog.image_url}
-                        alt={blog.title}
-                        className="w-[60px] h-[50px] object-cover flex-shrink-0 rounded"
-                      />
-                      <div className="leading-tight">
-                        <p className="text-[11px] font-medium line-clamp-2">{blog.title}</p>
-                        <p className="text-[10px] text-gray-400">
-                          {new Date(blog.created_at).toLocaleDateString("vi-VN")}
-                        </p>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </aside>
           </div>
         </div>
       </div>

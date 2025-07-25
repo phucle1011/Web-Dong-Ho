@@ -128,7 +128,7 @@ const handleSubmit = async (e) => {
                   <div className="mb-4">
                     <InputFaq
                       label="Địa Chỉ Email"
-                      placeholder="info@quomodosoft.com"
+                      placeholder="điền email của bạn"
                       name="email"
                       inputClasses="h-[50px]"
                       value={formData.email}

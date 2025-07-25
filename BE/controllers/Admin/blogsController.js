@@ -1,6 +1,6 @@
 const Blog = require('../../models/blogsModel');
 const { Op } = require('sequelize');
-
+const User = require('../../models/usersModel');
 class BlogController {
   // Lấy danh sách blog có hỗ trợ tìm kiếm theo tiêu đề + phân trang
   static async getAll(req, res) {
@@ -22,7 +22,14 @@ class BlogController {
         where: whereCondition,
         limit: Number(limit),
         offset: Number(offset),
-        order: [['created_at', 'DESC']],  // dùng created_at thay vì createdAt
+        order: [['created_at', 'DESC']],  
+        include: [
+        {
+          model: User,
+          as: "user", 
+          attributes: ["id", "name"], 
+        },
+      ],
       });
 
       const totalPages = Math.ceil(totalItems / limit);
@@ -41,20 +48,35 @@ class BlogController {
   }
 
   static async getById(req, res) {
-    try {
-      const id = req.params.id;
-      const blog = await Blog.findByPk(id);
-      if (!blog) return res.status(404).json({ message: 'Không tìm thấy bài viết' });
-      res.json(blog);
-    } catch (error) {
-      res.status(500).json({ message: 'Lỗi khi lấy bài viết', error: error.message });
+  try {
+    const id = req.params.id;
+    const blog = await Blog.findOne({
+      where: { id },
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    if (!blog) {
+      return res.status(404).json({ message: 'Không tìm thấy bài viết' });
     }
+
+    res.json(blog);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi khi lấy bài viết', error: error.message });
   }
+}
+
 
   static async create(req, res) {
     try {
       const data = req.body; 
-      const { user_id, title, image_url, content, meta_description, focus_keyword } = req.body;
+      const { user_id, title, image_url, content, meta_description,  } = req.body;
 
       const newBlog = await Blog.create({
         user_id: data.user_id,
@@ -62,7 +84,7 @@ class BlogController {
         image_url: data.image_url,
         content: data.content,
         meta_description: data.meta_description,
-        focus_keyword: data.focus_keyword,
+        // focus_keyword: data.focus_keyword,
       });
 
       res.status(201).json(newBlog);
@@ -81,7 +103,7 @@ class BlogController {
       image_url,
       content,
       meta_description,
-      focus_keyword
+      // focus_keyword
     } = req.body;
 
     const blog = await Blog.findByPk(id);
@@ -93,7 +115,7 @@ class BlogController {
       image_url,
       content,
       meta_description,
-      focus_keyword
+      // focus_keyword
     });
 
     res.json({ message: 'Cập nhật thành công', blog });

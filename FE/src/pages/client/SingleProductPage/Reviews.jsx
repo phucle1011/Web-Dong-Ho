@@ -200,17 +200,29 @@ useEffect(() => {
       .map((word) => word.trim())
       .filter((word) => word.length > 0 && !word.startsWith("#"));
 
-    const filter = new Filter();
-    filter.addWords(...badWordsVi);
+    
+const normalizeBadWord = (str) => {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")    
+    .replace(/\s+/g, "");            
+};
 
-    if (filter.isProfane(message)) {
-      Swal.fire({
-        icon: "error",
-        title: "Ngôn ngữ không phù hợp",
-        text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.",
-      });
-      return;
-    }
+const normalizedMessage = normalizeBadWord(message);
+const normalizedBadWords = badWordsVi.map(word => normalizeBadWord(word));
+
+const foundBad = normalizedBadWords.find(bad => normalizedMessage.includes(bad));
+if (foundBad) {
+  Swal.fire({
+    icon: "error",
+    title: "Ngôn ngữ không phù hợp",
+    text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.",
+  });
+  return;
+}
+
 
     if (!orderDetailId) {
       Swal.fire({
@@ -224,7 +236,7 @@ useEffect(() => {
     setReviewLoading(true);
     let imageUrls = [];
 
-    // ✅ Chỉ upload ảnh nếu có, không cần so sánh với ảnh sản phẩm
+  
     if (imageFiles?.length > 0) {
       imageUrls = await handleImageUploads(imageFiles);
       if (!imageUrls) {
