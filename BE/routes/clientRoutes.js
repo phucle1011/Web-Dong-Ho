@@ -62,8 +62,6 @@ router.get("/category/list", categoryController.getCategories);
 router.get('/blogs/search', BlogController.searchBlogs);
 router.get('/blogs', BlogController.getAllBlogs);
 router.get('/blogs/:id', BlogController.getBlogById);
-router.get("/blogs/:blogId/reviews", BlogReviewController.getBlogReviews);
-router.post("/blogs/:blogId/reviews", BlogReviewController.createBlogReview);
 
 //------------------[ Contact ]------------------
 router.post("/contact", ContactController.sendContactEmail);

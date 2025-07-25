@@ -42,11 +42,6 @@ CommentModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'commentedP
 BlogModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 UserModel.hasMany(BlogModel, { foreignKey: 'user_id', as: 'blogs' });
 
-BlogReviewModel.belongsTo(UserModel, { as: "user", foreignKey: "user_id" });
-UserModel.hasMany(BlogReviewModel, { foreignKey: "user_id", as: "blogReviews" });
-
-
-
 // User - Comment
 CommentModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 
