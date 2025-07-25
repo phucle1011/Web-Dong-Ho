@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import setupAxiosInterceptors from "./utils/axiosInterceptor";
 import { useAuth } from "./components/Auth/AuthContext/index.jsx";
 
@@ -83,12 +83,15 @@ import WalletDetail from "./pages/admin/washlet/detail";
 import GuestRoute from "./components/Auth/GuestRoute/index.jsx";
 import ProtectedRoute from "./components/Auth/ProtectedRoute/index.jsx";
 import AdminProfile from "./components/admin/profile/index.jsx";
+import GeminiChatbox from "./GeminiChatbox";
+
 
 const AppRoutes = () => {
   const navigate = useNavigate();
   const auth = useAuth(); // Lấy toàn bộ context
   const token = auth ? auth.token : null; // Kiểm tra trước khi destructure
   const user = auth ? auth.user : null;
+  const location = useLocation();
 
   // Cấu hình interceptor khi component mount
   useEffect(() => {
@@ -96,179 +99,182 @@ const AppRoutes = () => {
   }, [navigate]);
 
   return (
-    <Routes>
-      {/*--------------------CLIENT-------------------- */}
-      <Route path="/" element={<ClientLayout />}>
-        <Route index element={<HomeThree />} />
-        <Route path="about" element={<About />} />
-        <Route path="/all-products" element={<AllProductPage />} />
-        <Route element={<GuestRoute />}>
-          <Route path="login" element={<Login />} />
-          <Route path="signup" element={<Signup />} />
+    <>
+      {!location.pathname.startsWith("/admin") && <GeminiChatbox />}
+      <Routes>
+        {/*--------------------CLIENT-------------------- */}
+        <Route path="/" element={<ClientLayout />}>
+          <Route index element={<HomeThree />} />
+          <Route path="about" element={<About />} />
+          <Route path="/all-products" element={<AllProductPage />} />
+          <Route element={<GuestRoute />}>
+            <Route path="login" element={<Login />} />
+            <Route path="signup" element={<Signup />} />
+          </Route>
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={["user", "admin"]}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/become-saller" element={<BecomeSaller />} />
+          <Route path="/blogs" element={<Blogs />} />
+          <Route path="/blogs/:id" element={<Blog />} />
+          <Route path="/cart" element={<CardPage />} />
+          {/* <Route path="/checkout" element={<CheakoutPage />} /> */}
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<Faq />} />
+          <Route path="/flash-sale" element={<FlashSale />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/products-compaire" element={<ProductsCompaire />} />
+          <Route path="/saller-page" element={<SallerPage />} />
+          <Route path="/sallers" element={<Sallers />} />
+          <Route path="/product" element={<SingleProductPage />} />
+          <Route path="/terms-condition" element={<TermsCondition />} />
+          <Route path="/tracking-order" element={<TrackingOrder />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/auth/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+
+
         </Route>
+
+        {/*--------------------ADMIN-------------------- */}
+        <Route
+          path="/admin"
+          element={<Navigate to="/admin/login" replace />}
+        />
+        <Route
+          path="/admin/login"
+          element={!token ? <LoginAdmin /> : <Navigate to="/admin/" replace />}
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="orders">
+            <Route path="getAll" element={<OrderGetAll />} />
+            <Route path="detail/:id" element={<OrderDetail />} />
+          </Route>
+          <Route path="washlets">
+            <Route path="getAll" element={<WashletGetAll />} />
+            <Route path="detail/:id" element={<WalletDetail />} />
+          </Route>
+          <Route path="user">
+            <Route path="getAll" element={<UserList />} />
+            <Route path="detail/:id" element={<UserDetail />} />
+          </Route>
+          <Route path="comments">
+            <Route path="getAll" element={<CommentPage />} />
+            <Route path="detail/:id" element={<CommentProductDetailPage />} />
+          </Route>
+          <Route path="carts">
+            <Route path="getAll" element={<CartPage />} />
+            <Route path="detail/:id" element={<CartDetailPage />} />
+          </Route>
+          <Route path="address">
+            <Route path="getAll" element={<AddressList />} />
+            <Route path="detail/user/:userId" element={<AddressDetail />} />
+          </Route>
+          <Route path="categories">
+            <Route path="getAll" element={<CategoryGetAll />} />
+            <Route path="create" element={<CategoryCreate />} />
+            <Route path="edit/:id" element={<CategoryEdit />} />
+          </Route>
+          <Route path="blog">
+            <Route path="getAll" element={<BlogList />} />
+            <Route path="detail/:id" element={<BlogDetail />} />
+            <Route path="add" element={<BlogAdd />} />
+            <Route path="edit/:id" element={<EditBlog />} />
+          </Route>
+          <Route path="promotions">
+            <Route path="getAll" element={<PromotionGetAll />} />
+            <Route path="create" element={<PromotionCreate />} />
+            <Route path="edit/:id" element={<PromotionEdit />} />
+          </Route>
+          <Route path="promotion-products">
+            <Route path="getAll" element={<PromotionProductList />} />
+            <Route path="create" element={<PromotionProductForm />} />
+            <Route path="edit/:id" element={<PromotionProductEdit />} />
+          </Route>
+          <Route path="products">
+            <Route path="getAll" element={<ProductList />} />
+            <Route path="create" element={<ProductAdd />} />
+            <Route path="addVariant/:productId" element={<AddVariant />} />
+            <Route path="detail/:id" element={<ProductDetail />} />
+            <Route path="editVariant/:id" element={<EditVariant />} />
+          </Route>
+          <Route path="attribute">
+            <Route path="getAll" element={<Attribute />} />
+            <Route path="edit/:id" element={<AttributeEdit />} />
+            <Route path="create" element={<AttributeCreate />} />
+
+          </Route>
+          <Route path="wishlist">
+            <Route path="getAll" element={<WishlistList />} />
+            <Route path="detail/:id" element={<WishlistDetail />} />
+          </Route>
+          <Route path="brand">
+            <Route path="getAll" element={<BrandList />} />
+            <Route path="detail/:id" element={<BrandDetail />} />
+            <Route path="create" element={<BrandCreate />} />
+          </Route>
+          <Route path="notification">
+            <Route path="getAll" element={<NotificationList />} />
+            <Route path="create" element={<NotificationSendAll />} />
+          </Route>
+          <Route path="promotionusers">
+            <Route path="getAll" element={<PromotionList />} />
+          </Route>
+        </Route>
+
+        <Route path="/*" element={<FourZeroFour />} />
+        {/*--------------------ADMIN-------------------- */}
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute restrictedRoles={["admin"]}>
+              <CheakoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wishlist"
+          element={
+            <ProtectedRoute restrictedRoles={["admin"]}>
+              <Wishlist />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute restrictedRoles={["admin"]}>
+              <CardPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/profile"
           element={
-            <ProtectedRoute allowedRoles={["user", "admin"]}>
+            <ProtectedRoute allowedRoles={["user", "admin"]} restrictedRoles={["admin"]}>
               <Profile />
             </ProtectedRoute>
           }
         />
-        <Route path="/become-saller" element={<BecomeSaller />} />
-        <Route path="/blogs" element={<Blogs />} />
-        <Route path="/blogs/:id" element={<Blog />} />
-        <Route path="/cart" element={<CardPage />} />
-        {/* <Route path="/checkout" element={<CheakoutPage />} /> */}
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/faq" element={<Faq />} />
-        <Route path="/flash-sale" element={<FlashSale />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/products-compaire" element={<ProductsCompaire />} />
-        <Route path="/saller-page" element={<SallerPage />} />
-        <Route path="/sallers" element={<Sallers />} />
-        <Route path="/product" element={<SingleProductPage />} />
-        <Route path="/terms-condition" element={<TermsCondition />} />
-        <Route path="/tracking-order" element={<TrackingOrder />} />
-        <Route path="/wishlist" element={<Wishlist />} />
-        <Route path="/auth/verify-email" element={<VerifyEmail />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-
-
-
-      </Route>
-
-      {/*--------------------ADMIN-------------------- */}
-      <Route
-        path="/admin"
-        element={<Navigate to="/admin/login" replace />}
-      />
-      <Route
-        path="/admin/login"
-        element={!token ? <LoginAdmin /> : <Navigate to="/admin/" replace />}
-      />
-      <Route
-        path="/admin/*"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="profile" element={<AdminProfile />} />
-        <Route path="orders">
-          <Route path="getAll" element={<OrderGetAll />} />
-          <Route path="detail/:id" element={<OrderDetail />} />
-        </Route>
-        <Route path="washlets">
-          <Route path="getAll" element={<WashletGetAll />} />
-          <Route path="detail/:id" element={<WalletDetail />} />
-        </Route>
-        <Route path="user">
-          <Route path="getAll" element={<UserList />} />
-          <Route path="detail/:id" element={<UserDetail />} />
-        </Route>
-        <Route path="comments">
-          <Route path="getAll" element={<CommentPage />} />
-          <Route path="detail/:id" element={<CommentProductDetailPage />} />
-        </Route>
-        <Route path="carts">
-          <Route path="getAll" element={<CartPage />} />
-          <Route path="detail/:id" element={<CartDetailPage />} />
-        </Route>
-        <Route path="address">
-          <Route path="getAll" element={<AddressList />} />
-          <Route path="detail/user/:userId" element={<AddressDetail />} />
-        </Route>
-        <Route path="categories">
-          <Route path="getAll" element={<CategoryGetAll />} />
-          <Route path="create" element={<CategoryCreate />} />
-          <Route path="edit/:id" element={<CategoryEdit />} />
-        </Route>
-        <Route path="blog">
-          <Route path="getAll" element={<BlogList />} />
-          <Route path="detail/:id" element={<BlogDetail />} />
-          <Route path="add" element={<BlogAdd />} />
-          <Route path="edit/:id" element={<EditBlog />} />
-        </Route>
-        <Route path="promotions">
-          <Route path="getAll" element={<PromotionGetAll />} />
-          <Route path="create" element={<PromotionCreate />} />
-          <Route path="edit/:id" element={<PromotionEdit />} />
-        </Route>
-        <Route path="promotion-products">
-          <Route path="getAll" element={<PromotionProductList />} />
-          <Route path="create" element={<PromotionProductForm />} />
-          <Route path="edit/:id" element={<PromotionProductEdit />} />
-        </Route>
-        <Route path="products">
-          <Route path="getAll" element={<ProductList />} />
-          <Route path="create" element={<ProductAdd />} />
-          <Route path="addVariant/:productId" element={<AddVariant />} />
-          <Route path="detail/:id" element={<ProductDetail />} />
-          <Route path="editVariant/:id" element={<EditVariant />} />
-        </Route>
-        <Route path="attribute">
-          <Route path="getAll" element={<Attribute />} />
-          <Route path="edit/:id" element={<AttributeEdit />} />
-          <Route path="create" element={<AttributeCreate />} />
-
-        </Route>
-        <Route path="wishlist">
-          <Route path="getAll" element={<WishlistList />} />
-          <Route path="detail/:id" element={<WishlistDetail />} />
-        </Route>
-        <Route path="brand">
-          <Route path="getAll" element={<BrandList />} />
-          <Route path="detail/:id" element={<BrandDetail />} />
-          <Route path="create" element={<BrandCreate />} />
-        </Route>
-        <Route path="notification">
-          <Route path="getAll" element={<NotificationList />} />
-          <Route path="create" element={<NotificationSendAll />} />
-        </Route>
-        <Route path="promotionusers">
-          <Route path="getAll" element={<PromotionList />} />
-        </Route>
-      </Route>
-
-      <Route path="/*" element={<FourZeroFour />} />
-      {/*--------------------ADMIN-------------------- */}
-      <Route
-        path="/checkout"
-        element={
-          <ProtectedRoute restrictedRoles={["admin"]}>
-            <CheakoutPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/wishlist"
-        element={
-          <ProtectedRoute restrictedRoles={["admin"]}>
-            <Wishlist />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/cart"
-        element={
-          <ProtectedRoute restrictedRoles={["admin"]}>
-            <CardPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute allowedRoles={["user", "admin"]} restrictedRoles={["admin"]}>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

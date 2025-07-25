@@ -73,10 +73,11 @@ app.use(cors({
   credentials: true
 }));
 
+app.use(apiRoutes);
 app.use(clientRoutes);
 app.use('/admin', adminRoutes);
 app.use('/', authenticate, updateLastActive, clientRoutes);
-app.use(apiRoutes);
+
 
 const port = 5000;
 
