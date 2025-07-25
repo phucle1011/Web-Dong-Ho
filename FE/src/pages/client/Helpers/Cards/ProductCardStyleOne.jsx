@@ -6,10 +6,10 @@ import { decodeToken } from "../../Helpers/jwtDecode";
 import Constants from "../../../../Constants";
 import Compair from "../icons/Compair";
 import QuickViewIco from "../icons/QuickViewIco";
-import Star from "../icons/Star";
 import ThinLove from "../icons/ThinLove";
 import ReactDOM from "react-dom";
 import { FiShoppingCart } from "react-icons/fi";
+import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -19,61 +19,72 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [variantImages, setVariantImages] = useState([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
+  const [avgRating, setAvgRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [productData, setProductData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   // Memoize product and variants
   const product = useMemo(() => datas || {}, [datas]);
-  
-  const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
-  const representativeVariant = useMemo(() => product.representativeVariant || {}, [product.representativeVariant]);
+  const variants = useMemo(() => Array.isArray(productData?.variants) ? productData.variants : [], [productData]);
 
   useEffect(() => {
     if (!product.id) return;
 
-    const firstImage = product.thumbnail || "/images/no-image.jpg";
-    const validVariants = variants.filter(
-      (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
-    );
+    async function fetchProduct() {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${Constants.DOMAIN_API}/products/${product.id}/variants`);
+        const { product: fetchedProduct } = res.data;
+        setProductData(fetchedProduct);
+        setVariantImages(fetchedProduct.variants[0]?.images || []);
+        setSelectedImage(fetchedProduct.thumbnail || fetchedProduct.variants[0]?.images[0]?.image_url || "/images/no-image.jpg");
+        setAvgRating(parseFloat(fetchedProduct.averageRating) || 0);
+        setRatingCount(parseInt(fetchedProduct.ratingCount) || 0);
 
-    // If no valid variants, reset states
-    if (validVariants.length === 0) {
-      setSelectedVariant(null);
-      setSelectedImage(firstImage);
-      setVariantImages([]);
-      setIsInWishlist(false);
-      return;
-    }
-
-    // If selectedVariant is invalid or out of stock, select the next valid variant
-    if (!selectedVariant || parseInt(selectedVariant.stock) <= 0 || !variants.some(v => v.id === selectedVariant.id)) {
-      const currentIndex = selectedVariant ? variants.findIndex(v => v.id === selectedVariant.id) : -1;
-      // Try to select the next valid variant after the current one
-      let nextValidVariant = null;
-      for (let i = currentIndex + 1; i < variants.length; i++) {
-        if (validVariants.some(v => v.id === variants[i].id)) {
-          nextValidVariant = validVariants.find(v => v.id === variants[i].id);
-          break;
+        if (fetchedProduct.variants.length > 0) {
+          const validVariants = fetchedProduct.variants.filter(
+            (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
+          );
+          const firstValidVariant = validVariants[0] || fetchedProduct.variants[0];
+          setSelectedVariant(firstValidVariant);
+          setVariantImages(firstValidVariant.images || []);
+          setSelectedImage(
+            firstValidVariant.images[0]?.image_url || fetchedProduct.thumbnail || "/images/no-image.jpg"
+          );
+          setAvgRating(parseFloat(firstValidVariant.averageRating) || 0);
+          setRatingCount(parseInt(firstValidVariant.ratingCount) || 0);
+          checkWishlistStatus(firstValidVariant.id);
         }
+      } catch (err) {
+        setError(err.message || "Không thể tải thông tin sản phẩm");
+      } finally {
+        setLoading(false);
       }
-      // If no next valid variant, fall back to the first valid variant
-      const targetVariant = nextValidVariant || validVariants[0];
-      setSelectedVariant(targetVariant);
-      const targetVariantImages = targetVariant.images || [];
-      setSelectedImage(targetVariantImages.length > 0 ? targetVariantImages[0].image_url || targetVariant.thumbnail || firstImage : firstImage);
-      setVariantImages(targetVariantImages);
-      checkWishlistStatus(targetVariant.id);
-    } else {
-      // Update images for current valid variant
-      const currentVariantImages = selectedVariant.images || [];
-      setSelectedImage(currentVariantImages.length > 0 ? currentVariantImages[0].image_url || selectedVariant.thumbnail || firstImage : firstImage);
-      setVariantImages(currentVariantImages);
-      checkWishlistStatus(selectedVariant.id);
     }
-  }, [product.id, product.thumbnail, variants, selectedVariant]);
+
+    fetchProduct();
+  }, [product.id]);
+
+  useEffect(() => {
+    if (selectedVariant) {
+      setAvgRating(parseFloat(selectedVariant.averageRating) || 0);
+      setRatingCount(parseInt(selectedVariant.ratingCount) || 0);
+      setVariantImages(selectedVariant.images || []);
+      setSelectedImage(
+        selectedVariant.images[0]?.image_url || productData?.thumbnail || "/images/no-image.jpg"
+      );
+    } else if (productData) {
+      setAvgRating(parseFloat(productData.averageRating) || 0);
+      setRatingCount(parseInt(productData.ratingCount) || 0);
+    }
+  }, [selectedVariant, productData]);
 
   const totalStock = useMemo(() =>
-    product.total_stock || variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0),
-    [product.total_stock, variants]
+    productData?.total_stock || variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0),
+    [productData, variants]
   );
 
   const validVariants = useMemo(() =>
@@ -87,20 +98,16 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     let hasStock = totalStock > 0;
     let discountPercent = 0;
 
-    if (representativeVariant && representativeVariant.originalPrice) {
-      displayOriginalPrice = parseFloat(representativeVariant.originalPrice) || 0;
-      displayPrice = parseFloat(representativeVariant.discountedPrice) || displayOriginalPrice;
-      discountPercent = parseFloat(representativeVariant.discountPercent) || 0;
-    } else if (validVariants.length > 0) {
+    if (validVariants.length > 0) {
       const initialVariant = selectedVariant || validVariants[0];
       displayOriginalPrice = parseFloat(initialVariant.price) || 0;
       displayPrice = parseFloat(initialVariant.promotion?.discounted_price || initialVariant.price) || 0;
       discountPercent = parseFloat(initialVariant.promotion?.discount_percent || 0);
     } else {
       hasStock = false;
-      displayOriginalPrice = parseFloat(product.price) || 0;
-      displayPrice = parseFloat(product.promotion?.discounted_price || product.price) || 0;
-      discountPercent = parseFloat(product.promotion?.discount_percent || 0);
+      displayOriginalPrice = parseFloat(productData?.price) || 0;
+      displayPrice = parseFloat(productData?.promotion?.discounted_price || productData?.price) || 0;
+      discountPercent = parseFloat(productData?.promotion?.discount_percent || 0);
     }
 
     displayPrice = isNaN(displayPrice) ? 0 : Math.max(0, displayPrice);
@@ -108,11 +115,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     discountPercent = isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100 ? 0 : Math.round(discountPercent);
 
     return { displayPrice, displayOriginalPrice, hasStock, discountPercent };
-  }, [product, variants, selectedVariant, representativeVariant, totalStock]);
+  }, [productData, variants, selectedVariant, totalStock]);
 
   const { displayPrice, displayOriginalPrice, hasStock, discountPercent } = priceInfo;
-  const thumbnail = selectedImage || product.thumbnail?.trim() || "/images/no-image.jpg";
-  const productName = product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
+  const thumbnail = selectedImage || productData?.thumbnail?.trim() || "/images/no-image.jpg";
+  const productName = productData?.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
 
   const maxStock = 5;
   const stockPercentage = totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
@@ -146,7 +153,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           },
         }
       );
-
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
       if (error.response?.status === 400) {
@@ -185,7 +191,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   };
 
-  const description = product.description?.trim() || "Không có mô tả";
+  const description = productData?.description?.trim() || "Không có mô tả";
   const maxLength = 80;
   const isLongDescription = description.length > maxLength;
   const truncatedDescription = isLongDescription && !isExpanded
@@ -292,6 +298,27 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   };
 
+  const renderStars = (avgRating) => {
+    const fullStars = Math.floor(avgRating);
+    const hasHalfStar = avgRating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    return (
+      <>
+        {Array(fullStars)
+          .fill()
+          .map((_, i) => (
+            <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" fill="currentColor" />
+          ))}
+        {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
+        {Array(emptyStars)
+          .fill()
+          .map((_, i) => (
+            <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
+          ))}
+      </>
+    );
+  };
+
   const QuickViewDialog = () =>
     isQuickViewOpen &&
     ReactDOM.createPortal(
@@ -344,7 +371,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               </span>
             )}
             <div className="grid grid-cols-4 gap-1.5 mt-5 max-h-28 overflow-y-auto">
-              {(variantImages.length > 0 ? variantImages : product.variantImages || []).map((img) => (
+              {variantImages.map((img) => (
                 <div
                   key={img.id || img.image_url}
                   onClick={() => setSelectedImage(img.image_url)}
@@ -363,6 +390,10 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           </div>
           <div className="flex flex-col space-y-3">
             <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">{productName}</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex">{renderStars(avgRating)}</div>
+              <span className="text-sm text-gray-600">{ratingCount} đánh giá</span>
+            </div>
             <p className="text-gray-600 text-xs">
               <span className="font-medium">Mô tả:</span> {truncatedDescription}
               {isLongDescription && (
@@ -533,6 +564,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     });
   };
 
+  if (loading) return <div>Đang tải sản phẩm...</div>;
+  if (error) return <div>Lỗi: {error}</div>;
+
   return (
     <div
       className="product-card-one w-full h-full bg-white relative group overflow-hidden"
@@ -553,7 +587,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </div>
           </div>
         )}
-
         <div className="w-full h-full flex items-center justify-center">
           <img
             src={thumbnail}
@@ -561,7 +594,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             className="max-w-full max-h-full object-contain"
           />
         </div>
-
         {discountPercent > 0 && displayOriginalPrice > displayPrice && (
           <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10 sm:text-sm sm:px-3 sm:py-1.5">
             -{discountPercent}%
@@ -582,12 +614,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             THÊM GIỎ HÀNG
           </button>
         </div>
-        <div className="reviews flex space-x-[1px] mb-3 mt-[10px]">
-          {Array.from({ length: product.review || 5 }).map((_, i) => (
-            <span key={i}>
-              <Star className="w-4 h-4 text-yellow-400" />
-            </span>
-          ))}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex">{renderStars(avgRating)}</div>
+          <span className="text-sm text-gray-600">{ratingCount} đánh giá</span>
         </div>
         <p
           className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600"
@@ -644,51 +673,39 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           onClick={async (e) => {
             e.preventDefault();
             try {
-              const res = await fetch("http://localhost:5000/products/compare");
-              const data = await res.json();
-
-              if (!data || !data.data) {
-                toast.error("Không thể lấy dữ liệu sản phẩm để so sánh.");
-                return;
-              }
-
+              const res = await axios.get(`${Constants.DOMAIN_API}/products/${product.id}/variants`);
+              const fetchedProduct = res.data.product;
               const allVariants = [];
-              data.data.forEach((product) => {
-                product.variants.forEach((variant) => {
-                  allVariants.push({
-                    productId: product.id,
-                    productName: product.name,
-                    productDescription: product.description,
-                    productThumbnail: product.thumbnail,
-                    brand: product.brand?.name || "-",
-                    average_rating: product.average_rating,
-                    variantId: variant.id,
-                    price: variant.price,
-                    stock: variant.stock,
-                    sku: variant.sku,
-                    images: variant.images,
-                    attributeValues: variant.attributeValues,
-                  });
+              fetchedProduct.variants.forEach((variant) => {
+                allVariants.push({
+                  productId: fetchedProduct.id,
+                  productName: fetchedProduct.name,
+                  productDescription: fetchedProduct.description,
+                  productThumbnail: fetchedProduct.thumbnail,
+                  brand: fetchedProduct.brand?.name || "-",
+                  averageRating: fetchedProduct.averageRating,
+                  ratingCount: fetchedProduct.ratingCount,
+                  variantId: variant.id,
+                  price: variant.price,
+                  stock: variant.stock,
+                  sku: variant.sku,
+                  images: variant.images,
+                  attributeValues: variant.attributeValues,
                 });
               });
-
               const clickedVariant = allVariants.find(
-                (v) => v.productId === product.id && v.variantId === (selectedVariant?.id || product.variants?.[0]?.id)
+                (v) => v.productId === product.id && v.variantId === (selectedVariant?.id || fetchedProduct.variants?.[0]?.id)
               );
-
               if (!clickedVariant) {
                 toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
                 return;
               }
-
               const current = JSON.parse(localStorage.getItem("compareList")) || [];
               const exists = current.find((item) => item.variantId === clickedVariant.variantId);
-
               if (!exists) {
                 const updated = [...current, clickedVariant].slice(0, 4);
                 localStorage.setItem("compareList", JSON.stringify(updated));
               }
-
               navigate("/products-compaire");
             } catch (error) {
               console.error(error);

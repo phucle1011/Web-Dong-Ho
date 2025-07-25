@@ -400,7 +400,7 @@ static async getAll(req, res) {
               ],
             },
           ],
-          required: false, // Cho phép trả về sản phẩm ngay cả khi không có biến thể hợp lệ
+          required: true, // Cho phép trả về sản phẩm ngay cả khi không có biến thể hợp lệ
         },
         {
           model: CategoryModel,
@@ -545,6 +545,7 @@ static async getAll(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
 }
 
 module.exports = ProductClientController;

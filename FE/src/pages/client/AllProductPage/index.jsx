@@ -360,7 +360,7 @@ export default function AllProductPage() {
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path d="M1 1L5 5L9 1" stroke="#9A9A9A" />
-                    </svg>
+ xóa bộ lọc                   </svg>
                   </div>
                 </div>
                 <button
@@ -389,7 +389,7 @@ export default function AllProductPage() {
               {error && <p className="text-center text-red-500">{error}</p>}
               {!loading && products.length === 0 && !error && (
                 <p className="text-center text-gray-600">
-                  Không tìm thấy sản phẩm phù hợp ở trang {pagination.currentPage}. Hãy thử điều chỉnh danh mục, thương hiệu, khoảng giá hoặc xóa bộ lọc.
+                Không có dữ liệu ...
                 </p>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
