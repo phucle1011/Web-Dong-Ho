@@ -252,7 +252,7 @@ const statsCards = [
             </div>
           ))}
         </div>
-        {bestSellingProduct ? (
+        {/* {bestSellingProduct ? (
   <div className="d-flex align-items-center justify-content-between">
     <div>
       <h5 className="fw-bold">{bestSellingProduct.variant?.name}</h5>
@@ -267,7 +267,7 @@ const statsCards = [
   </div>
 ) : (
   <p>Không có dữ liệu sản phẩm bán chạy.</p>
-)}
+)} */}
 
         <div className="row">
           <div className="col-lg-8 d-flex align-items-stretch">

@@ -370,20 +370,24 @@ function OrderGetAll() {
                           currency: "VND",
                         })}
                       </td>
-                      <td className="p-2 border border-gray-300">
-                        <select
-                          value={order.status}
-                          onChange={(e) =>
-                            handleChangeStatus(order.id, e.target.value)
-                          }
-                          className="capitalize border rounded px-2 py-1"
-                        >
-                          {getStatusesForOrder(order.status).map((status) => (
-                            <option key={status} value={status}>
-                              {translateStatus(status)}
-                            </option>
-                          ))}
-                        </select>
+                      <td className="p-2 border border-gray-300 text-center capitalize">
+                        {["completed", "cancelled"].includes(order.status) ? (
+                          <div className="px-2 py-1 inline-block bg-gray-100 rounded text-gray-700 font-medium">
+                            {translateStatus(order.status)}
+                          </div>
+                        ) : (
+                          <select
+                            value={order.status}
+                            onChange={(e) => handleChangeStatus(order.id, e.target.value)}
+                            className="capitalize border rounded px-2 py-1"
+                          >
+                            {getStatusesForOrder(order.status).map((status) => (
+                              <option key={status} value={status}>
+                                {translateStatus(status)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="p-2 border border-gray-300 text-center">{order.payment_method}</td>
                       <td className="p-2 border border-gray-300 flex gap-2 text-center">
@@ -395,13 +399,13 @@ function OrderGetAll() {
                           <FaEye size={16} className="font-bold" />
                         </Link>
 
-                        <button
+                        {/* <button
                           onClick={() => handleTrackOrder(order.order_code)}
                           className="bg-green-600 hover:bg-green-500 text-white p-2 rounded"
                           title="Theo dõi"
                         >
                           <FaMapMarkerAlt size={16} className="font-bold" />
-                        </button>
+                        </button> */}
                       </td>
                     </tr>
 

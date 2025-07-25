@@ -19,6 +19,7 @@ export default function Payment() {
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [withdrawRequests, setWithdrawRequests] = useState([]);
+  const [banks, setBanks] = useState([]);
 
   const fetchWallets = async () => {
     try {
@@ -143,6 +144,17 @@ export default function Payment() {
     }
   };
 
+  useEffect(() => {
+    axios.get("https://api.vietqr.io/v2/banks")
+      .then((res) => {
+        if (res.data.code === "00") {
+          setBanks(res.data.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Lỗi khi lấy danh sách ngân hàng:", err);
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 pb-10">
@@ -210,7 +222,7 @@ export default function Payment() {
           </div>
           <div className="space-y-3">
             <input
-              type="number"
+              type="number"  min={0} 
               placeholder="Nhập số tiền cần rút..."
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -222,18 +234,12 @@ export default function Payment() {
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
             >
-              <option value="" disabled>
-                Chọn ngân hàng
-              </option>
-              <option value="vietcombank">Vietcombank</option>
-              <option value="techcombank">Techcombank</option>
-              <option value="vpbank">VPBank</option>
-              <option value="mbbank">MBBank</option>
-              <option value="bidv">BIDV</option>
-              <option value="acb">ACB</option>
-              <option value="agribank">Agribank</option>
-              <option value="sacombank">Sacombank</option>
-              <option value="shb">SHB</option>
+              <option value="" disabled>Chọn ngân hàng</option>
+              {banks.map((bank) => (
+                <option key={bank.code} value={bank.code}>
+                  {bank.shortName || bank.name}
+                </option>
+              ))}
             </select>
 
             <input

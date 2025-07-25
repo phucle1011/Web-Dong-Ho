@@ -809,12 +809,12 @@ export default function CheckoutPage() {
       }
 
       const phone = user?.phone?.trim();
-      const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
+      const phoneRegex = /^0\d{9}$/;
       if (!phone) {
         toast.error("Vui lòng nhập số điện thoại");
         return;
       } else if (!phoneRegex.test(phone)) {
-        toast.error("Số điện thoại không hợp lệ");
+        toast.error("Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.");
         return;
       }
 
@@ -949,7 +949,7 @@ export default function CheckoutPage() {
           setFinalData((prev) => ({
             ...prev,
             formattedAmount: adjustedAmount.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
-            amount: adjustedAmount, 
+            amount: adjustedAmount,
           }));
         }
       } catch (error) {
@@ -991,7 +991,7 @@ export default function CheckoutPage() {
                   <form className="w-full px-10 py-[30px] border border-[#EDEDED]">
                     <div className="mb-5">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên <span className="text-red-500">*</span>
-</label>
+                      </label>
                       <div className="relative">
                         <input
                           type="text"
@@ -1007,7 +1007,7 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span>
-</label>
+                        </label>
                         <input
                           type="email"
                           placeholder="example@example.com"
@@ -1019,12 +1019,18 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại <span className="text-red-500">*</span>
-</label>
+                        </label>
                         <input
                           type="tel"
                           placeholder="0909xxxxxx"
                           value={user?.phone || ""}
-                          onChange={(e) => handleUserInfoChange("phone", e.target.value)}
+                          onChange={(e) => {
+                            const phone = e.target.value;
+                            if (/^\d{0,10}$/.test(phone)) {
+                              handleUserInfoChange("phone", phone);
+                            }
+                          }}
+                          maxLength={10}
                           className="w-full h-[44px] px-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                           required
                         />
@@ -1043,7 +1049,7 @@ export default function CheckoutPage() {
 
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ <span className="text-red-500">*</span>
-</label>
+                      </label>
 
                       <div className="w-full p-4 border border-gray-200 rounded-lg bg-white shadow-sm relative">
                         <button
@@ -1421,7 +1427,7 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={handleCheckout}
                     disabled={isSubmitting || isCalculatingShipping}
-                    className={`w-full h-[50px] black-btn flex justify-center items-center mt-4 ${isSubmitting || isCalculatingShipping ? "opacity-50 cursor-not-allowed" : ""
+                    className={`w-full h-[40px] black-btn flex justify-center items-center mt-4 rounded-lg ${isSubmitting || isCalculatingShipping ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                   >
                     {isSubmitting ? (

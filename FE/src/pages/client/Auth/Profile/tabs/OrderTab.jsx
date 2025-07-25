@@ -785,6 +785,20 @@ export default function OrderTab() {
                                         </tr>
                                       )}
 
+                                      {Number(order.wallet_balance) > 0 && order.status !== "cancelled" && (
+                                        <tr className="bg-gray-50">
+                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                            Ví tiền:
+                                          </td>
+                                          <td className="text-right p-2 border-t text-red-600 font-medium">
+                                            -{Number(order.wallet_balance).toLocaleString("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            })}
+                                          </td>
+                                        </tr>
+                                      )}
+
                                       <tr className="bg-gray-100 font-semibold">
                                         <td colSpan={5} className="text-right p-2 border-t border-b">Tổng tiền:</td>
                                         <td className="text-right p-2 border-t border-b text-blue-600">

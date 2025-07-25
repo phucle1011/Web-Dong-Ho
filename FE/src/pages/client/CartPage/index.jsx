@@ -299,8 +299,10 @@ export default function CardPage({ cart = true }) {
               <div className="flex flex-col lg:flex-row gap-6">
                 <div className="lg:w-1/2 w-full">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                    <div className="relative w-[150px] h-[50px]">
+                    <div className="relative w-[150px] h-[40px]">
                       <InputCom
+                        inputWrapperClasses="rounded-lg"
+                        inputClasses="px-4"
                         type="text"
                         placeholder="Mã giảm giá"
                         value={promoCode}
@@ -320,7 +322,7 @@ export default function CardPage({ cart = true }) {
                     <button
                       type="button"
                       onClick={handleApplyDiscount}
-                      className="w-[120px] h-[50px] black-btn"
+                      className="w-[120px] h-[40px] black-btn rounded-lg"
                       disabled={isLoading}
                     >
                       <span className="text-sm font-semibold">{isLoading ? "Đang xử lý..." : "Áp dụng"}</span>
@@ -442,14 +444,14 @@ export default function CardPage({ cart = true }) {
                               </p>
                             </div>
                           )}
-                          {discountInfo.max_price && (discountInfo.voucherDiscount > 0 || discountInfo.promoDiscount > 0) && (
+                          {/* {discountInfo.max_price && (discountInfo.voucherDiscount > 0 || discountInfo.promoDiscount > 0) && (
                             <div className="flex justify-between mb-3">
                               <p className="text-[13px] text-qgraytwo italic">Giảm tối đa</p>
                               <p className="text-[13px] text-qgraytwo italic">
                                 {Number(discountInfo.max_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                               </p>
                             </div>
-                          )}
+                          )} */}
                           <div className="flex justify-between mb-3">
                             <p className="text-[15px] font-medium text-qblack">Tổng sau giảm</p>
                             <p className="text-[15px] font-medium text-qred">
@@ -461,11 +463,11 @@ export default function CardPage({ cart = true }) {
                       <div className="w-full h-[1px] bg-[#EDEDED]"></div>
                     </div>
 
-                    <button type="button" className="w-full mb-10">
+                    {/* <button type="button" className="w-full mb-10">
                       <div className="w-full h-[50px] bg-[#F6F6F6] flex justify-center items-center">
                         <span className="text-sm font-semibold">Cập nhật giỏ hàng</span>
                       </div>
-                    </button>
+                    </button> */}
 
                     <div className="flex justify-between mb-3">
                       <p className="text-[18px] font-medium text-qblack">
@@ -505,12 +507,12 @@ export default function CardPage({ cart = true }) {
                           localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
                         }}
                       >
-                        <div className="w-full h-[50px] black-btn flex justify-center items-center">
+                        <div className="w-full h-[40px] black-btn flex justify-center items-center rounded-lg">
                           <span className="text-sm font-semibold">Tiến hành thanh toán</span>
                         </div>
                       </Link>
                     ) : (
-                      <div className="w-full h-[50px] bg-gray-300 flex justify-center items-center cursor-not-allowed">
+                      <div className="w-full h-[40px] bg-gray-300 flex justify-center items-center cursor-not-allowed rounded-lg">
                         <span className="text-sm font-semibold text-gray-500">Tiến hành thanh toán</span>
                       </div>
                     )}

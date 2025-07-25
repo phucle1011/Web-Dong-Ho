@@ -31,13 +31,13 @@ function WashletGetAll() {
     approved: 0,
     rejected: 0,
   });
-    const [confirmModal, setConfirmModal] = useState({
+  const recordsPerPage = 10;
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     id: null,
     action: null,
   });
-  const recordsPerPage = 10;
-  const [selectedRequest, setSelectedRequest] = useState(null);
 
   const formatDateLocal = (date) => {
     const year = date.getFullYear();
@@ -137,6 +137,7 @@ function WashletGetAll() {
     }
   };
 
+
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
@@ -179,7 +180,8 @@ function WashletGetAll() {
                 <th className="text-center py-3 px-2">Tên khách hàng</th>
                 <th className="text-center py-3 px-2">Số dư</th>
                 <th className="text-center py-3 px-2">Số tiền chờ duyệt</th>
-                <th className="text-center py-3 px-2">Hình thức</th>
+                <th className="text-center py-3 px-2">Số lần rút tiền</th>
+                <th className="text-center py-3 px-2">Số lần hoàn tiền</th>
                 <th className="text-center py-3 px-2">Trạng thái</th>
                 <th className="text-center py-3 px-2">Ngày thực hiện</th>
                 <th className="text-center py-3 px-2"></th>
@@ -188,25 +190,33 @@ function WashletGetAll() {
             <tbody>
               {wallets.length > 0 ? (
                 wallets.map((item, index) => (
-                  <tr key={item.id}>
+                  <tr key={item.user.id}>
                     <td className="p-2 border text-center">{index + 1}</td>
                     <td className="p-2 border text-center">{item.user?.name || 'N/A'}</td>
+
+                    <td className="p-2 border text-center">
+                      <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+                        {Number(item.user?.balance || 0).toLocaleString("vi-VN")} ₫
+                      </span>
+                    </td>
                     <td className="p-2 border text-center">
                       <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">
-                        {Number(item.user?.balance || 0).toLocaleString("vi-VN")} ₫
+                      {Number(item.amount || 0).toLocaleString("vi-VN")} ₫
+                      </span>
+                    </td>
+                    <td className="p-2 border text-center">{item.user.withdrawCount}</td>
+                    <td className="p-2 border text-center">{item.user.refundCount}</td>
+
+                    <td className="p-2 border text-center">
+                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${item.hasPending ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-600'}`}>
+                        {item.hasPending ? 'Đang chờ duyệt' : 'Không có yêu cầu'}
                       </span>
                     </td>
 
                     <td className="p-2 border text-center">
-                      <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
-                        {Number(item.amount).toLocaleString("vi-VN")} ₫
-                      </span>
+                      {new Date(item.latestCreatedAt).toLocaleDateString("vi-VN")}
                     </td>
-                    <td className="p-2 border text-center">{translateWithdrawType(item.type)}</td>
-                    <td className="p-2 border text-center">
-                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${item.status === 'pending' ? 'bg-blue-100 text-blue-800' : item.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{translateWithdrawStatus(item.status)}</span>
-                    </td>
-                    <td className="p-2 border text-center">{new Date(item.created_at).toLocaleDateString("vi-VN")}</td>
+
                     <td className="p-2 border text-center">
                       <div className="flex justify-center items-center gap-2">
                         <Link
@@ -216,6 +226,7 @@ function WashletGetAll() {
                         >
                           <FaEye size={18} />
                         </Link>
+
                         {item.status === 'pending' && (
                           <>
                             <button
@@ -235,17 +246,19 @@ function WashletGetAll() {
                             </button>
                           </>
                         )}
-
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-gray-500">Không có yêu cầu rút tiền nào.</td>
+                  <td colSpan={8} className="text-center py-4 text-gray-500">
+                    Không có yêu cầu nào.
+                  </td>
                 </tr>
               )}
             </tbody>
+
           </table>
         </div>
 
@@ -279,7 +292,7 @@ function WashletGetAll() {
           onClose={() => setSelectedRequest(null)}
         />
       )}
-<FormDelete
+      <FormDelete
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false, id: null, action: null })}
         onConfirm={handleConfirmAction}
@@ -292,7 +305,6 @@ function WashletGetAll() {
         confirmText={confirmModal.action === "approve" ? "Duyệt" : "Từ chối"}
         type={confirmModal.action}
       />
-
 
     </div>
   );

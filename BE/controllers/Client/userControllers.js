@@ -1,38 +1,51 @@
 const UserModel = require('../../models/usersModel');
 
 class UserController {
-    static async updateUserInfo(req, res) {
-        try {
-            const { id } = req.params;
-            const { name, email, phone } = req.body;
+  static async updateUserInfo(req, res) {
+    try {
+      const { id } = req.params;
+      const { name, phone } = req.body;
 
-            const user = await UserModel.findByPk(id);
-            if (!user) {
-                return res.status(404).json({ message: "Người dùng không tồn tại." });
-            }
+      const phoneRegex = /^(0[3|5|7|8|9])\d{8}$/;
 
-            if (name) user.name = name;
-            if (email) user.email = email;
-            if (phone) user.phone = phone;
+      if (!name || name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Tên không được để trống.",
+        });
+      }
 
-            await user.save();
+      if (!phone || !phoneRegex.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          message: "Số điện thoại không hợp lệ! Phải đủ 10 số và bắt đầu bằng 03, 05, 07, 08, 09.",
+        });
+      }
 
-            res.status(200).json({
-                success: true,
-                message: "Cập nhật thông tin thành công",
-                data: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone
-                }
-            });
+      const user = await UserModel.findByPk(id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "Người dùng không tồn tại." });
+      }
 
-        } catch (error) {
-            console.error("Lỗi khi cập nhật thông tin người dùng:", error);
-            res.status(500).json({ error: error.message });
+      user.name = name;
+      user.phone = phone;
+
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Cập nhật thông tin thành công",
+        data: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone
         }
+      });
+    } catch (error) {
+      console.error("Lỗi khi cập nhật thông tin người dùng:", error);
+      res.status(500).json({ message: "Lỗi máy chủ khi cập nhật thông tin người dùng." });
     }
+  }
 }
 
 module.exports = UserController;
