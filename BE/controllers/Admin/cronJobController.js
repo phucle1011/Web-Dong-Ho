@@ -5,11 +5,11 @@ const UserModel = require('../../models/usersModel');
 const nodemailer = require('nodemailer');
 // const getEmailTemplate = require('../../utils/emailTemplate');
 const WishlistModel = require('../../models/wishlistsModel');
-const ProductModel = require('../../models/productsModel');
-const ProductVariantsModel = require('../../models/productVariantsModel');
 const transporter = require('../../config/mailer');
 const { getEmailTemplate, getWishlistPromoTemplate } = require('../../utils/emailTemplate');
 const PromotionProductModel = require('../../models/promotionProductsModel');
+const notifyWishlistPromotions = require('../../services/notifyWishlistPromotions');
+
 
 
 
@@ -103,68 +103,6 @@ async function deactivateStaleUsers() {
     }
 }
 
-async function notifyWishlistPromotions() {
-    try {
-        // 1. Lấy promotions active dành cho sản phẩm
-        const promos = await PromotionModel.findAll({
-            where: { status: 'active', applicable_to: 'product' }
-        });
-
-        for (const promo of promos) {
-            // 2. Lấy biến thể thuộc promotion
-            const items = await PromotionProductModel.findAll({
-                where: { promotion_id: promo.id, product_variant_id: { [Op.ne]: null } },
-                include: [{
-                    model: ProductVariantsModel,
-                    as: 'variant',
-                    include: [{ model: ProductModel, as: 'product' }]
-                }]
-            });
-
-            for (const entry of items) {
-                const variant = entry.variant;
-                const product = variant.product;
-                if (!variant || !product) continue;
-
-                // 3. Tìm user đã wishlist biến thể này
-                const wishers = await WishlistModel.findAll({
-                    where: { product_variant_id: variant.id },
-                    include: [{ model: UserModel, as: 'user', attributes: ['name', 'email'] }]
-                });
-
-                // 4. Gửi mail mỗi user
-                const startDate = new Date(promo.start_date).toLocaleDateString('vi-VN');
-                const endDate = new Date(promo.end_date).toLocaleDateString('vi-VN');
-                const type = promo.discount_type === 'percentage' ? '%' : '₫';
-
-                for (const w of wishers) {
-                    const user = w.user;
-                    const html = getWishlistPromoTemplate(
-                        user.name,
-                        product.name,
-                        promo.discount_value,
-                        type,
-                        promo.name,
-                        promo.code || '',
-                        startDate,
-                        endDate
-                    );
-
-                    await transporter.sendMail({
-                        from: `"TIMEMASTERS" <${process.env.EMAIL_USER}>`,
-                        to: user.email,
-                        subject: `🎉 ${product.name} bạn yêu thích đang giảm giá!`,
-                        html
-                    });
-                }
-            }
-        }
-
-        console.log('✔ Đã gửi thông báo khuyến mãi cho wishlist');
-    } catch (err) {
-        console.error('Lỗi khi gửi thông báo wishlist-promotions:', err);
-    }
-}
 
 cron.schedule('0 0 * * *', () => {
     updatePromotionStatuses();
@@ -175,11 +113,6 @@ cron.schedule('59 23 * * *', () => {
 });
 
 cron.schedule('0 0 * * *', deactivateStaleUsers);
-
-cron.schedule('0 9 * * *', () => {
-    console.log('🔔 Chạy job notifyWishlistPromotions');
-    notifyWishlistPromotions();
-});
 
 
 module.exports = { updatePromotionStatuses, notifyWishlistPromotions, deactivateStaleUsers };

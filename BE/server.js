@@ -18,6 +18,8 @@ const cleanupRememberTokens = require('./controllers/Client/rememberTokenCleanup
 const authenticate = require('./services/Middleware');
 const updateLastActive = require('./config/middleware/updateLastActive');
 const { authAdmin} = require('./services/authCheck');
+const notifyWishlistPromotions = require('./services/notifyWishlistPromotions');
+
 
 
 
@@ -47,6 +49,11 @@ cron.schedule('* * * * *', async () => {
 
 cron.schedule('0 0 * * *', () => {
   cleanupRememberTokens();
+});
+
+
+cron.schedule('0 9 * * *', () => {
+    notifyWishlistPromotions();
 });
 
 app.use(cors());

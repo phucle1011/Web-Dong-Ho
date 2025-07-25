@@ -176,17 +176,5 @@ router.delete('flashSale/:id', FlashSaleController.delete);
 router.get('/active-products', FlashSaleController.getActiveProductPromotions);
 
 
-// TEST: gọi manual notifyWishlistPromotions
-router.get('/cron/test-wishlist', async (req, res) => {
-  try {
-    await notifyWishlistPromotions();
-    res.json({ ok: true, message: 'notifyWishlistPromotions executed' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-
 
 module.exports = router;
