@@ -12,7 +12,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
-import { useLocation } from "react-router-dom";
+import { useLocation,useNavigate } from "react-router-dom";
 
 export default function AllProductPage() {
   const [products, setProducts] = useState([]);
@@ -37,6 +37,7 @@ export default function AllProductPage() {
     makeupCorner: false,
     babyItem: false,
   });
+  const navigate = useNavigate();
   const [volume, setVolume] = useState([0, 1000000000]);
   const [filterToggle, setToggle] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,32 +45,10 @@ export default function AllProductPage() {
   const [brandList, setBrandList] = useState([]);
   const location = useLocation();
   const brandId = location.state?.brandId;
-  useEffect(() => {
-    if (brandId) {
-      const fetchByBrand = async () => {
-        setLoading(true);
-        try {
-          const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
-            params: { brand_id: brandId },
-            headers: { "Cache-Control": "no-cache" },
-          });
-          setProducts(res.data.data || []);
-          setPagination((prev) => ({
-            ...prev,
-            totalProducts: res.data.pagination?.totalProducts || 0,
-          }));
-          setError(null);
-        } catch (error) {
-          setError("Không thể tải sản phẩm theo thương hiệu.");
-          setProducts([]);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchByBrand();
-    }
-  }, [brandId]);
+    const categoryId = location.state?.categoryId;
 
+
+ 
   useEffect(() => {
     async function fetchBrands() {
       try {
@@ -145,13 +124,29 @@ export default function AllProductPage() {
           selectedBrandIds.length > 0 ||
           volume[0] !== 0 ||
           volume[1] !== 1000000000;
-
+         
         // 👉 Nếu có brandId từ location và chưa lọc gì khác, ưu tiên gọi riêng
         if (brandId && !isFiltering) {
           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
             params: { brand_id: brandId },
             headers: { "Cache-Control": "no-cache" },
           });
+          
+
+          setProducts(res.data.data || []);
+          setPagination((prev) => ({
+            ...prev,
+            totalProducts: res.data.pagination?.totalProducts || 0,
+          }));
+          setError(null);
+          return; // 🛑 dừng tại đây để không gọi thêm lần nữa
+        }
+         if (categoryId && !isFiltering) {
+          const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
+            params: { category_id: categoryId },
+            headers: { "Cache-Control": "no-cache" },
+          });
+          
 
           setProducts(res.data.data || []);
           setPagination((prev) => ({
@@ -181,6 +176,7 @@ export default function AllProductPage() {
           ...prev,
           totalProducts: res.data.pagination?.totalProducts || 0,
         }));
+        navigate(location.pathname, { replace: true }); // Xóa state
         setError(null);
       } catch (error) {
         console.error("API Error:", error.response?.data || error.message);
@@ -208,7 +204,7 @@ export default function AllProductPage() {
     brandFilters,
     volume,
     brandId,
-    brandList,
+    brandList,location.state
   ]);
 
 

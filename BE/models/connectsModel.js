@@ -143,13 +143,9 @@ PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 
 
 OrderModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
 
-// FlashSale belongsTo Promotion
-FlashSaleModel.belongsTo(PromotionModel, {
-  foreignKey: 'promotion_id',
-  as: 'promotion'
-});
-PromotionModel.hasOne(FlashSaleModel, {
-  foreignKey: 'promotion_id',
+// Notification hasMany FlashSales
+NotificationModel.hasMany(FlashSaleModel, {
+  foreignKey: 'notification_id',
   as: 'flashSale'
 });
 
@@ -158,10 +154,19 @@ FlashSaleModel.belongsTo(NotificationModel, {
   foreignKey: 'notification_id',
   as: 'notification'
 });
-NotificationModel.hasOne(FlashSaleModel, {
-  foreignKey: 'notification_id',
+
+// FlashSale belongsTo Promotion
+FlashSaleModel.belongsTo(PromotionModel, {
+  foreignKey: 'promotion_id',
+  as: 'promotion'
+});
+
+// Promotion hasOne FlashSale (nếu cần)
+PromotionModel.hasOne(FlashSaleModel, {
+  foreignKey: 'promotion_id',
   as: 'flashSale'
 });
+
 
 /* --------- User - WithdrawRequests --------- */
 UserModel.hasMany(WithdrawRequestsModel, { foreignKey: 'user_id', as: 'withdrawRequests', });

@@ -150,10 +150,10 @@ const onSubmit = async (formData) => {
 
     // Bước 2: Gửi request tạo sản phẩm chính
     const productData = {
-      ...formData,
-      thumbnail: thumbnailUrl,
-      description: description,
-    };
+  ...formData,
+  thumbnail: thumbnailUrl,
+  description: description,
+};
 
     const productRes = await axios.post(`${Constants.DOMAIN_API}/admin/products`, productData);
     const newProductId = productRes.data.product.id;
@@ -454,6 +454,25 @@ const generateSlug = (text) => {
 
 
 
+{/* Mô tả ngắn */}
+<div className="col-span-2">
+  <label className="block font-medium mb-1 text-sm mb-2">Mô tả ngắn</label>
+  <textarea
+    className="w-full border px-3 py-2 rounded text-sm"
+    rows="3"
+    {...register("short_description", {
+      required: "Vui lòng nhập mô tả ngắn",
+      maxLength: {
+        value: 300,
+        message: "Tối đa 300 ký tự"
+      }
+    })}
+    placeholder="Nhập mô tả ngắn..."
+  ></textarea>
+  {errors.short_description && (
+    <small className="text-danger">{errors.short_description.message}</small>
+  )}
+</div>
 
 
 
@@ -461,6 +480,7 @@ const generateSlug = (text) => {
   <div className="col-span-2">
     <label className="block font-medium mb-1 text-sm mb-2">Mô tả</label>
     <div className="bg-white border rounded">
+
       <Editor
         apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
         value={description}

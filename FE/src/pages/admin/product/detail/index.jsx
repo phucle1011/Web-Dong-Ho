@@ -389,6 +389,19 @@ console.log(res.data?.data);
             </div>
           </div>
         </div>
+        <div className="mb-4">
+  <label className="font-semibold block mb-2">Mô tả ngắn:</label>
+  <textarea
+    rows={3}
+    name="short_description"
+    className="w-full border p-2 rounded"
+    value={formData.short_description || ""}
+    onChange={(e) =>
+      setFormData((prev) => ({ ...prev, short_description: e.target.value }))
+    }
+  />
+</div>
+
 
         <div className="mb-4">
           <label className="font-semibold block mb-2">Mô tả:</label>

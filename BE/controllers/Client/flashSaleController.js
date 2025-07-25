@@ -16,163 +16,202 @@ static async getAll(req, res) {
   try {
     const now = new Date();
 
-    const flashSales = await FlashSaleModel.findAll({
+    const notifications = await NotificationModel.findAll({
+      where: {
+        status: 1,
+        // Nếu muốn lọc theo ngày hiện tại đang hiệu lực:
+        // start_date: { [Op.lte]: now },
+        // end_date: { [Op.gte]: now },
+      },
+      attributes: [
+        'id',
+        'title',
+        'thumbnail', // ✅ đảm bảo dòng này có
+        'status',
+        'start_date',
+        'end_date',
+        'created_at',
+      ],
       include: [
         {
-          model: PromotionModel,
-          as: "promotion",
-          where: {
-            status: "active",
-            start_date: { [Op.lte]: now },
-            end_date: { [Op.gte]: now },
-          },
-          required: true,
-        },
-        {
-          model: NotificationModel,
-          as: "notification",
-          // Thêm dòng này để chỉ lấy những trường thực sự tồn tại
-          attributes: ['id', 'thumbnail', 'title', 'status', 'created_at'],
+          model: FlashSaleModel,
+          as: "flashSale",
+          required: false,
+          include: [
+            {
+              model: PromotionModel,
+              as: "promotion",
+              where: {
+                status: "active",
+                start_date: { [Op.lte]: now },
+                end_date: { [Op.gte]: now },
+              },
+              required: true,
+            },
+          ],
         },
       ],
       order: [["id", "DESC"]],
     });
 
-    res.status(200).json({ success: true, data: flashSales });
+    res.status(200).json({ success: true, data: notifications });
   } catch (error) {
-    console.error("Lỗi khi lấy flash sale:", error);
+    console.error("Lỗi khi lấy danh sách flash sale theo notification:", error);
     res.status(500).json({ success: false, message: "Lỗi máy chủ" });
   }
 }
 
-  static async getDiscountedProducts(req, res) {
-    try {
-      const now = new Date();
-      const promotionId = req.params.promotion_id; 
-  
-      // Xây dựng điều kiện where cho promotion
-      const promotionWhere = {
-        status: "active",
-        start_date: { [Op.lte]: now },
-        end_date: { [Op.gte]: now },
-      };
-      if (promotionId) {
-        promotionWhere.id = promotionId;
-      }
-  
-      const discountedVariants = await ProductVariant.findAll({
-        include: [
-          {
-            model: Product,
-            as: "product",
-            where: { status: 1 ,
-              publication_status: 'published'
-            },
-            attributes: ["id", "name", "thumbnail", "createdAt"],
-          },
-          {
-            model: VariantImagesModel,
-            as: "images",
-            attributes: ["id", "image_url"],
-          },
-          {
-            model: PromotionProductModel,
-            as: "promotionProducts",
-            include: [
-              {
-                model: PromotionModel,
-                as: "promotion",
-                where: promotionWhere,
-                required: true,
-                attributes: [
-                  "id",
-                  "name",
-                  "discount_type",
-                  "discount_value",
-                  "start_date",
-                  "end_date",
-                ],
-              },
-            ],
-          },
-        ],
-        where: {
-          "$promotionProducts.promotion.id$": { [Op.ne]: null },
-        },
-      });
-  
-      // Gom nhóm theo product như code cũ
-      const productMap = new Map();
-  
-      for (const variant of discountedVariants) {
-        const product = variant.product;
-        if (!product) continue;
-  
-        const variantPrice = parseFloat(variant.price);
-  
-        // Tìm khuyến mãi tốt nhất cho variant này
-        const bestPromotion = variant.promotionProducts.reduce((best, pp) => {
-          const promo = pp.promotion;
-          let finalPrice = variantPrice;
-          let percent = 0;
-  
-          if (promo.discount_type === "percentage") {
-            finalPrice -= (variantPrice * parseFloat(promo.discount_value)) / 100;
-            percent = parseFloat(promo.discount_value);
-          } else if (promo.discount_type === "fixed") {
-            finalPrice -= parseFloat(promo.discount_value);
-            percent = ((variantPrice - finalPrice) / variantPrice) * 100;
-          }
-  
-          finalPrice = Math.max(0, finalPrice);
-  
-          const info = {
-            id: promo.id,
-            name: promo.name,
-            discount_type: promo.discount_type,
-            discount_value: parseFloat(promo.discount_value),
-            discounted_price: parseFloat(finalPrice.toFixed(2)),
-            discount_percent: parseFloat(percent.toFixed(2)),
-          };
-  
-          if (!best || info.discounted_price < best.discounted_price) {
-            return info;
-          }
-          return best;
-        }, null);
-  
-        const variantJson = variant.toJSON();
-        variantJson.promotion = bestPromotion || {
-          discounted_price: variantPrice,
-          discount_percent: 0,
-        };
-  
-        // Gom nhóm theo product
-        if (!productMap.has(product.id)) {
-          productMap.set(product.id, {
-            id: product.id,
-            name: product.name,
-            thumbnail: product.thumbnail,
-            created_at: product.createdAt,
-            variants: [variantJson],
-            total_stock: parseInt(variant.stock) || 0,
-            variantCount: 1,
-          });
-        } else {
-          const p = productMap.get(product.id);
-          p.variants.push(variantJson);
-          p.total_stock += parseInt(variant.stock) || 0;
-          p.variantCount += 1;
-        }
-      }
-  
-      const result = Array.from(productMap.values());
-      return res.status(200).json(result);
-    } catch (error) {
-      console.error("Lỗi khi lấy sản phẩm giảm giá:", error);
-      return res.status(500).json({ message: "Lỗi server khi lấy sản phẩm giảm giá" });
+  static async getDiscountedProductsByNotificationId(req, res) {
+  try {
+    const now = new Date();
+    const notificationId = req.params.notification_id;
+
+    if (!notificationId) {
+      return res.status(400).json({ message: "Thiếu notification_id" });
     }
+
+    // ✅ 1. Tìm tất cả flash_sale liên quan đến notification
+    const flashSales = await FlashSaleModel.findAll({
+      where: { notification_id: notificationId },
+    });
+
+    if (!flashSales || flashSales.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy Flash Sale nào" });
+    }
+
+    const promotionIds = flashSales.map(fs => fs.promotion_id);
+    console.log("===> [PROMOTION_IDS]", promotionIds);
+
+    // ✅ 2. Điều kiện lọc promotion
+    const promotionWhere = {
+      status: "active",
+      start_date: { [Op.lte]: now },
+      end_date: { [Op.gte]: now },
+      id: { [Op.in]: promotionIds },
+    };
+
+    console.log("===> [WHERE promotion]", promotionWhere);
+
+    // ✅ 3. Tìm các product_variant có liên kết promotion
+    const discountedVariants = await ProductVariant.findAll({
+      include: [
+        {
+          model: Product,
+          as: "product",
+          where: {
+            status: 1,
+            publication_status: "published",
+          },
+          attributes: ["id", "name", "thumbnail", "createdAt"],
+        },
+        {
+          model: VariantImagesModel,
+          as: "images",
+          attributes: ["id", "image_url"],
+        },
+        {
+          model: PromotionProductModel,
+          as: "promotionProducts",
+          include: [
+            {
+              model: PromotionModel,
+              as: "promotion",
+              where: promotionWhere,
+              required: true,
+              attributes: [
+                "id",
+                "name",
+                "discount_type",
+                "discount_value",
+                "start_date",
+                "end_date",
+              ],
+            },
+          ],
+        },
+      ],
+      where: {
+        "$promotionProducts.promotion.id$": { [Op.ne]: null },
+      },
+    });
+
+    console.log("===> [discountedVariants.length]", discountedVariants.length);
+
+    // ✅ 4. Gom theo product
+    const productMap = new Map();
+
+    for (const variant of discountedVariants) {
+      const product = variant.product;
+      if (!product) continue;
+
+      const variantPrice = parseFloat(variant.price);
+
+      // ✅ Tìm khuyến mãi tốt nhất
+      const bestPromotion = variant.promotionProducts.reduce((best, pp) => {
+        const promo = pp.promotion;
+        let finalPrice = variantPrice;
+        let percent = 0;
+
+        if (promo.discount_type === "percentage") {
+          finalPrice -= (variantPrice * parseFloat(promo.discount_value)) / 100;
+          percent = parseFloat(promo.discount_value);
+        } else if (promo.discount_type === "fixed") {
+          finalPrice -= parseFloat(promo.discount_value);
+          percent = ((variantPrice - finalPrice) / variantPrice) * 100;
+        }
+
+        finalPrice = Math.max(0, finalPrice);
+
+        const info = {
+          id: promo.id,
+          name: promo.name,
+          discount_type: promo.discount_type,
+          discount_value: parseFloat(promo.discount_value),
+          discounted_price: parseFloat(finalPrice.toFixed(2)),
+          discount_percent: parseFloat(percent.toFixed(2)),
+        };
+
+        if (!best || info.discounted_price < best.discounted_price) {
+          return info;
+        }
+        return best;
+      }, null);
+
+      const variantJson = variant.toJSON();
+      variantJson.promotion = bestPromotion || {
+        discounted_price: variantPrice,
+        discount_percent: 0,
+      };
+
+      if (!productMap.has(product.id)) {
+        productMap.set(product.id, {
+          id: product.id,
+          name: product.name,
+          thumbnail: product.thumbnail,
+          created_at: product.createdAt,
+          variants: [variantJson],
+          total_stock: parseInt(variant.stock) || 0,
+          variantCount: 1,
+        });
+      } else {
+        const p = productMap.get(product.id);
+        p.variants.push(variantJson);
+        p.total_stock += parseInt(variant.stock) || 0;
+        p.variantCount += 1;
+      }
+    }
+
+    const result = Array.from(productMap.values());
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm giảm giá theo notification:", error);
+    return res.status(500).json({ message: "Lỗi server khi xử lý yêu cầu" });
   }
+}
+
+
+
 }
 
 module.exports = FlashSaleController;

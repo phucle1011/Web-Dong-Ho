@@ -27,7 +27,6 @@ export default function ProductView({ className, reportHandler }) {
   const navigate = useNavigate();
   useEffect(() => {
     if (!state?.productId) {
-      toast.error("Thiếu thông tin sản phẩm!");
       navigate("/all-products");
     }
   }, [state]);
@@ -324,15 +323,7 @@ export default function ProductView({ className, reportHandler }) {
         <div className="w-full">
           <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
             <img src={selectedImage} alt="" className="object-contain" />
-            {allVariants.some(
-              (variant) =>
-                variant.promotionProducts &&
-                variant.promotionProducts.length > 0
-            ) && (
-                <div className="w-[80px] h-[80px] rounded-full bg-qyellow text-qblack flex justify-center items-center text-xl font-medium absolute left-[30px] top-[30px]">
-                  <span>sale</span>
-                </div>
-              )}
+            
           </div>
           <div className="overflow-x-auto">
             <div className="flex gap-2 flex-nowrap">

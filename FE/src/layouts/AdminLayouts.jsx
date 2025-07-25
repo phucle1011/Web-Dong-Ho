@@ -51,7 +51,7 @@ const AdminLayout = () => {
           data-header-position="fixed"
         >
           <Aside />
-          <div className="body-wrapper">
+          <div className="body-wrapper bg-gray-50">
             <Header />
             <div className="container-fluid bg-gray-50">
               <div className="row mt-2 rounded-1">

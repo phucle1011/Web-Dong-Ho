@@ -4,53 +4,56 @@ const FlashSaleModel = require("../../models/FlashSaleModel");
 const PromotionModel = require("../../models/promotionsModel");
 const PromotionProductModel = require("../../models/promotionProductsModel");
 
-const { Op, fn, col } = require("sequelize");
+const { Op, fn, col,literal  } = require("sequelize");
 
 class FlashSaleController {
   // ✅ Lấy tất cả flash sale đang hoạt động
-  static async getAll(req, res) {
+static async getAll(req, res) {
   try {
     const now = new Date();
 
-    const flashSales = await FlashSaleModel.findAll({
+    const notifications = await NotificationModel.findAll({
       include: [
         {
-          model: PromotionModel,
-          as: "promotion",
-          where: {
-            status: "active",
-            start_date: { [Op.lte]: now },
-            end_date: { [Op.gte]: now },
-          },
-          required: true, // Đảm bảo chỉ lấy flash sale có promotion hợp lệ
-        },
-        {
-          model: NotificationModel,
-          as: "notification",
-        },
+          model: FlashSaleModel,
+          as: "flashSale", // ✅ alias mới: flash_sales
+          include: [
+            {
+              model: PromotionModel,
+              as: "promotion",
+            //  "" where: {
+            //     start_date: { [Op.lte]: now },
+            //     end_date: { [Op.gte]: now }
+            //   },"",
+              required: true
+            }
+          ]
+        }
       ],
-      order: [["id", "DESC"]],
+      order: [["id", "DESC"]]
     });
 
     res.status(200).json({
       success: true,
-      data: flashSales,
+      data: notifications
     });
   } catch (error) {
-    console.error("Lỗi khi lấy flash sale:", error);
+    console.error("Lỗi khi lấy danh sách notification:", error);
     res.status(500).json({
       success: false,
-      message: "Lỗi máy chủ",
+      message: "Lỗi máy chủ"
     });
   }
 }
+
+
 
 
   // ✅ Tạo flash sale mới (xóa bản cũ nếu có)
  static async create(req, res) {
   try {
     // Nhận promotion_id có thể là số hoặc mảng số
-    let { promotion_id, thumbnail, title, start_date, end_date } = req.body;
+    let { promotion_id, thumbnail, title, start_date, end_date, status } = req.body;
 
     if (!promotion_id || !thumbnail || !title || !start_date || !end_date) {
       return res
@@ -76,12 +79,13 @@ class FlashSaleController {
 
     // Tạo notification mới
     const notification = await NotificationModel.create({
-      thumbnail,
-      title,
-      status: 1,
-      start_date,
-      end_date
-    });
+  thumbnail,
+  title,
+  status, // nếu không có thì mặc định là 1
+  start_date,
+  end_date
+});
+
 
     // Duyệt từng promotion_id
     const createdFlashSales = [];
@@ -150,48 +154,48 @@ class FlashSaleController {
     }
   }
 
-  static async getActiveProductPromotions(req, res) {
-    try {
-      const now = new Date();
-
-      const promotions = await PromotionModel.findAll({
-        where: {
-          applicable_to: "product",
-
-          status: ["active", "upcoming"],
-        },
-        attributes: {
-          include: [
-            // Thêm cột đếm số lượng product_variant_id trong bảng promotion_products
-            [
-              fn("COUNT", col("promotionProducts.product_variant_id")),
-              "variant_count",
-            ],
-          ],
-        },
+ static async getActiveProductPromotions(req, res) {
+  try {
+    const promotions = await PromotionModel.findAll({
+      where: {
+        applicable_to: "product",
+        status: ["active", "upcoming"],
+        "$flashSale.id$": null, // lọc ra các promotion KHÔNG nằm trong flashSale
+      },
+      attributes: {
         include: [
-          {
-            model: PromotionProductModel,
-            as: "promotionProducts",
-            attributes: [], // Không trả về chi tiết, chỉ dùng để đếm
-          },
+          [fn("COUNT", col("promotionProducts.product_variant_id")), "variant_count"]
         ],
-        group: ["Promotion.id"],
-        order: [["created_at", "DESC"]],
-      });
+      },
+      include: [
+        {
+          model: PromotionProductModel,
+          as: "promotionProducts",
+          attributes: [],
+        },
+        {
+          model: FlashSaleModel,
+          as: "flashSale",
+          required: false, // LEFT JOIN để có thể lọc NULL
+          attributes: [],
+        },
+      ],
+      group: ["Promotion.id"],
+      order: [["created_at", "DESC"]],
+    });
 
-      res.status(200).json({
-        success: true,
-        data: promotions,
-      });
-    } catch (error) {
-      console.error("Lỗi khi lấy khuyến mãi sản phẩm:", error);
-      res.status(500).json({
-        success: false,
-        message: "Lỗi máy chủ.",
-      });
-    }
+    res.status(200).json({
+      success: true,
+      data: promotions,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy khuyến mãi sản phẩm:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ.",
+    });
   }
+}
 }
 
 module.exports = FlashSaleController;

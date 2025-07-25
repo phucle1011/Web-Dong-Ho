@@ -204,6 +204,10 @@ static async getPublishedProducts(req, res) {
 
     // Lấy thông tin sản phẩm
     const product = await Product.findByPk(id, {
+      attributes: [
+        "id", "name", "slug", "description", "short_description", "brand_id", "category_id", 
+        "thumbnail", "status", "publication_status", "createdAt", "updatedAt"
+      ],
       include: [
         {
           model: CategoryModel,
@@ -247,26 +251,25 @@ static async getPublishedProducts(req, res) {
           model: OrderDetail,
           as: "orderDetails",
           attributes: ["id"],
-          required: false, // Cho phép biến thể không có đơn hàng vẫn lấy được
+          required: false,
         },
         {
           model: CartItem,
-          as: "carts", // Alias này phải đúng với model association
+          as: "carts",
           attributes: ["id"],
-          required: false, // Cho phép biến thể không có trong giỏ hàng vẫn lấy được
+          required: false,
         },
       ],
       order: [["created_at", "DESC"]],
     });
 
-    // Gắn thêm flag `canDelete` cho mỗi biến thể
+    // Gắn thêm flag canDelete
     const variants = rows.map((variant) => {
       const usedInOrder = variant.orderDetails && variant.orderDetails.length > 0;
       const usedInCart = variant.carts && variant.carts.length > 0;
-
       return {
         ...variant.toJSON(),
-        canDelete: !usedInOrder && !usedInCart, // Chỉ có thể xóa nếu không nằm trong đơn hàng hoặc giỏ hàng
+        canDelete: !usedInOrder && !usedInCart,
       };
     });
 
@@ -296,12 +299,13 @@ static async getPublishedProducts(req, res) {
 
 
   // Tạo mới sản phẩm + biến thể
-  static async createProduct(req, res) {
+static async createProduct(req, res) {
   try {
     const {
       name,
       slug,
       description,
+      short_description, // <== Thêm dòng này
       brand_id,
       category_id,
       thumbnail,
@@ -313,11 +317,12 @@ static async getPublishedProducts(req, res) {
       name,
       slug,
       description,
+      short_description, // <== Thêm dòng này
       brand_id,
       category_id,
-      thumbnail: thumbnail.url,
+      thumbnail: thumbnail?.url || null,
       status,
-      publication_status:is_featured,
+      publication_status: is_featured,
     });
 
     res.status(201).json({ message: "Tạo sản phẩm thành công", product });
@@ -325,7 +330,6 @@ static async getPublishedProducts(req, res) {
   } catch (error) {
     console.error(error);
 
-    // Nếu là lỗi unique
     if (error instanceof Sequelize.UniqueConstraintError) {
       return res.status(400).json({
         error: "Tên hoặc slug sản phẩm đã tồn tại.",
@@ -336,6 +340,8 @@ static async getPublishedProducts(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+
 
   static async addVariant(req, res) {
 
@@ -512,43 +518,45 @@ res.status(500).json({ error: error.message });
 
   // Cập nhật sản phẩm (chỉ thông tin cơ bản)
   static async update(req, res) {
-    try {
-      const { id } = req.params;
-      const {
-        name,
-        slug,
-        description,
-        brand_id,
-        category_id,
-        thumbnail,
-        status,
-        publication_status,
-      } = req.body;
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      slug,
+      description,
+      short_description, // ✅ thêm dòng này
+      brand_id,
+      category_id,
+      thumbnail,
+      status,
+      publication_status,
+    } = req.body;
 
-      const product = await Product.findByPk(id);
-      if (!product) {
-        return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-      }
-
-      if (name !== undefined) product.name = name;
-      if (slug !== undefined) product.slug = slug;
-      if (description !== undefined) product.description = description;
-      if (brand_id !== undefined) product.brand_id = brand_id;
-      if (category_id !== undefined) product.category_id = category_id;
-      if (thumbnail !== undefined) product.thumbnail = thumbnail;
-      if (status !== undefined) product.status = status;
-      if (publication_status !== undefined) product.publication_status = publication_status;
-
-
-      await product.save();
-
-      res
-        .status(200)
-        .json({ message: "Cập nhật sản phẩm thành công", product });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    const product = await Product.findByPk(id);
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
+
+    if (name !== undefined) product.name = name;
+    if (slug !== undefined) product.slug = slug;
+    if (description !== undefined) product.description = description;
+    if (short_description !== undefined) product.short_description = short_description; // ✅ gán giá trị
+    if (brand_id !== undefined) product.brand_id = brand_id;
+    if (category_id !== undefined) product.category_id = category_id;
+    if (thumbnail !== undefined) product.thumbnail = thumbnail;
+    if (status !== undefined) product.status = status;
+    if (publication_status !== undefined) product.publication_status = publication_status;
+
+    await product.save();
+
+    res
+      .status(200)
+      .json({ message: "Cập nhật sản phẩm thành công", product });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
+}
+
 static async searchProducts(req, res) {
   try {
     const { searchTerm, categoryId, brandId, publicationStatus, page = 1, limit = 10 } = req.query;

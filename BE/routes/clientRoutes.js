@@ -163,7 +163,7 @@ router.patch('/notifications/:id/read', notificationClientController.getNotifica
 router.patch('/notifications/mark-all-read', notificationClientController.createNotification);
 
 router.get('/client/flashSale', FlashSaleController.getAll);
-router.get('/client/flashSale/list/:promotion_id', FlashSaleController.getDiscountedProducts);
+router.get('/client/flashSale/list/:notification_id', FlashSaleController.getDiscountedProductsByNotificationId);
 
 
 

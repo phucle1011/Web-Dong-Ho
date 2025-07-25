@@ -49,7 +49,9 @@ export default function Navbar({ className, type }) {
 
   return (
     <div
-      className={`nav-widget-wrapper w-full h-[60px] relative z-30 ${type === 3 ? "bg-qh3-blue" : "bg-qyellow"} ${className || ""}`}
+      className={`nav-widget-wrapper w-full h-[60px] relative z-30 ${
+        type === 3 ? "bg-qh3-blue" : "bg-qyellow"
+      } ${className || ""}`}
     >
       <div className="container-x mx-auto h-full">
         <div className="w-full h-full relative">
@@ -63,38 +65,66 @@ export default function Navbar({ className, type }) {
                 >
                   <div className="flex space-x-3 items-center">
                     <span>
-                      <svg className="fill-current" width="14" height="9" viewBox="0 0 14 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        className="fill-current"
+                        width="14"
+                        height="9"
+                        viewBox="0 0 14 9"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <rect width="14" height="1" />
                         <rect y="8" width="14" height="1" />
                         <rect y="4" width="10" height="1" />
                       </svg>
                     </span>
-                    <span className="text-sm font-600 text-qblacktext">Tất cả danh mục</span>
+                    <span className="text-sm font-600 text-qblacktext">
+                      Tất cả danh mục
+                    </span>
                   </div>
                   <div>
-                    <Arrow width="5.78538" height="1.28564" className="fill-current text-qblacktext" />
+                    <Arrow
+                      width="5.78538"
+                      height="1.28564"
+                      className="fill-current text-qblacktext"
+                    />
                   </div>
                 </button>
 
                 {categoryToggle && (
-                  <div className="fixed top-0 left-0 w-full h-full -z-10" onClick={handler}></div>
+                  <div
+                    className="fixed top-0 left-0 w-full h-full -z-10"
+                    onClick={handler}
+                  ></div>
                 )}
 
-                <div className="category-dropdown w-full absolute left-0 top-[53px] overflow-hidden z-50" style={{ height: elementsSize }}>
+                <div
+                  className="category-dropdown w-full absolute left-0 top-[53px] overflow-hidden z-50"
+                  style={{ height: elementsSize }}
+                >
                   <ul className="categories-list">
-                    {loading && <li className="text-sm text-qblack">Đang tải...</li>}
+                    {loading && (
+                      <li className="text-sm text-qblack">Đang tải...</li>
+                    )}
                     {error && <li className="text-sm text-red-500">{error}</li>}
-                    {!loading && categories.length === 0 && <li className="text-sm text-qblack">Không có danh mục nào</li>}
+                    {!loading && categories.length === 0 && (
+                      <li className="text-sm text-qblack">
+                        Không có danh mục nào
+                      </li>
+                    )}
                     {categories.map((category) => (
                       <li key={category.id} className="category-item">
-                        <Link
-                          to={{
-                            pathname: "/all-products",
-                            state: { categoryId: category.id },
-                          }}
-                        >
-                          <div className={`flex justify-between items-center px-5 h-10 bg-white transition-all duration-300 ease-in-out cursor-pointer text-qblack ${type === 3 ? "hover:bg-qh3-blue hover:text-white" : "hover:bg-qyellow"}`}>
-                            <span className="text-sm font-600 text-qblacktext">{category.name}</span>
+                        <Link to="/all-products" state={{ categoryId: category.id }}>
+                          <div
+                            className={`flex justify-between items-center px-5 h-10 bg-white transition-all duration-300 ease-in-out cursor-pointer text-qblack ${
+                              type === 3
+                                ? "hover:bg-qh3-blue hover:text-white"
+                                : "hover:bg-qyellow"
+                            }`}
+                          >
+                            <span className="text-sm font-600 text-qblacktext">
+                              {category.name}
+                            </span>
                           </div>
                         </Link>
                       </li>
@@ -106,34 +136,120 @@ export default function Navbar({ className, type }) {
               <div className="nav">
                 <ul className="nav-wrapper flex xl:space-x-10 space-x-5">
                   <li>
-                    <Link to="/" className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"}`}>Trang chủ</Link>
+                    <Link
+                      to="/"
+                      className={`text-sm font-600 ${
+                        type === 3 ? "text-white" : "text-qblacktext"
+                      }`}
+                    >
+                      Trang chủ
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/all-products" className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"}`}>Sản phẩm</Link>
+                    <Link
+                      to="/all-products"
+                      className={`text-sm font-600 ${
+                        type === 3 ? "text-white" : "text-qblacktext"
+                      }`}
+                    >
+                      Sản phẩm
+                    </Link>
                   </li>
                   <li className="relative">
-                    <Link to="#" className={`flex items-center text-sm font-600 cursor-pointer ${type === 3 ? "text-white" : "text-qblacktext"}`}>
+                    <Link
+                      to="#"
+                      className={`flex items-center text-sm font-600 cursor-pointer ${
+                        type === 3 ? "text-white" : "text-qblacktext"
+                      }`}
+                    >
                       Trang
                       <span className="ml-1.5 flex items-center">
                         <Arrow className="fill-current" />
                       </span>
                     </Link>
                     <div className="sub-menu w-[220px] absolute left-0 top-[60px]">
-                      <div className="w-full bg-white" style={{ boxShadow: "0px 15px 50px 0px rgba(0, 0, 0, 0.14)" }}>
+                      <div
+                        className="w-full bg-white"
+                        style={{
+                          boxShadow: "0px 15px 50px 0px rgba(0, 0, 0, 0.14)",
+                        }}
+                      >
                         <div className="p-5">
                           <ul className="flex flex-col space-y-2">
-                            <li><Link to="/privacy-policy"><span className={`text-qgray text-sm font-400 hover:text-qyellow`}>Chính sách bảo mật</span></Link></li>
-                            <li><Link to="/terms-condition"><span className={`text-qgray text-sm font-400 hover:text-qyellow`}>Điều khoản - Điều kiện</span></Link></li>
-                            <li><Link to="/faq"><span className={`text-qgray text-sm font-400 hover:text-qyellow`}>Câu hỏi thường gặp</span></Link></li>
-                            <li><Link to="/all-products"><span className={`text-qgray text-sm font-400 hover:text-qyellow`}>Sản phẩm</span></Link></li>
+                            <li>
+                              <Link to="/privacy-policy">
+                                <span
+                                  className={`text-qgray text-sm font-400 hover:text-qyellow`}
+                                >
+                                  Chính sách bảo mật
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link to="/terms-condition">
+                                <span
+                                  className={`text-qgray text-sm font-400 hover:text-qyellow`}
+                                >
+                                  Điều khoản - Điều kiện
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link to="/faq">
+                                <span
+                                  className={`text-qgray text-sm font-400 hover:text-qyellow`}
+                                >
+                                  Câu hỏi thường gặp
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link to="/all-products">
+                                <span
+                                  className={`text-qgray text-sm font-400 hover:text-qyellow`}
+                                >
+                                  Sản phẩm
+                                </span>
+                              </Link>
+                            </li>
                           </ul>
                         </div>
                       </div>
                     </div>
                   </li>
-                  <li><Link to="/about"><span className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"}`}>Về chúng tôi</span></Link></li>
-                  <li><Link to="/blogs"><span className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"}`}>Tin tức</span></Link></li>
-                  <li><Link to="/contact"><span className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"}`}>Liên hệ</span></Link></li>
+                  <li>
+                    <Link to="/about">
+                      <span
+                        className={`text-sm font-600 ${
+                          type === 3 ? "text-white" : "text-qblacktext"
+                        }`}
+                      >
+                        Về chúng tôi
+                      </span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/blogs">
+                      <span
+                        className={`text-sm font-600 ${
+                          type === 3 ? "text-white" : "text-qblacktext"
+                        }`}
+                      >
+                        Tin tức
+                      </span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/contact">
+                      <span
+                        className={`text-sm font-600 ${
+                          type === 3 ? "text-white" : "text-qblacktext"
+                        }`}
+                      >
+                        Liên hệ
+                      </span>
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </div>

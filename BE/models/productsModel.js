@@ -36,6 +36,10 @@ const ProductModel = connection.define('products', {
     allowNull: false,
     defaultValue: 1
   },
+  short_description: {
+  type: DataTypes.STRING,
+  allowNull: true
+},
   publication_status: {
     type: DataTypes.ENUM('draft', 'published'),
     allowNull: false,

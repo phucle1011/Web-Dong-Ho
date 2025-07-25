@@ -9,14 +9,15 @@ export default function CampaignCountDown({ flashSales = [], className }) {
 
   if (!flashSales.length) return null;
 
-  const { promotion, notification } = flashSales[selectedIndex];
-  const isUpcoming = promotion?.status === "upcoming";
-  const isActive = promotion?.status === "active";
+  const notification = flashSales[selectedIndex];
+  const isUpcoming = notification.status === 0;
+  const isActive = notification.status === 1;
 
-  // Nếu là upcoming thì đếm đến start_date, còn active thì đếm đến end_date
-  const { showDate, showHour, showMinute, showSecound } = useCountDown(
-    isUpcoming ? promotion?.start_date : promotion?.end_date
-  );
+  const countdownTarget = isUpcoming
+    ? notification.start_date
+    : notification.end_date;
+
+  const { showDate, showHour, showMinute, showSecound } = useCountDown(countdownTarget);
 
   const startAuto = useCallback(() => {
     clearInterval(timer.current);
@@ -64,7 +65,6 @@ export default function CampaignCountDown({ flashSales = [], className }) {
           }`}
           style={{ backgroundImage: `url(${notification?.thumbnail})` }}
         />
-
         <div className="absolute inset-0 bg-black/30" />
 
         <Nav pos="left" onClick={prev} />
@@ -85,13 +85,13 @@ export default function CampaignCountDown({ flashSales = [], className }) {
         <div className="absolute inset-0 flex flex-col justify-center pl-6 sm:pl-20 z-20 text-white">
           <div className="max-w-[420px]">
             <h2 className="text-2xl sm:text-4xl font-bold drop-shadow mb-3 break-words">
-              {promotion?.name}
+              {notification.title}
             </h2>
 
             {isActive ? (
               <Link
                 to="/flash-sale"
-                state={{ flashSales: [flashSales[selectedIndex]] }} // ✅ Truyền đúng phần tử đang hiển thị
+                state={{ notification }}
                 className="inline-flex bg-yellow-400 text-black font-semibold px-4 py-2 rounded hover:bg-yellow-300 transition text-sm sm:text-base"
               >
                 Xem ngay

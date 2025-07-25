@@ -8,44 +8,43 @@ import Constants from "../../../Constants";
 
 export default function FlashSale() {
   const location = useLocation();
-  const flashSales = location.state?.flashSales || [];
+  const notification = location.state?.notification || null;
+  const notification_id = notification.id;
+const end_date = notification.end_date;
+  
 
-  // Lấy promotion_id từ flashSales
-  const promotion_id = flashSales[0]?.promotion?.id;
 
   const [products, setProducts] = useState([]);
-  const [promotionInfo, setPromotionInfo] = useState(null);
   const [loading, setLoading] = useState(false);
-const [visibleCount, setVisibleCount] = useState(4); // Hiển thị mặc định 12 sản phẩm
+  const [visibleCount, setVisibleCount] = useState(4);
+  const [endDate, setEndDate] = useState("2025-12-31T23:59:59");
 
-// Khi nhấn Xem thêm, tăng lên 12 sản phẩm nữa
-const handleShowMore = () => {
-  setVisibleCount((prev) => prev + 12);
-};
+  const handleShowMore = () => {
+    setVisibleCount((prev) => prev + 12);
+  };
 
   useEffect(() => {
     async function fetchProducts() {
-      if (!promotion_id) return;
+      if (!notification_id) return;
       setLoading(true);
       try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/client/flashSale/list/${promotion_id}`);
-        setProducts(res.data || []);
-        
-        // Lấy info promotion đầu tiên cho countdown
-        if (res.data.length > 0) {
-          setPromotionInfo(res.data[0].variants[0]?.promotion || null);
-        }
+        const res = await axios.get(`${Constants.DOMAIN_API}/client/flashSale/list/${notification_id}`);
+        const productsFromApi = res.data || [];
+        setProducts(productsFromApi);
+
+
+        if (end_date) setEndDate(end_date);
       } catch (err) {
+        console.error("Lỗi khi load sản phẩm:", err);
         setProducts([]);
       } finally {
         setLoading(false);
       }
     }
+
     fetchProducts();
-  }, [promotion_id]);
-const firstPromotion = flashSales[0]?.promotion;
-  const endDate = firstPromotion?.end_date || "2025-12-31T23:59:59"; 
-  // Đếm ngược đến hết flash sale
+  }, [notification_id]);
+
   const { showDate, showHour, showMinute, showSecound } = useCountDown(endDate);
 
   return (
@@ -71,34 +70,30 @@ const firstPromotion = flashSales[0]?.promotion;
               </div>
             </div>
 
-           <div className="products grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5">
-  {loading ? (
-    <p className="text-center col-span-4 text-gray-500 italic">Đang tải khuyến mãi...</p>
-  ) : products.length > 0 ? (
-    products.slice(0, visibleCount).map((product) => (
-      <div key={product.id} className="item" data-aos="fade-up">
-        <ProductCardStyleOne datas={product} />
-      </div>
-    ))
-  ) : (
-    <p className="text-center col-span-4 text-gray-500 italic">Không có sản phẩm khuyến mãi</p>
-  )}
-</div>
+            <div className="products grid xl:grid-cols-4 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 xl:gap-[30px] gap-5">
+              {loading ? (
+                <p className="text-center col-span-4 text-gray-500 italic">Đang tải khuyến mãi...</p>
+              ) : products.length > 0 ? (
+                products.slice(0, visibleCount).map((product) => (
+                  <div key={product.id} className="item" data-aos="fade-up">
+                    <ProductCardStyleOne datas={product} />
+                  </div>
+                ))
+              ) : (
+                <p className="text-center col-span-4 text-gray-500 italic">Không có sản phẩm khuyến mãi</p>
+              )}
+            </div>
 
-{/* Nút Xem thêm nên nằm ngoài grid để nằm giữa và không bị lẫn với item sản phẩm */}
-{!loading && products.length > visibleCount && (
-  <div className="w-full flex justify-center mt-8">
-    <button
-      onClick={handleShowMore}
-      className="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 font-semibold shadow transition"
-    >
-      Xem thêm
-    </button>
-  </div>
-)}
-
-
-
+            {!loading && products.length > visibleCount && (
+              <div className="w-full flex justify-center mt-8">
+                <button
+                  onClick={handleShowMore}
+                  className="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 font-semibold shadow transition"
+                >
+                  Xem thêm
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
