@@ -3,19 +3,25 @@ const Product = require("../../models/productsModel");
 const ProductVariant = require("../../models/productVariantsModel");
 const PromotionProduct = require("../../models/promotionProductsModel");
 const Promotion = require("../../models/promotionsModel");
-const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
+const ProductVariantAttributeValue = require("../../models/productVariantAttributeValuesModel");
+const ProductAttribute = require("../../models/productAttributesModel");
+const Brand = require('../../models/brandsModel');
+const Category = require('../../models/categoriesModel');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const stringSimilarity = require("string-similarity");
 
 const genAI = new GoogleGenerativeAI(process.env.GROQ_API_KEY);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function isWatchRelated(prompt) {
-  const keywords = [
-    "đồng hồ", "watch", "chopard", "rolex", "giảm giá",
-    "bảo hành", "còn hàng", "mẫu", "sản phẩm", "giá",
-    "khuyến mãi", "chi tiết", "mua", "hình ảnh", "tình trạng"
-  ];
-  return keywords.some(keyword => prompt.toLowerCase().includes(keyword));
-}
+const removeVietnameseTones = (str) => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+};
 
 class ChatController {
   static async chatWithGemini(req, res) {
@@ -23,19 +29,83 @@ class ChatController {
       const { prompt, history = [] } = req.body;
       if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
-      const vietnamesePrompt = `Bạn là chatbot hỗ trợ cho website bán đồng hồ. Chỉ trả lời các nội dung liên quan đến sản phẩm đồng hồ, khuyến mãi, bảo hành. Nếu nội dung không phù hợp, hãy nói: "Xin lỗi, tôi chỉ có thể hỗ trợ các thông tin liên quan đến sản phẩm đồng hồ trên website." \n\n${prompt}`;
+      const normalizedPrompt = removeVietnameseTones(prompt);
+      const keywords = normalizedPrompt.split(/\s|-/).filter(Boolean);
+
+      const greetings = [
+        "chao", "xin chao", "hello", "hi", "minh muon hoi",
+        "co ai o do khong", "shop oi", "tu van", "giup voi"
+      ];
+
+      const isGreeting = greetings.some(g =>
+        normalizedPrompt.includes(g) ||
+        stringSimilarity.compareTwoStrings(normalizedPrompt, g) > 0.7
+      );
+
+      if (isGreeting) {
+        return res.json({
+          reply: "Xin chào bạn! Mình có thể giúp gì cho bạn hôm nay?",
+          products: []
+        });
+      }
+
+      // Intent detection
+      const isProductIntent = ['dong ho', 'san pham'].some(kw => normalizedPrompt.includes(kw));
+      const isPromotionIntent = ['khuyen mai', 'giam gia'].some(kw => normalizedPrompt.includes(kw));
+      const isWarrantyIntent = ['bao hanh', 'doi tra'].some(kw => normalizedPrompt.includes(kw));
+      const isShippingIntent = ['giao hang', 'van chuyen'].some(kw => normalizedPrompt.includes(kw));
+      const isContactIntent = ['lien he', 'hotline', 'ho tro'].some(kw => normalizedPrompt.includes(kw));
+
+      if (isWarrantyIntent) {
+        return res.json({
+          reply: "Sản phẩm bên mình được bảo hành chính hãng 12 tháng. Bạn cần hỗ trợ thêm gì không?",
+          products: []
+        });
+      }
+
+      if (isShippingIntent) {
+        return res.json({
+          reply: "Bên mình hỗ trợ giao hàng toàn quốc, thời gian từ 2–5 ngày tùy khu vực bạn nhé.",
+          products: []
+        });
+      }
+
+      if (isContactIntent) {
+        return res.json({
+          reply: "Bạn có thể liên hệ bên mình qua số hotline 0123.456.789 hoặc email hotro@dongho.vn",
+          products: [],
+          action: "contact",
+        });
+      }
+
+      if (!isProductIntent && !isPromotionIntent) {
+        return res.json({
+          reply: "Xin lỗi bạn, mình chưa rõ yêu cầu. Bạn có thể nói cụ thể hơn không ạ?",
+          products: []
+        });
+      }
 
       const matchedProducts = await Product.findAll({
         where: {
-          name: { [Op.like]: `%${prompt}%` },
           status: 1,
-          publication_status: "published"
+          publication_status: "published",
         },
         include: [
           {
             model: ProductVariant,
             as: "variants",
+            required: true,
             include: [
+              {
+                model: ProductVariantAttributeValue,
+                as: "attributeValues",
+                include: [
+                  {
+                    model: ProductAttribute,
+                    as: "attribute",
+                  }
+                ]
+              },
               {
                 model: PromotionProduct,
                 as: "promotionProducts",
@@ -50,24 +120,69 @@ class ChatController {
                     },
                     required: false
                   }
-                ],
-                required: false
+                ]
               }
             ]
-          }
-        ],
-        limit: 5
+          },
+          { model: Brand, as: "brand" },
+          { model: Category, as: "category" }
+        ]
       });
 
-      if (matchedProducts.length === 0 && !isWatchRelated(prompt)) {
-        return res.json({
-          reply: "Xin lỗi bạn nhé, mình chưa hiểu ý câu hỏi vừa rồi. Bạn có thể nói lại chi tiết hơn không ạ?",
-          products: []
-        });
-      }
+      const scoredResults = matchedProducts
+        .map(product => {
+          const normName = removeVietnameseTones(product.name || "");
+          const normBrand = removeVietnameseTones(product.brand?.name || "");
+          const normCategory = removeVietnameseTones(product.category?.name || "");
+          let score = 0;
 
-      if (matchedProducts.length > 0) {
-        const result = matchedProducts.map(product => {
+          // Tên sản phẩm
+          keywords.forEach(kw => {
+            if (normName.includes(kw)) score += 3;
+            else score += stringSimilarity.compareTwoStrings(normName, kw);
+          });
+
+          // Thương hiệu
+          keywords.forEach(kw => {
+            if (normBrand.includes(kw)) score += 2;
+            else score += stringSimilarity.compareTwoStrings(normBrand, kw) * 2;
+          });
+
+          // Danh mục
+          keywords.forEach(kw => {
+            if (normCategory.includes(kw)) score += 2;
+            else score += stringSimilarity.compareTwoStrings(normCategory, kw) * 2;
+          });
+
+          // Biến thể và thuộc tính
+          const variantScore = product.variants.reduce((vScore, variant) => {
+            const normVariantName = removeVietnameseTones(variant.name || "");
+            let subScore = 0;
+
+            keywords.forEach(kw => {
+              if (normVariantName.includes(kw)) subScore += 1.5;
+              else subScore += stringSimilarity.compareTwoStrings(normVariantName, kw);
+            });
+
+            variant.attributeValues?.forEach(attr => {
+              const attrValue = removeVietnameseTones(attr?.value || "");
+              const attrName = removeVietnameseTones(attr?.attribute?.name || "");
+              keywords.forEach(kw => {
+                if (attrValue.includes(kw) || attrName.includes(kw)) subScore += 1;
+              });
+            });
+
+            return Math.max(vScore, subScore);
+          }, 0);
+
+          score += variantScore;
+
+          return { product, score };
+        })
+        .filter(item => item.score > 0.5)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+        .map(({ product }) => {
           const variant = product.variants[0];
           const promo = variant?.promotionProducts?.[0]?.promotion;
           const price = parseFloat(variant?.price || 0);
@@ -94,54 +209,27 @@ class ChatController {
           };
         });
 
+      if (scoredResults.length > 0) {
         return res.json({
-          reply: `Tôi tìm thấy ${result.length} sản phẩm liên quan đến yêu cầu của bạn.`,
-          products: result
+          reply: `Tôi tìm thấy ${scoredResults.length} sản phẩm phù hợp với yêu cầu của bạn.`,
+          products: scoredResults
         });
       }
 
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const chatSession = model.startChat({
-        generationConfig: {
-          temperature: 0.7,
-          topK: 1,
-          topP: 1,
-          maxOutputTokens: 2048,
-        },
-        safetySettings: [
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-          },
-        ],
-        history: [
-          {
-            role: "user",
-            parts: [{ text: "Bạn luôn trả lời bằng tiếng Việt." }],
-          },
-          ...history.map((item) => ({
-            role: item.isBot ? "model" : "user",
-            parts: [{ text: item.text }],
-          })),
-        ],
-      });
-
-      let result;
+      // Fallback: gửi câu hỏi cho Gemini
+      const vietnamesePrompt = `Bạn là chatbot hỗ trợ khách hàng cho website bán đồng hồ. Trả lời câu hỏi sau đây một cách tự nhiên, lịch sự và chuyên nghiệp.\n\n${prompt}`;
+      let fallbackResult;
       let retries = 0;
       const maxRetries = 3;
 
       while (retries < maxRetries) {
         try {
-          result = await chatSession.sendMessage(vietnamesePrompt);
+          fallbackResult = await chatSession.sendMessage(vietnamesePrompt);
           break;
         } catch (err) {
           if (err.message.includes("503") && retries < maxRetries - 1) {
             retries++;
-            console.warn(`Gemini overloaded, retry ${retries} after 2s...`);
+            console.warn(`Gemini quá tải, thử lại lần ${retries} sau 2s...`);
             await sleep(2000);
           } else {
             throw err;
@@ -149,9 +237,9 @@ class ChatController {
         }
       }
 
-      const response = await result.response.text();
+      const fallbackReply = await fallbackResult.response.text();
       return res.json({
-        reply: response || "Không có phản hồi từ Gemini.",
+        reply: fallbackReply || "Không có phản hồi từ Gemini.",
         products: []
       });
     } catch (error) {

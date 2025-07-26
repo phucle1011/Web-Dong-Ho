@@ -1,12 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Constants from "./Constants";
 import { Link } from "react-router-dom";
+import { FaMicrophone } from "react-icons/fa";
+import { FiPhone } from "react-icons/fi";
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 export default function GeminiChatbox() {
   const [show, setShow] = useState(false);
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
+
+  const handleVoiceInput = () => {
+    if (!SpeechRecognition) {
+      alert("Trình duyệt không hỗ trợ nhận diện giọng nói.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "vi-VN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setPrompt(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Voice error:", event.error);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+    setIsListening(true);
+    recognitionRef.current = recognition;
+  };
 
   const sendPrompt = async (e) => {
     e.preventDefault();
@@ -29,6 +76,7 @@ export default function GeminiChatbox() {
       const botMessage = {
         role: "gemini",
         text: data.reply || "Không có phản hồi.",
+        action: data.action || null,
       };
 
       if (data.products?.length > 0) {
@@ -125,6 +173,7 @@ export default function GeminiChatbox() {
       borderRadius: "20px",
       marginRight: "8px",
       outline: "none",
+      paddingRight: "40px",
     },
     chatButton: {
       padding: "10px 16px",
@@ -169,14 +218,7 @@ export default function GeminiChatbox() {
                 <div>
                   <div>{msg.text}</div>
                   {msg.products?.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: "10px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
-                      }}
-                    >
+                    <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
                       {msg.products.map((product) => (
                         <Link
                           key={product.id}
@@ -215,6 +257,16 @@ export default function GeminiChatbox() {
                       ))}
                     </div>
                   )}
+                  {msg.action === "contact" && (
+                    <div style={{ marginTop: "10px" }}>
+                      <Link
+                        to="/contact"
+                        className="inline-flex items-center gap-2 px-6 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-full shadow hover:bg-yellow-600 transition duration-300">
+                        <FiPhone className="text-lg" />
+                        Liên hệ ngay
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -224,17 +276,37 @@ export default function GeminiChatbox() {
                 <TypingDots />
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
 
           <form style={styles.chatForm} onSubmit={sendPrompt}>
-            <input
-              type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Nhập câu hỏi..."
-              required
-              style={styles.chatInput}
-            />
+            <div style={{ position: "relative", flex: 1 }}>
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Nhập câu hỏi..."
+                required
+                style={styles.chatInput}
+              />
+              <button
+                type="button"
+                onClick={handleVoiceInput}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: isListening ? "red" : "#555",
+                }}
+              >
+                <FaMicrophone size={18} />
+              </button>
+            </div>
             <button type="submit" style={styles.chatButton}>
               Gửi
             </button>
@@ -244,6 +316,7 @@ export default function GeminiChatbox() {
     </>
   );
 }
+
 function TypingDots() {
   return (
     <span style={{ display: "inline-block", minWidth: "30px" }}>
