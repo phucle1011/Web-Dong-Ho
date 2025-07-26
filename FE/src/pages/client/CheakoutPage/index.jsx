@@ -1339,24 +1339,9 @@ export default function CheckoutPage() {
 
                       {enabled && balance !== null && (
                         <div className="text-right text-sm space-y-1">
-                          <div className="text-gray-500 text-sm mr-2">
-                            Số dư ví: <strong>{Number(balance).toLocaleString()}đ</strong>
-                          </div>
                           <div className="text-gray-600">
                             Đã sử dụng: <strong className="text-green-600">
                               {Number(
-                                Math.min(
-                                  balance,
-                                  totalPrice - (discountInfo?.promoDiscount || 0) - (discountInfo?.voucherDiscount || 0) + (finalData.shippingFee || 0)
-                                )
-                              ).toLocaleString()}đ
-                            </strong>
-                          </div>
-
-                          <div className="text-gray-600">
-                            Còn lại trong ví: <strong>
-                              {Number(
-                                balance -
                                 Math.min(
                                   balance,
                                   totalPrice - (discountInfo?.promoDiscount || 0) - (discountInfo?.voucherDiscount || 0) + (finalData.shippingFee || 0)

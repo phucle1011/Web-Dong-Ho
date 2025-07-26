@@ -5,9 +5,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const session = require("express-session");
-const clientRoutes = require('./routes/clientRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const apiRoutes = require('./routes/apiRoutes');
 const app = express();
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -20,7 +17,8 @@ const updateLastActive = require('./config/middleware/updateLastActive');
 const { authAdmin} = require('./services/authCheck');
 const notifyWishlistPromotions = require('./services/notifyWishlistPromotions');
 
-
+const webhookRoutes = require('./routes/webhookRoutes');
+app.use('/stripe/webhook', express.raw({type: 'application/json'}), webhookRoutes);
 
 
 cron.schedule('* * * * *', async () => {
@@ -63,6 +61,12 @@ require('./controllers/Admin/cronJobController');
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+const clientRoutes = require('./routes/clientRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+const apiRoutes = require('./routes/apiRoutes');
+
 app.use('/public', express.static('public'));
 app.use('/uploads', express.static('uploads'));
 

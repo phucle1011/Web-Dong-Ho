@@ -98,6 +98,7 @@ router.put("/orders/cancel/:id", OrderController.cancelOrder);
 router.put("/orders/confirm-delivered/:id", OrderController.confirmDelivered);
 router.post('/wallets/request-refund', checkJWT, OrderController.requestRefund);
 router.get('/wallet/balance', checkJWT, OrderController.getBalance);
+router.post('/wallet/topup', checkJWT, OrderController.createStripeTopupSession);
 
 //------------------[ SHIPPING ]------------------
 router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);

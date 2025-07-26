@@ -9,6 +9,9 @@ const PromotionUserModel = require("../../models/promotionUsersModel");
 const WithdrawRequestsModel = require('../../models/withdrawRequestsModel');
 const RedisService = require("../../config/redisService");
 
+const Stripe = require('stripe');
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
 const requestIp = require("request-ip");
 const moment = require("moment");
 const { Op } = require("sequelize");
@@ -710,13 +713,11 @@ class OrderController {
                 user.balance = currentBalance - usedFromWallet;
                 await user.save({ transaction: t });
             }
-            console.log("Total Price after discounts:", totalPrice, "Used from wallet:", usedFromWallet);
 
 
             const order_code = `ORD-${Date.now()}`;
             const currentDateTime = new Date(Date.now() + 7 * 60 * 60 * 1000);
             const finalTotal = totalPrice + (shipping_fee || 0) - usedFromWallet;
-            console.log("Final Total Price:", finalTotal);
 
 
             const newOrder = await OrderModel.create(
@@ -899,10 +900,10 @@ class OrderController {
             }
 
             const usedFromWallet = Number(req.body.wallet_balance || 0);
-const finalAmount = priceAfterSpecial - discountAmount;
-const shipping = parseFloat(shipping_fee) || 0;
-const finalTotalWithShipping = finalAmount + shipping;
-const amountAfterWallet = Math.max(0, finalTotalWithShipping - usedFromWallet);
+            const finalAmount = priceAfterSpecial - discountAmount;
+            const shipping = parseFloat(shipping_fee) || 0;
+            const finalTotalWithShipping = finalAmount + shipping;
+            const amountAfterWallet = Math.max(0, finalTotalWithShipping - usedFromWallet);
 
             const simplifiedProducts = products.map((item) => ({
                 variant: {
@@ -933,7 +934,7 @@ const amountAfterWallet = Math.max(0, finalTotalWithShipping - usedFromWallet);
                     specialDiscount: specialDiscount,
                     shipping_fee: shipping_fee || 0,
                     voucher_discount,
-                    wallet_balance: usedFromWallet 
+                    wallet_balance: usedFromWallet
                 })
             ).toString("base64");
 
@@ -1034,23 +1035,23 @@ const amountAfterWallet = Math.max(0, finalTotalWithShipping - usedFromWallet);
                 Buffer.from(extraData, "base64").toString("utf-8")
             );
 
-            const usedFromWallet = Number(decoded.wallet_balance || 0); 
+            const usedFromWallet = Number(decoded.wallet_balance || 0);
 
-if (usedFromWallet > 0) {
-    const user = await UserModel.findByPk(user_id, {
-        transaction: t,
-        lock: t.LOCK.UPDATE
-    });
+            if (usedFromWallet > 0) {
+                const user = await UserModel.findByPk(user_id, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE
+                });
 
-    const currentBalance = Number(user.balance || 0);
-    if (currentBalance < usedFromWallet) {
-        await t.rollback();
-        return res.status(400).json({ message: "Số dư ví không đủ." });
-    }
+                const currentBalance = Number(user.balance || 0);
+                if (currentBalance < usedFromWallet) {
+                    await t.rollback();
+                    return res.status(400).json({ message: "Số dư ví không đủ." });
+                }
 
-    user.balance = currentBalance - usedFromWallet;
-    await user.save({ transaction: t });
-}
+                user.balance = currentBalance - usedFromWallet;
+                await user.save({ transaction: t });
+            }
 
             const {
                 user_id,
@@ -1199,7 +1200,7 @@ if (usedFromWallet > 0) {
                     shipping_code: null,
                     discount_amount: discountAmount || 0,
                     special_discount_amount: finalSpecialDiscount || 0,
-                       wallet_balance: usedFromWallet,
+                    wallet_balance: usedFromWallet,
                 },
                 { transaction: t }
             );
@@ -1918,6 +1919,113 @@ if (usedFromWallet > 0) {
             console.error('Lỗi khi lấy balance:', error);
             return res.status(500).json({ success: false, message: 'Lỗi server' });
         }
+    }
+
+    static async createStripeTopupSession(req, res) {
+        try {
+            const { amount } = req.body;
+
+            const userId = req.user.id;
+
+            const parsedAmount = parseInt(amount);
+            if (!parsedAmount || isNaN(parsedAmount) || parsedAmount < 13000) {
+                return res.status(400).json({ message: 'Số tiền nạp không hợp lệ (tối thiểu 13,000₫).' });
+            }
+
+            const session = await stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                mode: 'payment',
+                line_items: [{
+                    price_data: {
+                        currency: 'vnd',
+                        product_data: {
+                            name: 'Nạp tiền vào ví',
+                        },
+                        unit_amount: parsedAmount,
+                    },
+                    quantity: 1,
+                }],
+                success_url: `${process.env.FRONTEND_URL}/profile#payment`,
+                cancel_url: `${process.env.FRONTEND_URL}/profile#payment`,
+                metadata: {
+                    userId,
+                    topupAmount: parsedAmount,
+                },
+            });
+
+            return res.status(200).json({ url: session.url });
+        } catch (err) {
+            console.error('Stripe Topup Error:', err);
+            return res.status(500).json({ message: 'Lỗi tạo phiên thanh toán Stripe' });
+        }
+    }
+
+    static async handleWebhook(req, res) {
+        const sig = req.headers['stripe-signature'];
+
+        try {
+            const event = stripe.webhooks.constructEvent(
+                req.rawBody,
+                sig,
+                process.env.STRIPE_WEBHOOK_SECRET
+            );
+
+            if (event.type === 'checkout.session.completed') {
+                const session = event.data.object;
+                const userId = session.metadata?.userId;
+                const amount = parseInt(session.metadata?.topupAmount);
+
+                if (!userId || isNaN(amount)) {
+                    return res.status(400).json({ message: 'Thiếu metadata' });
+                }
+
+                const user = await UserModel.findOne({ where: { id: userId } });
+                if (!user) return res.status(404).json({ message: 'Không tìm thấy user' });
+
+                user.balance = (parseInt(user.balance) || 0) + amount;
+                await user.save();
+
+                await WebhookController.sendTopUpEmail(user, amount);
+            }
+
+            res.status(200).json({ received: true });
+        } catch (err) {
+            console.error('Webhook error:', {
+                message: err.message,
+                stack: err.stack,
+                rawBody: req.rawBody,
+                headers: req.headers
+            });
+            res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+    }
+
+    static async sendTopUpEmail(user, amount) {
+        const formattedAmount = new Intl.NumberFormat('vi-VN').format(amount);
+        const formattedBalance = new Intl.NumberFormat('vi-VN').format(user.balance);
+
+        let transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Xác nhận nạp tiền vào ví',
+            html: `
+        <p>Chào ${user.full_name || user.name || 'bạn'},</p>
+        <p>Bạn vừa nạp thành công <strong>${formattedAmount}₫</strong> vào ví điện tử.</p>
+        <p>Số dư hiện tại của bạn là: <strong>${formattedBalance}₫</strong></p>
+        <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>
+        <p>-- Hệ thống Đồng Hồ --</p>
+      `,
+        };
+
+        await transporter.sendMail(mailOptions);
     }
 }
 
