@@ -51,6 +51,7 @@ class AuthController {
             const user = await UserModel.create({
                 name,
                 email,
+                balance: null,
                 password: hashedPassword,
                 phone: phone || null,
                 avatar: avatar || "default-avatar.png",
