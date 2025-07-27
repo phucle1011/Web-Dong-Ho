@@ -1924,27 +1924,28 @@ class OrderController {
     static async createStripeTopupSession(req, res) {
         try {
             const { amount } = req.body;
-
             const userId = req.user.id;
 
             const parsedAmount = parseInt(amount);
             if (!parsedAmount || isNaN(parsedAmount) || parsedAmount < 13000) {
-                return res.status(400).json({ message: 'Số tiền nạp không hợp lệ (tối thiểu 13,000₫).' });
+                return res.status(400).json({ message: "Số tiền nạp không hợp lệ (tối thiểu 13,000₫)." });
             }
 
             const session = await stripe.checkout.sessions.create({
-                payment_method_types: ['card'],
-                mode: 'payment',
-                line_items: [{
-                    price_data: {
-                        currency: 'vnd',
-                        product_data: {
-                            name: 'Nạp tiền vào ví',
+                payment_method_types: ["card"],
+                mode: "payment",
+                line_items: [
+                    {
+                        price_data: {
+                            currency: "vnd",
+                            product_data: {
+                                name: "Nạp tiền vào ví",
+                            },
+                            unit_amount: parsedAmount,
                         },
-                        unit_amount: parsedAmount,
+                        quantity: 1,
                     },
-                    quantity: 1,
-                }],
+                ],
                 success_url: `${process.env.FRONTEND_URL}/profile#payment`,
                 cancel_url: `${process.env.FRONTEND_URL}/profile#payment`,
                 metadata: {
@@ -1955,13 +1956,13 @@ class OrderController {
 
             return res.status(200).json({ url: session.url });
         } catch (err) {
-            console.error('Stripe Topup Error:', err);
-            return res.status(500).json({ message: 'Lỗi tạo phiên thanh toán Stripe' });
+            console.error("Stripe Topup Error:", err);
+            return res.status(500).json({ message: "Lỗi tạo phiên thanh toán Stripe" });
         }
     }
 
     static async handleWebhook(req, res) {
-        const sig = req.headers['stripe-signature'];
+        const sig = req.headers["stripe-signature"];
 
         try {
             const event = stripe.webhooks.constructEvent(
@@ -1970,63 +1971,105 @@ class OrderController {
                 process.env.STRIPE_WEBHOOK_SECRET
             );
 
-            if (event.type === 'checkout.session.completed') {
+            if (event.type === "checkout.session.completed") {
                 const session = event.data.object;
+
+                if (session.payment_status !== "paid") {
+                    console.warn("Phiên chưa thanh toán, bỏ qua");
+                    return res.status(200).json({ skipped: true });
+                }
+
                 const userId = session.metadata?.userId;
                 const amount = parseInt(session.metadata?.topupAmount);
 
                 if (!userId || isNaN(amount)) {
-                    return res.status(400).json({ message: 'Thiếu metadata' });
+                    return res.status(400).json({ message: "Thiếu thông tin metadata" });
                 }
 
+                // (Tùy chọn) kiểm tra nếu bạn có lưu log session id:
+                // const existing = await StripeSessionLogModel.findOne({ where: { session_id: session.id } });
+                // if (existing) return res.status(200).json({ message: "Đã xử lý trước đó" });
+
                 const user = await UserModel.findOne({ where: { id: userId } });
-                if (!user) return res.status(404).json({ message: 'Không tìm thấy user' });
+                if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
 
                 user.balance = (parseInt(user.balance) || 0) + amount;
+                await WithdrawRequestsModel.create({
+                    user_id: userId,
+                    amount,
+                    method: 'bank',
+                    bank_account: 'stripe-topup',
+                    bank_name: 'Stripe',
+                    status: 'approved',
+                    note: 'Nạp tiền từ Stripe',
+                    type: 'recharge'
+                });
+
                 await user.save();
 
-                await WebhookController.sendTopUpEmail(user, amount);
+                await OrderController.sendTopUpEmail(user, amount);
+
+                return res.status(200).json({ received: true });
             }
 
-            res.status(200).json({ received: true });
+            return res.status(200).json({ ignored: true });
         } catch (err) {
-            console.error('Webhook error:', {
+            console.error("Webhook error:", {
                 message: err.message,
                 stack: err.stack,
                 rawBody: req.rawBody,
-                headers: req.headers
+                headers: req.headers,
             });
-            res.status(400).send(`Webhook Error: ${err.message}`);
+            return res.status(400).send(`Webhook Error: ${err.message}`);
         }
     }
 
     static async sendTopUpEmail(user, amount) {
-        const formattedAmount = new Intl.NumberFormat('vi-VN').format(amount);
-        const formattedBalance = new Intl.NumberFormat('vi-VN').format(user.balance);
+        try {
+            const formattedAmount = new Intl.NumberFormat('vi-VN').format(amount);
+            const formattedBalance = new Intl.NumberFormat('vi-VN').format(user.balance);
 
-        let transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+            let transporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            });
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: user.email,
-            subject: 'Xác nhận nạp tiền vào ví',
-            html: `
-        <p>Chào ${user.full_name || user.name || 'bạn'},</p>
-        <p>Bạn vừa nạp thành công <strong>${formattedAmount}₫</strong> vào ví điện tử.</p>
-        <p>Số dư hiện tại của bạn là: <strong>${formattedBalance}₫</strong></p>
-        <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>
-        <p>-- Hệ thống Đồng Hồ --</p>
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: user.email,
+                subject: 'Nạp tiền vào ví thành công',
+                html: `
+        <html>
+        <head>
+          <meta charset="UTF-8" />
+        </head>
+        <body style="font-family: Arial, sans-serif; color: #333;">
+          <p>Chào ${user.full_name || user.name || "bạn"},</p>
+          <p>Bạn vừa nạp thành công <strong>${formattedAmount}₫</strong> vào ví.</p>
+          <p><strong>Số dư hiện tại:</strong> ${formattedBalance}₫</p>
+          <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.</p>
+          <hr />
+          <p style="color: #555;"><em>Nếu có bất kỳ sai sót nào, vui lòng liên hệ chúng tôi để được hỗ trợ xử lý:</em></p>
+          <ul>
+            <li>Điện thoại / Zalo: <strong>0379 169 731</strong></li>
+            <li>Email: <strong>phuc628780@gmail.com</strong></li>
+          </ul>
+          <p>-- Hệ thống Đồng Hồ TimesMaster --</p>
+        </body>
+        </html>
       `,
-        };
+            };
 
-        await transporter.sendMail(mailOptions);
+            await transporter.sendMail(mailOptions);
+            console.log("Gửi email nạp tiền thành công");
+        } catch (err) {
+            console.error("Gửi mail nạp tiền thất bại:", err);
+        }
     }
+
 }
 
 module.exports = OrderController;

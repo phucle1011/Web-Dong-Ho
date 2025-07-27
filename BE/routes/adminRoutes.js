@@ -37,10 +37,12 @@ router.get('/orders/:id', OrderController.getById);
 router.put('/orders/edit/:id', OrderController.update);
 router.delete("/orders/delete/:id", OrderController.delete);
 
-//------------------[ ORDERS ]------------------\
+//------------------[ WALLETS ]------------------\
 router.get('/wallets', WalletsController.getAll);
 router.put('/wallets/withdraw/:id', WalletsController.updateWithdrawStatus);
 router.get('/wallets/withdraw/:id', WalletsController.getId);
+router.get("/wallets/user/:userId", WalletsController.getByUserId);
+router.get('/wallets/topups', checkJWT, WalletsController.getTopupHistory);
 
 //------------------[ USERS ]------------------\
 router.get('/user/list', UserController.get);

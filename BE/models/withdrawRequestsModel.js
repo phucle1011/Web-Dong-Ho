@@ -36,7 +36,7 @@ const WithdrawRequestsModel = connection.define('withdraw_requests', {
         allowNull: false,
     },
     type: {
-        type: DataTypes.ENUM('withdraw', 'refund'),
+        type: DataTypes.ENUM('withdraw', 'refund', 'recharge'),
         allowNull: false,
         defaultValue: 'withdraw'
     },

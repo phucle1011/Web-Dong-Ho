@@ -1,14 +1,24 @@
 import axios from "axios";
+import { decodeToken } from "../../../Helpers/jwtDecode.jsx";
 import React, { useState, useEffect } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { BiMoneyWithdraw, BiPlusCircle } from "react-icons/bi";
+import {
+  FaAngleDoubleLeft,
+  FaAngleDoubleRight,
+  FaChevronLeft,
+  FaChevronRight
+} from "react-icons/fa";
+
 import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
-export default function Payment() {
-  const token = localStorage.getItem("token");
+const token = localStorage.getItem("token");
+const decoded = token ? decodeToken(token) : {};
+const userId = decoded?.id;
 
+export default function Payment() {
   const [showBalance, setShowBalance] = useState(false);
   const [balance, setBalance] = useState(0);
   const [pending, setPending] = useState(0);
@@ -18,118 +28,114 @@ export default function Payment() {
   const [bankAccount, setBankAccount] = useState("");
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [withdrawRequests, setWithdrawRequests] = useState([]);
   const [banks, setBanks] = useState([]);
-  const [showTopUpInput, setShowTopUpInput] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('');
+  const [showTopUpInput, setShowTopUpInput] = useState(false);
+  const [showWithdrawSection, setShowWithdrawSection] = useState(false);
+  const [topups, setTopups] = useState([]);
+  const [totalTopups, setTotalTopups] = useState(0);
+
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [withdraws, setWithdraws] = useState([]);
+  const [refunds, setRefunds] = useState([]);
+  const [totalWithdraws, setTotalWithdraws] = useState(0);
+  const [totalRefunds, setTotalRefunds] = useState(0);
+
+  const AccordionItem = ({ title, children }) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div className="border border-gray-200 rounded mb-3 shadow-sm">
+        <button
+          className="w-full text-left px-4 py-3 bg-gray-100 hover:bg-gray-200 font-semibold text-sm rounded-t"
+          onClick={() => setOpen(!open)}
+        >
+          {title}
+        </button>
+        {open && <div className="px-5 py-4 bg-white text-sm">{children}</div>}
+      </div>
+    );
+  };
 
   useEffect(() => {
-    fetchWallets();
+    fetchWalletInfo();
+    fetchWalletDetails();
+    fetchTopups();
     fetchBanks();
-  }, []);
+  }, [currentPage]);
 
-  const fetchWallets = async () => {
+  const fetchWalletInfo = async () => {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/wallets`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      const data = res.data?.data || [];
-      if (data.length > 0) {
-        const wallet = data[0];
-        setBalance(parseInt(wallet.balance || 0));
-        setWithdrawRequests(wallet.withdrawRequests || []);
-
-        const pendingAmount = wallet.withdrawRequests
-          ?.filter((req) => req.status === "pending" && req.type === "withdraw")
-          .reduce((sum, req) => sum + parseInt(req.amount || 0), 0);
-        setPending(pendingAmount || 0);
-
-        const pendingWithdraw = wallet.withdrawRequests?.find(
-          (req) => req.status === "pending" && req.type === "withdraw"
-        );
-        setHasPendingWithdraw(!!pendingWithdraw);
-      }
+      const wallet = res.data?.data?.[0];
+      setBalance(parseInt(wallet.balance || 0));
+      const pendingAmount = wallet.withdrawRequests?.filter(r => r.status === "pending" && r.type === "withdraw")
+        .reduce((sum, r) => sum + parseInt(r.amount || 0), 0);
+      setPending(pendingAmount || 0);
+      setHasPendingWithdraw(!!wallet.withdrawRequests?.find(r => r.status === "pending" && r.type === "withdraw"));
     } catch (err) {
-      console.error("Lỗi khi tải ví:", err);
       toast.error("Không thể tải thông tin ví.");
     }
   };
 
-  const fetchBanks = async () => {
+  const fetchWalletDetails = async () => {
     try {
-      const res = await axios.get("https://api.vietqr.io/v2/banks");
-      if (res.data.code === "00") {
-        setBanks(res.data.data);
-      }
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/wallets/user/${userId}?page=${currentPage}&limit=${recordsPerPage}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = res.data?.data || {};
+      const pagination = res.data?.pagination || {};
+      setWithdraws(data.withdraws || []);
+      setRefunds(data.refunds || []);
+      setTotalWithdraws(pagination.totalWithdraws || 0);
+      setTotalRefunds(pagination.totalRefunds || 0);
+      setTotalPages(pagination.totalPages || 1);
     } catch (err) {
-      console.error("Lỗi khi lấy danh sách ngân hàng:", err);
+      toast.error("Không thể tải lịch sử ví.");
     }
   };
 
-  const formatCurrency = (amount) => {
-    return parseInt(amount).toLocaleString("vi-VN") + " ₫";
+  const fetchTopups = async (page) => {
+    try {
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/wallets/topups?page=${page}&limit=${recordsPerPage}&userId=${userId}`
+      );
+      setTopups(res.data?.data || []);
+      setTotalTopups(res.data?.pagination?.total || 0);
+    } catch (err) {
+      toast.error("Không thể tải lịch sử nạp tiền.");
+    }
   };
+
+  const formatCurrency = (amount) => parseInt(amount).toLocaleString("vi-VN") + " ₫";
 
   const handleTopUp = async () => {
     const amountInt = parseInt(topUpAmount);
-
-    if (!topUpAmount || isNaN(amountInt)) {
-      toast.warning('Vui lòng nhập số tiền hợp lệ.');
-      return;
-    }
-
-    if (amountInt < 13000) {
-      toast.warning('Vui lòng nhập số tiền tối thiểu 13,000₫ để nạp.');
-      return;
-    }
-
-    if (amountInt > 99999999) {
-      toast.warning('Số tiền tối đa cho mỗi lần nạp là 99,999,999₫.');
-      return;
-    }
-
+    if (!topUpAmount || isNaN(amountInt)) return toast.warning("Vui lòng nhập số tiền hợp lệ.");
+    if (amountInt < 13000) return toast.warning("Số tiền tối thiểu là 13,000₫.");
     try {
       setIsSubmitting(true);
-      const res = await axios.post(
-        `${Constants.DOMAIN_API}/wallet/topup`,
-        { amount: parseInt(topUpAmount) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.url) {
-        window.location.href = res.data.url;
-      }
-    } catch (error) {
-      console.error("Lỗi tạo phiên Stripe:", error);
-      toast.error("Không thể tạo phiên thanh toán Stripe.");
+      const res = await axios.post(`${Constants.DOMAIN_API}/wallet/topup`, { amount: amountInt }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.url) window.location.href = res.data.url;
+    } catch {
+      toast.error("Không thể tạo phiên thanh toán.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleWithdraw = async () => {
-    if (!withdrawAmount || !selectedBank || !bankAccount) {
-      toast.warning("Vui lòng nhập đầy đủ thông tin.");
-      return;
-    }
-
-    if (!/^\d{6,20}$/.test(bankAccount)) {
-      toast.warning("Số tài khoản ngân hàng không hợp lệ.");
-      return;
-    }
-
     const amount = parseInt(withdrawAmount);
-    if (isNaN(amount) || amount <= 0) {
-      toast.warning("Số tiền rút không hợp lệ.");
-      return;
-    }
-
-    if (amount > balance - pending) {
-      toast.warning(`Số tiền rút vượt quá số dư khả dụng: ${formatCurrency(balance - pending)}.`);
-      return;
-    }
-
+    if (!amount || !selectedBank || !bankAccount) return toast.warning("Vui lòng nhập đầy đủ.");
+    if (amount > balance - pending) return toast.warning(`Không đủ số dư: ${formatCurrency(balance - pending)}`);
     const confirm = await Swal.fire({
       title: "Xác nhận thông tin",
       icon: "warning",
@@ -138,7 +144,7 @@ export default function Payment() {
           <p><strong>Số tiền:</strong> ${formatCurrency(amount)}</p>
           <p><strong>Ngân hàng:</strong> ${selectedBank.toUpperCase()}</p>
           <p><strong>Số tài khoản:</strong> ${bankAccount}</p>
-          <p>Bạn xác nhận thông tin rút tiền là <strong>chính xác</strong>?</p>
+          <p>Bạn xác nhận thông tin rút tiền là <strong>chính xác</strong> và tự chịu trách nhiệm nếu có sai xót?</p>
         </div>
       `,
       showCancelButton: true,
@@ -146,61 +152,44 @@ export default function Payment() {
       cancelButtonText: "Hủy",
       reverseButtons: true,
     });
-
     if (!confirm.isConfirmed) return;
-
     try {
       setIsSubmitting(true);
-      const res = await axios.post(
-        `${Constants.DOMAIN_API}/wallets/transactions`,
-        {
-          amount,
-          method: selectedBank,
-          bank_account: bankAccount,
-          bank_name: selectedBank,
-          note,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      toast.success(res.data.message || "Yêu cầu rút tiền đã gửi.");
-      setWithdrawAmount("");
-      setSelectedBank("");
-      setBankAccount("");
-      setNote("");
-      fetchWallets();
-    } catch (err) {
-      console.error("Lỗi rút tiền:", err);
+      const res = await axios.post(`${Constants.DOMAIN_API}/wallets/transactions`, {
+        amount, method: selectedBank, bank_account: bankAccount, bank_name: selectedBank, note,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(res.data.message || "Đã gửi yêu cầu rút.");
+      setWithdrawAmount(""); setSelectedBank(""); setBankAccount(""); setNote("");
+      fetchWalletInfo();
+      fetchWalletDetails();
+    } catch {
       toast.error("Rút tiền thất bại.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getTypeLabel = (type) => {
-    switch (type) {
-      case "withdraw":
-        return "Rút tiền";
-      case "refund":
-        return "Hoàn tiền";
-      default:
-        return "Không xác định";
-    }
-  };
+  const translateStatus = (status) => ({
+    pending: "Chờ duyệt",
+    approved: "Đã duyệt",
+    rejected: "Từ chối",
+    completed: "Hoàn thành",
+  }[status] || status);
 
-const handleChange = (e) => {
-  const raw = e.target.value;
-  const unformatted = raw.replace(/\D/g, "");
-  const formatted = formatCurrency(unformatted);
-   setValue("amount", formatted);}
+  const fetchBanks = async () => {
+    try {
+      const res = await axios.get("https://api.vietqr.io/v2/banks");
+      if (res.data.code === "00") setBanks(res.data.data);
+    } catch { }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 pb-10">
       <header className="bg-orange-500 text-white px-6 py-6 rounded-b-3xl">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <span className="uppercase tracking-wide text-sm opacity-90">
-            Tổng số dư&nbsp;&gt;
-          </span>
+          <span className="uppercase tracking-wide text-sm opacity-90">Tổng số dư&nbsp;&gt;</span>
           <div className="flex items-center gap-1">
             <button onClick={() => setShowBalance(!showBalance)} className="p-0.5">
               {showBalance ? <FiEyeOff size={16} /> : <FiEye size={16} />}
@@ -213,45 +202,21 @@ const handleChange = (e) => {
       </header>
 
       <section className="bg-white shadow-lg rounded-xl -mt-4 mx-4 sm:mx-auto max-w-2xl flex justify-center text-center">
-        <ActionButton
-          icon={<BiPlusCircle size={22} />}
-          label="Nạp tiền"
-          onClick={() => setShowTopUpInput((prev) => !prev)}
-        />
-
-        <ActionButton icon={<BiMoneyWithdraw size={22} />} label="Rút tiền" />
+        <ActionButton icon={<BiPlusCircle size={22} />} label="Nạp tiền" onClick={() => setShowTopUpInput(prev => !prev)} />
+        <ActionButton icon={<BiMoneyWithdraw size={22} />} label="Rút tiền" onClick={() => setShowWithdrawSection(prev => !prev)} />
       </section>
 
       {showTopUpInput && (
         <div className="mt-4 max-w-2xl mx-auto px-4">
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="font-medium mb-2">Nhập số tiền cần nạp</h3>
-            <input
-              type="number"
-              value={topUpAmount}
-              onChange={(e) => setTopUpAmount(e.target.value)}
-              placeholder="Nhập số tiền"
-              className="border border-gray-300 rounded px-3 py-2 w-full mb-3"
-              min="13000"
-              step="1000"
-              max="99999999"
-            />
-            
+            <input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)}
+              placeholder="Nhập số tiền" className="border rounded px-3 py-2 w-full mb-3" />
             <div className="flex gap-2 justify-end">
-              <button
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                onClick={() => {
-                  setShowTopUpInput(false);
-                  setTopUpAmount('');
-                }}
-              >
-                Hủy
-              </button>
-              <button
-                className="bg-[#1868D5] text-white px-4 py-2 rounded hover:opacity-90"
-                onClick={handleTopUp}
-                disabled={isSubmitting}
-              >
+              <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={() => {
+                setShowTopUpInput(false); setTopUpAmount('');
+              }}>Hủy</button>
+              <button className="bg-[#1868D5] text-white px-4 py-2 rounded" onClick={handleTopUp} disabled={isSubmitting}>
                 {isSubmitting ? "Đang xử lý..." : "Xác nhận"}
               </button>
             </div>
@@ -259,94 +224,162 @@ const handleChange = (e) => {
         </div>
       )}
 
-      <main className="mt-8 px-4 sm:px-0 max-w-2xl mx-auto space-y-6">
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold text-center mb-6">Thông tin ví</h2>
-
-          {withdrawRequests.filter(req => req.status === "pending").length > 0 ? (
-            <ul className="mt-2 divide-y text-xs text-gray-600 border rounded overflow-hidden max-h-[250px] overflow-y-auto">
-              {withdrawRequests
-                .filter(req => req.status === "pending")
-                .slice()
-                .reverse()
-                .map((req) => (
-                  <li key={req.id} className="px-3 py-2 bg-white flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-800">Ngân hàng: {req.bank_name?.toUpperCase()}</p>
-                      <p className="text-gray-500">STK: {req.bank_account}</p>
-                      {req.note && <p className="text-gray-400 italic text-xs">"{req.note}"</p>}
-                      <p className="text-gray-500">Hình thức: {getTypeLabel(req.type)}</p>
-                    </div>
-                    <span className="font-semibold text-yellow-600">{formatCurrency(req.amount)}</span>
-                  </li>
-                ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 italic text-xs">Không có yêu cầu đang chờ.</p>
-          )}
-
-          <hr className="my-6" />
-
-          <div className="space-y-3">
-            <input
-              type="number"
-              placeholder="Số tiền cần rút..."
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
-            <select
-              value={selectedBank}
-              onChange={(e) => setSelectedBank(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            >
+      {showWithdrawSection && (
+        <div className="mt-4 max-w-2xl mx-auto px-4">
+          <div className="bg-white p-4 rounded-lg shadow space-y-3">
+            <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Số tiền cần rút" className="w-full border rounded px-3 py-2" />
+            <select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)} className="w-full border rounded px-3 py-2">
               <option value="">Chọn ngân hàng</option>
               {banks.map((bank) => (
-                <option key={bank.code} value={bank.code}>
-                  {bank.shortName || bank.name}
-                </option>
+                <option key={bank.code} value={bank.code}>{bank.shortName || bank.name}</option>
               ))}
             </select>
-            <input
-              type="text"
-              placeholder="Số tài khoản"
-              value={bankAccount}
-              onChange={(e) => setBankAccount(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
-            <textarea
-              placeholder="Ghi chú (không bắt buộc)"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
-            <button
-              className={`w-full rounded px-4 py-2 text-white ${hasPendingWithdraw ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
-              onClick={handleWithdraw}
-              disabled={isSubmitting || hasPendingWithdraw}
-            >
-              {hasPendingWithdraw
-                ? "Đang chờ duyệt..."
-                : isSubmitting
-                  ? "Đang xử lý..."
-                  : "Rút tiền"}
+            <input type="text" placeholder="Số tài khoản" value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="w-full border rounded px-3 py-2" />
+            <textarea placeholder="Ghi chú (không bắt buộc)" value={note} onChange={(e) => setNote(e.target.value)} className="w-full border rounded px-3 py-2" />
+            <button className="w-full rounded px-4 py-2 text-white bg-blue-600 hover:bg-blue-700" onClick={handleWithdraw} disabled={isSubmitting || hasPendingWithdraw}>
+              {hasPendingWithdraw ? "Đang chờ duyệt..." : isSubmitting ? "Đang xử lý..." : "Rút tiền"}
             </button>
           </div>
         </div>
-      </main>
+      )}
+
+      <div className="mt-10 max-w-4xl mx-auto px-4">
+        <h3 className="text-2xl font-bold mb-6 text-center text-gray-800">Lịch sử giao dịch</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[{
+            label: "Rút tiền", list: withdraws, total: totalWithdraws, type: "withdraw"
+          }, {
+            label: "Hoàn tiền", list: refunds, total: totalRefunds, type: "refund"
+          }, {
+            label: "Nạp tiền", list: topups, total: totalTopups, type: "topup"
+          }].map(({ label, list, total, type }) => (
+            <div key={type} className="bg-white rounded-xl shadow-md border border-gray-200">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-800">{label} ({total})</h3>
+              </div>
+              <div className="divide-y">
+                {list.length === 0 ? (
+                  <p className="text-gray-500 text-sm py-6 text-center">Không có lịch sử {label.toLowerCase()}</p>
+                ) : (
+                  list.map((item, idx) => {
+                    const stt = (currentPage - 1) * recordsPerPage + idx + 1;
+                    return (
+                      <AccordionItem key={`${type}-${item.id || idx}`}
+                        title={
+                          <div className="flex items-center justify-between text-sm font-medium">
+                            <span className="text-gray-700">#{stt}</span>
+                            <span className="text-gray-600">{formatCurrency(item.amount)}</span>
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${item.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                              item.status === "approved" || item.status === "completed" ? "bg-green-100 text-green-700" :
+                                item.status === "rejected" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+                              }`}>
+                              {translateStatus(item.status)}
+                            </span>
+                          </div>
+                        }
+                      >
+                        <div className="text-sm text-gray-700 space-y-2 mt-2">
+                          <p><strong>Ngày tạo:</strong>
+                            {(() => {
+                              const date = new Date(item.created_at);
+                              const pad = (n) => String(n).padStart(2, '0');
+                              const h = pad(date.getUTCHours());
+                              const m = pad(date.getUTCMinutes());
+                              const s = pad(date.getUTCSeconds());
+                              const d = pad(date.getUTCDate());
+                              const mo = pad(date.getUTCMonth() + 1);
+                              const y = date.getUTCFullYear();
+                              return `${h}:${m}:${s} ${d}/${mo}/${y}`;
+                            })()} </p>
+                          {type === "withdraw" && (
+                            <>
+                              <p><strong>Ngân hàng:</strong> {item.bank_name}</p>
+                              <p><strong>Số tài khoản:</strong> {item.bank_account}</p>
+                            </>
+                          )}
+                          {type === "refund" && (
+                            <>
+                              <p><strong>Đơn hàng:</strong> {item.order?.order_code || "—"}</p>
+                              {item.order?.orderDetails?.map((d, i) => (
+                                <p key={i}><strong>Sản phẩm:</strong> {d.variant?.product?.name}</p>
+                              ))}
+                            </>
+                          )}
+                          {type === "topup" && (
+                            <>
+                              <p><strong>Phương thức:</strong> {item.method?.toUpperCase() || "—"}</p>
+                              <p><strong>Mã giao dịch:</strong> {item.transaction_id || "—"}</p>
+                            </>
+                          )}
+                        </div>
+                      </AccordionItem>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6">
+            <div className="flex items-center space-x-1">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+                className="px-2 py-1 border rounded disabled:opacity-50"
+              >
+                <FaAngleDoubleLeft />
+              </button>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-2 py-1 border rounded disabled:opacity-50"
+              >
+                <FaChevronLeft />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => page >= currentPage - 2 && page <= currentPage + 2)
+                .map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 border rounded text-sm flex items-center justify-center ${page === currentPage
+                      ? "bg-blue-600 text-white"
+                      : "bg-white hover:bg-blue-100"
+                      }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-2 py-1 border rounded disabled:opacity-50"
+              >
+                <FaChevronRight />
+              </button>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                className="px-2 py-1 border rounded disabled:opacity-50"
+              >
+                <FaAngleDoubleRight />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
 
 function ActionButton({ icon, label, onClick }) {
   return (
-    <button
-      className="flex flex-col items-center gap-1 py-5 hover:text-orange-500 w-full"
-      onClick={onClick}
-    >
-      <div className="w-11 h-11 flex items-center justify-center bg-orange-100 rounded-full">
-        {icon}
-      </div>
+    <button className="flex flex-col items-center gap-1 py-5 hover:text-orange-500 w-full" onClick={onClick}>
+      <div className="w-11 h-11 flex items-center justify-center bg-orange-100 rounded-full">{icon}</div>
       <span className="text-xs font-medium">{label}</span>
     </button>
   );

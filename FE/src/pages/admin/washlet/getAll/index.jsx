@@ -92,7 +92,7 @@ function WashletGetAll() {
       const res = await axios.put(`${Constants.DOMAIN_API}/admin/wallets/withdraw/${id}`, {
         status: "rejected",
       });
-      toast.success(res.data.message || "Đã từ chối yêu cầu và hoàn tiền.");
+      toast.success(res.data.message || "Đã từ chối yêu cầu rút tiền.");
       fetchWallets(currentPage);
     } catch (error) {
       toast.error("Không thể từ chối yêu cầu.");
@@ -100,26 +100,9 @@ function WashletGetAll() {
     }
   };
 
-  const translateWithdrawStatus = (status) => {
-    switch (status) {
-      case "pending": return "Đang chờ duyệt";
-      case "approved": return "Đã duyệt";
-      case "rejected": return "Từ chối";
-      default: return "Không xác định";
-    }
-  };
-
   const handleFilterClick = (status) => {
     setStatusFilter(status);
     setActiveStatus(status);
-  };
-
-  const translateWithdrawType = (type) => {
-    switch (type) {
-      case "withdraw": return "Rút tiền";
-      case "refund": return "Hoàn tiền";
-      default: return "Không xác định";
-    }
   };
 
   const openConfirmModal = (id, action) => {
@@ -176,15 +159,16 @@ function WashletGetAll() {
           <table className="w-full border-collapse border border-gray-300 mt-3 text-left text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="text-center py-3 px-2">#</th>
-                <th className="text-center py-3 px-2">Tên khách hàng</th>
-                <th className="text-center py-3 px-2">Số dư</th>
-                <th className="text-center py-3 px-2">Số tiền chờ duyệt</th>
-                <th className="text-center py-3 px-2">Số lần rút tiền</th>
-                <th className="text-center py-3 px-2">Số lần hoàn tiền</th>
-                <th className="text-center py-3 px-2">Trạng thái</th>
-                <th className="text-center py-3 px-2">Ngày thực hiện</th>
-                <th className="text-center py-3 px-2"></th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">#</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Tên khách hàng</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Số dư</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Số tiền chờ duyệt</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Số lần rút tiền</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Số lần hoàn tiền</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Số lần nạp tiền</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Trạng thái</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap">Ngày thực hiện</th>
+                <th className="text-center py-3 px-2 whitespace-nowrap"></th>
               </tr>
             </thead>
             <tbody>
@@ -201,11 +185,12 @@ function WashletGetAll() {
                     </td>
                     <td className="p-2 border text-center">
                       <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800">
-                      {Number(item.amount || 0).toLocaleString("vi-VN")} ₫
+                        {Number(item.amount || 0).toLocaleString("vi-VN")} ₫
                       </span>
                     </td>
                     <td className="p-2 border text-center">{item.user.withdrawCount}</td>
                     <td className="p-2 border text-center">{item.user.refundCount}</td>
+                    <td className="p-2 border text-center">{item.user.rechargeCount || 0}</td>
 
                     <td className="p-2 border text-center">
                       <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${item.hasPending ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-600'}`}>
@@ -214,13 +199,23 @@ function WashletGetAll() {
                     </td>
 
                     <td className="p-2 border text-center">
-                      {new Date(item.latestCreatedAt).toLocaleDateString("vi-VN")}
+                      {(() => {
+                        const date = new Date(item.latestCreatedAt);
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const h = pad(date.getUTCHours());
+                        const m = pad(date.getUTCMinutes());
+                        const s = pad(date.getUTCSeconds());
+                        const d = pad(date.getUTCDate());
+                        const mo = pad(date.getUTCMonth() + 1);
+                        const y = date.getUTCFullYear();
+                        return `${h}:${m}:${s} ${d}/${mo}/${y}`;
+                      })()}
                     </td>
 
                     <td className="p-2 border text-center">
                       <div className="flex justify-center items-center gap-2">
                         <Link
-                          to={`/admin/washlets/detail/${item.id}`}
+                          to={`/admin/washlets/user/${item.user.id}`}
                           className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                           title="Xem chi tiết"
                         >
@@ -252,7 +247,7 @@ function WashletGetAll() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="text-center py-4 text-gray-500">
+                  <td colSpan={10} className="text-center py-4 text-gray-500">
                     Không có yêu cầu nào.
                   </td>
                 </tr>

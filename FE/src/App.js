@@ -167,7 +167,7 @@ const AppRoutes = () => {
           </Route>
           <Route path="washlets">
             <Route path="getAll" element={<WashletGetAll />} />
-            <Route path="detail/:id" element={<WalletDetail />} />
+            <Route path="user/:userId" element={<WalletDetail />} />
           </Route>
           <Route path="user">
             <Route path="getAll" element={<UserList />} />
