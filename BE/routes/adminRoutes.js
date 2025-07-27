@@ -20,7 +20,7 @@ const DashboardController = require('../controllers/Admin/dashboardController');
 const BlogController = require('../controllers/Admin/blogsController');
 const NotificationController = require('../controllers/Admin/notificationController');
 const ProductAttributeController = require('../controllers/Admin/product_attributesController');
-
+const BlogCategoryController = require('../controllers/Admin/blogCategoryController');
 const { notifyWishlistPromotions } = require('../controllers/Admin/cronJobController');
 const FlashSaleController = require('../controllers/Admin/flashSaleController');
 const WalletsController = require('../controllers/Admin/walletsController');
@@ -122,6 +122,16 @@ router.post('/user/:userId/addresses', AddressController.addAddress);
 //------------------[ CART ]------------------\
 router.get('/cart/list', CartController.getAllCart);
 router.get('/cart/user/:userId', CartController.getCartByUserId);
+
+
+//------------------[ Blog Category ]------------------\
+
+router.get('/blogcategory/list', BlogCategoryController.getAll);
+router.get('/blogcategory/:id', BlogCategoryController.getById);
+router.post('/blogcategory', BlogCategoryController.create);
+router.put('/blogcategory/:id', BlogCategoryController.update);
+router.delete('/blogcategory/:id', BlogCategoryController.delete);
+
 
 //------------------[ Blog ]------------------\
 router.get('/blog/list', BlogController.getAll);

@@ -229,7 +229,7 @@ export default function ProductsCompare() {
                             })}
                           </p>
                           <button
-                            className="block mx-auto text-xs text-blue-500 underline"
+                            className="block mx-auto text-xs text-blue-500 "
                             onClick={() => handleClearVariant(i)}
                           >
                             Xóa
@@ -240,9 +240,9 @@ export default function ProductsCompare() {
                   ))}
                 </tr>
 
-                {/* Các dòng thông tin khác */}
+
                 {[
-                  { label: "Tên sản phẩm", value: (v) => v?.productName || "-" },
+                  // { label: "Tên sản phẩm", value: (v) => v?.productName || "-" },
                   {
                     label: "Hình ảnh",
                     value: (v) => {
@@ -283,36 +283,36 @@ export default function ProductsCompare() {
                   </tr>
                 ))}
 
-{allAttributes
-  .filter((attr) =>
-   
-    selectedVariants.some((v) => v && getAttributeValue(v, attr) !== "-")
-  )
-  .map((attr) => (
-    <tr key={attr}>
-      <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">
-        {capitalizeFirstLetter(attr)}
-      </td>
-      {selectedVariants.map((v, i) => {
-        const value = v ? getAttributeValue(v, attr) : "-";
-        return (
-          <td key={i} className="text-center text-sm px-[26px] py-[20px]">
-            {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
-              value !== "-" ? (
-                <div
-                  className="w-6 h-6 rounded-full mx-auto border"
-                  style={{ backgroundColor: value }}
-                  title={value}
-                />
-              ) : "-"
-            ) : (
-              value
-            )}
-          </td>
-        );
-      })}
-    </tr>
-  ))}
+                {allAttributes
+                  .filter((attr) =>
+
+                    selectedVariants.some((v) => v && getAttributeValue(v, attr) !== "-")
+                  )
+                  .map((attr) => (
+                    <tr key={attr}>
+                      <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">
+                        {capitalizeFirstLetter(attr)}
+                      </td>
+                      {selectedVariants.map((v, i) => {
+                        const value = v ? getAttributeValue(v, attr) : "-";
+                        return (
+                          <td key={i} className="text-center text-sm px-[26px] py-[20px]">
+                            {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
+                              value !== "-" ? (
+                                <div
+                                  className="w-6 h-6 rounded-full mx-auto border"
+                                  style={{ backgroundColor: value }}
+                                  title={value}
+                                />
+                              ) : "-"
+                            ) : (
+                              value
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
 
 
               </tbody>

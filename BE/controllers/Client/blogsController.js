@@ -1,21 +1,44 @@
 const { Op } = require("sequelize"); 
 const Blog = require("../../models/blogsModel");
 const User = require("../../models/usersModel");
+const BlogCategory = require("../../models/blogsCategoryModel");
 class BlogController {
  static async getAllBlogs(req, res) {
   try {
+    const { category } = req.query;
+
+    let whereClause = {};
+
+    
+    if (category) {
+      const blogCategory = await BlogCategory.findOne({
+        where: { slug: category },
+      });
+
+      if (!blogCategory) {
+        return res.status(200).json({ blogs: [] }); 
+      }
+
+      whereClause.blogCategory_id = blogCategory.id;
+    }
+
     const blogs = await Blog.findAll({
+      where: whereClause,
       order: [["created_at", "DESC"]],
       include: [
         {
           model: User,
-          as: "user", 
-          attributes: ["id", "name"], 
+          as: "user",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BlogCategory,
+          as: "category",
+          attributes: ["id", "name", "slug"],
         },
       ],
     });
 
-   
     const result = blogs.map((blog) => ({
       id: blog.id,
       user_id: blog.user_id,
@@ -27,6 +50,8 @@ class BlogController {
       updated_at: blog.updated_at,
       meta_description: blog.meta_description,
       focus_keyword: blog.focus_keyword,
+      blog_category: blog.blog_category?.name || null,
+      blog_category_slug: blog.blog_category?.slug || null,
     }));
 
     res.status(200).json({ blogs: result });

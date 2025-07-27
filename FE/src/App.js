@@ -78,6 +78,9 @@ import AttributeEdit from "./pages/admin/product/attribute/detail";
 import AttributeCreate from "./pages/admin/product/attribute/create";
 import WashletGetAll from "./pages/admin/washlet/getAll";
 import WalletDetail from "./pages/admin/washlet/detail";
+import Blogcategory from "./pages/admin/blogcategory/getall/index.jsx";
+import BlogCategoryadd from "./pages/admin/blogcategory/add/index.jsx";
+import BlogCategoryEdit from "./pages/admin/blogcategory/edit/index.jsx";
 
 // Protected Route
 import GuestRoute from "./components/Auth/GuestRoute/index.jsx";
@@ -195,6 +198,11 @@ const AppRoutes = () => {
             <Route path="detail/:id" element={<BlogDetail />} />
             <Route path="add" element={<BlogAdd />} />
             <Route path="edit/:id" element={<EditBlog />} />
+          </Route>
+            <Route path="blogcategory">
+            <Route path="getAll" element={<Blogcategory />} />
+            <Route path="add" element={<BlogCategoryadd />} />
+            <Route path="edit/:id" element={<BlogCategoryEdit />} />
           </Route>
           <Route path="promotions">
             <Route path="getAll" element={<PromotionGetAll />} />

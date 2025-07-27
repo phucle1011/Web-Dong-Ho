@@ -21,7 +21,7 @@ const PromotionUserModel = require('./promotionUsersModel');
 const BlogModel = require('../models/blogsModel');
 const FlashSaleModel = require('./FlashSaleModel');
 const WithdrawRequestsModel = require('../models/withdrawRequestsModel');
-
+const BlogCategory = require('../models/blogsCategoryModel');
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
 // User - Address
@@ -41,6 +41,10 @@ CommentModel.belongsTo(ProductModel, { foreignKey: 'product_id', as: 'commentedP
 // Blog - User
 BlogModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 UserModel.hasMany(BlogModel, { foreignKey: 'user_id', as: 'blogs' });
+
+// Blog - blogCategory
+BlogModel.belongsTo(BlogCategory, { foreignKey: 'blogCategory_id',as: 'category' }); 
+BlogCategory.hasMany(BlogModel, { foreignKey: 'blogCategory_id' });
 
 // User - Comment
 CommentModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
@@ -205,4 +209,5 @@ module.exports = {
   CommentImageModel,
   FlashSaleModel,
   WithdrawRequestsModel,
+  BlogCategory,
 };

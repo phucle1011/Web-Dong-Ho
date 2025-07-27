@@ -1,3 +1,4 @@
+// Các import giữ nguyên
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -14,8 +15,9 @@ function EditBlog() {
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
   const [metaDescription, setMetaDescription] = useState("");
-  const [focusKeyword, setFocusKeyword] = useState("");
   const [userId, setUserId] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [blogCategoryId, setBlogCategoryId] = useState("");
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -25,29 +27,41 @@ function EditBlog() {
   const UPLOAD_PRESET = "duantotnghiep_preset";
 
   useEffect(() => {
-    fetch(`${Constants.DOMAIN_API}/admin/blog/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchBlog = async () => {
+      try {
+        const res = await fetch(`${Constants.DOMAIN_API}/admin/blog/${id}`);
+        const data = await res.json();
         setTitle(data.title);
         setContent(data.content);
         setUserId(data.user_id);
         setImagePreview(data.image_url);
         setMetaDescription(data.meta_description || "");
-        // setFocusKeyword(data.focus_keyword || "");
-      })
-      .catch(() => {
+        setBlogCategoryId(data.blogCategory_id || "");
+      } catch (err) {
         Swal.fire("Lỗi", "Không thể tải dữ liệu bài viết", "error");
-      });
+      }
+    };
+
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${Constants.DOMAIN_API}/admin/blogcategory/list`);
+        const data = await res.json();
+        setCategories(data.data || []);
+      } catch (error) {
+        console.error("Lỗi lấy danh mục:", error);
+      }
+    };
+
+    fetchBlog();
+    fetchCategories();
   }, [id]);
 
   const handleImageUpload = async () => {
     if (!image) return imagePreview;
-
     const formData = new FormData();
     formData.append("file", image);
     formData.append("upload_preset", UPLOAD_PRESET);
     setUploading(true);
-
     try {
       const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
         method: "POST",
@@ -66,8 +80,7 @@ function EditBlog() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const contentValue = editorRef.current?.getContent() || content;
-
-    if (!title || !contentValue || !userId) {
+    if (!title || !contentValue || !userId || !blogCategoryId) {
       Swal.fire("Cảnh báo", "Vui lòng nhập đầy đủ thông tin", "warning");
       return;
     }
@@ -84,7 +97,7 @@ function EditBlog() {
           image_url: imageUrl,
           user_id: userId,
           meta_description: metaDescription,
-          // focus_keyword: focusKeyword,
+          blogCategory_id: blogCategoryId,
         }),
       });
 
@@ -109,37 +122,23 @@ function EditBlog() {
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label fw-bold">Tiêu đề bài viết</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Nhập tiêu đề"
-                    required
-                  />
+                  <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Danh mục</label>
+                  <select className="form-select" value={blogCategoryId} onChange={(e) => setBlogCategoryId(e.target.value)} required>
+                    <option value="">-- Chọn danh mục --</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="mb-3">
                   <label className="form-label fw-bold">Mô tả bài viết</label>
-                  <textarea
-                    className="form-control"
-                    rows="3"
-                    value={metaDescription}
-                    onChange={(e) => setMetaDescription(e.target.value)}
-                    placeholder="Nhập meta description (70-160 ký tự)"
-                  />
+                  <textarea className="form-control" rows="3" value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} />
                 </div>
-
-                {/* <div className="mb-3">
-                  <label className="form-label fw-bold">Từ khóa trọng tâm (Focus Keyword)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={focusKeyword}
-                    onChange={(e) => setFocusKeyword(e.target.value)}
-                    placeholder="Nhập từ khóa trọng tâm"
-                  />
-                </div> */}
 
                 <label className="form-label fw-bold">Nội dung bài viết</label>
                 <Editor
@@ -149,19 +148,12 @@ function EditBlog() {
                   init={{
                     height: 400,
                     menubar: true,
-                    plugins: [
-                      "advlist", "autolink", "lists", "link", "image", "charmap", "preview", "anchor",
-                      "searchreplace", "visualblocks", "code", "fullscreen",
-                      "insertdatetime", "media", "table", "help", "wordcount"
-                    ],
-                    toolbar:
-                      "undo redo | formatselect | bold italic backcolor | \
-                       alignleft aligncenter alignright alignjustify | \
-                       bullist numlist outdent indent | image | help",
+                    plugins: ["advlist", "autolink", "lists", "link", "image", "charmap", "preview", "anchor", "searchreplace", "visualblocks", "code", "fullscreen", "insertdatetime", "media", "table", "help", "wordcount"],
+                    toolbar: "undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | image | help",
                     image_title: true,
                     automatic_uploads: true,
                     file_picker_types: "image",
-                    file_picker_callback: function (cb, value, meta) {
+                    file_picker_callback: function (cb) {
                       const input = document.createElement("input");
                       input.setAttribute("type", "file");
                       input.setAttribute("accept", "image/*");
@@ -183,39 +175,15 @@ function EditBlog() {
 
                 <div className="mb-3 mt-3">
                   <label className="form-label fw-bold">Ảnh đại diện</label>
-                  <input
-                    type="file"
-                    className="form-control"
-                    accept="image/*"
-                    onChange={(e) => setImage(e.target.files[0])}
-                  />
-                  {imagePreview && (
-                    <div className="mt-2">
-                      <img src={imagePreview} alt="preview" style={{ maxWidth: "200px" }} />
-                    </div>
-                  )}
+                  <input type="file" className="form-control" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+                  {imagePreview && <div className="mt-2"><img src={imagePreview} alt="preview" style={{ maxWidth: "200px" }} /></div>}
                   {uploading && <p className="text-info">Đang tải ảnh lên...</p>}
                 </div>
 
                 <div className="d-flex justify-content-start gap-2 mt-3">
-
-                  <button type="submit" className="btn btn-primary" disabled={uploading}>
-                    Cập nhật bài viết
-                  </button>
-                <button
-  type="button"
-  className="btn"
-  style={{
-    backgroundColor: "#6c757d", 
-    color: "#fff",
-    border: "none"
-  }}
-  onClick={() => navigate(-1)}
->
-  Quay lại
-</button>
+                  <button type="submit" className="btn btn-primary" disabled={uploading}>Cập nhật bài viết</button>
+                  <button type="button" className="btn" style={{ backgroundColor: "#6c757d", color: "#fff", border: "none" }} onClick={() => navigate(-1)}>Quay lại</button>
                 </div>
-
               </form>
             </div>
           </div>

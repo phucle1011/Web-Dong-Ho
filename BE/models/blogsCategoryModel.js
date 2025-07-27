@@ -1,27 +1,25 @@
+
 const connection = require('../config/database');
 const { DataTypes } = require('sequelize');
 
-const Blog = connection.define('Blog', {
+const BlogCategory = connection.define('BlogCategory', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
-  user_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  title: {
+  name: {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
-  image_url: {
+  slug: {
     type: DataTypes.STRING(255),
     allowNull: false,
+    unique: true,
   },
-  content: {
-    type: DataTypes.TEXT,
-    allowNull: false,
+  status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
   },
   created_at: {
     type: DataTypes.DATE,
@@ -30,20 +28,10 @@ const Blog = connection.define('Blog', {
   updated_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-  },
-  meta_description: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  blogCategory_id: { 
-    type: DataTypes.INTEGER,
-    allowNull: false ,
-  },
-
-
+  }
 }, {
-  tableName: 'blogs',
+  tableName: 'blog_categories',
   timestamps: false,
 });
 
-module.exports = Blog;
+module.exports = BlogCategory;

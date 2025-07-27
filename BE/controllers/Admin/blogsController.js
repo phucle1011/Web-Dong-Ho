@@ -1,8 +1,9 @@
 const Blog = require('../../models/blogsModel');
 const { Op } = require('sequelize');
 const User = require('../../models/usersModel');
+const BlogCategory = require('../../models/blogsCategoryModel');
 class BlogController {
-  // Lấy danh sách blog có hỗ trợ tìm kiếm theo tiêu đề + phân trang
+  
   static async getAll(req, res) {
     try {
       const { page = 1, limit = 5, search = "" } = req.query;
@@ -22,14 +23,19 @@ class BlogController {
         where: whereCondition,
         limit: Number(limit),
         offset: Number(offset),
-        order: [['created_at', 'DESC']],  
+        order: [['created_at', 'DESC']],
         include: [
-        {
-          model: User,
-          as: "user", 
-          attributes: ["id", "name"], 
-        },
-      ],
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "name"],
+          },
+          {
+            model: BlogCategory,
+            as: "category",
+            attributes: ["id", "name", "slug"],
+          },
+        ],
       });
 
       const totalPages = Math.ceil(totalItems / limit);
@@ -48,35 +54,40 @@ class BlogController {
   }
 
   static async getById(req, res) {
-  try {
-    const id = req.params.id;
-    const blog = await Blog.findOne({
-      where: { id },
-      order: [['created_at', 'DESC']],
-      include: [
-        {
-          model: User,
-          as: "user",
-          attributes: ["id", "name"],
-        },
-      ],
-    });
+    try {
+      const id = req.params.id;
+      const blog = await Blog.findOne({
+        where: { id },
+        order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "name"],
+          },
+          {
+            model: BlogCategory,
+            as: "category",
+            attributes: ["id", "name", "slug"],
+          },
+        ],
+      });
 
-    if (!blog) {
-      return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+      if (!blog) {
+        return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+      }
+
+      res.json(blog);
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi khi lấy bài viết', error: error.message });
     }
-
-    res.json(blog);
-  } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi lấy bài viết', error: error.message });
   }
-}
 
 
   static async create(req, res) {
     try {
-      const data = req.body; 
-      const { user_id, title, image_url, content, meta_description,  } = req.body;
+      const data = req.body;
+      const { user_id, title, image_url, content, meta_description, } = req.body;
 
       const newBlog = await Blog.create({
         user_id: data.user_id,
@@ -84,7 +95,8 @@ class BlogController {
         image_url: data.image_url,
         content: data.content,
         meta_description: data.meta_description,
-        // focus_keyword: data.focus_keyword,
+        blogCategory_id: data.blogCategory_id
+
       });
 
       res.status(201).json(newBlog);
@@ -103,11 +115,13 @@ class BlogController {
       image_url,
       content,
       meta_description,
-      // focus_keyword
+      blogCategory_id, 
     } = req.body;
 
     const blog = await Blog.findByPk(id);
-    if (!blog) return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+    if (!blog) {
+      return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+    }
 
     await blog.update({
       user_id,
@@ -115,7 +129,7 @@ class BlogController {
       image_url,
       content,
       meta_description,
-      // focus_keyword
+      blogCategory_id, 
     });
 
     res.json({ message: 'Cập nhật thành công', blog });
@@ -123,6 +137,8 @@ class BlogController {
     res.status(500).json({ message: 'Lỗi khi cập nhật bài viết', error: error.message });
   }
 }
+
+
 
 
   static async delete(req, res) {
