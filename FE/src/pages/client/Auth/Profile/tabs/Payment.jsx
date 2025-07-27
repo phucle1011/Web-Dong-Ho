@@ -296,20 +296,35 @@ export default function Payment() {
                             <>
                               <p><strong>Ngân hàng:</strong> {item.bank_name}</p>
                               <p><strong>Số tài khoản:</strong> {item.bank_account}</p>
+                              <p><strong>Ghi chú:</strong> {item.note}</p>
                             </>
                           )}
                           {type === "refund" && (
                             <>
-                              <p><strong>Đơn hàng:</strong> {item.order?.order_code || "—"}</p>
+                              <p><strong>Mã đơn hàng:</strong> {item.order?.order_code || "—"}</p>
+                              <p><strong>Phương thức thanh toán:</strong> {item.order?.payment_method || "—"}</p>
                               {item.order?.orderDetails?.map((d, i) => (
-                                <p key={i}><strong>Sản phẩm:</strong> {d.variant?.product?.name}</p>
+                                <p key={i}>
+                                  <strong>Sản phẩm:</strong> {d.variant?.product?.name || "—"} - <strong>SKU:</strong> {d.variant.sku || "—"}
+                                </p>
                               ))}
                             </>
                           )}
                           {type === "topup" && (
                             <>
                               <p><strong>Phương thức:</strong> {item.method?.toUpperCase() || "—"}</p>
-                              <p><strong>Mã giao dịch:</strong> {item.transaction_id || "—"}</p>
+                              <p><strong>Thời gian thực hiện:</strong>
+                                {(() => {
+                                  const date = new Date(item.created_at);
+                                  const pad = (n) => String(n).padStart(2, '0');
+                                  const h = pad(date.getUTCHours());
+                                  const m = pad(date.getUTCMinutes());
+                                  const s = pad(date.getUTCSeconds());
+                                  const d = pad(date.getUTCDate());
+                                  const mo = pad(date.getUTCMonth() + 1);
+                                  const y = date.getUTCFullYear();
+                                  return `${h}:${m}:${s} ${d}/${mo}/${y}`;
+                                })()} </p>
                             </>
                           )}
                         </div>

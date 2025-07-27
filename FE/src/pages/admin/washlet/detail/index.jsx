@@ -201,16 +201,17 @@ function WalletUserDetail() {
                                                 )}
                                                 {type === "refund" && (
                                                     <>
-                                                        <p><strong>Đơn hàng:</strong> {item.order?.order_code || "—"}</p>
+                                                        <p><strong>Mã đơn hàng:</strong> {item.order?.order_code || "—"}</p>
                                                         {item.order?.orderDetails?.map((d, i) => (
-                                                            <p key={i}><strong>Sản phẩm:</strong> {d.variant?.product?.name}</p>
+                                                            <p key={i}>
+                                                                <strong>Sản phẩm:</strong> {d.variant?.product?.name || "—"} - <strong>SKU:</strong> {d.variant.sku || "—"}
+                                                            </p>
                                                         ))}
                                                     </>
                                                 )}
                                                 {type === "topup" && (
                                                     <>
                                                         <p><strong>Phương thức:</strong> {item.method?.toUpperCase() || "—"}</p>
-                                                        <p><strong>Mã giao dịch:</strong> {item.transaction_id || "—"}</p>
                                                     </>
                                                 )}
                                             </div>
