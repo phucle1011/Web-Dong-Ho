@@ -71,7 +71,7 @@ function AddressList() {
               <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
                 <input
                   type="text"
-                  className="shadow border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border border-gray-300 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Tìm theo tên người dùng..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}

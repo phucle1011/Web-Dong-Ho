@@ -250,7 +250,7 @@ function PromotionGetAll() {
             <div className="flex flex-col sm:flex-row gap-3 mb-4 items-stretch sm:items-center flex-wrap">
                 <input
                     type="text"
-                    className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+                    className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
                     placeholder="Nhập tên khuyến mãi..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}

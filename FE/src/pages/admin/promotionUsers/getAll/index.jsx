@@ -394,7 +394,7 @@ function PromotionList() {
             value={promotionSearchInput}
             onChange={(e) => setPromotionSearchInput(e.target.value)}
             onKeyDown={handlePromotionKeyDown}
-            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             placeholder="Tìm kiếm theo tên hoặc mã..."
           />
           <button
@@ -544,7 +544,7 @@ function PromotionList() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             placeholder="Tìm kiếm theo tên hoặc email..."
           />
           <button
@@ -566,7 +566,7 @@ function PromotionList() {
               <table className="min-w-full divide-y divide-gray-200 text-sm table-fixed">
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 text-center w-12">
+                    <th className="p-3 text-center w-12 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={paginatedCustomers
@@ -576,11 +576,11 @@ function PromotionList() {
                         disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive'}
                       />
                     </th>
-                    <th className="border p-2 w-10">#</th>
-                    <th className="border p-2">Tên</th>
-                    <th className="border p-2">Email</th>
-                    <th className="border p-2">Số điện thoại</th>
-                    <th className="border p-2 w-32">Trạng thái</th>
+                    <th className="border p-2 w-10 whitespace-nowrap">#</th>
+                    <th className="border p-2 whitespace-nowrap">Tên</th>
+                    <th className="border p-2 whitespace-nowrap">Email</th>
+                    <th className="border p-2 whitespace-nowrap">Số điện thoại</th>
+                    <th className="border p-2 w-32 whitespace-nowrap">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

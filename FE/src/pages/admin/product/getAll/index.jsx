@@ -367,7 +367,7 @@ const categoryOptions = categories.map((cat) => ({
             value={searchInput}
             onChange={handleSearchInputChange}
             placeholder="Tìm kiếm theo tên sản phẩm..."
-            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
           />
        <Select

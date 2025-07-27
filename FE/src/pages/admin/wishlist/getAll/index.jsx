@@ -139,7 +139,7 @@ function WishlistList() {
             placeholder="Tìm kiếm..."
             value={searchTerm}
             onChange={handleSearchChange}
-            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           />
           <button onClick={handleSearchSubmit} className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

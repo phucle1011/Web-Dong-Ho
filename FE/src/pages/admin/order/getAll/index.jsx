@@ -323,7 +323,7 @@ function OrderGetAll() {
         <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
-            className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             placeholder="Nhập tên khách hàng..."
             value={searchTerm}
             onChange={handleSearchChange}

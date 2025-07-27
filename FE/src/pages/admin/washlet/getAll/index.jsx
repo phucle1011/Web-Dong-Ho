@@ -120,6 +120,9 @@ function WashletGetAll() {
     }
   };
 
+    const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
 
   return (
     <div className="container mx-auto p-2">
@@ -153,6 +156,25 @@ function WashletGetAll() {
               </button>
             );
           })}
+        </div>
+
+ <div className="mb-6 flex items-center gap-2">
+          <input
+            type="text"
+            className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
+            placeholder="Nhập tên khách hàng..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
+          <button
+            type="button"
+            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
+            onClick={() => fetchWallets(1)}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
+            </svg>
+          </button>
         </div>
 
         <div className="overflow-x-auto">

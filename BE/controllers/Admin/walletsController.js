@@ -78,7 +78,6 @@ class WalletsController {
               ? {
                 [Op.or]: [
                   { name: { [Op.like]: `%${searchTerm}%` } },
-                  { email: { [Op.like]: `%${searchTerm}%` } }
                 ]
               }
               : {},
