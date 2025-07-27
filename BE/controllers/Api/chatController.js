@@ -55,6 +55,9 @@ class ChatController {
       const isWarrantyIntent = ['bao hanh', 'doi tra'].some(kw => normalizedPrompt.includes(kw));
       const isShippingIntent = ['giao hang', 'van chuyen'].some(kw => normalizedPrompt.includes(kw));
       const isContactIntent = ['lien he', 'hotline', 'ho tro'].some(kw => normalizedPrompt.includes(kw));
+      const isVariantIntent = ['mau sac', 'mau', 'size', 'kich thuoc', 'day da', 'day kim loai', 'kieu', 'mat so', 'kích thước', 'chất liệu dây', 'chất liệu vỏ', 'chuyển động'].some(kw =>
+        normalizedPrompt.includes(kw)
+      );
 
       if (isWarrantyIntent) {
         return res.json({
@@ -78,7 +81,7 @@ class ChatController {
         });
       }
 
-      if (!isProductIntent && !isPromotionIntent) {
+      if (!isProductIntent && !isPromotionIntent && !isVariantIntent) {
         return res.json({
           reply: "Xin lỗi bạn, mình chưa rõ yêu cầu. Bạn có thể nói cụ thể hơn không ạ?",
           products: []

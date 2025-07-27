@@ -333,7 +333,7 @@ export default function CardPage({ cart = true }) {
                     <p className="text-red-500 text-sm mb-4">{error}</p>
                   )}
 
-                  <div className="voucher-section mb-6 max-w-md">
+                  <div className="voucher-section mb-6 max-w-md max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <h3 className="text-[16px] font-semibold text-gray-800 mb-3">Chọn Voucher</h3>
                     {isLoading ? (
                       <p className="text-gray-500">Đang tải danh sách voucher...</p>

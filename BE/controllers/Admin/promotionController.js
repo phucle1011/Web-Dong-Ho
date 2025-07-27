@@ -213,14 +213,14 @@ class PromotionController {
 
       const code = await PromotionController.generateUniquePromoCode();
       const isSpecial = Array.isArray(user_ids) && user_ids.length > 0;
-
+      const actualQuantity = isSpecial ? user_ids.length : Number(quantity);
 
       const promotion = await PromotionModel.create({
         name,
         description,
         discount_type,
         discount_value: Number(discount_value),
-        quantity: Number(quantity),
+        quantity: actualQuantity,
         start_date: start,
         end_date: end,
         status: promoStatus,
@@ -270,6 +270,9 @@ class PromotionController {
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
       const users = await UserModel.findAll({
+        where: {
+          status: 'active',
+        },
         include: [{
           model: OrderModel,
           as: 'orders',

@@ -146,6 +146,7 @@ class PromotionUserController {
       const users = await UserModel.findAll({
         where: {
           id: { [Op.notIn]: existingUserIds },
+          status: 'active'
         },
         attributes: ['id', 'name', 'email'],
         order: [['name', 'ASC']],
@@ -176,6 +177,15 @@ class PromotionUserController {
       }));
 
       await PromotionUserModel.bulkCreate(newEntries, { ignoreDuplicates: true });
+
+      const totalUsersInPromotion = await PromotionUserModel.count({
+        where: { promotion_id: promotionId }
+      });
+
+      await PromotionModel.update(
+        { quantity: totalUsersInPromotion },
+        { where: { id: promotionId } }
+      );
 
       return res.status(200).json({
         status: 200,

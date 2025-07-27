@@ -15,7 +15,7 @@ function PromotionCreate() {
   const [showUserList, setShowUserList] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [selectAllUsers, setSelectAllUsers] = useState(false);
-const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(false);
   const {
     control,
     register,
@@ -56,6 +56,15 @@ const [enabled, setEnabled] = useState(false);
     };
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (showUserList) {
+      const selectedUsers = getValues("user_ids");
+      if (Array.isArray(selectedUsers)) {
+        setValue("quantity", selectedUsers.length);
+      }
+    }
+  }, [watch("user_ids"), showUserList]);
 
   const generateCodeFromName = (name) => {
     if (!name) return "";
@@ -162,8 +171,8 @@ const [enabled, setEnabled] = useState(false);
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
       <h2 className="text-xl font-semibold mb-4">Thêm khuyến mãi mới</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 md:grid-cols-2">
-        <div className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit(onSubmit)} class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
           <div>
             <label className="block mb-1 font-medium">Tên khuyến mãi</label>
             <input
@@ -263,6 +272,9 @@ const [enabled, setEnabled] = useState(false);
               <p className="text-red-500 text-sm mt-1">{errors.discount_value.message}</p>
             )}
           </div>
+        </div>
+
+        <div class="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
 
           <div>
             <label className="block mb-1 font-medium">Số lượt áp dụng</label>
@@ -273,9 +285,15 @@ const [enabled, setEnabled] = useState(false);
                 min: { value: 0, message: "Số lượng phải >= 0" },
               })}
               className="w-full border rounded px-3 py-2"
+              disabled={showUserList}
             />
             {errors.quantity && (
               <p className="text-red-500 text-sm mt-1">{errors.quantity.message}</p>
+            )}
+            {showUserList && (
+              <p className="text-sm text-red-500 mt-1 italic">
+                Số lượt áp dụng sẽ tự động bằng số khách hàng đặc biệt được chọn.
+              </p>
             )}
           </div>
 
@@ -380,9 +398,11 @@ const [enabled, setEnabled] = useState(false);
               )}
             </div>
           )}
+
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div class="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
+
           <div>
             <label className="block mb-1 font-medium">Ngày bắt đầu</label>
             <Controller
@@ -432,30 +452,51 @@ const [enabled, setEnabled] = useState(false);
               <p className="text-red-500 text-sm mt-1">{errors.end_date.message}</p>
             )}
           </div>
+        </div>
 
-          <div>
-            <label className="block mb-1 font-medium">Áp dụng cho</label>
-            <select
-              {...register("applicable_to", { required: "Vui lòng chọn trường này" })}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option value="order">Đơn hàng</option>
-              <option value="product">Sản phẩm</option>
-            </select>
-            {errors.applicable_to && (
-              <p className="text-red-500 text-sm mt-1">{errors.applicable_to.message}</p>
-            )}
+        <div class="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
+          <div className="flex flex-col space-y-6">
+            <div>
+              <label className="block mb-1 font-medium">Áp dụng cho</label>
+              <select
+                {...register("applicable_to", { required: "Vui lòng chọn trường này" })}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="order">Đơn hàng</option>
+                <option value="product">Sản phẩm</option>
+              </select>
+              {errors.applicable_to && (
+                <p className="text-red-500 text-sm mt-1">{errors.applicable_to.message}</p>
+              )}
+            </div>
+
+            <div className="form-check form-switch d-flex align-items-center gap-2">
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id="statusSwitch"
+                {...register("status")}
+                defaultChecked={true}
+              />
+              <label
+                className="form-check-label"
+                htmlFor="statusSwitch"
+                style={{ minWidth: "70px", textAlign: "left" }}
+              >
+                {watch("status") ? "Hiển thị" : "Ẩn"}
+              </label>
+            </div>
           </div>
+        </div>
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <div>
-            <label className="block mb-1 font-medium">Trạng thái hiển thị</label>
-            <select
-              {...register("status_visibility")}
+            <label className="block mb-1 font-medium">Mô tả</label>
+            <textarea
+              {...register("description")}
               className="w-full border rounded px-3 py-2"
-            >
-              <option value="visible">Hiện</option>
-              <option value="hidden">Ẩn</option>
-            </select>
+              rows={5}
+            />
           </div>
 
           {applicableTo === "order" && (
@@ -508,23 +549,15 @@ const [enabled, setEnabled] = useState(false);
           )}
         </div>
 
-        <div className="col-span-2">
-          <label className="block mb-1 font-medium">Mô tả</label>
-          <textarea
-            {...register("description")}
-            className="w-full border rounded px-3 py-2"
-            rows={3}
-          />
-        </div>
-
-        <div className="mt-6 flex gap-4">
-          <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded mt-2 text-center">
+        <div className="md:col-span-2 mt-6 flex gap-6">
+          <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded">
             Tạo khuyến mãi
           </button>
 
           <button
+            type="button"
             onClick={() => navigate("/admin/promotions/getAll")}
-            className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 mt-2 text-center"
+            className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
           >
             Quay lại
           </button>
