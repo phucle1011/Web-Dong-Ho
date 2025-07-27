@@ -33,7 +33,6 @@ export default function Middlebar({ className, type }) {
         });
         setCount(res.data?.count ?? 0);
       } catch (err) {
-        // toast.error("Không thể lấy số lượng giỏ hàng.");
       }
     };
 
@@ -41,7 +40,6 @@ export default function Middlebar({ className, type }) {
       const decoded = decodeToken(token);
       const userId = decoded?.id;
       if (!userId) {
-        // toast.error("Không thể xác định ID người dùng từ token.");
         return;
       }
 
@@ -52,7 +50,6 @@ export default function Middlebar({ className, type }) {
         });
         setWishlistCount(response.data.data.length || 0);
       } catch (err) {
-        // toast.error("Không thể lấy số lượng danh sách yêu thích.");
       }
     };
 
@@ -71,51 +68,59 @@ export default function Middlebar({ className, type }) {
     return () => window.removeEventListener("storage", updateCompareCount);
   }, []);
 
-  const handleSearch = useCallback(async ({ keyword, brandIds, attributeValues, attributeIds }) => {
-    if (!brandIds && !keyword && !attributeValues?.length) {
-      toast.warn('Vui lòng chọn ít nhất một thương hiệu, nhập từ khóa hoặc kích thước.');
-      return;
-    }
-    try {
+  const handleSearch = useCallback(
+    async ({ keyword, brandIds, attributeValues, attributeIds }) => {
+      if (
+        !keyword?.trim() &&
+        (!brandIds || brandIds.length === 0) &&
+        (!attributeValues || attributeValues.length === 0)
+      ) {
+        toast.warn('Vui lòng nhập từ khóa hoặc chọn bộ lọc.');
+        return;
+      }
+
       setIsLoading(true);
-      console.log('Search params received:', { keyword, brandIds, attributeValues, attributeIds });
-      const brandIdsParam = brandIds || 'all';
-      const params = {
-        brandIds: brandIdsParam,
-        page: 1,
-        limit: 10,
-      };
-      // Gửi keyword nếu không có attributeValues, hoặc attributeValues nếu có
-      if (keyword && !attributeValues?.length) {
-        params.keyword = keyword;
-      } else if (attributeValues?.length > 0) {
-        params.attribute_values = attributeValues; // Gửi attributeValues làm từ khóa thuộc tính
-        if (attributeIds?.length > 0) {
-          params.attribute_ids = attributeIds;
+      try {
+        const params = { page: 1, limit: 10 };
+
+        if (keyword?.trim()) {
+          params.keyword = keyword.trim();
         }
-      } else if (keyword) {
-        params.attribute_values = [keyword]; // Xử lý keyword như attributeValues nếu không có giá trị cụ thể
-      }
-      const response = await axios.get(`${Constants.DOMAIN_API}/products/search`, {
-        params,
-      });
-      console.log('API response (full):', response);
-      if (response.data.status === 200) {
-        console.log('API data:', response.data.data);
-        setProducts(response.data.data || []);
-        setIsSearchDialogOpen(true);
-      } else {
-        toast.error(`Lỗi từ server: ${response.data.message || 'Không thể tải danh sách sản phẩm.'}`);
+
+        if (brandIds?.length) {
+          params.brand_ids = brandIds;
+        }
+
+        if (!keyword?.trim() && attributeValues?.length) {
+          params.attribute_values = attributeValues;
+          if (attributeIds?.length) {
+            params.attribute_ids = attributeIds;
+          }
+        }
+
+        const { data } = await axios.get(
+          `${Constants.DOMAIN_API}/products/search`,
+          { params }
+        );
+
+        if (data.status === 200) {
+          setProducts(data.data);
+          setIsSearchDialogOpen(true);
+        } else {
+          toast.error(data.message || 'Không thể tải sản phẩm.');
+          setProducts([]);
+        }
+      } catch (err) {
+        console.error('Search error', err);
+        toast.error('Lỗi khi tìm kiếm, thử lại sau.');
         setProducts([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching products (details):', error.response || error);
-      toast.error('Có lỗi xảy ra khi tải danh sách sản phẩm. Vui lòng thử lại.');
-      setProducts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
+
 
   const handleProductClick = () => {
     setIsSearchDialogOpen(false);
@@ -206,7 +211,7 @@ export default function Middlebar({ className, type }) {
                     alt="logo"
                   />
                 </Link>
-                
+
               )}
             </div>
             <div className="w-[517px] h-[44px]">
@@ -228,7 +233,7 @@ export default function Middlebar({ className, type }) {
                 )}
               </div>
 
-  <div className="compaire relative">
+              <div className="compaire relative">
                 <Link to="/notification">
                   <span>
                     <Compair />
@@ -243,7 +248,7 @@ export default function Middlebar({ className, type }) {
                   </span>
                 )}
               </div>
-              
+
               <div className="cart-wrapper group relative py-4">
                 <div className="cart relative cursor-pointer">
                   <Link to="/wishlist">

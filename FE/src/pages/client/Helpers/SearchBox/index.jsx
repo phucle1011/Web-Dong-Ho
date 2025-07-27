@@ -9,122 +9,120 @@ export default function SearchBox({ className, type, onSearch }) {
   const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
 
   useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const response = await axios.get(`${Constants.DOMAIN_API}/brands/active`, {
-          params: { page: 1, limit: 100 },
-        });
-        if (response.data.status === 200) {
-          setBrands(response.data.data);
+    axios
+      .get(`${Constants.DOMAIN_API}/brands/active`, { params: { page: 1, limit: 100 } })
+      .then(res => {
+        if (res.data.status === 200) {
+          setBrands(res.data.data);
         }
-      } catch (error) {
-        console.error('SearchBox - Lỗi khi lấy danh sách thương hiệu:', error);
-      }
-    };
-
-    fetchBrands();
+      })
+      .catch(err => console.error("SearchBox fetch brands:", err));
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = e => {
     e.preventDefault();
-    const trimmedKeyword = keyword.trim();
-    const isSizeSearch = /^\d+mm$/.test(trimmedKeyword); // Kiểm tra kích thước
-    const searchParams = {
-      keyword: isSizeSearch ? '' : trimmedKeyword, // Nếu là kích thước, không dùng keyword
-      brandIds: selectedBrands.length > 0 ? selectedBrands : null,
-      attributeValues: trimmedKeyword ? [trimmedKeyword] : [], // Luôn gửi attributeValues cho mọi giá trị
-      attributeIds: isSizeSearch ? [17] : [], // Chỉ gửi attributeIds=17 cho kích thước
-    };
-    console.log('Search params sent:', searchParams); // Debug
-    onSearch(searchParams);
+    const t = keyword.trim();
+    const isSize  = /^\d+mm$/i.test(t);
+    const isColor = /^#([0-9A-Fa-f]{6})$/.test(t);
+
+    const params = { page: 1, limit: 10 };
+    if (selectedBrands.length) {
+      params.brand_ids = selectedBrands;
+    }
+
+    if (isSize) {
+      params.keyword = "";
+      params.attributeValues = [];
+      params.attributeIds = [17]; // ví dụ id thuộc tính size
+    } else if (isColor) {
+      params.keyword = "";
+      params.attributeValues = [t.toLowerCase()];
+      params.attributeIds = [];
+    } else {
+      params.keyword = t;
+      params.attributeValues = [];
+      params.attributeIds = [];
+    }
+
+    onSearch(params);
   };
 
-  const toggleBrand = (brandId) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]
+  const toggleBrand = id =>
+    setSelectedBrands(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
-  };
+  const toggleAll  = () =>
+    setSelectedBrands(prev =>
+      prev.length === brands.length ? [] : brands.map(b => b.id)
+    );
 
-  const toggleAllBrands = () => {
-    setSelectedBrands((prev) =>
-      prev.length === brands.length ? [] : brands.map((brand) => brand.id)
-    );
-  };
+  const showColorSquare = /^#([0-9A-Fa-f]{6})$/.test(keyword.trim());
 
   return (
-    <div
-      className={`w-full h-full flex items-center border border-qgray-border bg-white ${className || ""}`}
-    >
-      <div className="flex-1 h-full">
-        <form onSubmit={handleSubmit} className="h-full">
-          <input
-            type="text"
-            className="search-input w-full h-full px-4 py-2 text-sm focus:outline-none"
-            placeholder="Tìm sản phẩm, kích thước (39mm), chất liệu (Vàng Trắng 18k), bộ máy (Rolex Calibre 7140)..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+    <div className={`w-full h-full flex items-center border bg-white ${className || ""}`}>
+      <form onSubmit={handleSubmit} className="flex-1 h-full relative">
+        {showColorSquare && (
+          <div
+            style={{
+              width: 20,
+              height: 20,
+              backgroundColor: keyword.trim(),
+              border: "1px solid #ccc",
+              borderRadius: 4,
+              position: "absolute",
+              left: 8,
+              top: "50%",
+              transform: "translateY(-50%)",
+            }}
           />
-        </form>
-      </div>
-      <div className="w-[1px] h-[22px] bg-qgray-border"></div>
-      <div className="relative flex-1 flex items-center px-4">
+        )}
+        <input
+          type="text"
+          className="w-full h-full px-4 py-2 text-sm focus:outline-none"
+          placeholder="Tìm sản phẩm, màu (#a75716), size (39mm)..."
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+          style={{ paddingLeft: showColorSquare ? 36 : undefined }}
+        />
+      </form>
+
+      <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+      <div className="relative px-2">
         <button
           type="button"
-          onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
-          className="w-full text-xs font-500 text-qgray flex justify-between items-center"
+          onClick={() => setIsBrandDropdownOpen(o => !o)}
+          className="text-xs text-gray-600 flex items-center"
         >
-          <span>Tất cả thương hiệu</span>
-          <span>
-            <svg
-              width="10"
-              height="5"
-              viewBox="0 0 10 5"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <rect
-                x="9.18359"
-                y="0.90918"
-                width="5.78538"
-                height="1.28564"
-                transform="rotate(135 9.18359 0.90918)"
-                fill="#8E8E8E"
-              />
-              <rect
-                x="5.08984"
-                y="5"
-                width="5.78538"
-                height="1.28564"
-                transform="rotate(-135 5.08984 5)"
-                fill="#8E8E8E"
-              />
-            </svg>
-          </span>
+          Tất cả thương hiệu
+          <svg width="10" height="5" className="ml-1">
+            <path d="M0 0 L5 5 L10 0" stroke="#888" fill="none" />
+          </svg>
         </button>
         {isBrandDropdownOpen && (
-          <div className="absolute left-0 top-full w-[200px] bg-white border border-gray-200 shadow-lg rounded z-50 max-h-[300px] overflow-y-auto">
+          <div className="absolute left-0 top-full bg-white border shadow-lg rounded mt-1 z-50 w-48 max-h-60 overflow-y-auto">
             <ul className="p-2">
               <li className="py-1">
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={selectedBrands.length === brands.length}
-                    onChange={toggleAllBrands}
+                    onChange={toggleAll}
                     className="form-checkbox"
                   />
                   <span className="text-sm text-gray-600">Tất cả</span>
                 </label>
               </li>
-              {brands.map((brand) => (
-                <li key={brand.id} className="py-1">
+              {brands.map(b => (
+                <li key={b.id} className="py-1">
                   <label className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      checked={selectedBrands.includes(brand.id)}
-                      onChange={() => toggleBrand(brand.id)}
+                      checked={selectedBrands.includes(b.id)}
+                      onChange={() => toggleBrand(b.id)}
                       className="form-checkbox"
                     />
-                    <span className="text-sm text-gray-600">{brand.name}</span>
+                    <span className="text-sm text-gray-600">{b.name}</span>
                   </label>
                 </li>
               ))}
@@ -132,10 +130,12 @@ export default function SearchBox({ className, type, onSearch }) {
           </div>
         )}
       </div>
+
       <button
         onClick={handleSubmit}
-        className={`w-[93px] h-full text-sm font-600 ${type === 3 ? "bg-qh3-blue text-white" : "bg-gray-200 text-qblack"}`}
-        type="button"
+        className={`ml-2 px-4 py-2 text-sm ${
+          type === 3 ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"
+        }`}
       >
         Tìm kiếm
       </button>

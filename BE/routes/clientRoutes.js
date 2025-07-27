@@ -45,7 +45,7 @@ router.get('/wallets', checkJWT, WalletsController.get);
 router.post('/wallets/transactions', checkJWT, WalletsController.requestWithdraw);
 router.get('/wallets/topups', checkJWT, WalletsController.getTopupHistory);
 
-// ------------------[ Search ]------------------//
+// ------------------[ SEARCH ]------------------//
 router.get('/products/search', SearchController.searchProducts);
 
 //------------------[ CHATBOX ]------------------//
