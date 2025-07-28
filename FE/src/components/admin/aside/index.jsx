@@ -1,4 +1,4 @@
-import { FaTachometerAlt, FaUser, FaMoneyBillWave, FaMapMarkerAlt,FaPen,FaPenNib, FaTag, FaPercent, FaCogs, FaTags, FaBoxOpen, FaBox, FaShoppingCart, FaHeart, FaHistory, FaCommentDots, FaBell } from "react-icons/fa";
+import { FaTachometerAlt, FaUser, FaListAlt, FaMoneyBillWave, FaMapMarkerAlt, FaGavel, FaPen, FaPenNib, FaTag, FaPercent, FaCogs, FaTags, FaBoxOpen, FaBox, FaShoppingCart, FaHeart, FaHistory, FaCommentDots, FaBell } from "react-icons/fa";
 import { MdDirectionsBus, MdFeedback } from "react-icons/md";
 import { Link, useLocation } from "react-router-dom";
 
@@ -63,14 +63,14 @@ function Aside() {
             <li className={`sidebar-item ${location.pathname === "/admin/promotion-products/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link d-flex align-items-center" to="/admin/promotion-products/getAll" title="Quản lý sản phẩm khuyến mãi">
                 <FaTag />
-                <span className="hide-menu text-truncate"style={{ maxWidth: '150px'}}>
-                Quản lý sản phẩm khuyến mãi
+                <span className="hide-menu text-truncate" style={{ maxWidth: '150px' }}>
+                  Quản lý sản phẩm khuyến mãi
                 </span>
               </Link>
             </li> <li className={`sidebar-item ${location.pathname === "/admin/promotionusers/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link" to="/admin/promotionusers/getAll">
                 <FaTags />
-                <span className="hide-menu text-truncate" style={{ maxWidth: '150px'}}>Quản lý khách hàng đặc biệt</span>
+                <span className="hide-menu text-truncate" style={{ maxWidth: '150px' }}>Quản lý khách hàng đặc biệt</span>
               </Link>
             </li>
 
@@ -97,6 +97,25 @@ function Aside() {
             </li>
 
             <li className="nav-small-cap">
+              <span className="hide-menu">Quản lý đấu giá</span>
+            </li>
+
+            <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link d-flex align-items-center" to="/admin/wishlist/getAll" title="Quản lý sản phẩm đấu giá">
+                <FaGavel  />
+                <span className="hide-menu text-truncate" style={{ maxWidth: "160px", display: "inline-block", whiteSpace: "nowrap", overflow: "hidden" }}>
+                  Quản lý sản phẩm đấu giá
+                </span>
+              </Link>
+            </li>
+            <li className={`sidebar-item ${location.pathname === "/admin/washlets/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/washlets/getAll">
+                <FaListAlt  />
+                <span className="hide-menu">Quản lý đấu giá</span>
+              </Link>
+            </li>
+
+            <li className="nav-small-cap">
               <span className="hide-menu">Quản lý người dùng</span>
             </li>
             <li className={`sidebar-item ${location.pathname === "/admin/user/getAll" ? "active" : ""}`}>
@@ -105,18 +124,18 @@ function Aside() {
                 <span className="hide-menu">Quản lý người dùng</span>
               </Link>
             </li>
-<li className={`sidebar-item ${location.pathname === "/admin/blogcategory/getAll" ? "active" : ""}`}>
-  <Link className="sidebar-link" to="/admin/blogcategory/getAll">
-    <FaPen /> {/* icon cây viết */}
-    <span className="hide-menu">Quản lý loại bài viết</span>
-  </Link>
-</li>
-<li className={`sidebar-item ${location.pathname === "/admin/blog/getAll" ? "active" : ""}`}>
-  <Link className="sidebar-link" to="/admin/blog/getAll">
-    <FaPenNib /> {/* icon tay cầm viết */}
-    <span className="hide-menu">Quản lý bài viết</span>
-  </Link>
-</li>
+            <li className={`sidebar-item ${location.pathname === "/admin/blogcategory/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/blogcategory/getAll">
+                <FaPen /> {/* icon cây viết */}
+                <span className="hide-menu">Quản lý loại bài viết</span>
+              </Link>
+            </li>
+            <li className={`sidebar-item ${location.pathname === "/admin/blog/getAll" ? "active" : ""}`}>
+              <Link className="sidebar-link" to="/admin/blog/getAll">
+                <FaPenNib /> {/* icon tay cầm viết */}
+                <span className="hide-menu">Quản lý bài viết</span>
+              </Link>
+            </li>
             <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link d-flex align-items-center" to="/admin/wishlist/getAll" title="Quản lý sản phẩm yêu thích">
                 <FaHeart />
