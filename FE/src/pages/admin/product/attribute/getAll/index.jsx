@@ -10,7 +10,7 @@ import {
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
   FaTrashAlt,
-  FaEdit
+  FaEdit,
 } from "react-icons/fa";
 
 function AttributeGetAll() {
@@ -45,7 +45,9 @@ function AttributeGetAll() {
     if (!selectedAttribute) return;
 
     try {
-      await axios.delete(`${Constants.DOMAIN_API}/admin/attribute/${selectedAttribute.id}`);
+      await axios.delete(
+        `${Constants.DOMAIN_API}/admin/attribute/${selectedAttribute.id}`
+      );
       toast.error("Xoá thuộc tính thành công");
       if (attributes.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -87,7 +89,9 @@ function AttributeGetAll() {
         <button
           key={i}
           onClick={() => handlePageChange(i)}
-          className={`px-3 py-1 border rounded ${i === currentPage ? "bg-blue-600 text-white" : "bg-white"}`}
+          className={`px-3 py-1 border rounded ${
+            i === currentPage ? "bg-blue-600 text-white" : "bg-white"
+          }`}
         >
           {i}
         </button>
@@ -133,24 +137,23 @@ function AttributeGetAll() {
 
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
-   <div className="flex justify-between items-center mb-4">
-  <h2 className="text-xl font-semibold">Danh sách thuộc tính</h2>
-  <div className="flex gap-2">
-    <Link
-      to="/admin/products/getAll"
-      className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
-    >
-      ← Quay lại sản phẩm
-    </Link>
-    <Link
-      to="/admin/attribute/create"
-      className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
-    >
-      + Thêm thuộc tính
-    </Link>
-  </div>
-</div>
-
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Danh sách thuộc tính</h2>
+        <div className="flex gap-2">
+          <Link
+            to="/admin/products/getAll"
+            className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+          >
+            ← Quay lại sản phẩm
+          </Link>
+          <Link
+            to="/admin/attribute/create"
+            className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
+          >
+            + Thêm thuộc tính
+          </Link>
+        </div>
+      </div>
 
       <div className="mb-4 flex gap-2">
         <input
@@ -167,9 +170,19 @@ function AttributeGetAll() {
           onClick={handleSearch}
           className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
         >
-         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
-            </svg>
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z"
+            />
+          </svg>
         </button>
       </div>
 
@@ -195,16 +208,19 @@ function AttributeGetAll() {
               <td className="border p-2 text-center space-x-2">
                 <Link
                   to={`/admin/attribute/edit/${attr.id}`}
-                 className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                  className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                 >
                   <FaEdit size={20} className="font-bold" />
                 </Link>
-                <button
-                  onClick={() => setSelectedAttribute(attr)}
-                  className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                >
-                  <FaTrashAlt size={20} className="font-bold" />
-                </button>
+                {!attr.isReferenced && (
+                  <button
+                    onClick={() => setSelectedAttribute(attr)}
+                    className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                    title="Xoá thuộc tính"
+                  >
+                    <FaTrashAlt size={20} className="font-bold" />
+                  </button>
+                )}
               </td>
             </tr>
           ))}

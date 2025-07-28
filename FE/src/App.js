@@ -72,6 +72,8 @@ import BrandDetail from "./pages/admin/brand/detail";
 import BrandCreate from "./pages/admin/brand/Create";
 import NotificationList from "./pages/admin/notification/getAll";
 import NotificationSendAll from "./pages/admin/notification/Create";
+import NotificationEdit from "./pages/admin/notification/Edit";
+
 import PromotionList from "./pages/admin/promotionUsers/getAll";
 import Attribute from "./pages/admin/product/attribute/getAll";
 import AttributeEdit from "./pages/admin/product/attribute/detail";
@@ -239,6 +241,8 @@ const AppRoutes = () => {
           <Route path="notification">
             <Route path="getAll" element={<NotificationList />} />
             <Route path="create" element={<NotificationSendAll />} />
+            <Route path="edit/:id" element={<NotificationEdit />} />
+
           </Route>
           <Route path="promotionusers">
             <Route path="getAll" element={<PromotionList />} />

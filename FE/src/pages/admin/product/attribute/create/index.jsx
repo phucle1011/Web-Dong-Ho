@@ -24,7 +24,7 @@ function AttributeCreate() {
 
         const cleanedData = {
             ...formData,
-            name: formData.name.trim().replace(/\s+/g, " "),
+            name: formData.name.trim(),
         };
 
         try {

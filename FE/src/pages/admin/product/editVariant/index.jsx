@@ -243,7 +243,7 @@ const EditVariantForm = () => {
                 (item) => item.id === parseInt(attr.attribute_id)
               );
               const isColor =
-                selectedAttr?.name.toLowerCase() === "color" ||
+                selectedAttr?.name.toLowerCase() === "màu sắc" ||
                 selectedAttr?.name.toLowerCase() === "màu";
 
               return (

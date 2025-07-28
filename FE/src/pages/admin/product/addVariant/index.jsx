@@ -165,7 +165,7 @@ function AddVariantForm() {
       const selectedAttr = allAttributes.find(
         (a) => a.id.toString() === attr.attribute_id.toString()
       );
-      const isColor = selectedAttr?.name?.toLowerCase() === "color";
+      const isColor = selectedAttr?.name?.toLowerCase() === "màu sắc";
 
       return (
         <div key={index} className="flex gap-4 mb-2 items-center">

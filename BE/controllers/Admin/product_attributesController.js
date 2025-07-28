@@ -1,51 +1,78 @@
 const ProductAttributeModel = require('../../models/productAttributesModel');
+const ProductVariantAttributeValuesModel  = require('../../models/productVariantAttributeValuesModel');
+
 const { Op } = require('sequelize');
 
 class ProductAttributeController {
   // Lấy danh sách thuộc tính với tìm kiếm và phân trang
-  static async getAll(req, res) {
-    const { searchTerm = '', page = 1, limit = 10 } = req.query;
-    const pageNumber = parseInt(page);
-    const pageSize = parseInt(limit);
-    const offset = (pageNumber - 1) * pageSize;
 
-    try {
-      const whereClause = searchTerm
-        ? {
-            name: {
-              [Op.like]: `%${searchTerm}%`,
-            },
-          }
-        : {};
+static async getAll(req, res) {
+  const { searchTerm = '', page = 1, limit = 10 } = req.query;
+  const pageNumber = parseInt(page);
+  const pageSize = parseInt(limit);
+  const offset = (pageNumber - 1) * pageSize;
 
-      const { rows: attributes, count: totalItems } = await ProductAttributeModel.findAndCountAll({
-        where: whereClause,
-        limit: pageSize,
-        offset,
-        order: [['created_at', 'DESC']],
-      });
+  try {
+    const whereClause = searchTerm
+      ? {
+          name: {
+            [Op.like]: `%${searchTerm}%`,
+          },
+        }
+      : {};
 
-      const totalPages = Math.ceil(totalItems / pageSize);
+    const { rows: attributes, count: totalItems } = await ProductAttributeModel.findAndCountAll({
+      where: whereClause,
+      limit: pageSize,
+      offset,
+      order: [['created_at', 'DESC']],
+    });
 
-      res.status(200).json({
-        status: 200,
-        message: 'Lấy danh sách thuộc tính thành công',
-        data: attributes,
-        pagination: {
-          totalItems,
-          totalPages,
-          currentPage: pageNumber,
-          perPage: pageSize,
+    // 🔍 Lấy danh sách id của attributes
+    const attributeIds = attributes.map((attr) => attr.id);
+
+    // 🔍 Tìm các product_attribute_id đang được dùng trong bảng value
+    const referenced = await ProductVariantAttributeValuesModel.findAll({
+      attributes: ['product_attribute_id'],
+      where: {
+        product_attribute_id: {
+          [Op.in]: attributeIds,
         },
-      });
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách thuộc tính:', error);
-      res.status(500).json({
-        status: 500,
-        message: 'Lỗi server khi lấy danh sách thuộc tính.',
-      });
-    }
+      },
+      group: ['product_attribute_id'],
+      raw: true,
+    });
+
+    const referencedIds = referenced.map((r) => r.product_attribute_id);
+
+    // ✅ Gắn isReferenced vào mỗi attribute
+    const enrichedAttributes = attributes.map((attr) => ({
+      ...attr.toJSON(),
+      isReferenced: referencedIds.includes(attr.id),
+    }));
+
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    return res.status(200).json({
+      status: 200,
+      message: 'Lấy danh sách thuộc tính thành công',
+      data: enrichedAttributes,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: pageNumber,
+        perPage: pageSize,
+      },
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách thuộc tính:', error);
+    return res.status(500).json({
+      status: 500,
+      message: 'Lỗi server khi lấy danh sách thuộc tính.',
+    });
   }
+}
+
 
   // Tạo mới thuộc tính
   static async create(req, res) {
@@ -58,7 +85,7 @@ class ProductAttributeController {
       });
     }
 
-    const normalizedName = name.trim().replace(/\s+/g, ' ').toLowerCase();
+    const normalizedName = name.trim().replace(/\s+/g, ' ');
 
     try {
       const existingAttribute = await ProductAttributeModel.findOne({

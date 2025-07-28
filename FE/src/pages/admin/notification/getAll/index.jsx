@@ -14,6 +14,7 @@ import {
   FaChevronDown,
   FaChevronUp,
 } from "react-icons/fa";
+import FormDelete from "../../../../components/formDelete";
 
 const STATUS_VI = {
   1: "Hiển thị",
@@ -64,7 +65,9 @@ const NotificationList = () => {
 
   const confirmDelete = async () => {
     try {
-      const res = await axios.delete(`${Constants.DOMAIN_API}/admin/flashSale/${deleteItem.id}`);
+      const res = await axios.delete(
+        `${Constants.DOMAIN_API}/admin/flashSale/${deleteItem.id}`
+      );
       toast.success(res.data.message || "Xóa thành công");
       fetchNotifications();
     } catch (err) {
@@ -102,11 +105,10 @@ const NotificationList = () => {
     }
   };
 
-
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Danh sách Flash Sale</h2>
+        <h2 className="text-xl font-semibold">Quản lý thông báo khuyến mãi</h2>
         <Link
           to="/admin/notification/create"
           className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
@@ -145,145 +147,202 @@ const NotificationList = () => {
       ) : error ? (
         <div className="text-center text-red-600 py-6">{error}</div>
       ) : paginatedNotifications.length === 0 ? (
-        <div className="text-center text-gray-500 py-6">Không có Flash Sale nào.</div>
+        <div className="text-center text-gray-500 py-6">
+          Không có khuyến mãi nào.
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-auto border border-collapse border-gray-300">
-  <thead className="bg-gray-100">
-    <tr>
-      <th className="border p-2 text-center">#</th>
-      <th className="border p-2">Ảnh</th>
-      <th className="border p-2">Tiêu đề</th>
-      <th className="border p-2">Trạng thái</th>
-      <th className="border p-2">Hành động</th>
-    </tr>
-  </thead>
-  <tbody>
-    {paginatedNotifications.map((noti, idx) => {
-      const isExpanded = expandedRow === noti.id;
-      const status = noti.status;
-      const stt = (currentPage - 1) * itemsPerPage + idx + 1;
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="border p-2 text-center">#</th>
+                <th className="border p-2">Ảnh</th>
+                <th className="border p-2">Tiêu đề</th>
+                <th className="border p-2">Trạng thái</th>
+                <th className="border p-2">Thời gian</th> {/* Thêm dòng này */}
+                <th className="border p-2">Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedNotifications.map((noti, idx) => {
+                const isExpanded = expandedRow === noti.id;
+                const status = noti.status;
+                const stt = (currentPage - 1) * itemsPerPage + idx + 1;
 
-      return (
-        <React.Fragment key={noti.id}>
-          <tr className="hover:bg-gray-50">
-            <td className="border p-2 text-center">{stt}</td>
-            <td className="border p-2 text-center">
-              {noti.thumbnail ? (
-                <img
-                  src={noti.thumbnail}
-                  alt="thumb"
-                  className="w-12 h-12 object-cover rounded mx-auto"
-                />
-              ) : (
-                <span className="inline-block w-12 h-12 bg-gray-200 rounded" />
-              )}
-            </td>
-            <td className="border p-2 font-medium">{noti.title}</td>
-            <td className="border p-2 text-center">
-              <span
-                className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}
-              >
-                {STATUS_VI[status] || "Không xác định"}
-              </span>
-            </td>
-            <td className="border p-2 text-center">
-  <Link
-    to={`/admin/notification/edit/${noti.id}`}
-    className="p-2 rounded w-8 h-8 inline-flex items-center justify-center bg-yellow-500 text-white hover:bg-yellow-600"
-    title="Sửa"
-  >
-    <FaEdit size={20} />
-  </Link>
+                return (
+                  <React.Fragment key={noti.id}>
+                    <tr className="hover:bg-gray-50">
+                      <td className="border p-2 text-center">{stt}</td>
+                      <td className="border p-2 text-center">
+                        {noti.thumbnail ? (
+                          <img
+                            src={noti.thumbnail}
+                            alt="thumb"
+                            className="w-12 h-12 object-cover rounded mx-auto"
+                          />
+                        ) : (
+                          <span className="inline-block w-12 h-12 bg-gray-200 rounded" />
+                        )}
+                      </td>
+                      <td className="border p-2 font-medium">{noti.title}</td>
+                      <td className="border p-2 text-center">
+                        <span
+                          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                            status
+                          )}`}
+                        >
+                          {STATUS_VI[status] || "Không xác định"}
+                        </span>
+                      </td>
+                      <td className="border p-2 text-sm text-center text-blue-700">
+                        {(() => {
+                          const now = new Date();
+                          const start = new Date(noti.start_date);
+                          const end = new Date(noti.end_date);
 
-  <button
-    className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-onClick={() => handleDeleteClick()}
-    title="Xóa"
-  >
-    <FaTrashAlt size={20} />
-  </button>
+                          if (now < start) {
+                            const diff = Math.ceil(
+                              (start - now) / (1000 * 60 * 60 * 24)
+                            );
+                            return `Còn ${diff} ngày nữa bắt đầu`;
+                          } else if (now >= start && now <= end) {
+                            const diff = Math.ceil(
+                              (end - now) / (1000 * 60 * 60 * 24)
+                            );
+                            return `Còn ${diff} ngày nữa kết thúc`;
+                          } else {
+                            return "Đã kết thúc";
+                          }
+                        })()}
+                      </td>
 
-  <button
-    onClick={() => setExpandedRow(isExpanded ? null : noti.id)}
-    className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-    title={isExpanded ? "Ẩn" : "Xem thêm"}
-  >
-    {isExpanded ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
-  </button>
-</td>
+                      <td className="p-2 border">
+                        <div className="flex gap-2 justify-center">
+                          <Link
+                            to={`/admin/notification/edit/${noti.id}`}
+                            className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                            title="Sửa thông báo"
+                          >
+                            <FaEdit size={20} className="font-bold" />
+                          </Link>
 
-          </tr>
+                          <button
+                            onClick={() => handleDeleteClick(noti)}
+                            className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                            title="Xoá thông báo"
+                          >
+                            <FaTrashAlt size={20} className="font-bold" />
+                          </button>
 
-          {isExpanded && (
-            <tr>
-              <td colSpan={5} className="p-2 bg-blue-50 border border-blue-300">
-                <table className="w-full table-auto border border-collapse border-blue-300 mt-2 text-sm">
-                  <thead className="bg-blue-100 text-blue-900 font-semibold">
-                    <tr>
-                      <th className="p-2 border text-center">#</th>
-                      <th className="p-2 border">Tên khuyến mãi</th>
-                      <th className="p-2 border">Giảm giá</th>
-                      <th className="p-2 border">Giá tối thiểu</th>
-                      <th className="p-2 border">Số lượng áp dụng</th>
-                      <th className="p-2 border">Thời gian</th>
+                          <button
+                            onClick={() =>
+                              setExpandedRow(isExpanded ? null : noti.id)
+                            }
+                            className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center hover:bg-blue-600"
+                            title={isExpanded ? "Ẩn chi tiết" : "Xem thêm"}
+                          >
+                            {isExpanded ? (
+                              <FaChevronUp size={16} />
+                            ) : (
+                              <FaChevronDown size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {Array.isArray(noti.flashSale) && noti.flashSale.length > 0 ? (
-                      noti.flashSale.map((fs, i) => {
-                        const promo = fs.promotion;
-                        if (!promo) return null;
 
-                        const now = new Date();
-                        const start = new Date(promo.start_date);
-                        const end = new Date(promo.end_date);
-
-                        let timeStatus = "";
-                        if (now < start) {
-                          const diff = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-                          timeStatus = `Còn ${diff} ngày nữa bắt đầu`;
-                        } else if (now >= start && now <= end) {
-                          const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-                          timeStatus = `Còn ${diff} ngày nữa kết thúc`;
-                        } else {
-                          timeStatus = `Đã kết thúc`;
-                        }
-
-                        return (
-                          <tr key={fs.id}>
-                            <td className="p-2 border text-center">{i + 1}</td>
-                            <td className="p-2 border">{promo.name || "Không tên"}</td>
-                            <td className="p-2 border">
-                              {promo.discount_value}
-                              {promo.discount_type === "percentage" ? "%" : "₫"}
-                            </td>
-                            <td className="p-2 border">
-                              {Number(promo.min_price_threshold || 0).toLocaleString("vi-VN")}₫
-                            </td>
-                            <td className="p-2 border text-center">{promo.quantity || 0}</td>
-                            <td className="p-2 border">{timeStatus}</td>
-                          </tr>
-                        );
-                      })
-                    ) : (
+                    {isExpanded && (
                       <tr>
-                        <td colSpan="6" className="text-center p-3 italic text-gray-500">
-                          Không có Flash Sale nào trong thông báo này.
+                        <td
+                          colSpan={6}
+                          className="p-2 bg-blue-50 border border-blue-300"
+                        >
+                          <table className="w-full table-auto border border-collapse border-blue-300 mt-2 text-sm">
+                            <thead className="bg-blue-100 text-blue-900 font-semibold">
+                              <tr>
+                                <th className="p-2 border text-center">#</th>
+                                <th className="p-2 border">Tên khuyến mãi</th>
+                                <th className="p-2 border">Giảm giá</th>
+                                <th className="p-2 border">Giá tối thiểu</th>
+                                <th className="p-2 border">Số lượng áp dụng</th>
+                                <th className="p-2 border">Thời gian</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Array.isArray(noti.flashSale) &&
+                              noti.flashSale.length > 0 ? (
+                                noti.flashSale.map((fs, i) => {
+                                  const promo = fs.promotion;
+                                  if (!promo) return null;
+
+                                  const now = new Date();
+                                  const start = new Date(promo.start_date);
+                                  const end = new Date(promo.end_date);
+
+                                  let timeStatus = "";
+                                  if (now < start) {
+                                    const diff = Math.ceil(
+                                      (start - now) / (1000 * 60 * 60 * 24)
+                                    );
+                                    timeStatus = `Còn ${diff} ngày nữa bắt đầu`;
+                                  } else if (now >= start && now <= end) {
+                                    const diff = Math.ceil(
+                                      (end - now) / (1000 * 60 * 60 * 24)
+                                    );
+                                    timeStatus = `Còn ${diff} ngày nữa kết thúc`;
+                                  } else {
+                                    timeStatus = `Đã kết thúc`;
+                                  }
+
+                                  return (
+                                    <tr key={fs.id}>
+                                      <td className="p-2 border text-center">
+                                        {i + 1}
+                                      </td>
+                                      <td className="p-2 border">
+                                        {promo.name || "Không tên"}
+                                      </td>
+                                      <td className="p-2 border">
+                                        {promo.discount_value}
+                                        {promo.discount_type === "percentage"
+                                          ? "%"
+                                          : "₫"}
+                                      </td>
+                                      <td className="p-2 border">
+                                        {Number(
+                                          promo.min_price_threshold || 0
+                                        ).toLocaleString("vi-VN")}
+                                        ₫
+                                      </td>
+                                      <td className="p-2 border text-center">
+                                        {promo.quantity || 0}
+                                      </td>
+                                      <td className="p-2 border">
+                                        {timeStatus}
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              ) : (
+                                <tr>
+                                  <td
+                                    colSpan="6"
+                                    className="text-center p-3 italic text-gray-500"
+                                  >
+                                    Không có Flash Sale nào trong thông báo này.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </td>
                       </tr>
                     )}
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-          )}
-        </React.Fragment>
-      );
-    })}
-  </tbody>
-</table>
-
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -357,41 +416,16 @@ onClick={() => handleDeleteClick()}
         </button>
       </div>
 
-       {showDeleteDialog && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          role="dialog"
-          aria-labelledby="delete-dialog-title"
-          aria-modal="true"
-          onKeyDown={handleDialogKeyDown}
-          ref={dialogRef}
-          tabIndex={-1}
-        >
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-            <h3 id="delete-dialog-title" className="text-lg font-semibold mb-4">
-              Xác nhận xóa
-            </h3>
-            <p className="mb-6 text-gray-700">
-              Bạn có chắc chắn muốn xóa <strong>{deleteItem?.title || "thông báo"}</strong>?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                Xóa
-              </button>
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
+      {showDeleteDialog && deleteItem && (
+        <FormDelete
+          isOpen={true}
+          onClose={cancelDelete}
+          onConfirm={confirmDelete}
+          message={`Bạn có chắc chắn muốn xoá "${
+            deleteItem.title || "thông báo"
+          }" không?`}
+        />
       )}
-
 
       <ToastContainer position="top-right" autoClose={2000} />
     </div>

@@ -43,8 +43,7 @@ const SHORT_DESC_LIMIT = 30;
           `${Constants.DOMAIN_API}/products/${productId}/variants`
         );
         const { product } = res.data;
-        console.log(product);
-        
+         
         setProductData(product);
         setVariants(product.variants);
         setImages(product.variantImages);
@@ -465,7 +464,7 @@ const SHORT_DESC_LIMIT = 30;
                         {attr.attribute?.name || "Không xác định"}
                       </td>
                       <td className="p-2 border border-gray-300">
-                        {attr.attribute?.name.toLowerCase() === "color" ? (
+                        {attr.attribute?.name.toLowerCase() === "màu sắc" ? (
                           <div className="flex items-center gap-2">
                             <div
                               className="w-6 h-6 rounded border border-gray-400"

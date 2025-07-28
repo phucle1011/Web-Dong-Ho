@@ -101,7 +101,7 @@ const fetchPromotions = async () => {
         setPromotions(mappedPromotions);
       } catch (err) {
         toast.error("Lỗi khi tải dữ liệu chi tiết!");
-        navigate("/admin/notification");
+        navigate("/admin/notification/getAll");
       }
     };
   fetchPromotions();
@@ -135,7 +135,7 @@ const fetchPromotions = async () => {
       });
       socket.emit("update_notification");
       toast.success("Cập nhật thành công!");
-      navigate("/admin/notifications");
+      navigate("/admin/notification/getAll");
     } catch {
       toast.error("Cập nhật thất bại.");
     }
@@ -166,28 +166,61 @@ const fetchPromotions = async () => {
     </div>
 
     <div>
-      <label className="block mb-1 font-medium">Chương trình khuyến mãi</label>
-      <Select
-        options={promotions}
-        value={selectedPromotions}
-        onChange={setSelectedPromotions}
-        isMulti
-        getOptionLabel={(e) => (
-          <div className="flex items-center">
-            <span className="font-medium mr-1">{e.name}</span>
-            <span className="text-sm">
-              (<span className="text-yellow-500">{e.timeText}</span>
-              {" - "}
-              <span className="text-green-500">{e.variant_count} biến thể</span>
-              )
-            </span>
-          </div>
-        )}
-      />
-      {errors.promotionIds && (
-        <p className="text-sm text-red-500">{errors.promotionIds}</p>
-      )}
-    </div>
+  <label className="block mb-1 font-medium">Chương trình khuyến mãi</label>
+  <Select
+    options={promotions}
+    isMulti
+    closeMenuOnSelect={false}
+    menuPlacement="auto"
+    value={selectedPromotions}
+    onChange={(selected) => {
+      setSelectedPromotions(selected || []);
+    }}
+    placeholder="Chọn chương trình khuyến mãi..."
+    styles={{
+      control: (provided) => ({
+        ...provided,
+        minHeight: "48px",
+        flexWrap: "wrap",
+        alignItems: "flex-start",
+      }),
+      valueContainer: (provided) => ({
+        ...provided,
+        flexWrap: "wrap",
+        maxHeight: "auto",
+        overflowY: "auto",
+        paddingTop: "6px",
+        paddingBottom: "6px",
+      }),
+      multiValue: (provided) => ({
+        ...provided,
+        whiteSpace: "normal",
+        wordBreak: "break-word",
+        maxWidth: "100%",
+      }),
+      input: (provided) => ({
+        ...provided,
+        maxWidth: "100%",
+        minWidth: "50px",
+        flex: 1,
+      }),
+    }}
+    getOptionLabel={(e) => (
+      <div className="flex items-center">
+        <span className="font-medium mr-1">{e.name}</span>
+        <span className="text-sm">
+          (<span className="text-yellow-500">{e.timeText}</span>
+          {" - "}
+          <span className="text-green-500">{e.variant_count} biến thể</span>)
+        </span>
+      </div>
+    )}
+  />
+
+  {errors.promotionIds && (
+    <p className="text-sm text-red-500 mt-1">{errors.promotionIds}</p>
+  )}
+</div>
   </div>
 
   {/* Card 2: Ảnh */}
@@ -204,7 +237,7 @@ const fetchPromotions = async () => {
           selected={startDate}
           onChange={setStartDate}
           showTimeSelect
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-4 py-2"
           minDate={new Date()}
           maxDate={endDate || null}
           minTime={startMin}
@@ -221,7 +254,7 @@ const fetchPromotions = async () => {
           selected={endDate}
           onChange={setEndDate}
           showTimeSelect
-          className="w-full border rounded px-3 py-2"
+          className="w-full  border rounded px-4 py-2"
           minDate={startDate || new Date()}
           minTime={endMin}
           maxTime={endMax}
