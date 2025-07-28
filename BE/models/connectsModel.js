@@ -22,6 +22,11 @@ const BlogModel = require('../models/blogsModel');
 const FlashSaleModel = require('./FlashSaleModel');
 const WithdrawRequestsModel = require('../models/withdrawRequestsModel');
 const BlogCategory = require('../models/blogsCategoryModel');
+const AuctionsModel = require('../models/auctionsModel');
+const AuctionBidModel = require('../models/auctionBidsModel');
+const AuctionProductModel = require('../models/auctionsProductModel');
+const AuctionsImagesModel = require('../models/auctionsImagesModel');
+
 //--------------------- [ Thiết lập quan hệ ]------------------------
 
 // User - Address
@@ -188,6 +193,66 @@ OrderModel.hasMany(WithdrawRequestsModel, {
   as: 'withdrawRequests',
 });
 
+// Mỗi bid thuộc về 1 phiên đấu giá
+AuctionBidModel.belongsTo(AuctionsModel, {
+  foreignKey: 'auction_id',
+  as: 'auction'
+});
+
+// Một phiên đấu giá có nhiều lượt bid
+AuctionsModel.hasMany(AuctionBidModel, {
+  foreignKey: 'auction_id',
+  as: 'bids'
+});
+
+// Một Auction thuộc về một sản phẩm đấu giá
+AuctionsModel.belongsTo(AuctionProductModel, {
+  foreignKey: 'auctions_product_id',
+  as: 'auctionProduct'
+});
+
+// Một sản phẩm đấu giá có nhiều phiên đấu giá
+AuctionProductModel.hasMany(AuctionsModel, {
+  foreignKey: 'auctions_product_id',
+  as: 'auctions'
+});
+
+// Mỗi ảnh thuộc về một sản phẩm đấu giá
+AuctionsImagesModel.belongsTo(AuctionProductModel, {
+  foreignKey: 'auctions_product_id',
+  as: 'auctionProduct'
+});
+
+// Một sản phẩm đấu giá có nhiều ảnh
+AuctionProductModel.hasMany(AuctionsImagesModel, {
+  foreignKey: 'auctions_product_id',
+  as: 'images'
+});
+
+// Mỗi đơn hàng có thể thuộc về 1 sản phẩm đấu giá
+OrderModel.belongsTo(AuctionProductModel, {
+  foreignKey: 'auction_product_id',
+  as: 'auctionProduct'
+});
+
+// Một sản phẩm đấu giá có thể có nhiều đơn hàng (nếu cần)
+AuctionProductModel.hasMany(OrderModel, {
+  foreignKey: 'auction_product_id',
+  as: 'orders'
+});
+
+// Mỗi bid thuộc về một user
+AuctionBidModel.belongsTo(UserModel, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+// Một user có thể có nhiều bid
+UserModel.hasMany(AuctionBidModel, {
+  foreignKey: 'user_id',
+  as: 'bids'
+});
+
 module.exports = {
   UserModel,
   AddressesModel,
@@ -210,4 +275,8 @@ module.exports = {
   FlashSaleModel,
   WithdrawRequestsModel,
   BlogCategory,
+  AuctionBidModel, 
+  AuctionProductModel,
+  AuctionsImagesModel,
+  AuctionsModel
 };
