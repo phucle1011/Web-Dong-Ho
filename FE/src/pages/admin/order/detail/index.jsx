@@ -71,7 +71,7 @@ function OrderDetail() {
         }
       `}</style>
 
-      <div className="flex justify-between items-center mb-4">
+      {/* <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Chi tiết đơn hàng</h2>
         <button
           onClick={() => window.print()}
@@ -79,7 +79,7 @@ function OrderDetail() {
         >
           In hóa đơn
         </button>
-      </div>
+      </div> */}
 
       <div className="bg-white shadow-md rounded-md p-4 mb-6">
         <h4 className="text-xl font-semibold mb-4">Thông tin khách hàng</h4>
@@ -102,11 +102,15 @@ function OrderDetail() {
           <div>
             <span className="font-medium">Phương thức thanh toán:</span> {order.payment_method || "—"}
           </div>
-          <div className="md:col-span-2">
+          <div>
             <span className="font-medium">Ngày đặt hàng:</span>{" "}
             {order.created_at
               ? new Date(order.created_at).toLocaleDateString()
               : "—"}
+          </div>
+
+          <div>
+            <span className="font-medium">Ghi chú:</span> {order.note || "—"}
           </div>
         </div>
       </div>

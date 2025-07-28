@@ -24,7 +24,10 @@ class UserController {
 
       const user = await UserModel.findByPk(id);
       if (!user) {
-        return res.status(404).json({ success: false, message: "Người dùng không tồn tại." });
+        return res.status(404).json({
+          success: false,
+          message: "Người dùng không tồn tại.",
+        });
       }
 
       user.name = name;
@@ -32,18 +35,22 @@ class UserController {
 
       await user.save();
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
-        message: "Cập nhật thông tin thành công",
+        message: "Cập nhật thông tin thành công.",
         data: {
           id: user.id,
           name: user.name,
-          phone: user.phone
-        }
+          phone: user.phone,
+          email: user.email,
+        },
       });
     } catch (error) {
-      console.error("Lỗi khi cập nhật thông tin người dùng:", error);
-      res.status(500).json({ message: "Lỗi máy chủ khi cập nhật thông tin người dùng." });
+      console.error("Lỗi khi cập nhật người dùng:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi máy chủ khi cập nhật người dùng.",
+      });
     }
   }
 }

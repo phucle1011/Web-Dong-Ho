@@ -337,7 +337,7 @@ export default function Payment() {
           ))}
         </div>
 
-        {totalPages > 1 && (
+        {totalPages && (
           <div className="flex justify-center mt-6">
             <div className="flex items-center space-x-1">
               <button

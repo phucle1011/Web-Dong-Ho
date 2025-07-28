@@ -8,6 +8,7 @@ import Layout from "../Partials/LayoutHomeThree";
 import ProductsTable from "./ProductsTable";
 import Constants from "../../../Constants";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 
 export default function CardPage({ cart = true }) {
   const [totalPrice, setTotalPrice] = useState(0);
@@ -20,6 +21,7 @@ export default function CardPage({ cart = true }) {
   const [selectedProductVariants, setSelectedProductVariants] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [cartItems, setCartItems] = useState([]);
+  const location = useLocation();
 
   useEffect(() => {
     localStorage.removeItem("selectedPromoCode");
@@ -128,7 +130,6 @@ export default function CardPage({ cart = true }) {
     } else if (totalPrice >= voucher.min_price_threshold) {
       setSelectedVoucher(voucher);
       setError("");
-      localStorage.setItem("selectedVoucher", JSON.stringify(voucher));
     } else {
       setSelectedVoucher(null);
       setError(`Đơn hàng phải tối thiểu ${voucher.min_price_threshold.toLocaleString()}₫ để sử dụng voucher này.`);
@@ -184,16 +185,16 @@ export default function CardPage({ cart = true }) {
         promotion_user_id: promotionUserId
       }));
 
-      localStorage.setItem(
-        "selectedPromoCode",
-        JSON.stringify({
-          code: promoCode.trim(),
-          discountAmount: promoDiscount,
-          maxPrice: data.data.max_price,
-          promotion_user_id: promotionUserId,
-          appliedAt: Date.now(),
-        })
-      );
+      // localStorage.setItem(
+      //   "selectedPromoCode",
+      //   JSON.stringify({
+      //     code: promoCode.trim(),
+      //     discountAmount: promoDiscount,
+      //     maxPrice: data.data.max_price,
+      //     promotion_user_id: promotionUserId,
+      //     appliedAt: Date.now(),
+      //   })
+      // );
 
       setError("");
     } catch (err) {
@@ -228,7 +229,7 @@ export default function CardPage({ cart = true }) {
         finalTotal,
         promotion_user_id: discountInfo?.promotion_user_id || null,
       };
-      localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
+      // localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
     }
   }, [selectedProductVariants, cartItems, totalPrice, originalTotalPrice, discountInfo, finalTotal]);
 
@@ -250,7 +251,7 @@ export default function CardPage({ cart = true }) {
       originalTotalPrice,
     };
 
-    localStorage.setItem("finalTotal", JSON.stringify(finalData));
+    // localStorage.setItem("finalTotal", JSON.stringify(finalData));
   };
 
   useEffect(() => {
@@ -480,32 +481,18 @@ export default function CardPage({ cart = true }) {
 
                     {selectedProductVariants.length > 0 ? (
                       <Link
-                        to={{
-                          pathname: "/checkout",
-                          state: {
-                            selectedProductVariants,
-                            cartItems: cartItems.filter((item) =>
-                              selectedProductVariants.includes(item.product_variant_id)
-                            ),
-                            totalPrice,
-                            originalTotalPrice,
-                            discountInfo,
-                            finalTotal,
-                          },
+                        to="/checkout" state={{
+                          selectedProductVariants: selectedProductVariants,
+                          cartItems: cartItems.filter((item) =>
+                            selectedProductVariants.includes(item.product_variant_id)
+                          ),
+                          totalPrice,
+                          originalTotalPrice,
+                          discountInfo,
+                          finalTotal,
+                          selectedVoucher
                         }}
-                        onClick={() => {
-                          const checkoutData = {
-                            selectedProductVariants,
-                            cartItems: cartItems.filter((item) =>
-                              selectedProductVariants.includes(item.product_variant_id)
-                            ),
-                            totalPrice,
-                            originalTotalPrice,
-                            discountInfo,
-                            finalTotal,
-                          };
-                          localStorage.setItem("checkoutData", JSON.stringify(checkoutData));
-                        }}
+
                       >
                         <div className="w-full h-[40px] black-btn flex justify-center items-center rounded-lg">
                           <span className="text-sm font-semibold">Tiến hành thanh toán</span>

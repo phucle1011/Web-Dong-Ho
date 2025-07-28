@@ -10,8 +10,8 @@ export default function FlashSale() {
   const location = useLocation();
   const notification = location.state?.notification || null;
   const notification_id = notification.id;
-const end_date = notification.end_date;
-  
+  const end_date = notification.end_date;
+
 
 
   const [products, setProducts] = useState([]);

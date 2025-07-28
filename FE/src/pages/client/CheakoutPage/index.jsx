@@ -51,12 +51,17 @@ export default function CheckoutPage() {
   const id = decoded?.id;
   const [enabled, setEnabled] = useState(false);
   const [balance, setBalance] = useState(null);
+  const savedVoucher = location.state?.selectedVoucher;
+
+
 
   useEffect(() => {
+    console.log("location", location.state);
+
     if (!location.state && !localStorage.getItem("checkoutData")) {
       console.warn("Không có dữ liệu giỏ hàng");
       toast.error("Không có sản phẩm để thanh toán. Vui lòng quay lại giỏ hàng.");
-      navigate("/cart");
+      // navigate("/cart");
     }
   }, [location.state, navigate]);
 
@@ -73,16 +78,16 @@ export default function CheckoutPage() {
       savedOriginalTotalPrice = location.state.originalTotalPrice || 0;
       savedDiscountInfo = location.state.discountInfo || null;
       savedFinalTotal = location.state.finalTotal || 0;
-      localStorage.setItem(
-        "checkoutData",
-        JSON.stringify({
-          cartItems: items,
-          totalPrice: savedTotalPrice,
-          originalTotalPrice: savedOriginalTotalPrice,
-          discountInfo: savedDiscountInfo,
-          finalTotal: savedFinalTotal,
-        })
-      );
+      // localStorage.setItem(
+      //   "checkoutData",
+      //   JSON.stringify({
+      //     cartItems: items,
+      //     totalPrice: savedTotalPrice,
+      //     originalTotalPrice: savedOriginalTotalPrice,
+      //     discountInfo: savedDiscountInfo,
+      //     finalTotal: savedFinalTotal,
+      //   })
+      // );
     } else {
       const savedData = localStorage.getItem("checkoutData");
       if (savedData) {
@@ -758,16 +763,23 @@ export default function CheckoutPage() {
   const handleUserInfoChange = async (field, value) => {
     if (!user || !user.id) return;
 
+    if (user[field] === value) return;
+
     const updatedUser = { ...user, [field]: value };
     setUser(updatedUser);
 
     const payload = {
-      [field]: value
+      name: field === "name" ? value : user.name,
+      phone: field === "phone" ? value : user.phone,
     };
 
-    const updatedUserData = await updateUserInfo(user.id, payload);
-    if (updatedUserData) {
-      setUser(updatedUserData);
+    try {
+      const updatedUserData = await updateUserInfo(user.id, payload);
+      if (updatedUserData) {
+        setUser({ ...user, ...updatedUserData });
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật thông tin:", error);
     }
   };
 
@@ -822,6 +834,7 @@ export default function CheckoutPage() {
         toast.error("Vui lòng chọn hoặc thêm địa chỉ giao hàng");
         return;
       }
+      const savedVoucher = location.state?.selectedVoucher;
 
       const payload = {
         products: checkoutItems.map(item => ({
@@ -847,7 +860,7 @@ export default function CheckoutPage() {
         email: user.email,
         address: defaultAddress?.address_line || "",
         note: noteValue,
-        promotion: selectedVoucher ? selectedVoucher.id : null,
+        promotion: savedVoucher ? savedVoucher.id : null,
         promo_discount: discountInfo?.promoDiscount || 0,
         voucher_discount: discountInfo?.voucherDiscount || 0,
         promotion_user_id: discountInfo?.promotion_user_id || null,

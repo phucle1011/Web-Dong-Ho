@@ -120,7 +120,7 @@ function WashletGetAll() {
     }
   };
 
-    const handleSearchChange = (e) => {
+  const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
@@ -158,7 +158,7 @@ function WashletGetAll() {
           })}
         </div>
 
- <div className="mb-6 flex items-center gap-2">
+        <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
             className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"

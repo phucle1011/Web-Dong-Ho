@@ -641,11 +641,15 @@ export default function OrderTab() {
                                 <div>
                                   <span className="font-medium">Phương thức thanh toán:</span> {order.payment_method || "—"}
                                 </div>
-                                <div className="md:col-span-2">
+                                <div>
                                   <span className="font-medium">Ngày đặt hàng:</span>{" "}
                                   {order.created_at
                                     ? new Date(order.created_at).toLocaleDateString()
                                     : "—"}
+                                </div>
+
+                                <div>
+                                  <span className="font-medium">Ghi chú:</span> {order.note || "—"}
                                 </div>
                               </div>
                             </div>
@@ -684,57 +688,57 @@ export default function OrderTab() {
                                               currency: "VND",
                                             })}
                                           </td>
-<td className="p-2">
-  {order.status === "completed" ? (
-    <button
-      className="text-blue-500 hover:text-blue-900 transition-colors"
-      onClick={() => {
-        const product = item.variant?.product;
-        const productId = product?.id;
-        const deliveredAt = new Date(item.updated_at);
-        const currentDate = new Date();
-        const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
+                                          <td className="p-2">
+                                            {order.status === "completed" ? (
+                                              <button
+                                                className="text-blue-500 hover:text-blue-900 transition-colors"
+                                                onClick={() => {
+                                                  const product = item.variant?.product;
+                                                  const productId = product?.id;
+                                                  const deliveredAt = new Date(item.updated_at);
+                                                  const currentDate = new Date();
+                                                  const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
 
-        if (daysPassed > 7) {
-          toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
-          return;
-        }
+                                                  if (daysPassed > 7) {
+                                                    toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
+                                                    return;
+                                                  }
 
-        const editedOnce = item.comment && Number(item.comment.edited) === 1;
+                                                  const editedOnce = item.comment && Number(item.comment.edited) === 1;
 
-        if (item.comment) {
-          if (editedOnce) {
-            navigate(`/product#comment-${item.comment.id}`, {
-              state: { productId: product.id },
-            });
-          } else {
-            sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-            navigate(`/product#review`, {
-              state: { productId: product.id },
-            });
-          }
-        } else {
-          sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-          navigate(`/product#review`, {
-            state: { productId: product.id },
-          });
-        }
-      }}
-    >
-      {item.comment ? (
-        Number(item.comment.edited) === 1 ? (
-          <span>Xem đánh giá</span>
-        ) : (
-          <span>Chỉnh sửa đánh giá</span>
-        )
-      ) : (
-        <span>Đánh giá</span>
-      )}
-    </button>
-  ) : (
-    <span className="text-gray-400 italic">Chưa thể đánh giá</span>
-  )}
-</td>
+                                                  if (item.comment) {
+                                                    if (editedOnce) {
+                                                      navigate(`/product#comment-${item.comment.id}`, {
+                                                        state: { productId: product.id },
+                                                      });
+                                                    } else {
+                                                      sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+                                                      navigate(`/product#review`, {
+                                                        state: { productId: product.id },
+                                                      });
+                                                    }
+                                                  } else {
+                                                    sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+                                                    navigate(`/product#review`, {
+                                                      state: { productId: product.id },
+                                                    });
+                                                  }
+                                                }}
+                                              >
+                                                {item.comment ? (
+                                                  Number(item.comment.edited) === 1 ? (
+                                                    <span>Xem đánh giá</span>
+                                                  ) : (
+                                                    <span>Chỉnh sửa đánh giá</span>
+                                                  )
+                                                ) : (
+                                                  <span>Đánh giá</span>
+                                                )}
+                                              </button>
+                                            ) : (
+                                              <span className="text-gray-400 italic">Chưa thể đánh giá</span>
+                                            )}
+                                          </td>
 
 
 
