@@ -9,12 +9,11 @@ import {
   FaAngleDoubleRight,
   FaEye,
   FaEdit,
-  FaTrash,
-  FaPlus,
-  FaTrashAlt
+  FaTrashAlt,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import FormDelete from "../../../../components/formDelete";
 
 function BlogList() {
   const [blogs, setBlogs] = useState([]);
@@ -22,22 +21,16 @@ function BlogList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedIdToDelete, setSelectedIdToDelete] = useState(null);
   const navigate = useNavigate();
-
-  // useRef để giữ timer debounce
   const debounceTimer = useRef(null);
 
-  // Lấy danh sách blog với phân trang và tìm kiếm
   const fetchBlogs = async (page = 1, search = "") => {
     try {
       const response = await axios.get(`${Constants.DOMAIN_API}/admin/blog/list`, {
-        params: {
-          page,
-          limit,
-          search,
-        },
+        params: { page, limit, search },
       });
-
       setBlogs(response.data.data);
       setTotalPages(response.data.pagination.totalPages);
       setCurrentPage(response.data.pagination.currentPage);
@@ -48,45 +41,33 @@ function BlogList() {
 
   useEffect(() => {
     fetchBlogs(currentPage, searchTerm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-
     debounceTimer.current = setTimeout(() => {
-      setCurrentPage(1); // reset page khi search
+      setCurrentPage(1);
       fetchBlogs(1, searchTerm);
     }, 500);
-
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
   }, [searchTerm]);
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchBlogs(1, searchTerm);
+  const confirmDelete = (id) => {
+    setSelectedIdToDelete(id);
+    setShowDeleteModal(true);
   };
 
-  const handleDelete = async (id) => {
-    const confirm = await Swal.fire({
-      title: "Bạn có chắc muốn xóa?",
-      text: "Thao tác này không thể hoàn tác!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
-    });
-
-    if (confirm.isConfirmed) {
-      try {
-        await axios.delete(`${Constants.DOMAIN_API}/admin/blog/${id}`);
-        Swal.fire("Đã xóa!", "Bài viết đã được xóa.", "success");
-        fetchBlogs(currentPage, searchTerm);
-      } catch (error) {
-        Swal.fire("Lỗi", "Không thể xóa bài viết", "error");
-      }
+  const handleConfirmDelete = async ({ id }) => {
+    try {
+      await axios.delete(`${Constants.DOMAIN_API}/admin/blog/${id}`);
+      setShowDeleteModal(false);
+      Swal.fire("Đã xóa!", "Bài viết đã được xóa.", "success");
+      fetchBlogs(currentPage, searchTerm);
+    } catch (error) {
+      setShowDeleteModal(false);
+      Swal.fire("Lỗi", "Không thể xóa bài viết", "error");
     }
   };
 
@@ -115,15 +96,16 @@ function BlogList() {
               <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
                 <input
                   type="text"
-                  className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
-                  placeholder="Tìm theo tiêu đề bài viết..."
+                  className="flex-grow shadow border border-gray-300 rounded py-2 px-4 text-gray-700"
+                  placeholder="Tìm theo tiêu đề..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2" onClick={handleSearch}>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
-                  </svg>
+                <button
+                  className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2"
+                  onClick={() => fetchBlogs(1, searchTerm)}
+                >
+                  <FaSearch />
                 </button>
               </div>
 
@@ -135,7 +117,8 @@ function BlogList() {
                       <th>Tiêu đề</th>
                       <th>Hình ảnh</th>
                       <th>Nội dung</th>
-                      <th>Tên người viết</th>
+                      <th>Người viết</th>
+                      <th>Danh mục</th>
                       <th>Ngày tạo</th>
                       <th>Hành động</th>
                     </tr>
@@ -144,7 +127,7 @@ function BlogList() {
                     {blogs.length > 0 ? (
                       blogs.map((blog, index) => (
                         <tr key={blog.id}>
-                          <td>{(currentPage - 1) * limit + index + 1}</td> {/* ID tăng dần theo trang */}
+                          <td>{(currentPage - 1) * limit + index + 1}</td>
                           <td>{blog.title}</td>
                           <td>
                             <img
@@ -153,15 +136,9 @@ function BlogList() {
                               style={{ width: "100px", height: "auto" }}
                             />
                           </td>
-                          <td>
-                            {(() => {
-                              const div = document.createElement("div");
-                              div.innerHTML = blog.content;
-                              const text = div.textContent || div.innerText || "";
-                              return text.length > 20 ? text.slice(0, 20) + "..." : text;
-                            })()}
-                          </td>
+                          <td>{blog.content.replace(/<[^>]*>?/gm, '').slice(0, 30)}...</td>
                           <td>{blog.user?.name || "Không xác định"}</td>
+                          <td>{blog.category?.name || "Không rõ"}</td>
                           <td>{new Date(blog.created_at).toLocaleDateString("vi-VN")}</td>
                           <td>
                             <div className="d-flex gap-2">
@@ -169,7 +146,7 @@ function BlogList() {
                                 className="bg-blue-500 text-white p-2 rounded"
                                 onClick={() => navigate(`/admin/blog/detail/${blog.id}`)}
                               >
-                                <FaEye size={16} className="font-bold" />
+                                <FaEye size={16} />
                               </button>
                               <button
                                 className="btn btn-warning btn-sm"
@@ -178,10 +155,10 @@ function BlogList() {
                                 <FaEdit />
                               </button>
                               <button
-                                className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                                onClick={() => handleDelete(blog.id)}
+                                className="p-2 rounded-full bg-red-50 text-red-500"
+                                onClick={() => confirmDelete(blog.id)}
                               >
-                                <FaTrashAlt size={20} className="font-bold" />
+                                <FaTrashAlt size={20} />
                               </button>
                             </div>
                           </td>
@@ -189,7 +166,7 @@ function BlogList() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="text-center text-muted">
+                        <td colSpan={8} className="text-center text-muted">
                           Không có bài viết nào.
                         </td>
                       </tr>
@@ -200,22 +177,12 @@ function BlogList() {
 
               <div className="flex justify-center mt-4 items-center">
                 <div className="flex items-center space-x-1">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => handlePageChange(1)}
-                    className="px-2 py-1 border rounded disabled:opacity-50"
-                  >
+                  <button disabled={currentPage === 1} onClick={() => handlePageChange(1)}>
                     <FaAngleDoubleLeft />
                   </button>
-
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className="px-2 py-1 border rounded disabled:opacity-50"
-                  >
+                  <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)}>
                     <FaChevronLeft />
                   </button>
-
                   {[...Array(totalPages)].map((_, i) => {
                     const page = i + 1;
                     if (page >= currentPage - 1 && page <= currentPage + 1) {
@@ -223,10 +190,7 @@ function BlogList() {
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 border rounded ${currentPage === page
-                              ? "bg-blue-500 text-white"
-                              : "bg-blue-100 text-black hover:bg-blue-200"
-                            }`}
+                          className={`px-3 py-1 border rounded ${currentPage === page ? "bg-blue-500 text-white" : "bg-blue-100"}`}
                         >
                           {page}
                         </button>
@@ -234,20 +198,10 @@ function BlogList() {
                     }
                     return null;
                   })}
-
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className="px-2 py-1 border rounded disabled:opacity-50"
-                  >
+                  <button disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)}>
                     <FaChevronRight />
                   </button>
-
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => handlePageChange(totalPages)}
-                    className="px-2 py-1 border rounded disabled:opacity-50"
-                  >
+                  <button disabled={currentPage === totalPages} onClick={() => handlePageChange(totalPages)}>
                     <FaAngleDoubleRight />
                   </button>
                 </div>
@@ -256,8 +210,15 @@ function BlogList() {
           </div>
         </div>
       </div>
+      <FormDelete
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+        message="Bạn có chắc chắn muốn xóa bài viết này không?"
+        Id={selectedIdToDelete}
+      />
     </div>
   );
 }
 
-export default BlogList;
+export default BlogList; 

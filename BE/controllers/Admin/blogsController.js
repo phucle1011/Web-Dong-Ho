@@ -5,53 +5,55 @@ const BlogCategory = require('../../models/blogsCategoryModel');
 class BlogController {
   
   static async getAll(req, res) {
-    try {
-      const { page = 1, limit = 5, search = "" } = req.query;
-      const offset = (page - 1) * limit;
+  try {
+    const { page = 1, limit = 5, search = "" } = req.query;
+    const offset = (page - 1) * limit;
 
-      // Điều kiện tìm kiếm, nếu có
-      let whereCondition = {};
-      if (search) {
-        whereCondition = {
-          title: {
-            [Op.like]: `%${search}%`,
-          },
-        };
-      }
-
-      const { rows: blogs, count: totalItems } = await Blog.findAndCountAll({
-        where: whereCondition,
-        limit: Number(limit),
-        offset: Number(offset),
-        order: [['created_at', 'DESC']],
-        include: [
-          {
-            model: User,
-            as: "user",
-            attributes: ["id", "name"],
-          },
-          {
-            model: BlogCategory,
-            as: "category",
-            attributes: ["id", "name", "slug"],
-          },
-        ],
-      });
-
-      const totalPages = Math.ceil(totalItems / limit);
-
-      res.json({
-        data: blogs,
-        pagination: {
-          totalItems,
-          totalPages,
-          currentPage: Number(page),
-        },
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Lỗi khi lấy bài viết', error: error.message });
+    let whereCondition = {};
+    if (search) {
+      whereCondition.title = {
+        [Op.like]: `%${search}%`,
+      };
     }
+
+    const { rows: blogs, count: totalItems } = await Blog.findAndCountAll({
+      where: whereCondition,
+      limit: Number(limit),
+      offset: Number(offset),
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BlogCategory,
+          as: "category",
+          attributes: ["id", "name", "slug"],
+          where: {
+            status: 1, 
+          },
+          required: true, 
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: blogs,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: Number(page),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi khi lấy bài viết', error: error.message });
   }
+}
+
 
   static async getById(req, res) {
     try {

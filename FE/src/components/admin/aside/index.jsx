@@ -1,4 +1,4 @@
-import { FaTachometerAlt, FaUser, FaMoneyBillWave, FaMapMarkerAlt, FaTag, FaPercent, FaCogs, FaTags, FaBoxOpen, FaBox, FaShoppingCart, FaHeart, FaHistory, FaCommentDots, FaBell } from "react-icons/fa";
+import { FaTachometerAlt, FaUser, FaMoneyBillWave, FaMapMarkerAlt,FaPen,FaPenNib, FaTag, FaPercent, FaCogs, FaTags, FaBoxOpen, FaBox, FaShoppingCart, FaHeart, FaHistory, FaCommentDots, FaBell } from "react-icons/fa";
 import { MdDirectionsBus, MdFeedback } from "react-icons/md";
 import { Link, useLocation } from "react-router-dom";
 
@@ -105,18 +105,18 @@ function Aside() {
                 <span className="hide-menu">Quản lý người dùng</span>
               </Link>
             </li>
-              <li className={`sidebar-item ${location.pathname === "/admin/blogcategory/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/blogcategory/getAll">
-                <FaMapMarkerAlt />
-                <span className="hide-menu">Quản lý loại bài viết</span>
-              </Link>
-            </li>
-            <li className={`sidebar-item ${location.pathname === "/admin/blog/getAll" ? "active" : ""}`}>
-              <Link className="sidebar-link" to="/admin/blog/getAll">
-                <FaMapMarkerAlt />
-                <span className="hide-menu">Quản lý bài viết</span>
-              </Link>
-            </li>
+<li className={`sidebar-item ${location.pathname === "/admin/blogcategory/getAll" ? "active" : ""}`}>
+  <Link className="sidebar-link" to="/admin/blogcategory/getAll">
+    <FaPen /> {/* icon cây viết */}
+    <span className="hide-menu">Quản lý loại bài viết</span>
+  </Link>
+</li>
+<li className={`sidebar-item ${location.pathname === "/admin/blog/getAll" ? "active" : ""}`}>
+  <Link className="sidebar-link" to="/admin/blog/getAll">
+    <FaPenNib /> {/* icon tay cầm viết */}
+    <span className="hide-menu">Quản lý bài viết</span>
+  </Link>
+</li>
             <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link d-flex align-items-center" to="/admin/wishlist/getAll" title="Quản lý sản phẩm yêu thích">
                 <FaHeart />

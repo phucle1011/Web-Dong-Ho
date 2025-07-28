@@ -41,17 +41,9 @@ function BlogDetail() {
                 <div className="col-12 d-flex align-items-stretch">
                     <div className="card w-100 mt-4">
                         <div className="card-body p-4">
-                            <div className="d-flex justify-between align-items-center mb-4">
-                                <h5 className="card-title fw-semibold text-primary">
-                                    Chi tiết bài viết
-                                </h5>
-                                <button
-                                    className="btn btn-outline-secondary d-flex align-items-center gap-2"
-                                    onClick={() => navigate(-1)}
-                                >
-                                    <FaArrowLeft /> Quay lại
-                                </button>
-                            </div>
+                            <h5 className="card-title fw-semibold text-primary mb-4">
+                                Chi tiết bài viết
+                            </h5>
 
                             <table className="table">
                                 <tbody>
@@ -79,11 +71,9 @@ function BlogDetail() {
                                             />
                                         </td>
                                     </tr>
-
                                     <tr>
                                         <th>Tên người viết:</th>
                                         <td>{blog.user?.name || "Không xác định"}</td>
-
                                     </tr>
                                     <tr>
                                         <th>Ngày tạo:</th>
@@ -91,6 +81,17 @@ function BlogDetail() {
                                     </tr>
                                 </tbody>
                             </table>
+
+                            {/* Nút Quay lại đưa xuống cuối bên trái */}
+<div className="mt-4">
+  <button
+    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded d-flex align-items-center gap-2"
+    onClick={() => navigate(-1)}
+  >
+    Quay lại
+  </button>
+</div>
+
 
                         </div>
                     </div>

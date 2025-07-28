@@ -27,7 +27,8 @@ function AddBlog() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${Constants.DOMAIN_API}/admin/blogcategory/list`);
+        const res = await fetch(`${Constants.DOMAIN_API}/admin/blogcategory/list?status=1`);
+
         const data = await res.json();
         setCategories(data.data || []);
       } catch (error) {

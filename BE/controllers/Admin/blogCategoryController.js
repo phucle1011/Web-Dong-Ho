@@ -4,13 +4,25 @@ const slugify = require('slugify');
 
 class BlogCategoryController {
   static async getAll(req, res) {
-    try {
-      const categories = await BlogCategory.findAll({ order: [['id', 'DESC']] });
-      res.json({ success: true, data: categories });
-    } catch (error) {
-      res.status(500).json({ success: false, message: "Lỗi server", error });
+  try {
+    const { status } = req.query;
+
+    const whereCondition = {};
+    if (status !== undefined) {
+      whereCondition.status = status; 
     }
+
+    const categories = await BlogCategory.findAll({
+      where: whereCondition,
+      order: [['id', 'DESC']]
+    });
+
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi server", error });
   }
+}
+
   static async getById(req, res) {
   try {
     const { id } = req.params;

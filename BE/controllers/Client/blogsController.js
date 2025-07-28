@@ -7,24 +7,60 @@ class BlogController {
   try {
     const { category } = req.query;
 
-    let whereClause = {};
+    const whereBlog = {};
+    const whereCategory = {
+      status: 1, // ❗ CHỈ LẤY danh mục hiển thị
+    };
 
-    
     if (category) {
-      const blogCategory = await BlogCategory.findOne({
-        where: { slug: category },
-      });
-
-      if (!blogCategory) {
-        return res.status(200).json({ blogs: [] }); 
-      }
-
-      whereClause.blogCategory_id = blogCategory.id;
+      whereCategory.slug = category; // nếu có truyền slug thì lọc theo slug + status
     }
 
     const blogs = await Blog.findAll({
-      where: whereClause,
+      where: whereBlog,
       order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: BlogCategory,
+          as: "category",
+          attributes: ["id", "name", "slug"],
+          where: whereCategory,
+          required: true, // ❗ Bắt buộc để điều kiện `where` có tác dụng
+        },
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    const result = blogs.map((blog) => ({
+      id: blog.id,
+      user_id: blog.user_id,
+      user_name: blog.user?.name || "",
+      title: blog.title,
+      image_url: blog.image_url,
+      content: blog.content,
+      created_at: blog.created_at,
+      updated_at: blog.updated_at,
+      meta_description: blog.meta_description,
+      focus_keyword: blog.focus_keyword,
+      blog_category: blog.category?.name || null,
+      blog_category_slug: blog.category?.slug || null,
+    }));
+
+    res.status(200).json({ blogs: result });
+  } catch (error) {
+    console.error("Error fetching blogs:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+  static async getBlogById(req, res) {
+  const { id } = req.params;
+  try {
+    const blog = await Blog.findByPk(id, {
       include: [
         {
           model: User,
@@ -39,10 +75,14 @@ class BlogController {
       ],
     });
 
-    const result = blogs.map((blog) => ({
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+
+    const result = {
       id: blog.id,
       user_id: blog.user_id,
-      user_name: blog.user ? blog.user.name : "",
+      user_name: blog.user?.name || "",
       title: blog.title,
       image_url: blog.image_url,
       content: blog.content,
@@ -50,32 +90,17 @@ class BlogController {
       updated_at: blog.updated_at,
       meta_description: blog.meta_description,
       focus_keyword: blog.focus_keyword,
-      blog_category: blog.blog_category?.name || null,
-      blog_category_slug: blog.blog_category?.slug || null,
-    }));
+      blog_category: blog.category?.name || null,
+      blog_category_slug: blog.category?.slug || null,
+    };
 
-    res.status(200).json({ blogs: result });
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Error fetching blogs:", error);
+    console.error("Error fetching blog by id:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
-  static async getBlogById(req, res) {
-    const { id } = req.params;
-    try {
-      const blog = await Blog.findByPk(id);
-
-      if (!blog) {
-        return res.status(404).json({ message: "Blog not found" });
-      }
-
-      res.status(200).json(blog);
-    } catch (error) {
-      console.error("Error fetching blog by id:", error);
-      res.status(500).json({ message: "Internal Server Error" });
-    }
-  }
 
   // Thêm method tìm kiếm blog theo title
   static async searchBlogs(req, res) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 import Constants from "../../../Constants";
@@ -14,15 +14,17 @@ const PAGE_SIZE = 6;
 
 export default function Blogs() {
   const [blogs, setBlogs] = useState([]);
+  const [hotBlogs, setHotBlogs] = useState([]);
   const [page, setPage] = useState(1);
   const [categories, setCategories] = useState([]);
-  const location = useLocation();
 
-  // Lấy slug category từ query string
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const params = new URLSearchParams(location.search);
   const categorySlug = params.get("category");
 
-  // Lấy danh sách blog từ API
+  // Lấy danh sách blogs (lọc theo danh mục nếu có)
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
@@ -32,7 +34,7 @@ export default function Blogs() {
         const response = await fetch(url);
         const data = await response.json();
         setBlogs(data.blogs || []);
-        setPage(1); // reset về trang 1 khi lọc
+        setPage(1);
       } catch (error) {
         console.error("Lỗi khi tải danh sách blog:", error);
       }
@@ -41,11 +43,29 @@ export default function Blogs() {
     fetchBlogs();
   }, [categorySlug]);
 
+  // Lấy danh sách hot blogs (toàn bộ, không lọc theo danh mục)
+  useEffect(() => {
+    const fetchHotBlogs = async () => {
+      try {
+        const response = await fetch(`${Constants.DOMAIN_API}/blogs`);
+        const data = await response.json();
+        const sorted = (data.blogs || [])
+          .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
+          .slice(0, 4);
+        setHotBlogs(sorted);
+      } catch (error) {
+        console.error("Lỗi khi tải hot blogs:", error);
+      }
+    };
+
+    fetchHotBlogs();
+  }, []);
+
   // Lấy danh mục
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${Constants.DOMAIN_API}/admin/blogcategory/list`);
+        const res = await fetch(`${Constants.DOMAIN_API}/admin/blogcategory/list?status=1`);
         const data = await res.json();
         setCategories(data.data || []);
       } catch (err) {
@@ -56,7 +76,14 @@ export default function Blogs() {
     fetchCategories();
   }, []);
 
-  const hotBlogs = blogs.slice(0, 4);
+  const handleCategoryClick = (slug) => {
+    if (categorySlug === slug) {
+      navigate("/blogs"); // Hủy lọc
+    } else {
+      navigate(`/blogs?category=${slug}`); // Lọc theo slug
+    }
+  };
+
   const totalPages = Math.ceil(blogs.length / PAGE_SIZE);
   const pagedBlogs = blogs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -99,14 +126,14 @@ export default function Blogs() {
                 <ul className="border-b pb-3 mb-3">
                   {categories.map((cat) => (
                     <li key={cat.id} className="mb-1">
-                      <Link
-                        to={`/blogs?category=${cat.slug}`}
-                        className={`block text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${
+                      <button
+                        onClick={() => handleCategoryClick(cat.slug)}
+                        className={`w-full text-left text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${
                           categorySlug === cat.slug ? "bg-gray-200 font-semibold" : ""
                         }`}
                       >
                         {cat.name}
-                      </Link>
+                      </button>
                     </li>
                   ))}
                 </ul>
