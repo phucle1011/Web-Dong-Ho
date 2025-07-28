@@ -33,7 +33,7 @@ export default function SearchBox({ className, type, onSearch }) {
     if (isSize) {
       params.keyword = "";
       params.attributeValues = [];
-      params.attributeIds = [17]; // ví dụ id thuộc tính size
+      params.attributeIds = [17];
     } else if (isColor) {
       params.keyword = "";
       params.attributeValues = [t.toLowerCase()];

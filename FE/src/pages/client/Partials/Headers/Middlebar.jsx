@@ -5,7 +5,7 @@ import ThinLove from "../../Helpers/icons/ThinLove";
 import ThinPeople from "../../Helpers/icons/ThinPeople";
 import SearchBox from "../../Helpers/SearchBox";
 import ProductCardStyleOne from "../../Helpers/Cards/ProductCardStyleOne";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants";
@@ -18,9 +18,8 @@ export default function Middlebar({ className, type }) {
   const [count, setCount] = useState(0);
   const [compareCount, setCompareCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -68,115 +67,25 @@ export default function Middlebar({ className, type }) {
     return () => window.removeEventListener("storage", updateCompareCount);
   }, []);
 
-  const handleSearch = useCallback(
-    async ({ keyword, brandIds, attributeValues, attributeIds }) => {
-      if (
-        !keyword?.trim() &&
-        (!brandIds || brandIds.length === 0) &&
-        (!attributeValues || attributeValues.length === 0)
-      ) {
-        toast.warn('Vui lòng nhập từ khóa hoặc chọn bộ lọc.');
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const params = { page: 1, limit: 10 };
-
-        if (keyword?.trim()) {
-          params.keyword = keyword.trim();
-        }
-
-        if (brandIds?.length) {
-          params.brand_ids = brandIds;
-        }
-
-        if (!keyword?.trim() && attributeValues?.length) {
-          params.attribute_values = attributeValues;
-          if (attributeIds?.length) {
-            params.attribute_ids = attributeIds;
-          }
-        }
-
-        const { data } = await axios.get(
-          `${Constants.DOMAIN_API}/products/search`,
-          { params }
-        );
-
-        if (data.status === 200) {
-          setProducts(data.data);
-          setIsSearchDialogOpen(true);
-        } else {
-          toast.error(data.message || 'Không thể tải sản phẩm.');
-          setProducts([]);
-        }
-      } catch (err) {
-        console.error('Search error', err);
-        toast.error('Lỗi khi tìm kiếm, thử lại sau.');
-        setProducts([]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    []
-  );
-
-
-  const handleProductClick = () => {
-    setIsSearchDialogOpen(false);
+  const handleSearch = ({ keyword, brandIds, attributeValues, attributeIds }) => {
+    const params = new URLSearchParams();
+    if (keyword?.trim()) {
+      params.append("keyword", keyword.trim());
+    }
+    if (brandIds && brandIds.length > 0) {
+      params.append("brand_ids", brandIds.join(","));
+    }
+    if (attributeValues && attributeValues.length > 0) {
+      params.append("attribute_values", attributeValues.join(","));
+    }
+    if (attributeIds && attributeIds.length > 0) {
+      params.append("attribute_ids", attributeIds.join(","));
+    }
+    // Điều hướng về trang all-products với query string
+    navigate(`/all-products?${params.toString()}`);
   };
 
-  const SearchResultsDialog = () =>
-    isSearchDialogOpen &&
-    ReactDOM.createPortal(
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center min-h-screen z-50"
-        onClick={() => setIsSearchDialogOpen(false)}
-      >
-        <div
-          className="bg-white p-6 rounded-lg max-w-6xl w-full max-h-[80vh] overflow-y-auto relative"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setIsSearchDialogOpen(false)}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-          <h2 className="text-xl font-semibold mb-4">Kết quả tìm kiếm</h2>
-          {isLoading ? (
-            <p className="text-center text-gray-600">Đang tải sản phẩm...</p>
-          ) : products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <ProductCardStyleOne
-                  key={product.id}
-                  datas={product}
-                  type={type}
-                  onProductClick={handleProductClick}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-gray-600">Không tìm thấy sản phẩm nào.</p>
-          )}
-        </div>
-      </div>,
-      document.body
-    );
+
 
   return (
     <div className={`w-full h-[86px] bg-white ${className}`}>
@@ -296,7 +205,6 @@ export default function Middlebar({ className, type }) {
           </div>
         </div>
       </div>
-      <SearchResultsDialog />
     </div>
   );
 }

@@ -11,7 +11,7 @@ const { Op } = require('sequelize');
 
 class WishlistController {
 
-    // Lấy toàn bộ wishlist (dành cho admin)
+    // Lấy toàn bộ wishlist (admin)
     static async getAllWishlists(req, res) {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -19,8 +19,8 @@ class WishlistController {
             const offset = (page - 1) * limit;
 
             const wishlists = await WishlistModel.findAndCountAll({
-                limit: limit,
-                offset: offset,
+                limit,
+                offset,
                 order: [['id', 'DESC']],
                 include: [
                     {
@@ -51,12 +51,11 @@ class WishlistController {
                 currentPage: page,
             });
         } catch (error) {
-            console.error("Lỗi khi lấy toàn bộ wishlist:", error);
             res.status(500).json({ error: error.message });
         }
     }
 
-    // Lấy danh sách yêu thích của một người dùng
+    // Lấy wishlist theo user
     static async getWishlistByUser(req, res) {
         try {
             const { userId } = req.params;
@@ -66,8 +65,8 @@ class WishlistController {
 
             const wishlists = await WishlistModel.findAndCountAll({
                 where: { user_id: userId },
-                limit: limit,
-                offset: offset,
+                limit,
+                offset,
                 order: [['id', 'DESC']],
                 include: [
                     {
@@ -114,31 +113,24 @@ class WishlistController {
                 currentPage: page,
             });
         } catch (error) {
-            console.error("Lỗi khi lấy wishlist của người dùng:", error);
             res.status(500).json({ error: error.message });
         }
     }
 
-    // Thêm sản phẩm vào danh sách yêu thích
+    // Thêm sản phẩm vào wishlist
     static async addToWishlist(req, res) {
         try {
             const { userId, productVariantId } = req.body;
 
-            const existingWishlistItem = await WishlistModel.findOne({
-                where: {
-                    user_id: userId,
-                    product_variant_id: productVariantId,
-                },
+            const exists = await WishlistModel.findOne({
+                where: { user_id: userId, product_variant_id: productVariantId },
             });
 
-            if (existingWishlistItem) {
-                return res.status(409).json({
-                    status: 409,
-                    message: 'Sản phẩm đã có trong danh sách yêu thích.',
-                });
+            if (exists) {
+                return res.status(409).json({ status: 409, message: 'Sản phẩm đã có trong danh sách yêu thích.' });
             }
 
-            const newWishlistItem = await WishlistModel.create({
+            const newItem = await WishlistModel.create({
                 user_id: userId,
                 product_variant_id: productVariantId,
             });
@@ -146,91 +138,104 @@ class WishlistController {
             res.status(201).json({
                 status: 201,
                 message: 'Đã thêm sản phẩm vào danh sách yêu thích.',
-                data: newWishlistItem,
+                data: newItem,
             });
         } catch (error) {
-            console.error("Lỗi khi thêm vào wishlist:", error);
             res.status(500).json({ error: error.message });
         }
     }
 
-    // Xóa sản phẩm khỏi danh sách yêu thích
+    // Xóa sản phẩm khỏi wishlist
     static async removeFromWishlist(req, res) {
         try {
             const { userId, productVariantId } = req.params;
 
-            const deletedRowCount = await WishlistModel.destroy({
-                where: {
-                    user_id: userId,
-                    product_variant_id: productVariantId,
-                },
+            const deleted = await WishlistModel.destroy({
+                where: { user_id: userId, product_variant_id: productVariantId },
             });
 
-            if (deletedRowCount === 0) {
-                return res.status(404).json({
-                    status: 404,
-                    message: 'Không tìm thấy sản phẩm trong danh sách yêu thích của người dùng.',
-                });
+            if (deleted === 0) {
+                return res.status(404).json({ status: 404, message: 'Không tìm thấy sản phẩm để xoá.' });
             }
 
-            res.status(200).json({
-                status: 200,
-                message: 'Đã xóa sản phẩm khỏi danh sách yêu thích.',
-            });
+            res.status(200).json({ status: 200, message: 'Đã xóa sản phẩm khỏi danh sách yêu thích.' });
         } catch (error) {
-            console.error("Lỗi khi xóa khỏi wishlist:", error);
             res.status(500).json({ error: error.message });
         }
     }
 
-    // Xóa toàn bộ danh sách yêu thích của người dùng
+    // Xoá toàn bộ wishlist của user
     static async clearWishlist(req, res) {
         try {
             const { userId } = req.params;
 
-            const deletedRowCount = await WishlistModel.destroy({
-                where: { user_id: userId },
-            });
+            const deleted = await WishlistModel.destroy({ where: { user_id: userId } });
 
-            if (deletedRowCount === 0) {
-                return res.status(404).json({
-                    status: 404,
-                    message: 'Danh sách yêu thích của người dùng đã trống hoặc không tồn tại.',
-                });
+            if (deleted === 0) {
+                return res.status(404).json({ status: 404, message: 'Danh sách đã trống hoặc không tồn tại.' });
             }
 
-            res.status(200).json({
-                status: 200,
-                message: 'Đã xóa toàn bộ danh sách yêu thích.',
-            });
+            res.status(200).json({ status: 200, message: 'Đã xóa toàn bộ danh sách yêu thích.' });
         } catch (error) {
-            console.error("Lỗi khi xóa toàn bộ wishlist:", error);
             res.status(500).json({ error: error.message });
         }
     }
 
-    // Thêm tất cả sản phẩm trong wishlist vào giỏ hàng
+    // Thêm từng sản phẩm vào giỏ hàng từ wishlist và xoá khỏi wishlist
+    static async addSingleWishlistItemToCart(req, res) {
+        try {
+            const { userId, productVariantId, quantity } = req.body;
+
+            const variant = await ProductVariantsModel.findOne({
+                where: { id: productVariantId },
+                attributes: ['id', 'stock'],
+            });
+
+            if (!variant || variant.stock < quantity) {
+                return res.status(400).json({ status: 400, message: 'Sản phẩm không đủ tồn kho.' });
+            }
+
+            const [cartItem, created] = await CartModel.findOrCreate({
+                where: { user_id: userId, product_variant_id: productVariantId },
+                defaults: { quantity },
+            });
+
+            if (!created) {
+                cartItem.quantity += quantity;
+                await cartItem.save();
+            }
+
+            // Xoá khỏi wishlist
+            await WishlistModel.destroy({
+                where: { user_id: userId, product_variant_id: productVariantId },
+            });
+
+            res.status(200).json({
+                status: 200,
+                message: 'Đã thêm sản phẩm vào giỏ hàng và xoá khỏi danh sách yêu thích.',
+                data: cartItem,
+            });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // Thêm tất cả wishlist vào giỏ hàng và xoá khỏi wishlist
     static async addWishlistToCart(req, res) {
         try {
             const { userId } = req.params;
 
-            // Lấy tất cả sản phẩm trong wishlist
             const wishlistItems = await WishlistModel.findAll({
                 where: { user_id: userId },
-                include: [
-                    {
-                        model: ProductVariantsModel,
-                        as: 'variant',
-                        attributes: ['id', 'stock'],
-                    },
-                ],
+                include: [{
+                    model: ProductVariantsModel,
+                    as: 'variant',
+                    attributes: ['id', 'stock'],
+                }],
             });
 
             if (!wishlistItems.length) {
-                return res.status(404).json({
-                    status: 404,
-                    message: 'Danh sách yêu thích trống.',
-                });
+                return res.status(404).json({ status: 404, message: 'Danh sách yêu thích trống.' });
             }
 
             const transaction = await WishlistModel.sequelize.transaction();
@@ -240,32 +245,25 @@ class WishlistController {
 
                 for (const item of wishlistItems) {
                     const { product_variant_id: productVariantId, variant } = item;
-                    const quantity = 1; // Mặc định thêm 1 sản phẩm
+                    const quantity = 1;
 
-                    // Kiểm tra tồn kho
                     if (variant.stock < quantity) {
                         errors.push(`Sản phẩm ID ${productVariantId} không đủ tồn kho.`);
                         continue;
                     }
 
-                    // Kiểm tra sản phẩm trong giỏ hàng
-                    let cartItem = await CartModel.findOne({
+                    const [cartItem, created] = await CartModel.findOrCreate({
                         where: {
                             user_id: userId,
                             product_variant_id: productVariantId,
                         },
+                        defaults: { quantity },
                         transaction,
                     });
 
-                    if (cartItem) {
+                    if (!created) {
                         cartItem.quantity += quantity;
                         await cartItem.save({ transaction });
-                    } else {
-                        cartItem = await CartModel.create({
-                            user_id: userId,
-                            product_variant_id: productVariantId,
-                            quantity,
-                        }, { transaction });
                     }
 
                     addedItems.push(cartItem);
@@ -277,22 +275,30 @@ class WishlistController {
                         status: 400,
                         message: 'Một số sản phẩm không thể thêm vào giỏ hàng.',
                         errors,
-                        addedItems,
                     });
                 }
+
+                // Xoá khỏi wishlist các sản phẩm đã thêm
+                const variantIdsToRemove = addedItems.map(i => i.product_variant_id);
+                await WishlistModel.destroy({
+                    where: {
+                        user_id: userId,
+                        product_variant_id: { [Op.in]: variantIdsToRemove },
+                    },
+                    transaction,
+                });
 
                 await transaction.commit();
                 res.status(200).json({
                     status: 200,
-                    message: 'Đã thêm tất cả sản phẩm từ wishlist vào giỏ hàng.',
+                    message: 'Đã thêm tất cả sản phẩm và xoá khỏi danh sách yêu thích.',
                     data: addedItems,
                 });
-            } catch (error) {
+            } catch (err) {
                 await transaction.rollback();
-                throw error;
+                throw err;
             }
         } catch (error) {
-            console.error("Lỗi khi thêm wishlist vào giỏ hàng:", error);
             res.status(500).json({ error: error.message });
         }
     }

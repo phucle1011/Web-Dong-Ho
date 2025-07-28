@@ -218,15 +218,15 @@ function UserList() {
                         <table className="w-full border-collapse border border-gray-300 mt-3">
                             <thead>
                                 <tr className="bg-gray-200">
-                                    <th className="p-2 border whitespace-nowrap">#</th>
-                                    <th className="p-2 border whitespace-nowrap">Tên</th>
-                                    <th className="p-2 border whitespace-nowrap">Email</th>
-                                    <th className="p-2 border whitespace-nowrap">Điện thoại</th>
-                                    <th className="p-2 border whitespace-nowrap">Avatar</th>
-                                    <th className="p-2 border whitespace-nowrap">Vai trò</th>
-                                    <th className="p-2 border whitespace-nowrap">Trạng thái</th>
-                                    <th className="p-2 border whitespace-nowrap">Ngày tạo</th>
-                                    <th className="p-2 border whitespace-nowrap">Hành động</th>
+                                    <th className="p-2 border">#</th>
+                                    <th className="p-2 border">Tên</th>
+                                    <th className="p-2 border">Email</th>
+                                    <th className="p-2 border">Điện thoại</th>
+                                    <th className="p-2 border">Avatar</th>
+                                    <th className="p-2 border">Vai trò</th>
+                                    <th className="p-2 border">Trạng thái</th>
+                                    <th className="p-2 border">Ngày tạo</th>
+                                    <th className="p-2 border"></th>
                                 </tr>
                             </thead>
                             <tbody>

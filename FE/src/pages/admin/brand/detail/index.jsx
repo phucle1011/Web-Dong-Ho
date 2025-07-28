@@ -28,7 +28,6 @@ function BrandDetail() {
     const fetchBrandDetail = async () => {
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/${id}`);
-            console.log("[fetchBrandDetail] API trả về:", res.data.data);
             if (res.data.data) {
                 setBrand(res.data.data);
                 setOriginalBrand(res.data.data);
@@ -99,14 +98,10 @@ function BrandDetail() {
             return;
         }
 
-        // Upload ảnh trước khi gửi dữ liệu
         const newLogoUrl = await uploadLogo();
         const updatedData = { ...editableBrand, logo: newLogoUrl };
         const url = `${Constants.DOMAIN_API}/admin/brand/update/${id}`;
 
-        // Log URL và payload để debug
-        console.log("[handleUpdate] PUT →", url);
-        console.log("[handleUpdate] payload:", updatedData);
 
         Swal.fire({
             title: 'Xác nhận cập nhật',
@@ -121,19 +116,11 @@ function BrandDetail() {
             if (result.isConfirmed) {
                 try {
                     const res = await axios.put(url, updatedData);
-                    console.log("[handleUpdate] response:", res);
                     toast.success("Cập nhật thông tin thương hiệu thành công!");
                     setBrand(res.data.data);
                     setOriginalBrand(res.data.data);
                     setEditableBrand(res.data.data);
                 } catch (error) {
-                    console.error("[handleUpdate] AxiosError:", {
-                        message: error.message,
-                        status: error.response?.status,
-                        url: error.config?.url,
-                        data: error.config?.data,
-                        responseData: error.response?.data
-                    });
                     toast.error(error.response?.data?.message || "Lỗi khi cập nhật thương hiệu.");
                 }
             }
@@ -155,19 +142,12 @@ function BrandDetail() {
         }).then((result) => {
             if (result.isConfirmed) {
                 const url = `${Constants.DOMAIN_API}/admin/brand/update/${id}`;
-                console.log("[handleStatusChange] PUT →", url, { status: newStatus });
                 axios.put(url, { status: newStatus })
                     .then(response => {
-                        console.log("[handleStatusChange] response:", response);
                         toast.success(`Cập nhật trạng thái thành công: ${getVietnameseStatus(newStatus)}`);
                         fetchBrandDetail();
                     })
                     .catch(error => {
-                        console.error("[handleStatusChange] AxiosError:", {
-                            message: error.message,
-                            status: error.response?.status,
-                            responseData: error.response?.data
-                        });
                         toast.error(error.response?.data?.message || "Lỗi khi cập nhật trạng thái thương hiệu.");
                     });
             }
@@ -284,24 +264,29 @@ function BrandDetail() {
                         {/* Status */}
                         <div>
                             <strong className="text-gray-600 block mb-1">Trạng thái:</strong>
-                            <div className="flex items-center space-x-2">
-                                <span className={`capitalize px-2 py-1 rounded-full text-xs font-medium ${
-                                    editableBrand.status === 'active'
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                }`}>
-                                    {getVietnameseStatus(editableBrand.status)}
-                                </span>
-                                <select
-                                    value={editableBrand.status}
-                                    onChange={(e) => handleStatusChange(e.target.value)}
-                                    className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="active">Hoạt động</option>
-                                    <option value="inactive">Ngưng hoạt động</option>
-                                </select>
+                            <div className="border rounded p-2 w-fit">
+                                <div className="form-check form-switch m-0 flex items-center">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        id="brandStatusSwitch"
+                                        checked={editableBrand.status === "active"}
+                                        onChange={(e) =>
+                                            handleStatusChange(e.target.checked ? "active" : "inactive")
+                                        }
+                                    />
+                                    <span
+                                        className="form-check-label ms-2"
+                                        style={{ whiteSpace: "nowrap" }}
+                                    >
+                                        {editableBrand.status === "active"
+                                            ? "Hoạt động"
+                                            : "Ngưng hoạt động"}
+                                    </span>
+                                </div>
                             </div>
                         </div>
+
 
                         {/* Created At */}
                         <div>

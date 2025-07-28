@@ -148,39 +148,43 @@ class BrandController {
 
     static async update(req, res) {
         try {
-            const id = req.params.id
-            const { name, country, description, status, logo } = req.body
+            const id = parseInt(req.params.id);
+            if (isNaN(id)) {
+                return res.status(400).json({ status: 400, message: "ID không hợp lệ" });
+            }
 
-            const updateData = { name, country, description, status }
+            const brand = await BrandModel.findByPk(id);
+            if (!brand) {
+                return res.status(404).json({ status: 404, message: "Không tìm thấy thương hiệu" });
+            }
 
-            if (logo) {
-                updateData.logo = logo
+            const updateData = {};
+            const fields = ['name', 'country', 'description', 'status', 'logo'];
+            for (const field of fields) {
+                if (req.body[field] !== undefined) {
+                    updateData[field] = req.body[field];
+                }
             }
 
             if (req.file) {
-                updateData.logo = `/uploads/brands/${req.file.filename}`
+                updateData.logo = `/uploads/brands/${req.file.filename}`;
             }
 
-            const [affected] = await BrandModel.update(updateData, {
-                where: { id },
-                returning: true
-            })
+            await BrandModel.update(updateData, { where: { id } });
+            const updated = await BrandModel.findByPk(id);
 
-            if (!affected) {
-                return res.status(404).json({ status: 404, message: 'Không tìm thấy thương hiệu' })
-            }
-
-            const updatedBrand = await BrandModel.findByPk(id)
             return res.status(200).json({
                 status: 200,
-                message: 'Cập nhật thương hiệu thành công!',
-                data: updatedBrand
-            })
+                message: "Cập nhật thương hiệu thành công!",
+                data: updated
+            });
         } catch (error) {
-            console.error('Lỗi khi cập nhật thương hiệu:', error)
-            return res.status(500).json({ status: 500, message: error.message })
+            console.error("Lỗi khi cập nhật thương hiệu:", error);
+            return res.status(500).json({ status: 500, message: "Lỗi máy chủ", error: error.message });
         }
     }
+
+
 
     static async delete(req, res) {
         try {

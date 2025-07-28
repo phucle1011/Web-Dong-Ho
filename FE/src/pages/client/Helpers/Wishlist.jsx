@@ -23,7 +23,7 @@ export default function Wishlist({ className, type }) {
     const decoded = decodeToken(token);
     const userId = decoded?.id;
     if (!userId) {
-      toast.error("Không thể xác định ID người dùng từ token.");
+      // toast.error("Không thể xác định ID người dùng từ token.");
       return;
     }
 

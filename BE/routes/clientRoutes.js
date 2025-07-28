@@ -140,6 +140,7 @@ router.post('/wishlist', WishlistController.addToWishlist);
 router.delete('/users/:userId/wishlist/:productVariantId', WishlistController.removeFromWishlist);
 router.delete('/users/:userId/wishlist', WishlistController.clearWishlist);
 router.post('/users/:userId/wishlist/add-to-cart', WishlistController.addWishlistToCart);
+router.post('/wishlist/add-single-to-cart', WishlistController.addSingleWishlistItemToCart);
 
 // ------------------[ PasswordOld ]------------------//
 router.post('/change-password', authenticate, changePassword);

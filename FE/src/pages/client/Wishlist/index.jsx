@@ -82,6 +82,10 @@ export default function Wishlist({ wishlist = true }) {
       );
 
       toast.success(response.data.message || "Đã thêm tất cả sản phẩm vào giỏ hàng!");
+
+      // 🔁 Sau khi thêm tất cả, xoá hết khỏi wishlist
+      setWishlistItems([]);
+      setSelectedItems([]);
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi thêm sản phẩm vào giỏ hàng.";
@@ -91,7 +95,6 @@ export default function Wishlist({ wishlist = true }) {
     }
   };
 
-  // Modified: Hàm để thêm các sản phẩm được chọn vào giỏ hàng
   const handleAddSelectedToCart = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
@@ -109,28 +112,35 @@ export default function Wishlist({ wishlist = true }) {
     }
 
     try {
-      const payload = selectedItems.map((variantId) => ({
-        product_variant_id: variantId,
-        quantity: 1,
-      }));
-
-      const response = await axios.post(
-        `${Constants.DOMAIN_API}/users/${userId}/wishlist/add-to-cart`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+      await Promise.all(
+        selectedItems.map((variantId) =>
+          axios.post(
+            `${Constants.DOMAIN_API}/wishlist/add-single-to-cart`,
+            {
+              userId,
+              productVariantId: variantId,
+              quantity: 1,
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+        )
       );
 
-      toast.success(response.data.message || "Đã thêm các sản phẩm được chọn vào giỏ hàng!");
+      toast.success(`Đã thêm ${selectedItems.length} sản phẩm vào giỏ hàng!`);
+
+      // ✅ Gọi lại API để làm mới danh sách wishlist sau khi server đã xoá
+      await fetchWishlist();
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.errors?.join(", ") || // Modified: Hiển thị lỗi cụ thể từ backend
-        error.response?.data?.message ||
-        "Lỗi khi thêm sản phẩm vào giỏ hàng.";
-      toast.error(errorMessage);
+      const msg =
+        error.response?.data?.message || "Lỗi khi thêm sản phẩm vào giỏ hàng.";
+      toast.error(msg);
     } finally {
       setIsProcessing(false);
     }
   };
+
+
+
 
   const handleClearWishlist = async () => {
     if (isProcessing) return;
@@ -232,7 +242,7 @@ export default function Wishlist({ wishlist = true }) {
                 className="mb-[30px]"
                 products={wishlistItems}
                 onWishlistChange={fetchWishlist}
-                onSelectItems={setSelectedItems} // Modified: Truyền hàm cập nhật danh sách chọn
+                onSelectItems={setSelectedItems}
               />
               <div className="w-full mt-[30px] flex sm:justify-end justify-start">
                 <div className="sm:flex sm:space-x-[30px] items-center">

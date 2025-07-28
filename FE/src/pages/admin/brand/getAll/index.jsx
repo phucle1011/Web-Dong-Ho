@@ -316,7 +316,7 @@ function BrandList() {
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Mô tả</th>
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Trạng thái</th>
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Ngày tạo</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Hành động</th>
+                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -352,17 +352,24 @@ function BrandList() {
                                                     )}
                                                 </td>
                                                 <td className="p-2 border border-gray-300">
-                                                    <div className="flex items-center gap-2">
-                                                        <select
-                                                            value={brand.status}
-                                                            onChange={(e) => handleStatusChange(brand.id, e.target.value)}
-                                                            className="capitalize border rounded px-2 py-1"
-                                                        >
-                                                            <option value="active">Hoạt động</option>
-                                                            <option value="inactive">Ngừng hoạt động</option>
-                                                        </select>
+                                                    <div className="rounded p-2">
+                                                        <div className="form-check form-switch m-0">
+                                                            <input
+                                                                className="form-check-input"
+                                                                type="checkbox"
+                                                                id={`statusSwitch-${brand.id}`}
+                                                                checked={brand.status === "active"}
+                                                                onChange={(e) =>
+                                                                    handleStatusChange(brand.id, e.target.checked ? "active" : "inactive")
+                                                                }
+                                                            />
+                                                            <span className="form-check-label ms-2" style={{ whiteSpace: "nowrap" }}>
+                                                                {brand.status === "active" ? "Hoạt động" : "Ngừng hoạt động"}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </td>
+
                                                 <td className="p-2 border border-gray-300">{new Date(brand.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
                                                 <td className="p-2 border border-gray-300 text-center align-middle">
                                                     <div className="flex items-center justify-center gap-2">

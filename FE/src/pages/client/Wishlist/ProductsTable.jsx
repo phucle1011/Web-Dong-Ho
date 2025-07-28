@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import InputQuantityCom from "../Helpers/InputQuantityCom";
+import React, { useState, useEffect } from "react";
 import { FaTrashAlt } from "react-icons/fa";
 import axios from "axios";
 import Constants from "../../../Constants";
@@ -18,18 +17,26 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
     }
   }
 
-  // Modified: State để lưu danh sách các sản phẩm được chọn
   const [selectedItems, setSelectedItems] = useState([]);
 
-  // Modified: Hàm xử lý khi checkbox thay đổi
+  useEffect(() => {
+    onSelectItems(selectedItems);
+  }, [selectedItems]);
+
+  useEffect(() => {
+    const validSelected = selectedItems.filter((id) =>
+      products.some((item) => item.product_variant_id === id)
+    );
+    setSelectedItems(validSelected);
+  }, [products]);
+
+
   const handleCheckboxChange = (productVariantId) => {
-    setSelectedItems((prev) => {
-      const newSelected = prev.includes(productVariantId)
+    setSelectedItems((prev) =>
+      prev.includes(productVariantId)
         ? prev.filter((id) => id !== productVariantId)
-        : [...prev, productVariantId];
-      onSelectItems(newSelected); // Cập nhật danh sách chọn lên component cha
-      return newSelected;
-    });
+        : [...prev, productVariantId]
+    );
   };
 
   const handleRemove = async (wishlistItemId, productVariantId) => {
@@ -38,7 +45,6 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
       return;
     }
 
-    // Hiển thị dialog xác nhận với SweetAlert2
     const result = await Swal.fire({
       title: "Xác nhận xóa",
       text: "Bạn có chắc muốn xóa sản phẩm này khỏi danh sách yêu thích?",
@@ -50,25 +56,16 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
       cancelButtonText: "Hủy",
     });
 
-    if (!result.isConfirmed) {
-      return;
-    }
+    if (!result.isConfirmed) return;
 
     try {
       const response = await axios.delete(
         `${Constants.DOMAIN_API}/users/${userId}/wishlist/${productVariantId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success(response.data.message || "Đã xóa sản phẩm khỏi danh sách yêu thích!");
-      // Gọi callback để làm mới danh sách
-      if (onWishlistChange) {
-        onWishlistChange();
-      }
-      // Modified: Xóa sản phẩm khỏi danh sách chọn nếu có
+      if (onWishlistChange) onWishlistChange();
       setSelectedItems((prev) => prev.filter((id) => id !== productVariantId));
-      onSelectItems(selectedItems.filter((id) => id !== productVariantId));
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Lỗi khi xóa sản phẩm khỏi danh sách yêu thích.";
@@ -82,7 +79,7 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
         <p className="py-10 text-gray-500">Không có sản phẩm nào trong wishlist.</p>
       ) : (
         <div className="relative w-full overflow-x-auto border border-[#EDEDED]">
-          <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <table className="w-full text-sm text-left text-gray-500">
             <thead>
               <tr className="text-[13px] font-medium text-black bg-[#F6F6F6] uppercase border-b">
                 <th className="py-4 pl-4 w-[50px]">
@@ -90,20 +87,15 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                     type="checkbox"
                     checked={selectedItems.length === products.length && products.length > 0}
                     onChange={(e) => {
-                      if (e.target.checked) {
-                        const allVariantIds = products.map((item) => item.product_variant_id);
-                        setSelectedItems(allVariantIds);
-                        onSelectItems(allVariantIds);
-                      } else {
-                        setSelectedItems([]);
-                        onSelectItems([]);
-                      }
+                      const allIds = products.map((item) => item.product_variant_id);
+                      setSelectedItems(e.target.checked ? allIds : []);
                     }}
                   />
                 </th>
                 <th className="py-4 pl-10 w-[380px]">Sản phẩm</th>
                 <th className="py-4 text-center">Thuộc tính</th>
                 <th className="py-4 text-center">Giá</th>
+                <th className="py-4 text-center whitespace-nowrap">Tồn kho</th>
                 <th className="py-4 text-center">Tổng</th>
                 <th className="py-4 text-right pr-10"></th>
               </tr>
@@ -114,10 +106,20 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                 const price = item.variant?.price
                   ? parseFloat(item.variant.price).toLocaleString("vi-VN") + "₫"
                   : "N/A";
+
                 const attributes =
-                  item.variant?.attributeValues?.map(
-                    (av) => `${av.attribute?.name || "Thuộc tính"}: ${av.value}`
-                  ).join(", ") || "Chưa có thuộc tính";
+                  item.variant?.attributeValues?.length > 0 ? (
+                    <ul className="text-left list-disc list-inside space-y-1">
+                      {item.variant.attributeValues.map((av) => (
+                        <li key={av.id}>
+                          <strong>{av.attribute?.name || "Thuộc tính"}:</strong> {av.value}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="italic text-gray-400">Chưa có thuộc tính</span>
+                  );
+
                 const imageUrl =
                   item.variant?.images?.[0]?.image_url ||
                   product.thumbnail ||
@@ -134,14 +136,14 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                     </td>
                     <td className="pl-10 py-4 w-[380px]">
                       <div className="flex space-x-6 items-center">
-                        <div className="w-[80px] h-[80px] overflow-hidden flex justify-center items-center border border-[#EDEDED]">
+                        <div className="w-[80px] h-[80px] flex justify-center items-center border">
                           <img
                             src={imageUrl}
                             alt={product.name || "Sản phẩm"}
                             className="w-full h-full object-contain"
                           />
                         </div>
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex-1">
                           <p className="font-medium text-[15px] text-qblack">
                             {product.name || "Sản phẩm không xác định"}
                           </p>
@@ -150,16 +152,13 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                     </td>
                     <td className="py-4 text-center">{attributes}</td>
                     <td className="py-4 text-center">{price}</td>
-                    <td className="text-center py-4">
-                      <div className="flex space-x-1 items-center justify-center">
-                        <span className="text-[15px] font-normal">{price}</span>
-                      </div>
-                    </td>
+                    <td className="py-4 text-center">{item.variant?.stock ?? "—"}</td>
+                    <td className="py-4 text-center">{price}</td>
                     <td className="py-4 text-right pr-10">
                       <button
                         onClick={() => handleRemove(item.id, item.product_variant_id)}
                         type="button"
-                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition"
                         title="Xóa khỏi danh sách yêu thích"
                       >
                         <FaTrashAlt size={18} />

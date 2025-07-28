@@ -1,3 +1,5 @@
+// BE/controllers/Client/SearchController.js
+
 const { Op } = require('sequelize');
 const Sequelize = require('sequelize');
 const Product = require('../../models/productsModel');
@@ -22,37 +24,118 @@ class SearchController {
         limit = 10,
       } = req.query;
 
-      // normalize
+      // normalize và tính offset
       page = Math.max(1, parseInt(page));
       limit = Math.max(1, parseInt(limit));
       const offset = (page - 1) * limit;
       const now = new Date();
 
-      // helpers
-      const toIntList = v => (Array.isArray(v) ? v : `${v}`.split(',')).map(x => parseInt(x)).filter(n => !isNaN(n));
-      const toStrList = v => (Array.isArray(v) ? v : `${v}`.split(',')).map(x => x.trim().toLowerCase()).filter(x => x);
+      // helper chuyển chuỗi sang mảng số / chữ
+      const toIntList = v =>
+        (Array.isArray(v) ? v : `${v}`.split(','))
+          .map(x => parseInt(x))
+          .filter(n => !isNaN(n));
+      const toStrList = v =>
+        (Array.isArray(v) ? v : `${v}`.split(','))
+          .map(x => x.trim().toLowerCase())
+          .filter(x => x);
 
       const brandFilter = brand_ids === 'all' ? [] : toIntList(brand_ids);
       const attrIds = toIntList(attribute_ids);
       const attrVals = toStrList(attribute_values);
 
+      // tách tokens từ keyword
       const tokens = `${keyword}`.toLowerCase().split(/\s+/).filter(t => t);
 
-      // 1) Tìm các product khớp keyword và brand
+      //
+      // === BƯỚC 1: Tìm product IDs từ 4 nguồn khác nhau ===
+      //
+
+      // 1a) Theo tên/description của Product
       const prodWhere = { status: 1 };
       if (brandFilter.length) prodWhere.brand_id = { [Op.in]: brandFilter };
       if (tokens.length) {
         prodWhere[Op.or] = [
           ...tokens.map(t => ({ name: { [Op.like]: `%${t}%` } })),
-          ...tokens.map(t => ({ description: { [Op.like]: `%${t}%` } }))
+          ...tokens.map(t => ({ description: { [Op.like]: `%${t}%` } })),
         ];
       }
-      const baseProds = await Product.findAll({
+      const nameDescProds = await Product.findAll({
         where: prodWhere,
-        attributes: ['id', 'name'],
-        order: [['name', 'ASC']]
+        attributes: ['id'],
+        raw: true,
       });
-      const baseIds = baseProds.map(p => p.id);
+      const nameDescIds = nameDescProds.map(p => p.id);
+
+      // 1b) Theo SKU của Variant
+      let skuIds = [];
+      if (tokens.length) {
+        const skuMatches = await Variant.findAll({
+          where: {
+            sku: { [Op.or]: tokens.map(t => ({ [Op.like]: `%${t}%` })) }
+          },
+          attributes: ['product_id'],
+          raw: true,
+        });
+        skuIds = skuMatches.map(v => v.product_id);
+      }
+
+      // 1c) Theo giá trị của Attribute
+      let attrValProductIds = [];
+      if (tokens.length) {
+        const attrValsMatches = await AttrValue.findAll({
+          where: {
+            [Op.or]: tokens.map(t => ({ value: { [Op.like]: `%${t}%` } }))
+          },
+          include: [{
+            model: Variant,
+            as: 'variant',
+            attributes: ['product_id'],
+            required: true
+          }],
+          attributes: ['variant.product_id'],
+          raw: true,
+        });
+        attrValProductIds = attrValsMatches.map(a => a['variant.product_id']);
+      }
+
+      // 1d) Theo tên của Attribute
+      let attrNameProductIds = [];
+      if (tokens.length) {
+        // tìm attribute matching tên
+        const attributeMatches = await Attribute.findAll({
+          where: {
+            [Op.or]: tokens.map(t => ({ name: { [Op.like]: `%${t}%` } }))
+          },
+          attributes: ['id'],
+          raw: true,
+        });
+        const attrNameIds = attributeMatches.map(a => a.id);
+        if (attrNameIds.length) {
+          const attrNameValMatches = await AttrValue.findAll({
+            where: { product_attribute_id: { [Op.in]: attrNameIds } },
+            include: [{
+              model: Variant,
+              as: 'variant',
+              attributes: ['product_id'],
+              required: true
+            }],
+            attributes: ['variant.product_id'],
+            raw: true,
+          });
+          attrNameProductIds = attrNameValMatches.map(a => a['variant.product_id']);
+        }
+      }
+
+      // gộp unique
+      const baseIds = Array.from(new Set([
+        ...nameDescIds,
+        ...skuIds,
+        ...attrValProductIds,
+        ...attrNameProductIds
+      ]));
+
+      // nếu không tìm thấy ID nào
       if (!baseIds.length) {
         return res.json({
           status: 200,
@@ -62,12 +145,16 @@ class SearchController {
         });
       }
 
-      // 2) Lọc thêm theo thuộc tính (size, màu, chất liệu, ...)
+      //
+      // === BƯỚC 2: Lọc thêm theo attributeIds và attribute_values (nếu có) ===
+      //
       let finalIds = baseIds;
       if (attrIds.length || attrVals.length) {
         const avWhere = {};
         if (attrIds.length) avWhere.product_attribute_id = { [Op.in]: attrIds };
-        if (attrVals.length) avWhere[Op.or] = attrVals.map(v => ({ value: { [Op.like]: `%${v}%` } }));
+        if (attrVals.length) {
+          avWhere[Op.or] = attrVals.map(v => ({ value: { [Op.like]: `%${v}%` } }));
+        }
 
         const matching = await AttrValue.findAll({
           where: {
@@ -96,7 +183,9 @@ class SearchController {
         }
       }
 
-      // 3) Phân trang & lấy chi tiết
+      //
+      // === BƯỚC 3: Phân trang & lấy chi tiết product + variants + images + promotions ===
+      //
       const totalItems = finalIds.length;
       const totalPages = Math.ceil(totalItems / limit);
       const pageIds = finalIds.slice(offset, offset + limit);
@@ -137,10 +226,14 @@ class SearchController {
         order: [['name', 'ASC']]
       });
 
-      // format
+      // định dạng dữ liệu trả về
       const data = products.map(p => ({
-        id: p.id, name: p.name, description: p.description, thumbnail: p.thumbnail,
-        brand: p.brand?.name, category: p.category?.name,
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        thumbnail: p.thumbnail,
+        brand: p.brand?.name,
+        category: p.category?.name,
         variants: p.variants.map(v => {
           const promo = v.promotionProducts[0]?.promotion;
           let fp = parseFloat(v.price);
@@ -150,7 +243,8 @@ class SearchController {
               : fp - parseFloat(promo.discount_value);
           }
           return {
-            id: v.id, sku: v.sku,
+            id: v.id,
+            sku: v.sku,
             price: parseFloat(v.price),
             final_price: Math.max(fp, 0),
             images: v.images.map(i => i.image_url),
