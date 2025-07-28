@@ -10,6 +10,7 @@ import ThinLove from "../icons/ThinLove";
 import ReactDOM from "react-dom";
 import { FiShoppingCart } from "react-icons/fi";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react";
+import StarRating from "../StarRating";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -28,7 +29,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
   // Memoize product and variants
   const product = useMemo(() => datas || {}, [datas]);
-  const variants = useMemo(() => Array.isArray(productData?.variants) ? productData.variants : [], [productData]);
+  const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
+  const representativeVariant = useMemo(() => product.representativeVariant || {}, [product.representativeVariant]);
 
   useEffect(() => {
     if (!product.id) return;
@@ -83,7 +85,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   }, [selectedVariant, productData]);
 
   const totalStock = useMemo(() =>
-    productData?.total_stock || variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0),
+    parseInt(productData?.total_stock) || variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0),
     [productData, variants]
   );
 
@@ -98,24 +100,38 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     let hasStock = totalStock > 0;
     let discountPercent = 0;
 
-    if (validVariants.length > 0) {
+    const safeParsePrice = (value) => {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    const safeParseDiscount = (value) => {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) || parsed < 0 || parsed > 100 ? 0 : Math.round(parsed);
+    };
+
+    if (representativeVariant && representativeVariant.originalPrice) {
+      displayOriginalPrice = safeParsePrice(representativeVariant.originalPrice);
+      displayPrice = safeParsePrice(representativeVariant.discountedPrice || representativeVariant.originalPrice);
+      discountPercent = safeParseDiscount(representativeVariant.discountPercent);
+    } else if (validVariants.length > 0) {
       const initialVariant = selectedVariant || validVariants[0];
-      displayOriginalPrice = parseFloat(initialVariant.price) || 0;
-      displayPrice = parseFloat(initialVariant.promotion?.discounted_price || initialVariant.price) || 0;
-      discountPercent = parseFloat(initialVariant.promotion?.discount_percent || 0);
+      displayOriginalPrice = safeParsePrice(initialVariant.price);
+      displayPrice = safeParsePrice(initialVariant.promotion?.discounted_price || initialVariant.price);
+      discountPercent = safeParseDiscount(initialVariant.promotion?.discount_percent);
     } else {
       hasStock = false;
-      displayOriginalPrice = parseFloat(productData?.price) || 0;
-      displayPrice = parseFloat(productData?.promotion?.discounted_price || productData?.price) || 0;
-      discountPercent = parseFloat(productData?.promotion?.discount_percent || 0);
+      displayOriginalPrice = safeParsePrice(productData?.price);
+      displayPrice = safeParsePrice(productData?.promotion?.discounted_price || productData?.price);
+      discountPercent = safeParseDiscount(productData?.promotion?.discount_percent);
     }
 
-    displayPrice = isNaN(displayPrice) ? 0 : Math.max(0, displayPrice);
-    displayOriginalPrice = isNaN(displayOriginalPrice) ? 0 : Math.max(0, displayOriginalPrice);
-    discountPercent = isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100 ? 0 : Math.round(discountPercent);
+    if (displayPrice < displayOriginalPrice && discountPercent === 0) {
+      discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+    }
 
     return { displayPrice, displayOriginalPrice, hasStock, discountPercent };
-  }, [productData, variants, selectedVariant, totalStock]);
+  }, [productData, variants, selectedVariant, totalStock, representativeVariant]);
 
   const { displayPrice, displayOriginalPrice, hasStock, discountPercent } = priceInfo;
   const thumbnail = selectedImage || productData?.thumbnail?.trim() || "/images/no-image.jpg";
@@ -141,7 +157,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
     try {
       const response = await axios.post(
-        `${Constants.DOMAIN_API}/add-to-carts`,
+        `${Constants.DOMAIN_API}/add-to-cart`,
         {
           userId,
           productVariantId: variantId,
@@ -191,7 +207,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   };
 
-  const description = productData?.description?.trim() || "Không có mô tả";
+  const description = product.description || "Không có mô tả";
   const maxLength = 80;
   const isLongDescription = description.length > maxLength;
   const truncatedDescription = isLongDescription && !isExpanded
@@ -298,26 +314,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   };
 
-  const renderStars = (avgRating) => {
-    const fullStars = Math.floor(avgRating);
-    const hasHalfStar = avgRating % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-    return (
-      <>
-        {Array(fullStars)
-          .fill()
-          .map((_, i) => (
-            <Star key={`full-${i}`} className="text-yellow-400 w-4 h-4" fill="currentColor" />
-          ))}
-        {hasHalfStar && <StarHalf className="text-yellow-400 w-4 h-4" />}
-        {Array(emptyStars)
-          .fill()
-          .map((_, i) => (
-            <StarOutline key={`empty-${i}`} className="text-gray-300 w-4 h-4" />
-          ))}
-      </>
-    );
-  };
+  function decodeHtml(html) {
+    const txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+  }
 
   const QuickViewDialog = () =>
     isQuickViewOpen &&
@@ -391,20 +392,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           <div className="flex flex-col space-y-3">
             <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">{productName}</h2>
             <div className="flex items-center gap-2 mb-2">
-              <div className="flex">{renderStars(avgRating)}</div>
+              <StarRating rating={avgRating} readOnly />
               <span className="text-sm text-gray-600">{ratingCount} đánh giá</span>
             </div>
-            <p className="text-gray-600 text-xs">
-              <span className="font-medium">Mô tả:</span> {truncatedDescription}
-              {isLongDescription && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-blue-600 hover:underline ml-1 text-xs"
-                >
-                  {isExpanded ? "Thu gọn" : "Xem thêm"}
-                </button>
-              )}
-            </p>
             {variants.length > 0 && (
               <div>
                 <span className="block text-xs font-medium text-gray-600 mb-1">Biến thể:</span>
@@ -413,7 +403,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                     const name = variant.name || variant.sku || "Unnamed";
                     const originalPrice = Number(variant.price || 0);
                     const salePrice = Number(variant.promotion?.discounted_price || originalPrice);
-                    const variantDiscountPercent = Math.round(Number(variant.promotion?.discount_percent || 0));
+                    const variantDiscountPercent = Math.round(
+                      Number(variant.promotion?.discount_percent || (salePrice < originalPrice ? ((originalPrice - salePrice) / originalPrice) * 100 : 0))
+                    );
                     const inStock = variant.stock > 0;
                     const isSelected = selectedVariant?.id === variant.id;
                     return (
@@ -430,15 +422,15 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                         disabled={!inStock}
                       >
                         <p className="font-medium">{name}</p>
-                        <p className="text-red-500 font-semibold">
+                        <p className="text-qred font-semibold">
                           {salePrice.toLocaleString("vi-VN")}₫
                         </p>
                         {variantDiscountPercent > 0 && salePrice < originalPrice && (
                           <div className="flex items-center justify-center space-x-1">
-                            <p className="text-gray-400 line-through text-[10px]">
+                            <p className="text-qgray line-through text-[10px]">
                               {originalPrice.toLocaleString("vi-VN")}₫
                             </p>
-                            <span className="text-white text-[10px] font-semibold bg-red-500 px-1 rounded">
+                            <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
                               -{variantDiscountPercent}%
                             </span>
                           </div>
@@ -453,40 +445,55 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               </div>
             )}
             {selectedVariant && selectedVariant.attributeValues?.length > 0 && (
-              <div>
-                <span className="block text-xs font-medium text-gray-600 mb-1">Thuộc tính:</span>
-                <ul className="text-xs space-y-1">
-                  {selectedVariant.attributeValues.map((attr, index) => (
-                    <li key={index} className="flex items-center space-x-2">
-                      <span className="text-gray-600">{attr.attribute?.name || "N/A"}:</span>
-                      {attr.attribute?.name.toLowerCase() === "color" ? (
-                        <div
-                          className="w-4 h-4 rounded border border-gray-300"
-                          style={{ backgroundColor: attr.value }}
-                          title={attr.value}
-                        />
-                      ) : (
-                        <span className="text-gray-800">{attr.value || "N/A"}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+             <div className="text-xs mt-2">
+  <span className="block text-xs font-semibold text-gray-700 mb-2">Thuộc tính:</span>
+  <div className="overflow-x-auto">
+    <table className="min-w-[200px] text-xs border border-gray-300 table-fixed">
+      <thead>
+        <tr className="bg-gray-100 text-gray-700">
+          <th className="w-1/2 border border-gray-300 p-2 text-left font-medium">Tên</th>
+          <th className="w-1/2 border border-gray-300 p-2 text-left font-medium">Giá trị</th>
+        </tr>
+      </thead>
+      <tbody>
+        {selectedVariant.attributeValues.map((attr, index) => (
+          <tr key={index} className="border-t border-gray-200">
+            <td className="border border-gray-300 p-2 text-gray-600">
+              {attr.attribute?.name || "N/A"}
+            </td>
+            <td className="border border-gray-300 p-2">
+              {attr.attribute?.name.toLowerCase() === "color" ? (
+                <div
+                  className="w-4 h-4 rounded-full border border-gray-400 inline-block"
+                  style={{ backgroundColor: attr.value }}
+                  title={attr.value}
+                />
+              ) : (
+                <span className="text-gray-800">{attr.value || "N/A"}</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
             )}
             <div className="flex items-center space-x-2">
               {hasStock ? (
                 <>
-                  <span className="text-red-600 font-semibold text-sm">
+                  <span className="text-qred font-semibold text-sm">
                     {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                   </span>
                   {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                    <span className="text-gray-400 line-through text-xs">
+                    <span className="text-qgray line-through text-xs">
                       {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                     </span>
                   )}
                 </>
               ) : (
-                <span className="text-red-600 font-semibold text-sm">Sản phẩm hết hàng</span>
+                <span className="text-qred font-semibold text-sm">Sản phẩm hết hàng</span>
               )}
             </div>
             {hasStock && (
@@ -581,7 +588,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </div>
             <div className="progress w-full h-[5px] rounded-[22px] bg-primarygray relative overflow-hidden">
               <div
-                className={`h-full ${type === 3 ? "bg-qyellow" : "bg-qyellow"}`}
+                className={`h-full ${type === 3 ? "bg-qyellow" : "bg-qred"}`}
                 style={{ width: `${stockPercentage}%` }}
               ></div>
             </div>
@@ -615,8 +622,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           </button>
         </div>
         <div className="flex items-center gap-2 mb-4">
-          <div className="flex">{renderStars(avgRating)}</div>
-          <span className="text-sm text-gray-600">{ratingCount} đánh giá</span>
+          <StarRating rating={avgRating} readOnly />
+          <span className="text-sm text-gray-600"></span>
         </div>
         <p
           className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600"
@@ -628,7 +635,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           <div className="price-container group-hover:hidden">
             <p className="price flex items-center space-x-2">
               <span
-                className={`offer-price ${discountPercent > 0 ? "text-qred" : "text-qblack"} font-600 text-[18px]`}
+                className={`offer-price ${discountPercent > 0 && displayOriginalPrice > displayPrice ? "text-qred" : "text-qblack"} font-600 text-[18px]`}
               >
                 {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
               </span>
@@ -640,7 +647,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </p>
           </div>
         ) : (
-          <p className="price text-red-600 font-600 text-[16px] group-hover:hidden">
+          <p className="price text-qred font-600 text-[16px] group-hover:hidden">
             Sản phẩm hết hàng
           </p>
         )}
@@ -705,6 +712,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               if (!exists) {
                 const updated = [...current, clickedVariant].slice(0, 4);
                 localStorage.setItem("compareList", JSON.stringify(updated));
+                toast.success("Đã thêm sản phẩm vào so sánh!");
+              } else {
+                toast.info("Sản phẩm đã có trong danh sách so sánh!");
               }
               navigate("/products-compaire");
             } catch (error) {

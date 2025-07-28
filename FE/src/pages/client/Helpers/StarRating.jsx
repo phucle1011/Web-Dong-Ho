@@ -1,19 +1,11 @@
-const StarRating = ({ rating, ratingHandler, hoverRating, hoverHandler }) => (
+const StarRating = ({ rating }) => (
   <div className="star-rating flex">
-    {[...Array(5)].map((star, index) => {
-      // eslint-disable-next-line no-param-reassign
-      index += 1;
+    {[...Array(5)].map((_, index) => {
+      const starIndex = index + 1;
       return (
-        <button
-          type="button"
-          // eslint-disable-next-line react/no-array-index-key
-          key={index}
-          className={
-            index <= (hoverRating || rating) ? "text-qyellow" : "text-qgray"
-          }
-          onClick={() => ratingHandler(index)}
-          onMouseEnter={() => hoverHandler(index)}
-          onMouseLeave={() => hoverHandler(rating)}
+        <div
+          key={starIndex}
+          className={starIndex <= rating ? "text-qyellow" : "text-qgray"}
         >
           <svg
             width="19"
@@ -25,7 +17,7 @@ const StarRating = ({ rating, ratingHandler, hoverRating, hoverHandler }) => (
           >
             <path d="M9.5 0L11.6329 6.56434H18.535L12.9511 10.6213L15.084 17.1857L9.5 13.1287L3.91604 17.1857L6.04892 10.6213L0.464963 6.56434H7.36712L9.5 0Z" />
           </svg>
-        </button>
+        </div>
       );
     })}
   </div>
