@@ -107,6 +107,7 @@ router.post('/shipping/shipping-fee', ShippingController.calculateShippingFee);
 router.post('/auth/register', AuthController.register);
 router.get('/auth/verify-email', AuthController.verifyEmail);
 router.post('/auth/login', AuthController.login);
+router.post('/auth/google', AuthController.googleLogin);
 router.post('/auth/check-token', AuthController.checkToken);
 router.post('/auth/update-verification', AuthController.updateVerification);
 router.post('/auth/reset-password', AuthController.resetPassword);

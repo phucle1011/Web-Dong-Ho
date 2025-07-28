@@ -7,6 +7,9 @@ const { successResponse, errorResponse } = require('../../helpers/response');
 const UserModel = require('../../models/usersModel');
 const AddressModel = require("../../models/addressesModel");
 const { Op } = require('sequelize');
+const { OAuth2Client } = require('google-auth-library');
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = new OAuth2Client(CLIENT_ID);
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
@@ -247,6 +250,49 @@ class AuthController {
         }
     }
 
+    static async googleLogin(req, res) {
+    try {
+      const { idToken, rememberMe } = req.body;
+      // Verify ID token
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      const { email, sub: googleId, name, picture } = payload;
+
+      // Tìm hoặc tạo user
+      let user = await UserModel.findOne({ where: { email } });
+      if (!user) {
+        user = await UserModel.create({
+          name,
+          email,
+          avatar: picture,
+          googleId,
+          email_verified_at: new Date(),
+          role: 'user',
+          status: 'active',
+        });
+      } else if (!user.googleId) {
+        // Lần đầu login bằng Google, lưu googleId + avatar
+        await user.update({ googleId, avatar: picture });
+      }
+
+      // Sinh JWT
+      const expiresIn = rememberMe ? '30d' : '2h';
+      const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn });
+
+      if (rememberMe) {
+        await user.update({ remember_token: token });
+      }
+
+      return successResponse(res, 'Đăng nhập Google thành công!', { token, user }, 200);
+    } catch (err) {
+      console.error(err);
+      return errorResponse(res, 'Token Google không hợp lệ!', 401);
+    }
+  }
+
     //-------------------[ RESET PASSWORD ]--------------------------
     static async resetPassword(req, res) {
         const { email } = req.body;
@@ -311,8 +357,6 @@ class AuthController {
         }
     }
 
-
-
     static async getById(req, res) {
         try {
             const { id } = req.params;
@@ -343,6 +387,7 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
+
     static async update(req, res) {
         try {
             const { id } = req.params;

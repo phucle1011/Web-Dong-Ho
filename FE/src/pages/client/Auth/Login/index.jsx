@@ -6,6 +6,8 @@ import { toast } from "react-toastify";
 import Constants from "../../../../Constants";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
+import { GoogleLogin } from '@react-oauth/google';
+
 
 export default function Login() {
   const [checked, setValue] = useState(!!localStorage.getItem("token"));
@@ -122,6 +124,26 @@ export default function Login() {
     } catch (error) {
       console.error("Lỗi khi đăng nhập:", error);
       toast.error("Có lỗi xảy ra. Vui lòng thử lại sau!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    const idToken = credentialResponse.credential;
+    try {
+      setLoading(true);
+      const res = await axios.post(`${Constants.DOMAIN_API}/auth/google`, {
+        idToken,
+        rememberMe: checked
+      });
+      const { token } = res.data.data;
+      localStorage.setItem("token", token);
+      toast.success("Đăng nhập bằng Google thành công!");
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      toast.error("Google login thất bại, vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -302,6 +324,14 @@ export default function Login() {
                         {loading ? "Đang xử lý..." : "Đăng nhập"}
                       </button>
                     </div>
+                        
+                    <hr />
+                    <div className="google-login-area mb-4 flex justify-center mt-4">
+                      <GoogleLogin
+                        onSuccess={handleGoogleLogin}
+                        onError={() => toast.error("Đăng nhập Google thất bại!")}
+                      />
+                    </div>
 
                     {/* Đăng ký mới */}
                     <div className="signup-area flex justify-center mt-4">
@@ -361,6 +391,7 @@ export default function Login() {
                 )}
               </div>
             </div>
+
 
             {/* Hình ảnh bên phải */}
             <div className="flex-1 lg:flex hidden transform scale-60 xl:scale-100 xl:justify-center">
