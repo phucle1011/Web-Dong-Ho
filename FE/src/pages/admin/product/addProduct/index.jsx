@@ -273,7 +273,7 @@ const generateSlug = (text) => {
     <button
       type="button"
       onClick={() => setShowBrandModal(true)}
-      className="text-blue-600 hover:underline text-sm"
+      className="text-blue-600  text-sm"
     >
       + Thêm thương hiệu
     </button>
@@ -318,7 +318,7 @@ const generateSlug = (text) => {
   <button
     type="button"
     onClick={() => setShowCategoryModal(true)}
-    className="text-blue-600 hover:underline text-sm"
+    className="text-blue-600  text-sm"
   >
     + Thêm danh mục
   </button>
@@ -461,10 +461,9 @@ const generateSlug = (text) => {
     className="w-full border px-3 py-2 rounded text-sm"
     rows="3"
     {...register("short_description", {
-      required: "Vui lòng nhập mô tả ngắn",
       maxLength: {
-        value: 300,
-        message: "Tối đa 300 ký tự"
+        value: 100,
+        message: "Tối đa 100 ký tự"
       }
     })}
     placeholder="Nhập mô tả ngắn..."

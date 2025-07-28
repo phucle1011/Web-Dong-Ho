@@ -328,7 +328,7 @@ const EditVariantForm = () => {
               <button
                 type="button"
                 onClick={addAttributeField}
-                className="text-blue-600 hover:underline"
+                className="text-blue-600 "
               >
                 + Thêm thuộc tính
               </button>
@@ -382,7 +382,7 @@ const EditVariantForm = () => {
             <button
               type="button"
               onClick={addImageField}
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 "
             >
               + Thêm ảnh
             </button>

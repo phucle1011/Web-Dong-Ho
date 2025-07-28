@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useLayoutEffect } from "react";
 import data from "../../../data/products.json";
 import BreadcrumbCom from "../BreadcrumbCom";
 import ProductCardStyleOne from "../Helpers/Cards/ProductCardStyleOne";
@@ -12,6 +12,7 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import Constants from "../../../Constants";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export default function SingleProductPage() {
   const [tab, setTab] = useState("des");
@@ -24,8 +25,10 @@ export default function SingleProductPage() {
   const [reviewLoading, setLoading] = useState(false);
   const reviewElement = useRef(null);
   const [report, setReport] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const descriptionRef = useRef(null);
   const [commnets, setComments] = useState([
     {
       id: Math.random(),
@@ -59,22 +62,27 @@ export default function SingleProductPage() {
   ]);
   const { state } = useLocation();
   const navigate = useNavigate();
-  useEffect(() => {
-    if (!state?.productId) {
-      toast.error("Thiếu thông tin sản phẩm!");
-      navigate("/all-products");
-    }
-  }, [state]);
   const { productId } = state || {};
   const [description, setDescription] = useState([]);
-
   const [relatedProducts, setRelatedProducts] = useState([]);
   useEffect(() => {
-    const res = axios
+    const productId = state?.productId;
+
+    if (!productId) {
+      toast.error("Thiếu thông tin sản phẩm!");
+      navigate("/all-products");
+      return;
+    }
+
+    axios
       .get(`${Constants.DOMAIN_API}/products/${productId}/variants`)
       .then((res) => {
         setDescription(res.data.product.description);
+      })
+      .catch((err) => {
+        console.error("Lỗi khi gọi API chi tiết sản phẩm:", err);
       });
+
     axios
       .get(`${Constants.DOMAIN_API}/products/${productId}/similar`)
       .then((res) => {
@@ -83,12 +91,12 @@ export default function SingleProductPage() {
       .catch((err) => {
         console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
       });
-  }, [productId]);
+  }, [state, navigate]);
+
   useEffect(() => {
     if (window.location.hash === "#review") {
       setTab("review");
 
-     
       setTimeout(() => {
         const element = document.getElementById("review-section");
         if (element) {
@@ -98,28 +106,33 @@ export default function SingleProductPage() {
     }
   }, []);
 
-useEffect(() => {
-  if (window.location.hash.startsWith("#comment-")) {
-    setTab("review"); 
-    setTimeout(() => {
-      const commentId = window.location.hash.replace("#", "");
-      const element = document.getElementById(commentId);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 400); 
-  }
-}, []);
-
+  useEffect(() => {
+    if (window.location.hash.startsWith("#comment-")) {
+      setTab("review");
+      setTimeout(() => {
+        const commentId = window.location.hash.replace("#", "");
+        const element = document.getElementById(commentId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 400);
+    }
+  }, []);
 
   useEffect(() => {
-  if (tab === "review") {
-    const element = document.getElementById("review-section");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+    if (tab === "review") {
+      const element = document.getElementById("review-section");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
     }
-  }
-}, [tab]);
+  }, [tab]);
+  useLayoutEffect(() => {
+    const element = descriptionRef.current;
+    if (element) {
+      setIsOverflowing(element.scrollHeight > MAX_HEIGHT);
+    }
+  }, [description]);
 
   const reviewAction = () => {
     setLoading(true);
@@ -224,36 +237,40 @@ useEffect(() => {
             </div>
             <div className="tab-contents w-full min-h-[400px] ">
               <div className="container-x mx-auto">
-
-{tab === "des" && (
+                {tab === "des" && (
   <div data-aos="fade-up" className="w-full tab-content-item">
-  <h6 className="text-[18px] font-medium text-qblack mb-2">MÔ TẢ</h6>
+    <h6 className="text-[18px] font-medium text-qblack mb-2">
+      MÔ TẢ
+    </h6>
 
-  <div className="relative">
-    <div
-      className="prose prose-img:rounded-md transition-all duration-300 overflow-hidden"
-      style={{ maxHeight: isExpanded ? "none" : `${MAX_HEIGHT}px` }}
-      dangerouslySetInnerHTML={{ __html: description }}
-    ></div>
+    <div className="relative">
+      <div
+        ref={descriptionRef}
+        className="prose prose-img:rounded-md transition-all duration-300 overflow-hidden"
+        style={{
+          maxHeight: isExpanded ? "none" : `${MAX_HEIGHT}px`,
+        }}
+        dangerouslySetInnerHTML={{ __html: description }}
+      ></div>
 
-    {/* Gradient mờ phía dưới khi chưa mở rộng */}
-    {!isExpanded && (
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[rgb(177, 167, 167)] to-transparent pointer-events-none z-10"></div>
+      {!isExpanded && isOverflowing && (
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[rgb(177, 167, 167)] to-transparent pointer-events-none z-10"></div>
+      )}
+    </div>
+
+    {isOverflowing && (
+      <div className="text-center mt-2 z-20 relative">
+        <button
+          className="text-blue-600 font-semibold"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? "Thu gọn" : "Xem thêm"}
+        </button>
+      </div>
     )}
   </div>
-
-  {/* Nút Xem thêm nằm ngoài vùng mờ */}
-  <div className="text-center mt-2 z-20 relative">
-    <button
-      className="text-blue-600 font-semibold hover:underline"
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      {isExpanded ? "Thu gọn" : "Xem thêm"}
-    </button>
-  </div>
-</div>
-
 )}
+
 
                 {tab === "review" && (
                   <div

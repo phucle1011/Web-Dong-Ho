@@ -177,15 +177,12 @@ router.patch('/notification/:id/read', NotificationController.markAsRead);
 router.patch('/notification/mark-all-read', NotificationController.markAllAsRead);
 
 
-// ✅ Lấy danh sách tất cả Flash Sale đang hoạt động
-router.get('/flashSale', FlashSaleController.getAll);
-
-// ✅ Tạo mới Flash Sale (chỉ khi chưa tồn tại cho promotion_id)
-router.post('/flashSale', FlashSaleController.create);
-
-// ✅ Xoá Flash Sale theo ID (tuỳ chọn)
-router.delete('flashSale/:id', FlashSaleController.delete);
-router.get('/active-products', FlashSaleController.getActiveProductPromotions);
+router.get("/flashSale", FlashSaleController.getAll);
+router.post("/flashSale", FlashSaleController.create);
+router.get("/flashSale/:id", FlashSaleController.getById);
+router.put("/flashSale/:id", FlashSaleController.update);
+router.delete("/flashSale/:id", FlashSaleController.delete);
+router.get("/active-products", FlashSaleController.getActiveProductPromotions);
 
 
 

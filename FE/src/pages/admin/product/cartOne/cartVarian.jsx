@@ -190,7 +190,7 @@ const handleImageDelete = async (public_id) => {
           <button
             type="button"
             onClick={addAttributeRow}
-            className="text-blue-600 hover:underline text-sm mt-2"
+            className="text-blue-600  text-sm mt-2"
           >
             + Thêm thuộc tính
           </button>

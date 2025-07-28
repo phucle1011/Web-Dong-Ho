@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Constants from "../../../../Constants.jsx";
 import Select from "react-select";
 import { io } from "socket.io-client";
@@ -11,7 +11,8 @@ import "react-datepicker/dist/react-datepicker.css";
 
 const socket = io(Constants.DOMAIN_API);
 
-const CreateNotification = () => {
+const EditNotification = () => {
+  const { id } = useParams();
   const [title, setTitle] = useState("");
   const [thumbnail, setThumbnail] = useState("");
   const [selectedPromotions, setSelectedPromotions] = useState([]);
@@ -21,22 +22,61 @@ const CreateNotification = () => {
   const [status, setStatus] = useState(true);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+// Tính giới hạn giờ cho DatePicker
+const startMin = startDate
+  ? new Date(new Date(startDate).setHours(0, 0, 0, 0))
+  : new Date().setHours(0, 0, 0, 0);
+
+const startMax = startDate
+  ? new Date(new Date(startDate).setHours(23, 59, 59, 999))
+  : new Date().setHours(23, 59, 59, 999);
+
+const endMin = endDate
+  ? new Date(new Date(endDate).setHours(0, 0, 0, 0))
+  : new Date().setHours(0, 0, 0, 0);
+
+const endMax = endDate
+  ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
+  : new Date().setHours(23, 59, 59, 999);
+const fetchPromotions = async () => {
+  try {
+    const res = await axios.get(`${Constants.DOMAIN_API}/admin/active-products`);
+    const now = new Date();
+
+    const mapped = res.data.data.map((p) => {
+      const start = new Date(p.start_date);
+      const daysLeft = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
+
+      const timeText = daysLeft > 0 ? `${daysLeft} ngày nữa` : "Đang diễn ra";
+
+      return {
+        value: p.id,
+        name: p.name,
+        timeText,
+        variant_count: p.variant_count,
+      };
+    });
+
+    setPromotions(mapped);
+  } catch (err) {
+    console.error("Lỗi khi lấy danh sách khuyến mãi:", err);
+    toast.error("Không thể tải chương trình khuyến mãi.");
+  }
+};
 
   useEffect(() => {
-    const fetchPromotions = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/active-products`
-        );
-        const now = new Date();
+        const [promoRes, notiRes] = await Promise.all([
+          axios.get(`${Constants.DOMAIN_API}/admin/active-products`),
+          axios.get(`${Constants.DOMAIN_API}/admin/flashSale/${id}`),
+        ]);
 
-        const mapped = res.data.data.map((p) => {
+        const now = new Date();
+        const mappedPromotions = promoRes.data.data.map((p) => {
           const start = new Date(p.start_date);
           const daysLeft = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-
-          const timeText =
-            daysLeft > 0 ? `${daysLeft} ngày nữa` : "Đang diễn ra";
-
+          const timeText = daysLeft > 0 ? `${daysLeft} ngày nữa` : "Đang diễn ra";
           return {
             value: p.id,
             name: p.name,
@@ -45,15 +85,28 @@ const CreateNotification = () => {
           };
         });
 
-        setPromotions(mapped);
+        const noti = notiRes.data.data;
+        setTitle(noti.title);
+        setThumbnail(noti.thumbnail);
+        setStartDate(new Date(noti.start_date));
+        setEndDate(new Date(noti.end_date));
+        setStatus(noti.status === 1);
+        const selected = noti.flashSale.map((fs) => ({
+          value: fs.promotion.id,
+          name: fs.promotion.name,
+          timeText: "",
+          variant_count: 0,
+        }));
+        setSelectedPromotions(selected);
+        setPromotions(mappedPromotions);
       } catch (err) {
-        console.error("Lỗi khi lấy danh sách khuyến mãi:", err);
-        toast.error("Không thể tải chương trình khuyến mãi.");
+        toast.error("Lỗi khi tải dữ liệu chi tiết!");
+        navigate("/admin/notification");
       }
     };
-
-    fetchPromotions();
-  }, []);
+  fetchPromotions();
+    fetchData();
+  }, [id, navigate]);
 
   const validate = () => {
     const errs = {};
@@ -72,7 +125,7 @@ const CreateNotification = () => {
     const errs = validate();
     if (Object.keys(errs).length) return setErrors(errs);
     try {
-      await axios.post(`${Constants.DOMAIN_API}/admin/flashSale`, {
+      await axios.put(`${Constants.DOMAIN_API}/admin/flashSale/${id}`, {
         title,
         thumbnail,
         promotion_id: selectedPromotions.map((p) => p.value),
@@ -80,32 +133,17 @@ const CreateNotification = () => {
         end_date: endDate.toISOString(),
         status: status ? 1 : 0,
       });
-      socket.emit("new_notification");
-      toast.success("Thành công!");
-      navigate("/admin/notification");
+      socket.emit("update_notification");
+      toast.success("Cập nhật thành công!");
+      navigate("/admin/notifications");
     } catch {
-      toast.error("Thất bại.");
+      toast.error("Cập nhật thất bại.");
     }
   };
 
-  // Helpers to return Date objects for time boundaries
-  const getDateBounds = (date) => {
-    const min = date ? new Date(date) : new Date();
-    min.setHours(0, 0, 0, 0);
-    const max = new Date(min);
-    max.setHours(23, 59, 59, 999);
-    return { min, max };
-  };
-
-  // Compute bounds
-  const { min: startMin, max: startMax } = getDateBounds(
-    startDate || new Date()
-  );
-  const { min: endMin, max: endMax } = getDateBounds(endDate || new Date());
-
   return (
     <div className="p-6 max-w-4xl mx-auto bg-white rounded shadow">
-      <h2 className="text-2xl font-semibold mb-6">Tạo Thông Báo</h2>
+      <h2 className="text-2xl font-semibold mb-6">Chỉnh sửa Thông Báo</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Card 1 */}
         {/* Card 1 */}
@@ -265,4 +303,4 @@ const CreateNotification = () => {
   );
 };
 
-export default CreateNotification;
+export default EditNotification;

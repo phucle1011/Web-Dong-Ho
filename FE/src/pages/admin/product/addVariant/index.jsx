@@ -256,7 +256,7 @@ function AddVariantForm() {
     <button
       type="button"
       onClick={addAttributeRow}
-      className="text-blue-600 hover:underline text-sm"
+      className="text-blue-600  text-sm"
     >
       + Thêm thuộc tính
     </button>

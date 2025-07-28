@@ -501,7 +501,7 @@ function UserDetail() {
                 <strong className="text-gray-600 w-24">Email:</strong>
                 <input
                   type="text"
-                  className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer hover:underline focus:outline-none"
+                  className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer  focus:outline-none"
                   value={user.email || ''}
                   readOnly
                   onClick={() => user.email && window.open(`mailto:${user.email}`)}

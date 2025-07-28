@@ -25,12 +25,14 @@ export default function ProductView({ className, reportHandler }) {
   const [ratingCount, setRatingCount] = useState(0);
   const { state } = useLocation();
   const navigate = useNavigate();
-  useEffect(() => {
-    if (!state?.productId) {
-      navigate("/all-products");
-    }
-  }, [state]);
+  // useEffect(() => {
+  //   if (!state?.productId) {
+  //     navigate("/all-products");
+  //   }
+  // }, [state]);
   const { productId } = state || {};
+const [showFullShortDesc, setShowFullShortDesc] = useState(false);
+const SHORT_DESC_LIMIT = 30;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -41,6 +43,8 @@ export default function ProductView({ className, reportHandler }) {
           `${Constants.DOMAIN_API}/products/${productId}/variants`
         );
         const { product } = res.data;
+        console.log(product);
+        
         setProductData(product);
         setVariants(product.variants);
         setImages(product.variantImages);
@@ -316,14 +320,14 @@ export default function ProductView({ className, reportHandler }) {
 
   return (
     <div
-      className={`product-view w-full lg:flex justify-between ${className || ""
-        }`}
+      className={`product-view w-full lg:flex justify-between ${
+        className || ""
+      }`}
     >
       <div data-aos="fade-right" className="lg:w-1/2 xl:mr-[70px] lg:mr-[50px]">
         <div className="w-full">
           <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
             <img src={selectedImage} alt="" className="object-contain" />
-            
           </div>
           <div className="overflow-x-auto">
             <div className="flex gap-2 flex-nowrap">
@@ -356,10 +360,29 @@ export default function ProductView({ className, reportHandler }) {
           </span>
           <p
             data-aos="fade-up"
-            className="text-xl font-medium text-qblack mb-4"
+            className="text-xl font-medium text-qblack mb-2"
           >
             {productData.name}
           </p>
+
+          {productData.short_description && (
+            <div className="mb-4 text-sm text-gray-600">
+              {showFullShortDesc ||
+              productData.short_description.length <= SHORT_DESC_LIMIT
+                ? productData.short_description
+                : productData.short_description.slice(0, SHORT_DESC_LIMIT) +
+                  "..."}
+              {productData.short_description.length > SHORT_DESC_LIMIT && (
+                <button
+                  onClick={() => setShowFullShortDesc(!showFullShortDesc)}
+                  className="ml-2 text-blue-600 font-medium "
+                >
+                  {showFullShortDesc ? "Thu gọn" : "Xem thêm"}
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mb-4">
             <div className="flex">{renderStars(avgRating)}</div>
             <span className="text-sm text-gray-600">
@@ -388,9 +411,10 @@ export default function ProductView({ className, reportHandler }) {
                 <div
                   key={variant.id}
                   className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition
-                    ${inStock
-                      ? "cursor-pointer hover:shadow"
-                      : "opacity-50 cursor-not-allowed"
+                    ${
+                      inStock
+                        ? "cursor-pointer hover:shadow"
+                        : "opacity-50 cursor-not-allowed"
                     }
                     ${
                       isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""
@@ -515,27 +539,37 @@ export default function ProductView({ className, reportHandler }) {
               </button>
             </div>
             <div className="flex-1 h-full">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!selectedVariant) {
-                    toast.error(
-                      "Vui lòng chọn biến thể trước khi thêm vào giỏ hàng"
-                    );
-                    return;
-                  }
-                  if (quantity > selectedVariant.stock) {
-                    toast.error(
-                      `Chỉ còn ${selectedVariant.stock} sản phẩm trong kho`
-                    );
-                    return;
-                  }
-                  handleAddToCart(selectedVariant.id, quantity);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold w-full h-full"
-              >
-                THÊM GIỎ HÀNG
-              </button>
+              {selectedVariant?.stock > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedVariant) {
+                      toast.error(
+                        "Vui lòng chọn biến thể trước khi thêm vào giỏ hàng"
+                      );
+                      return;
+                    }
+                    if (quantity > selectedVariant.stock) {
+                      toast.error(
+                        `Chỉ còn ${selectedVariant.stock} sản phẩm trong kho`
+                      );
+                      return;
+                    }
+                    handleAddToCart(selectedVariant.id, quantity);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold w-full h-full"
+                >
+                  THÊM GIỎ HÀNG
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="bg-gray-300 text-gray-500 text-sm font-semibold w-full h-full cursor-not-allowed"
+                >
+                  HẾT HÀNG
+                </button>
+              )}
             </div>
           </div>
           <div data-aos="fade-up" className="mb-[20px]">

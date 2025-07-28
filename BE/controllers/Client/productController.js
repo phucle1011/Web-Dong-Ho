@@ -185,6 +185,7 @@ const variants = product.variants.map((variant) => {
           id: product.id,
           name: product.name,
           description: product.description,
+          short_description: product.short_description,
           price: product.price,
           brand: product.brand?.name || null,
           category: product.category?.name || null,
