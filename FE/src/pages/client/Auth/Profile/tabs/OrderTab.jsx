@@ -144,12 +144,11 @@ export default function OrderTab() {
       const isOnlinePayment = ["vnpay", "momo"].includes(paymentMethod);
       const hasWalletUsed = Number(selectedOrder.wallet_balance || 0) > 0;
 
-      // Nếu thanh toán online hoặc dùng ví thì hỏi xác nhận hoàn tiền
       if (isOnlinePayment || hasWalletUsed) {
         const confirm = await Swal.fire({
           title: "Xác nhận hoàn tiền về ví",
           icon: "warning",
-          text: "Số tiền sẽ được hoàn trực tiếp vào ví điện tử của bạn.",
+          text: "Số tiền mà bạn đã dùng trong ví sẽ được hoàn trực tiếp vào ví tiền của bạn.",
           showCancelButton: true,
           confirmButtonText: "Xác nhận",
           cancelButtonText: "Hủy",
@@ -160,7 +159,6 @@ export default function OrderTab() {
           return;
         }
 
-        // Gửi yêu cầu hoàn tiền
         await axios.post(`${Constants.DOMAIN_API}/wallets/request-refund`, {
           orderId: selectedOrder.id,
         }, {
@@ -170,7 +168,6 @@ export default function OrderTab() {
         });
       }
 
-      // Tiến hành hủy đơn
       await axios.put(
         `${Constants.DOMAIN_API}/orders/cancel/${selectedOrder.id}`,
         { cancellation_reason: reason }

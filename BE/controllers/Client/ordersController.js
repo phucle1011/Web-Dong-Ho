@@ -273,13 +273,7 @@ class OrderController {
 
             const paymentMethod = order.payment_method?.toLowerCase();
             const walletBalance = Number(order.wallet_balance) || 0;
-
-            if (paymentMethod === 'cod') {
-                if (walletBalance <= 0) {
-                    await t.rollback();
-                    return res.status(400).json({ message: "Đơn hàng COD không có phần thanh toán ví để hoàn tiền" });
-                }
-            }
+            const totalPrice = Number(order.total_price) || 0;
 
             if (order.status !== 'pending') {
                 await t.rollback();
@@ -304,6 +298,21 @@ class OrderController {
                 });
             }
 
+            let refundAmount = 0;
+
+            if (paymentMethod === 'cod') {
+                if (walletBalance <= 0) {
+                    await t.rollback();
+                    return res.status(400).json({ message: "Đơn hàng COD không có phần thanh toán ví để hoàn tiền" });
+                }
+                refundAmount = walletBalance;
+            } else if (paymentMethod === 'momo' || paymentMethod === 'vnpay') {
+                refundAmount = walletBalance + totalPrice;
+            } else {
+                await t.rollback();
+                return res.status(400).json({ message: `Phương thức thanh toán '${paymentMethod}' không hỗ trợ hoàn tiền` });
+            }
+
             const user = await UserModel.findByPk(userId, {
                 transaction: t,
                 lock: t.LOCK.UPDATE,
@@ -314,19 +323,7 @@ class OrderController {
                 return res.status(404).json({ message: "Không tìm thấy người dùng." });
             }
 
-            const refundAmount = parseFloat(order.wallet_balance) > 0
-                ? parseFloat(order.wallet_balance)
-                : parseFloat(order.total_price || 0);
-
-            const oldBalance = parseFloat(user.balance || 0);
-            const newBalance = oldBalance + refundAmount;
-
-            if (isNaN(newBalance)) {
-                await t.rollback();
-                return res.status(500).json({ message: "Lỗi tính toán số dư ví." });
-            }
-
-            user.balance = newBalance;
+            user.balance = parseFloat(user.balance || 0) + refundAmount;
             await user.save({ transaction: t });
 
             await WithdrawRequestsModel.create({
@@ -2067,6 +2064,25 @@ class OrderController {
             console.log("Gửi email nạp tiền thành công");
         } catch (err) {
             console.error("Gửi mail nạp tiền thất bại:", err);
+        }
+    }
+
+    static async getCoin(req, res) {
+        try {
+            const userId = req.user.id;
+
+            const user = await UserModel.findByPk(userId);
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+            }
+
+            return res.status(200).json({
+                success: true,
+                coin: user.coin || 0,
+            });
+        } catch (error) {
+            console.error('Lỗi khi lấy coin:', error);
+            return res.status(500).json({ success: false, message: 'Lỗi server' });
         }
     }
 

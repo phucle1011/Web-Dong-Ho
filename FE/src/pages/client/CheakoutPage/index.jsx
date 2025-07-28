@@ -20,6 +20,9 @@ export default function CheckoutPage() {
   const [finalTotal, setFinalTotal] = useState(0);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+
+  const toggleShowAll = () => setShowAll(!showAll);
 
   const [promoCodeData, setPromoCodeData] = useState({
     code: "",
@@ -1179,6 +1182,7 @@ export default function CheckoutPage() {
                           const total = price * quantity;
                           const attributes = variant.attributeValues;
                           const image = variant?.images?.[0]?.image_url || "";
+                          const displayedAttributes = showAll ? attributes : attributes.slice(0, 3);
 
                           return (
                             <li key={item.id} className="pb-4">
@@ -1195,18 +1199,22 @@ export default function CheckoutPage() {
                                   <p className="font-medium text-[15px] text-qblack">{variant.sku}</p>
 
                                   <div className="space-y-1">
-                                    {attributes.map((attr) => {
-                                      const attrName = attr.attribute?.name;
+                                    {displayedAttributes.map((attr) => {
+                                      const attrName = attr.attribute?.name || "";
                                       const attrValue = attr.value;
                                       const isColor = attrName.toLowerCase() === "color";
 
                                       return (
-                                        <div key={attr.id} className="flex items-center gap-2 text-sm text-gray-500">
-                                          <span>{attrName}:</span>
+                                        <div
+                                          key={attr.id}
+                                          className="flex items-center gap-1 flex-wrap text-gray-500"
+                                        >
+                                          <span className="font-medium">{attrName}</span>
                                           {isColor ? (
                                             <span
                                               className="inline-block w-4 h-4 rounded-full border border-gray-300"
                                               style={{ backgroundColor: attrValue }}
+                                              title={attrValue}
                                             ></span>
                                           ) : (
                                             <span>{attrValue}</span>
@@ -1214,8 +1222,18 @@ export default function CheckoutPage() {
                                         </div>
                                       );
                                     })}
-                                  </div>
 
+                                    {attributes.length > 3 && (
+                                      <button
+                                        onClick={toggleShowAll}
+                                        className="text-blue-600 hover:text-blue-800 text-sm mt-1"
+                                      >
+                                        {showAll
+                                          ? "Ẩn bớt"
+                                          : `Xem thêm (${attributes.length - 3}) thuộc tính`}
+                                      </button>
+                                    )}
+                                  </div>
                                   <p className="text-sm text-gray-700">
                                     Số lượng: <strong>{quantity}</strong>
                                   </p>

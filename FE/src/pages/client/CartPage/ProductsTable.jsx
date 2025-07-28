@@ -12,6 +12,16 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const [deleteMessage, setDeleteMessage] = useState("");
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [showAllMap, setShowAllMap] = useState({});
+
+  const toggleShowAll = (id) => {
+    setShowAllMap(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const [showNameMap, setShowNameMap] = useState({});
+  const toggleShowName = (id) => {
+    setShowNameMap(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     const selectedTotal = calculateSelectedTotal();
@@ -239,8 +249,8 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
               <th className="py-4 pl-10 w-[320px]">Sản phẩm</th>
               <th className="py-4 text-center w-[180px]">Thuộc tính</th>
               <th className="py-4 text-center w-[120px]">Giá tiền</th>
-              <th className="py-4 text-center w-[140px]">Số lượng</th>
-              <th className="py-4 text-center w-[140px]">Tổng tiền</th>
+              <th className="py-4 text-center w-[120px]">Số lượng</th>
+              <th className="py-4 text-center w-[120px]">Tổng tiền</th>
               <th className="py-4 text-right w-[80px]"></th>
             </tr>
           </thead>
@@ -255,7 +265,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
               cartItems.map((item) => {
                 const variant = item.variant;
                 const image = variant?.images?.[0]?.image_url || "";
-                const attributes = variant.attributeValues || [];
                 const originalPrice = parseFloat(variant.price || 0);
                 const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
                 const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
@@ -263,6 +272,10 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                 const stock = variant.stock;
                 const total = price * quantity;
                 const name = variant.product.name;
+                const attributes = item.variant.attributeValues || [];
+                const showAll = !!showAllMap[item.id];
+                const displayedAttrs = showAll ? attributes : attributes.slice(0, 2);
+                const showFullName = !!showNameMap[item.id];
 
                 return (
                   <tr
@@ -285,45 +298,64 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                     </td>
                     <td className="pl-10 py-4">
                       <div className="flex space-x-6 items-center">
-                        <div className="w-[80px] h-[80px] overflow-hidden border border-[#EDEDED] flex justify-center items-center">
-                          <img
-                            src={image}
-                            alt="product"
-                            className="w-full h-full object-contain"
-                          />
+                        <div className="w-[80px] h-[80px] ...">
+                          <img src={image} alt="product" className="w-full h-full object-contain" />
                         </div>
+
                         <div className="flex-1">
-                          <p className="font-medium text-[15px] text-qblack">{name} ({variant.sku})</p>
+                          <p
+                            className="font-medium text-[15px] text-qblack"
+                            style={
+                              !showFullName
+                                ? {
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }
+                                : {}
+                            }
+                          >
+                            {name} ({variant.sku})
+                          </p>
+
+                          {name.length > 40 && (
+                            <button
+                              onClick={() => toggleShowName(item.id)}
+                              className="mt-1 text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              {showFullName ? "Ẩn bớt" : "Xem thêm"}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-2 w-[180px] align-top">
                       <div className="flex flex-col gap-1">
-                        {attributes.map((attr) => {
-                          const attrName = attr.attribute?.name;
-                          const attrValue = attr.value;
-                          const isColor = attrName.toLowerCase() === "color";
-
+                        {displayedAttrs.map((attr) => {
+                          const name = attr.attribute?.name;
+                          const val = attr.value;
+                          const isColor = name?.toLowerCase() === "color";
                           return (
-                            <div
-                              key={attr.id}
-                              className="flex items-start gap-2 text-sm leading-snug break-words"
-                            >
-                              <span className="whitespace-nowrap font-semibold text-black">
-                                {attrName}:
-                              </span>
-                              {isColor ? (
-                                <span
-                                  className="inline-block w-4 h-4 rounded-full border border-gray-300 mt-1"
-                                  style={{ backgroundColor: attrValue }}
-                                  title={attrValue}
-                                ></span>
-                              ) : (
-                                <span className="text-gray-700 break-words">{attrValue}</span>
-                              )}
+                              <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
+                              <span className="font-semibold">{name}</span>
+                              {isColor
+                                ? <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: val }} title={val} />
+                                : <span>{val}</span>}
                             </div>
                           );
                         })}
+
+                        {attributes.length > 2 && (
+                          <button
+                            onClick={() => toggleShowAll(item.id)}
+                            className="mt-1 text-blue-600 hover:text-blue-800 text-sm self-start no-underline"
+                          >
+                            {showAll
+                              ? "Ẩn bớt"
+                              : `Xem thêm (${attributes.length - 2}) thuộc tính`}
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="text-center py-4">

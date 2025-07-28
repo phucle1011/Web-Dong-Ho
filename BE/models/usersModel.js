@@ -58,10 +58,15 @@ const UserModel = connection.define('users', {
         type: DataTypes.DATE,
         allowNull: true,
     },
-        balance: {
+    balance: {
         type: DataTypes.DECIMAL(20, 0),
         allowNull: true
-    }
+    },
+    // coin: {
+    //     type: DataTypes.INTEGER,
+    //     allowNull: true,
+    //     defaultValue: 0
+    // }
 }, {
     tableName: 'users',
     timestamps: true,
