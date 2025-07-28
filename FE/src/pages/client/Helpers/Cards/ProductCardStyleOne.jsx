@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo,useRef  } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -9,10 +9,10 @@ import QuickViewIco from "../icons/QuickViewIco";
 import ThinLove from "../icons/ThinLove";
 import ReactDOM from "react-dom";
 import { FiShoppingCart } from "react-icons/fi";
-import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 import StarRating from "../StarRating";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
+ const dialogRef = useRef();
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -81,6 +81,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     } else if (productData) {
       setAvgRating(parseFloat(productData.averageRating) || 0);
       setRatingCount(parseInt(productData.ratingCount) || 0);
+      setVariantImages([]);
+      setSelectedImage(productData.thumbnail || "/images/no-image.jpg");
     }
   }, [selectedVariant, productData]);
 
@@ -110,12 +112,16 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       return isNaN(parsed) || parsed < 0 || parsed > 100 ? 0 : Math.round(parsed);
     };
 
-    if (representativeVariant && representativeVariant.originalPrice) {
-      displayOriginalPrice = safeParsePrice(representativeVariant.originalPrice);
-      displayPrice = safeParsePrice(representativeVariant.discountedPrice || representativeVariant.originalPrice);
-      discountPercent = safeParseDiscount(representativeVariant.discountPercent);
+    if (selectedVariant) {
+      displayOriginalPrice = safeParsePrice(selectedVariant.price);
+      displayPrice = safeParsePrice(selectedVariant.promotion?.discounted_price || selectedVariant.price);
+      discountPercent = safeParseDiscount(selectedVariant.promotion?.discount_percent);
+    } else if (representativeVariant && representativeVariant.price) {
+      displayOriginalPrice = safeParsePrice(representativeVariant.price);
+      displayPrice = safeParsePrice(representativeVariant.promotion?.discounted_price || representativeVariant.price);
+      discountPercent = safeParseDiscount(representativeVariant.promotion?.discount_percent);
     } else if (validVariants.length > 0) {
-      const initialVariant = selectedVariant || validVariants[0];
+      const initialVariant = validVariants[0];
       displayOriginalPrice = safeParsePrice(initialVariant.price);
       displayPrice = safeParsePrice(initialVariant.promotion?.discounted_price || initialVariant.price);
       discountPercent = safeParseDiscount(initialVariant.promotion?.discount_percent);
@@ -155,7 +161,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       return;
     }
 
-     try {
+    try {
       const response = await axios.post(
         `${Constants.DOMAIN_API}/add-to-carts`,
         {
@@ -174,11 +180,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     } catch (error) {
       if (error.response?.status === 400) {
         const message = error.response.data?.message || "";
-
         if (message.includes("Số lượng vượt quá tồn kho")) {
           const match = message.match(/\((\d+)\)/);
           const stock = match ? parseInt(match[1], 10) : null;
-
           toast.error(
             stock
               ? `Bạn đã có một số sản phẩm trong giỏ. Hiện chỉ còn ${stock} sản phẩm trong kho.`
@@ -218,13 +222,27 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     : description;
 
   const handleVariantSelect = (variant) => {
-    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0) {
-      return;
+    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0) return;
+
+    // Fallback if variant lacks attributeValues
+    if (!variant.attributeValues || variant.attributeValues.length === 0) {
+      const fullVariant = productData?.variants?.find((v) => v.id === variant.id);
+      if (fullVariant) {
+        variant.attributeValues = fullVariant.attributeValues || [];
+        variant.images = fullVariant.images || [];
+        variant.averageRating = fullVariant.averageRating;
+        variant.ratingCount = fullVariant.ratingCount;
+      }
     }
+
     setSelectedVariant(variant);
     const newImages = variant.images || [];
     setVariantImages(newImages);
-    setSelectedImage(newImages.length > 0 ? newImages[0].image_url || thumbnail : thumbnail);
+    setSelectedImage(
+      newImages.length > 0 ? newImages[0].image_url || productData.thumbnail : productData.thumbnail
+    );
+    setAvgRating(parseFloat(variant.averageRating || 0));
+    setRatingCount(parseInt(variant.ratingCount || 0));
     checkWishlistStatus(variant.id);
   };
 
@@ -323,6 +341,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     return txt.value;
   }
 
+  const [expanded, setExpanded] = useState(false);
+  const attributes = selectedVariant?.attributeValues || [];
+
   const QuickViewDialog = () =>
     isQuickViewOpen &&
     ReactDOM.createPortal(
@@ -331,7 +352,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         onClick={() => setIsQuickViewOpen(false)}
       >
         <div
-          className="bg-white p-4 rounded-lg max-w-[550px] w-full max-h-[450px] relative grid grid-cols-2 gap-4 shadow-xl border border-gray-200 overflow-y-auto"
+          ref={dialogRef}
+          className="bg-white p-4 rounded-lg max-w-[600px] w-full max-h-[500px] relative grid grid-cols-2 gap-4 shadow-xl border border-gray-200 overflow-y-auto"
           style={{
             position: "fixed",
             top: "50%",
@@ -341,6 +363,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             zIndex: 1000,
           }}
           onClick={(e) => e.stopPropagation()}
+
         >
           <button
             onClick={() => setIsQuickViewOpen(false)}
@@ -362,7 +385,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </svg>
           </button>
           <div className="overflow-hidden mt-5 relative">
-            <div className="w-full h-56">
+            <div className="w-full h-64">
               <img
                 src={thumbnail}
                 alt={productName}
@@ -379,7 +402,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 <div
                   key={img.id || img.image_url}
                   onClick={() => setSelectedImage(img.image_url)}
-                  className={`w-[55px] h-[55px] p-1 border rounded-md cursor-pointer ${
+                  className={`w-[60px] h-[60px] p-1 border rounded-md cursor-pointer ${
                     selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
                   } hover:border-blue-400 transition-colors`}
                 >
@@ -396,7 +419,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">{productName}</h2>
             <div className="flex items-center gap-2 mb-2">
               <StarRating rating={avgRating} readOnly />
-              <span className="text-sm text-gray-600">{ratingCount} đánh giá</span>
+              <span className="text-sm text-gray-600"></span>
             </div>
             {variants.length > 0 && (
               <div>
@@ -448,40 +471,52 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               </div>
             )}
             {selectedVariant && selectedVariant.attributeValues?.length > 0 && (
-             <div className="text-xs mt-2">
-  <span className="block text-xs font-semibold text-gray-700 mb-2">Thuộc tính:</span>
-  <div className="overflow-x-auto">
-    <table className="min-w-[200px] text-xs border border-gray-300 table-fixed">
-      <thead>
-        <tr className="bg-gray-100 text-gray-700">
-          <th className="w-1/2 border border-gray-300 p-2 text-left font-medium">Tên</th>
-          <th className="w-1/2 border border-gray-300 p-2 text-left font-medium">Giá trị</th>
-        </tr>
-      </thead>
-      <tbody>
-        {selectedVariant.attributeValues.map((attr, index) => (
-          <tr key={index} className="border-t border-gray-200">
-            <td className="border border-gray-300 p-2 text-gray-600">
-              {attr.attribute?.name || "N/A"}
-            </td>
-            <td className="border border-gray-300 p-2">
-              {attr.attribute?.name.toLowerCase() === "color" ? (
+              <div className="text-xs mt-2">
+                <span className="block font-semibold text-gray-700 mb-1">Thuộc tính:</span>
                 <div
-                  className="w-4 h-4 rounded-full border border-gray-400 inline-block"
-                  style={{ backgroundColor: attr.value }}
-                  title={attr.value}
-                />
-              ) : (
-                <span className="text-gray-800">{attr.value || "N/A"}</span>
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
-
+                  className={`overflow-x-auto transition-all duration-300 border border-gray-300 ${
+                    expanded ? "max-h-none" : "max-h-24 overflow-y-hidden"
+                  }`}
+                >
+                  <table className="min-w-[200px] text-xs table-fixed w-full">
+                    <tbody>
+                      {attributes.map((attr, index) => {
+                        const attrName = attr.attribute?.name || "—";
+                        const attrValue = attr.value || "—";
+                        return (
+                          <tr key={index} className="border-t border-gray-200">
+                            <td className="w-1/2 border border-gray-300 p-1 text-gray-600 font-medium whitespace-nowrap">
+                              {attrName}
+                            </td>
+                            <td className="w-1/2 border border-gray-300 p-1 text-gray-800 whitespace-nowrap">
+                              {attrName.toLowerCase() === "color" ? (
+                                <div className="flex items-center gap-1">
+                                  <div
+                                    className="w-4 h-4 rounded-full border border-gray-400"
+                                    style={{ backgroundColor: attrValue }}
+                                    title={attrValue}
+                                  />
+                                  <span>{attrValue}</span>
+                                </div>
+                              ) : (
+                                attrValue
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {attributes.length > 3 && (
+                  <button
+                    className="mt-1 text-dark-600 hover:underline text-[12px]"
+                    onClick={() => setExpanded(!expanded)}
+                  >
+                    {expanded ? "Thu gọn" : "Xem thêm"}
+                  </button>
+                )}
+              </div>
             )}
             <div className="flex items-center space-x-2">
               {hasStock ? (
@@ -500,32 +535,54 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               )}
             </div>
             {hasStock && (
-              <div className="flex items-center space-x-2">
-                <button
-                  className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1 || !hasStock}
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))))}
-                  className="w-12 text-center border border-gray-300 rounded text-sm"
-                  min="1"
-                  max={selectedVariant?.stock || totalStock}
-                  disabled={!hasStock}
-                />
-                <button
-                  className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
-                  onClick={() => setQuantity(Math.min(selectedVariant?.stock || totalStock, quantity + 1))}
-                  disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
-                >
-                  +
-                </button>
-              </div>
-            )}
+  <div className="flex items-center space-x-2">
+    <button
+      className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        const scrollTop = dialogRef.current?.scrollTop;
+        setQuantity((prev) => Math.max(1, prev - 1));
+        setTimeout(() => {
+          if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+        }, 0);
+      }}
+      disabled={quantity <= 1 || !hasStock}
+    >
+      -
+    </button>
+    <input
+      type="number"
+      value={quantity}
+      onChange={(e) => {
+        const scrollTop = dialogRef.current?.scrollTop;
+        setQuantity(Math.max(1, Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))));
+        setTimeout(() => {
+          if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+        }, 0);
+      }}
+      className="w-12 text-center border border-gray-300 rounded text-sm"
+      min="1"
+      max={selectedVariant?.stock || totalStock}
+      disabled={!hasStock}
+      onClick={(e) => e.stopPropagation()}
+    />
+    <button
+      className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
+      onClick={(e) => {
+        e.stopPropagation();
+        const scrollTop = dialogRef.current?.scrollTop;
+        setQuantity((prev) => Math.min(selectedVariant?.stock || totalStock, prev + 1));
+        setTimeout(() => {
+          if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+        }, 0);
+      }}
+      disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
+    >
+      +
+    </button>
+  </div>
+)}
+
             <div className="flex items-center space-x-2">
               <button
                 type="button"
@@ -624,30 +681,41 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             THÊM GIỎ HÀNG
           </button>
         </div>
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-2">
           <StarRating rating={avgRating} readOnly />
           <span className="text-sm text-gray-600"></span>
         </div>
         <p
-          className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600"
+          className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600 cursor-pointer"
           onClick={handleNavigate}
         >
           {productName}
         </p>
         {hasStock ? (
-          <div className="price-container group-hover:hidden">
-            <p className="price flex items-center space-x-2">
+          <div className="price-container flex flex-col gap-1 group-hover:hidden">
+            <div className="price flex items-center space-x-2">
               <span
-                className={`offer-price ${discountPercent > 0 && displayOriginalPrice > displayPrice ? "text-qred" : "text-qblack"} font-600 text-[18px]`}
+                className={`offer-price ${
+                  discountPercent > 0 && displayOriginalPrice > displayPrice
+                    ? "text-qred"
+                    : "text-qblack"
+                } font-600 text-[18px]`}
               >
-                {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                {Number(displayPrice).toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
               </span>
               {discountPercent > 0 && displayOriginalPrice > displayPrice && (
                 <span className="main-price text-qgray line-through font-600 text-[16px]">
-                  {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                  {Number(displayOriginalPrice).toLocaleString("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  })}
                 </span>
               )}
-            </p>
+            </div>
+           
           </div>
         ) : (
           <p className="price text-qred font-600 text-[16px] group-hover:hidden">
@@ -675,7 +743,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           }}
         >
           <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-            <ThinLove className="w-5 h-5" fill={isInWishlist ? "#FF0000" : "none"} stroke={isInWishlist ? "#FF0000" : "#000000"} />
+            <ThinLove
+              className="w-5 h-5"
+              fill={isInWishlist ? "#FF0000" : "none"}
+              stroke={isInWishlist ? "#FF0000" : "#000000"}
+            />
           </span>
         </a>
         <a

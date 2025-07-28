@@ -13,194 +13,210 @@ const { Op, fn, col, literal,Sequelize } = require("sequelize");
 
 class ProductController {
   static async getVariantsWithPromotion(req, res) {
-    try {
-      const productId = req.params.id;
+  try {
+    const productId = req.params.id;
+    const now = new Date();
 
-      // Tìm thông tin sản phẩm kèm các quan hệ
-      const product = await Product.findOne({
-        where: { id: productId, 
-          publication_status: 'published',
-          status: 1,
+    const product = await Product.findOne({
+      where: {
+        id: productId,
+        publication_status: 'published',
+        status: 1,
+      },
+      include: [
+        { model: Brand, as: "brand", attributes: ["id", "name"] },
+        { model: Category, as: "category", attributes: ["id", "name"] },
+        {
+          model: ProductVariant,
+          as: "variants",
+          include: [
+            {
+              model: VariantImagesModel,
+              as: "images",
+              attributes: ["id", "image_url", "variant_id"],
+            },
+            {
+              model: PromotionProductModel,
+              as: "promotionProducts",
+              include: [
+                {
+                  model: PromotionModel,
+                  as: "promotion",
+                  where: {
+                    applicable_to: "product",
+                    start_date: { [Op.lte]: now },
+                    end_date: { [Op.gte]: now },
+                    status: "active",
+                  },
+                  required: false,
+                },
+              ],
+              required: false,
+            },
+            {
+              model: ProductVariantAttributeValuesModel,
+              as: "attributeValues",
+              include: [
+                {
+                  model: ProductAttributeModel,
+                  as: "attribute",
+                  attributes: ["id", "name"],
+                },
+              ],
+            },
+          ],
         },
-        include: [
-          { model: Brand, as: "brand", attributes: ["id", "name"] },
-          { model: Category, as: "category", attributes: ["id", "name"] },
-          {
-            model: ProductVariant,
-            as: "variants",
-            include: [
-              {
-                model: VariantImagesModel,
-                as: "images",
-                attributes: ["id", "image_url", "variant_id"],
-              },
-              {
-                model: PromotionProductModel,
-                as: "promotionProducts",
-                include: [
-                  {
-                    model: PromotionModel,
-                    as: "promotion",
-                    where: {
-                      applicable_to:"product",
-                      start_date: { [Op.lte]: new Date() },
-                      end_date: { [Op.gte]: new Date() },
-                      status: "active",
-                    },
-                    required: false,
-                  },
-                ],
-                required: false,
-              },
-              {
-                model: ProductVariantAttributeValuesModel,
-                as: "attributeValues",
-                include: [
-                  {
-                    model: ProductAttributeModel,
-                    as: "attribute",
-                    attributes: ["id", "name"],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
+      ],
+    });
 
-      if (!product) {
-        return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    // ✅ Tính đánh giá
+    const ratingData = await Comment.findAll({
+      include: [{
+        model: OrderDetail,
+        as: "orderDetail",
+        attributes: ["product_variant_id"],
+      }],
+      attributes: [
+        [col("orderDetail.product_variant_id"), "variantId"],
+        [fn("AVG", col("rating")), "avgRating"],
+        [fn("COUNT", col("rating")), "ratingCount"],
+      ],
+      group: ["orderDetail.product_variant_id"],
+      raw: true,
+    });
+
+    const ratingMap = {};
+    ratingData.forEach((item) => {
+      const variantId = item.variantId;
+      ratingMap[variantId] = {
+        avgRating: parseFloat(item.avgRating || 0).toFixed(1),
+        ratingCount: parseInt(item.ratingCount || 0),
+      };
+    });
+
+    const totalRating = ratingData.reduce(
+      (acc, cur) => {
+        const count = parseInt(cur.ratingCount || 0);
+        const avg = parseFloat(cur.avgRating || 0);
+        acc.sum += avg * count;
+        acc.count += count;
+        return acc;
+      },
+      { sum: 0, count: 0 }
+    );
+
+    const averageRating =
+      totalRating.count > 0 ? (totalRating.sum / totalRating.count).toFixed(1) : "0.0";
+    const ratingCount = totalRating.count;
+
+    const variantImages = [];
+    const variants = product.variants.map((variant) => {
+      if (variant.images?.length) {
+        variant.images.forEach((img) => {
+          variantImages.push({
+            id: img.id,
+            image_url: img.image_url,
+            variant_id: variant.id,
+          });
+        });
       }
 
-      const variantImages = [];
-      const now = new Date();
+      const variantPrice = parseFloat(variant.price) || 0;
+      let bestPromotion = null;
+      let finalPrice = variantPrice;
+      let discountPercent = 0;
 
+      const promotions = variant.promotionProducts || [];
+      if (promotions.length > 0) {
+        bestPromotion = promotions.reduce((best, promoProduct) => {
+          const promo = promoProduct.promotion;
+          if (!promo) return best;
 
+          let tmpPrice = variantPrice;
+          let tmpPercent = 0;
 
+          if (promo.discount_type === "percentage") {
+            tmpPrice -= (tmpPrice * parseFloat(promo.discount_value)) / 100;
+            tmpPercent = parseFloat(promo.discount_value);
+          } else {
+            tmpPrice -= parseFloat(promo.discount_value);
+            tmpPercent = ((variantPrice - tmpPrice) / variantPrice) * 100;
+          }
 
-      // ✅ Lấy trung bình đánh giá và số lượng đánh giá từ bảng comments (qua order_details → product_variants)
-     // Giả sử ratingData được lấy từ Comment như sau:
-const ratingData = await Comment.findAll({
-  include: [
-    {
-      model: OrderDetail,
-      as: "orderDetail",
-      attributes: ["product_variant_id"],
-    },
-  ],
-  attributes: [
-    [col("orderDetail.product_variant_id"), "variantId"],
-    [fn("AVG", col("rating")), "avgRating"],
-    [fn("COUNT", col("rating")), "ratingCount"],
-  ],
-  group: ["orderDetail.product_variant_id"],
-  raw: true,
-});
+          tmpPrice = Math.max(0, tmpPrice);
 
-// Tạo ratingMap để ánh xạ avgRating và ratingCount theo variantId
-const ratingMap = {};
-ratingData.forEach((item) => {
-  const variantId = item.variantId;
-  ratingMap[variantId] = {
-    avgRating: parseFloat(item.avgRating || 0).toFixed(1),
-    ratingCount: parseInt(item.ratingCount || 0),
-  };
-});
+          const promoData = {
+            id: promo.id,
+            code: promo.code,
+            discount_type: promo.discount_type,
+            discount_value: parseFloat(promo.discount_value),
+            discounted_price: parseFloat(tmpPrice.toFixed(2)),
+            discount_percent: parseFloat(tmpPercent.toFixed(2)),
+            meets_conditions: promo.quantity == null || promo.quantity > 0,
+          };
 
-// Nếu muốn tính tổng đánh giá cho toàn bộ sản phẩm (gộp các variant)
-const totalRating = ratingData.reduce(
-  (acc, cur) => {
-    const count = parseInt(cur.ratingCount || 0);
-    const avg = parseFloat(cur.avgRating || 0);
-    acc.sum += avg * count;
-    acc.count += count;
-    return acc;
-  },
-  { sum: 0, count: 0 }
-);
+          if (
+            !best ||
+            (promoData.meets_conditions && promoData.discounted_price < best.discounted_price)
+          ) {
+            return promoData;
+          }
+          return best;
+        }, null);
 
-const averageRating =
-  totalRating.count > 0 ? (totalRating.sum / totalRating.count).toFixed(1) : "0.0";
-const ratingCount = totalRating.count;
+        if (bestPromotion && bestPromotion.meets_conditions) {
+          finalPrice = bestPromotion.discounted_price;
+          discountPercent = bestPromotion.discount_percent;
+        }
+      }
 
+      const ratingInfo = ratingMap[variant.id] || { avgRating: "0.0", ratingCount: 0 };
 
-// ✅ Tiếp tục xử lý variants
-const variants = product.variants.map((variant) => {
-  const promo = variant.promotionProducts?.[0]?.promotion || null;
-  let finalPrice = parseFloat(variant.price);
-  let discount = 0;
-  let validPromo = null;
-
-  if (
-    promo &&
-    promo.status === "active" &&
-    new Date(promo.start_date) <= now &&
-    new Date(promo.end_date) >= now
-  ) {
-    validPromo = promo;
-
-    if (promo.discount_type === "percentage") {
-      discount = parseFloat(promo.discount_value);
-      finalPrice = parseFloat((finalPrice * (1 - discount / 100)).toFixed(2));
-    } else if (promo.discount_type === "fixed") {
-      discount = parseFloat(promo.discount_value);
-      finalPrice = parseFloat((finalPrice - discount).toFixed(2));
-    }
-
-    if (finalPrice < 0) finalPrice = 0;
-  }
-
-  if (variant.images?.length) {
-    variant.images.forEach((img) => {
-      variantImages.push({
-        id: img.id,
-        image_url: img.image_url,
-        variant_id: variant.id,
-      });
-    });
-  }
-
-  const ratingInfo = ratingMap[variant.id] || { avgRating: "0.0", ratingCount: 0 };
-
-  return {
-    ...variant.toJSON(),
-    final_price: validPromo ? finalPrice : null,
-    promotion: validPromo,
-    images: variant.images,
-    attribute_values: variant.attributeValues.map((attr) => ({
-      attribute_name: attr.attribute?.name,
-      value: attr.value,
-    })),
-    averageRating: ratingInfo.avgRating,
-    ratingCount: ratingInfo.ratingCount,
-  };
-});
-
-
-
-     
-
-      res.json({
-        product: {
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          short_description: product.short_description,
-          price: product.price,
-          brand: product.brand?.name || null,
-          category: product.category?.name || null,
-          thumbnail: product.thumbnail,
-          variants,
-          variantImages,
-          averageRating,
-          ratingCount,
+      return {
+        id: variant.id,
+        name: variant.name,
+        price: variantPrice,
+        stock: variant.stock,
+        sku: variant.sku,
+        images: variant.images,
+        attributeValues: variant.attributeValues,
+        final_price: bestPromotion ? finalPrice : null,
+        promotion: bestPromotion || {
+          discounted_price: variantPrice,
+          discount_percent: 0,
+          meets_conditions: true,
         },
-      });
-    } catch (err) {
-      console.error("Lỗi khi lấy thông tin sản phẩm và khuyến mãi:", err);
-      res.status(500).json({ message: "Đã xảy ra lỗi khi lấy dữ liệu" });
-    }
+        averageRating: ratingInfo.avgRating,
+        ratingCount: ratingInfo.ratingCount,
+      };
+    });
+
+    return res.json({
+      product: {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        short_description: product.short_description,
+        price: product.price,
+        brand: product.brand?.name || null,
+        category: product.category?.name || null,
+        thumbnail: product.thumbnail,
+        variants,
+        variantImages,
+        averageRating,
+        ratingCount,
+      },
+    });
+  } catch (err) {
+    console.error("Lỗi khi lấy thông tin sản phẩm và khuyến mãi:", err);
+    res.status(500).json({ message: "Đã xảy ra lỗi khi lấy dữ liệu" });
   }
+}
+
 
 static async getSimilarProducts(req, res) {
   try {

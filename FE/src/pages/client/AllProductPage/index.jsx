@@ -47,16 +47,11 @@ export default function AllProductPage() {
   const brandId = location.state?.brandId;
   const categoryId = location.state?.categoryId;
 
-
-  // 1) Đọc các tham số tìm kiếm từ URL
   const searchParams = new URLSearchParams(location.search);
   const keyword = searchParams.get("keyword") || "";
   const searchBrandIds = searchParams.get("brand_ids") || "";
   const searchAttrVals = searchParams.get("attribute_values") || "";
   const searchAttrIds = searchParams.get("attribute_ids") || "";
-
-
-
 
   useEffect(() => {
     async function fetchBrands() {
@@ -117,184 +112,81 @@ export default function AllProductPage() {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
-  // 2) Reset filters 1 lần khi có search param
-    // 2) Reset filters 1 lần khi có search param
- useEffect(() => {
-     const fetchProducts = async () => {
-       setLoading(true);
-       try {
-         const selectedCategoryIds = Object.keys(categoryFilters || {}).filter(
-           (key) => categoryFilters[key]
-         );
-         const selectedBrandIds = Object.keys(brandFilters || {}).filter(
-           (key) => brandFilters[key]
-         );
- 
-         const isFiltering =
-           selectedCategoryIds.length > 0 ||
-           selectedBrandIds.length > 0 ||
-           volume[0] !== 0 ||
-           volume[1] !== 1000000000;
-          
-         // 👉 Nếu có brandId từ location và chưa lọc gì khác, ưu tiên gọi riêng
-         if (brandId && !isFiltering) {
-           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
-             params: { brand_id: brandId },
-             headers: { "Cache-Control": "no-cache" },
-           });
-           
- 
-           setProducts(res.data.data || []);
-           setPagination((prev) => ({
-             ...prev,
-             totalProducts: res.data.pagination?.totalProducts || 0,
-           }));
-           setError(null);
-           return; // 🛑 dừng tại đây để không gọi thêm lần nữa
-         }
-          if (categoryId && !isFiltering) {
-           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
-             params: { category_id: categoryId },
-             headers: { "Cache-Control": "no-cache" },
-           });
-           
- 
-           setProducts(res.data.data || []);
-           setPagination((prev) => ({
-             ...prev,
-             totalProducts: res.data.pagination?.totalProducts || 0,
-           }));
-           setError(null);
-           return; // 🛑 dừng tại đây để không gọi thêm lần nữa
-         }
- 
-         const params = {
-           page: pagination.currentPage,
-           limit: pagination.limit,
-           min_price: volume[0] !== 0 ? volume[0] : undefined,
-           max_price: volume[1] !== 1000000000 ? volume[1] : undefined,
-           category_id: selectedCategoryIds.join(",") || undefined,
-           brand_id: selectedBrandIds.join(",") || undefined,
-         };
- 
-         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
-           params,
-           headers: { "Cache-Control": "no-cache" },
-         });
- 
-         setProducts(Array.isArray(res.data.data) ? res.data.data : []);
-         setPagination((prev) => ({
-           ...prev,
-           totalProducts: res.data.pagination?.totalProducts || 0,
-         }));
-         navigate(location.pathname, { replace: true }); // Xóa state
-         setError(null);
-       } catch (error) {
-         console.error("API Error:", error.response?.data || error.message);
- 
-         let errorMessage =
-           "Không thể tải danh sách sản phẩm. Vui lòng thử lại hoặc thay đổi bộ lọc.";
-         if (error.response?.status === 400) {
-           errorMessage =
-             "Tham số bộ lọc không hợp lệ. Vui lòng kiểm tra lại các bộ lọc.";
-         } else if (error.response?.status === 500) {
-           errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau.";
-         }
- 
-         setProducts([]);
-         setError(errorMessage);
-       } finally {
-         setLoading(false);
-       }
-     };
- 
-     fetchProducts();
-   }, [
-     pagination.currentPage,
-     categoryFilters,
-     brandFilters,
-     volume,
-     brandId,
-     brandList,location.state
-   ]);
+  useEffect(() => {
+    const hasSearch =
+      keyword ||
+      searchBrandIds ||
+      searchAttrVals ||
+      searchAttrIds;
 
+    async function fetchProducts() {
+      setLoading(true);
+      try {
+        if (hasSearch) {
+          const params = {
+            page: 1,
+            limit: pagination.limit,
+            keyword,
+            brand_ids: searchBrandIds,
+            attribute_values: searchAttrVals,
+            attribute_ids: searchAttrIds,
+          };
+          const res = await axios.get(
+            `${Constants.DOMAIN_API}/products/search`,
+            { params }
+          );
+          setProducts(res.data.data || []);
+          setPagination((prev) => ({
+            ...prev,
+            totalProducts: res.data.pagination?.totalItems || 0,
+          }));
+        } else {
+          const selectedCategoryIds = Object.keys(categoryFilters).filter(
+            (key) => categoryFilters[key]
+          );
+          const selectedBrandIds = Object.keys(brandFilters).filter(
+            (key) => brandFilters[key]
+          );
+          const params = {
+            page: pagination.currentPage,
+            limit: pagination.limit,
+            min_price: volume[0] !== 0 ? volume[0] : undefined,
+            max_price: volume[1] !== 1000000000 ? volume[1] : undefined,
+            category_id: selectedCategoryIds.join(",") || undefined,
+            brand_id: selectedBrandIds.join(",") || undefined,
+          };
+          const res = await axios.get(
+            `${Constants.DOMAIN_API}/products`,
+            { params }
+          );
+          setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+          setPagination((prev) => ({
+            ...prev,
+            totalProducts: res.data.pagination?.totalProducts || 0,
+          }));
+        }
+        setError(null);
+      } catch (err) {
+        console.error("API Error:", err);
+        setProducts([]);
+        setError(
+          hasSearch
+            ? "Lỗi khi tìm kiếm. Vui lòng thử lại."
+            : "Không thể tải sản phẩm."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
 
-
-
-  const renderPagination = () => {
-    const { currentPage, limit, totalProducts } = pagination;
-    const totalPages = Math.ceil(totalProducts / limit);
-    // Chỉ hiển thị nút "Next" nếu trang hiện tại có đủ 12 sản phẩm và có sản phẩm ở trang tiếp theo
-    const showNextPage = products.length === limit && totalProducts > currentPage * limit;
-    // Chỉ hiển thị nút "Previous" nếu không phải trang 1
-    const showPreviousPage = currentPage > 1;
-
-
-    return (
-      <div className="flex justify-center mt-4">
-        <div className="flex items-center space-x-1">
-          {/* Nút "First" */}
-          <button
-            disabled={!showPreviousPage}
-            onClick={() => handlePageChange(1)}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            <FaAngleDoubleLeft />
-          </button>
-          {/* Nút "Previous" */}
-          <button
-            disabled={!showPreviousPage}
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="px-2 py-1 border rounded disabled:opacity-50"
-          >
-            <FaChevronLeft />
-          </button>
-
-          {/* Hiển thị tối đa 3 nút trang gần currentPage */}
-          {[...Array(totalPages)].map((_, i) => {
-            const page = i + 1;
-            if (
-              page >= currentPage - 1 &&
-              page <= currentPage + 1 &&
-              page <= totalPages
-            ) {
-              return (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 border rounded ${currentPage === page
-                    ? "bg-blue-500 text-white"
-                    : "bg-blue-100 text-black hover:bg-blue-200"
-                    }`}
-                >
-                  {page}
-                </button>
-              );
-            }
-            return null;
-          })}
-
-          {/* Hiển thị nút "Next" và "Last" nếu showNextPage */}
-          {showNextPage && (
-            <>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                className="px-2 py-1 border rounded"
-              >
-                <FaChevronRight />
-              </button>
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                className="px-2 py-1 border rounded"
-              >
-                <FaAngleDoubleRight />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
+    fetchProducts();
+  }, [
+    pagination.currentPage,
+    categoryFilters,
+    brandFilters,
+    volume,
+    location.search,
+  ]);
 
   const handlePageChange = (newPage) => {
     const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);
@@ -306,6 +198,83 @@ export default function AllProductPage() {
         alert(`Không thể chuyển sang trang ${newPage}. Chỉ có ${totalPages} trang.`);
       }
     }
+  };
+
+  const renderPagination = () => {
+    const { currentPage, limit, totalProducts } = pagination;
+    const totalPages = Math.ceil(totalProducts / limit);
+    const showPreviousPage = currentPage > 1;
+    const showNextPage = currentPage < totalPages;
+
+    return (
+      <div className="flex justify-center mt-6">
+        <div className="flex items-center space-x-2">
+          {/* Nút "First" */}
+          <button
+            disabled={!showPreviousPage}
+            onClick={() => handlePageChange(1)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+            aria-label="Trang đầu"
+          >
+            <FaAngleDoubleLeft className="text-gray-600" />
+          </button>
+          {/* Nút "Previous" */}
+          <button
+            disabled={!showPreviousPage}
+            onClick={() => handlePageChange(currentPage - 1)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+            aria-label="Trang trước"
+          >
+            <FaChevronLeft className="text-gray-600" />
+          </button>
+
+          {/* Các nút trang */}
+          {[...Array(totalPages)].map((_, i) => {
+            const pageNum = i + 1;
+            // Hiển thị tối đa 5 trang: trang hiện tại, 2 trang trước, 2 trang sau
+            if (
+              (pageNum >= currentPage - 2 && pageNum <= currentPage + 2) &&
+              pageNum <= totalPages
+            ) {
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${
+                    pageNum === currentPage
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-gray-700 hover:bg-blue-50"
+                  }`}
+                  aria-label={`Trang ${pageNum}`}
+                >
+                  {pageNum}
+                </button>
+              );
+            }
+            return null;
+          })}
+
+          {/* Nút "Next" */}
+          <button
+            disabled={!showNextPage}
+            onClick={() => handlePageChange(currentPage + 1)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+            aria-label="Trang tiếp theo"
+          >
+            <FaChevronRight className="text-gray-600" />
+          </button>
+          {/* Nút "Last" */}
+          <button
+            disabled={!showNextPage}
+            onClick={() => handlePageChange(totalPages)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+            aria-label="Trang cuối"
+          >
+            <FaAngleDoubleRight className="text-gray-600" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -327,8 +296,6 @@ export default function AllProductPage() {
                   setPagination((prev) => ({ ...prev, currentPage: 1 }));
                 }}
               />
-
-
               <div className="w-full hidden lg:block h-[295px] overflow-hidden rounded-lg">
                 {/* <img
                   src={`${process.env.REACT_APP_PUBLIC_URL}/assets/images/bannera-5.png`}
@@ -368,7 +335,7 @@ export default function AllProductPage() {
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path d="M1 1L5 5L9 1" stroke="#9A9A9A" />
-                      xóa bộ lọc                   </svg>
+                    </svg>
                   </div>
                 </div>
                 <button
