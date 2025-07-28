@@ -24,9 +24,11 @@ const BlogCategoryController = require('../controllers/Admin/blogCategoryControl
 const { notifyWishlistPromotions } = require('../controllers/Admin/cronJobController');
 const FlashSaleController = require('../controllers/Admin/flashSaleController');
 const WalletsController = require('../controllers/Admin/walletsController');
+const AuctionBidController = require('../controllers/Admin/AuctionBidController');
 const AuctionController = require('../controllers/Admin/auctionController');
 
 //------------------[ ADMIN ROUTES ]------------------
+router.post('/auctionBid', AuctionBidController.placeBid);
 
 //------------------[ AUCTION ]------------------\
 router.get('/auctions', AuctionController.get);
