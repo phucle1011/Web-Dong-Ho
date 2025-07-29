@@ -449,6 +449,41 @@ class PromotionController {
     }
   }
 
+  static async getAppliedPromotions(req, res) {
+    try {
+      const promotions = await PromotionModel.findAll({
+        include: [
+          {
+            model: OrderModel,
+            as: 'orders',
+            required: true,
+            attributes: ['id', 'order_code', 'total_price', 'status', 'created_at'],
+            include: [
+              {
+                model: UserModel,
+                as: 'user',
+                attributes: ['id', 'name', 'email'],
+              }
+            ]
+          }
+        ],
+        order: [['updated_at', 'DESC']]
+      });
+
+      if (!promotions || promotions.length === 0) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy khuyến mãi đã áp dụng.' });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: promotions,
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy khuyến mãi đã áp dụng:', error);
+      res.status(500).json({ success: false, message: 'Lỗi máy chủ.' });
+    }
+  }
+
 }
 
 module.exports = PromotionController;

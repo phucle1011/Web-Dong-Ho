@@ -150,6 +150,8 @@ PromotionProductModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as
 PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 'promotionProducts' });
 
 OrderModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
+PromotionModel.hasMany(OrderModel, { foreignKey: 'promotion_id', as: 'orders' });
+
 
 // Notification hasMany FlashSales
 NotificationModel.hasMany(FlashSaleModel, {

@@ -31,6 +31,8 @@ import TrackingOrder from "./pages/client/TrackingOrder";
 import Wishlist from "./pages/client/Wishlist";
 import VerifyEmail from "./pages/client/Auth/VerifyEmail/index.jsx";
 import ResetPassword from "./pages/client/Auth/ResetPassword";
+import AuctionProductDetail from "./pages/client/Auctions";
+
 
 
 // Admin Layout và Pages
@@ -83,6 +85,7 @@ import WalletDetail from "./pages/admin/washlet/detail";
 import Blogcategory from "./pages/admin/blogcategory/getall/index.jsx";
 import BlogCategoryadd from "./pages/admin/blogcategory/add/index.jsx";
 import BlogCategoryEdit from "./pages/admin/blogcategory/edit/index.jsx";
+import PromotionOrderListModal from "./pages/admin/promotions/Promotiondetail";
 import AuctionGetAll from "./pages/admin/auction/getAll/index.jsx";
 import AuctionCreate from "./pages/admin/auction/create/index.jsx";
 import AuctionEdit from "./pages/admin/auction/edit/index.jsx";
@@ -150,7 +153,7 @@ const AppRoutes = () => {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/auth/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-
+          <Route path="/Auctions" element={<AuctionProductDetail />} />
 
 
         </Route>
@@ -214,7 +217,7 @@ const AppRoutes = () => {
             <Route path="add" element={<BlogAdd />} />
             <Route path="edit/:id" element={<EditBlog />} />
           </Route>
-            <Route path="blogcategory">
+          <Route path="blogcategory">
             <Route path="getAll" element={<Blogcategory />} />
             <Route path="add" element={<BlogCategoryadd />} />
             <Route path="edit/:id" element={<BlogCategoryEdit />} />
@@ -223,6 +226,7 @@ const AppRoutes = () => {
             <Route path="getAll" element={<PromotionGetAll />} />
             <Route path="create" element={<PromotionCreate />} />
             <Route path="edit/:id" element={<PromotionEdit />} />
+             <Route path="Promotiondetail" element={<PromotionOrderListModal />} />
           </Route>
           <Route path="promotion-products">
             <Route path="getAll" element={<PromotionProductList />} />

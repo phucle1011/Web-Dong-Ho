@@ -49,9 +49,8 @@ export default function Navbar({ className, type }) {
 
   return (
     <div
-      className={`nav-widget-wrapper w-full h-[60px] relative z-30 ${
-        type === 3 ? "bg-qh3-blue" : "bg-qyellow"
-      } ${className || ""}`}
+      className={`nav-widget-wrapper w-full h-[60px] relative z-30 ${type === 3 ? "bg-qh3-blue" : "bg-qyellow"
+        } ${className || ""}`}
     >
       <div className="container-x mx-auto h-full">
         <div className="w-full h-full relative">
@@ -116,11 +115,10 @@ export default function Navbar({ className, type }) {
                       <li key={category.id} className="category-item">
                         <Link to="/all-products" state={{ categoryId: category.id }}>
                           <div
-                            className={`flex justify-between items-center px-5 h-10 bg-white transition-all duration-300 ease-in-out cursor-pointer text-qblack ${
-                              type === 3
+                            className={`flex justify-between items-center px-5 h-10 bg-white transition-all duration-300 ease-in-out cursor-pointer text-qblack ${type === 3
                                 ? "hover:bg-qh3-blue hover:text-white"
                                 : "hover:bg-qyellow"
-                            }`}
+                              }`}
                           >
                             <span className="text-sm font-600 text-qblacktext">
                               {category.name}
@@ -138,9 +136,8 @@ export default function Navbar({ className, type }) {
                   <li>
                     <Link
                       to="/"
-                      className={`text-sm font-600 ${
-                        type === 3 ? "text-white" : "text-qblacktext"
-                      }`}
+                      className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"
+                        }`}
                     >
                       Trang chủ
                     </Link>
@@ -148,9 +145,8 @@ export default function Navbar({ className, type }) {
                   <li>
                     <Link
                       to="/all-products"
-                      className={`text-sm font-600 ${
-                        type === 3 ? "text-white" : "text-qblacktext"
-                      }`}
+                      className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"
+                        }`}
                     >
                       Sản phẩm
                     </Link>
@@ -158,9 +154,8 @@ export default function Navbar({ className, type }) {
                   <li className="relative">
                     <Link
                       to="#"
-                      className={`flex items-center text-sm font-600 cursor-pointer ${
-                        type === 3 ? "text-white" : "text-qblacktext"
-                      }`}
+                      className={`flex items-center text-sm font-600 cursor-pointer ${type === 3 ? "text-white" : "text-qblacktext"
+                        }`}
                     >
                       Trang
                       <span className="ml-1.5 flex items-center">
@@ -220,9 +215,8 @@ export default function Navbar({ className, type }) {
                   <li>
                     <Link to="/about">
                       <span
-                        className={`text-sm font-600 ${
-                          type === 3 ? "text-white" : "text-qblacktext"
-                        }`}
+                        className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"
+                          }`}
                       >
                         Về chúng tôi
                       </span>
@@ -231,9 +225,8 @@ export default function Navbar({ className, type }) {
                   <li>
                     <Link to="/blogs">
                       <span
-                        className={`text-sm font-600 ${
-                          type === 3 ? "text-white" : "text-qblacktext"
-                        }`}
+                        className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"
+                          }`}
                       >
                         Tin tức
                       </span>
@@ -242,11 +235,20 @@ export default function Navbar({ className, type }) {
                   <li>
                     <Link to="/contact">
                       <span
-                        className={`text-sm font-600 ${
-                          type === 3 ? "text-white" : "text-qblacktext"
-                        }`}
+                        className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"
+                          }`}
                       >
                         Liên hệ
+                      </span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/Auctions">
+                      <span
+                        className={`text-sm font-600 ${type === 3 ? "text-white" : "text-qblacktext"
+                          }`}
+                      >
+                        Đấu giá
                       </span>
                     </Link>
                   </li>

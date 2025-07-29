@@ -10,7 +10,8 @@ import {
     FaAngleDoubleLeft,
     FaAngleDoubleRight,
     FaTrashAlt,
-    FaEdit
+    FaEdit,
+    FaEye
 } from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -18,6 +19,8 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 function PromotionGetAll() {
+    const [showOrderModal, setShowOrderModal] = useState(false);
+    const [appliedOrders, setAppliedOrders] = useState([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [promotions, setPromotions] = useState([]);
@@ -98,8 +101,25 @@ function PromotionGetAll() {
     const perPage = 10;
 
     useEffect(() => {
-        getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate);
+        if (filterStatus === "used") {
+            getUsedPromotions();
+        } else {
+            getPromotions(currentPage, searchTerm, filterStatus, startDate, endDate);
+        }
     }, [currentPage, filterStatus]);
+
+    const getUsedPromotions = async () => {
+        try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/applied`);
+            const usedPromos = res.data.data || [];
+            setPromotions(usedPromos);
+            setTotalPages(1);
+            setStatusCounts(prev => ({ ...prev, used: usedPromos.length }));
+        } catch (error) {
+            console.error("Lỗi khi lấy khuyến mãi đã sử dụng:", error);
+            toast.error("Không thể tải khuyến mãi đã sử dụng.");
+        }
+    };
 
     const getPromotions = async (page = 1, search = "", status = "", start = "", end = "") => {
         try {
@@ -145,7 +165,6 @@ function PromotionGetAll() {
             toast.error("Không thể tải danh sách khuyến mãi.");
         }
     };
-
 
     const deletePromotion = async () => {
         if (!selectedPromotion) return;
@@ -219,6 +238,16 @@ function PromotionGetAll() {
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm rounded ml-2"
                 >
                     Xuất Excel
+                </button>
+                <button
+                    onClick={() => {
+                        setFilterStatus("used");
+                        setCurrentPage(1);
+                        getUsedPromotions();
+                    }}
+                    className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm rounded ml-2"
+                >
+                    Lọc đã sử dụng
                 </button>
             </div>
 
@@ -335,18 +364,38 @@ function PromotionGetAll() {
                                     {promo.special_promotion ? "Có" : "Không"}
                                 </td> */}
                                 <td className="border p-2 text-center space-x-2">
-                                    <Link
-                                        to={`/admin/promotions/edit/${promo.id}`}
-                                        className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                                    >
-                                        <FaEdit size={20} className="font-bold" />
-                                    </Link>
-                                    <button
-                                        onClick={() => setSelectedPromotion(promo)}
-                                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                                    >
-                                        <FaTrashAlt size={20} className="font-bold" />
-                                    </button>
+                                    {filterStatus === "used" ? (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/applied/${promo.id}`);
+                                                    setAppliedOrders(res.data.orders || []);
+                                                    setShowOrderModal(true);
+                                                } catch (err) {
+                                                    toast.error("Không thể tải đơn hàng đã áp dụng.");
+                                                }
+                                            }}
+                                            className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                                        >
+                                            <FaEye size={20} />
+                                        </button>
+
+                                    ) : (
+                                        <>
+                                            <Link
+                                                to={`/admin/promotions/edit/${promo.id}`}
+                                                className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                                            >
+                                                <FaEdit size={20} className="font-bold" />
+                                            </Link>
+                                            <button
+                                                onClick={() => setSelectedPromotion(promo)}
+                                                className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                                            >
+                                                <FaTrashAlt size={20} className="font-bold" />
+                                            </button>
+                                        </>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -402,12 +451,10 @@ function PromotionGetAll() {
                 </div>
             </div>
 
-            {selectedPromotion && (
-                <FormDelete
-                    isOpen={true}
-                    onClose={() => setSelectedPromotion(null)}
-                    onConfirm={deletePromotion}
-                    message={`Bạn có chắc chắn muốn xóa khuyến mãi "${selectedPromotion.name}" không?`}
+             {showOrderModal && (
+                <PromotionOrderListModal
+                    orders={appliedOrders}
+                    onClose={() => setShowOrderModal(false)}
                 />
             )}
         </div>
