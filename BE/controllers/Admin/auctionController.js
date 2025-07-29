@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { Op } = require('sequelize');
 const UsersModel = require('../../models/usersModel');
-const AuctionProductModel = require('../../models/auctionsProductModel')
+const ProductVariantModel = require('../../models/productVariantsModel');
 const AuctionModel = require('../../models/auctionsModel');
 
 class auctionController {
@@ -36,8 +36,8 @@ class auctionController {
             where: whereClause,
             include: [
                {
-                  model: AuctionProductModel,
-                  as: "auctionProduct",
+                  model: ProductVariantModel,
+                  as: "variant",
                },
             ],
          });
@@ -88,7 +88,7 @@ filteredAuctions.sort((a, b) => {
 
    static async getAuctionProduct(req, res) {
       try {
-         const auctionProducts = await AuctionProductModel.findAll();
+         const auctionProducts = await ProductVariantModel.findAll();
 
          return res.status(200).json({ data: auctionProducts });
       } catch (error) {
@@ -105,7 +105,7 @@ filteredAuctions.sort((a, b) => {
 
          const auction = await AuctionModel.findOne({
             where: { id },
-            include: [{ model: AuctionProductModel, as: "auctionProduct" }],
+            include: [{ model: ProductVariantModel, as: "variant" }],
          });
 
          if (!auction) {

@@ -1,6 +1,6 @@
 const AuctionModel = require("../../models/auctionsModel");
 const AuctionBidModel = require("../../models/auctionBidsModel");
-const Auctions_Product = require("../../models/auctionsProductModel");
+// const Auctions_Product = require("../../models/auctionsProductModel");
 const { errorResponse, successResponse } = require("../../helpers/response");
 
 class AuctionBidController {
