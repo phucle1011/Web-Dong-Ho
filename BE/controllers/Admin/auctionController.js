@@ -54,7 +54,19 @@ class auctionController {
             filteredAuctions = allAuctions.filter(a => a.status === status);
          }
 
-         filteredAuctions.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+const statusPriority = { active: 1, upcoming: 2, ended: 3 };
+
+filteredAuctions.sort((a, b) => {
+   const priorityA = statusPriority[a.status] || 99;
+   const priorityB = statusPriority[b.status] || 99;
+
+   if (priorityA === priorityB) {
+      return new Date(a.start_time) - new Date(b.start_time);
+   }
+
+   return priorityA - priorityB;
+});
+
          const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
 
          return res.status(200).json({
@@ -87,46 +99,41 @@ class auctionController {
 
    //--------------------------[ GET ID ]---------------------------
    static async getId(req, res) {
-  try {
-    const { id } = req.params;
-    const moment = require("moment-timezone");
+      try {
+         const { id } = req.params;
+         const moment = require("moment-timezone");
 
-    const auction = await AuctionModel.findOne({
-      where: { id },
-      include: [{ model: AuctionProductModel, as: "auctionProduct" }],
-    });
+         const auction = await AuctionModel.findOne({
+            where: { id },
+            include: [{ model: AuctionProductModel, as: "auctionProduct" }],
+         });
 
-    if (!auction) {
-      return res.status(404).json({ message: "Phiên đấu giá không tồn tại!" });
-    }
+         if (!auction) {
+            return res.status(404).json({ message: "Phiên đấu giá không tồn tại!" });
+         }
 
-    const startTimeStr = moment(auction.start_time).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
-    const endTimeStr = moment(auction.end_time).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
+         const startTimeStr = moment(auction.start_time).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
+         const endTimeStr = moment(auction.end_time).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
 
-    // Gán lại giá trị để trả ra FE
-    auction.dataValues.start_time = startTimeStr;
-    auction.dataValues.end_time = endTimeStr;
+         const now = moment().tz("Asia/Ho_Chi_Minh");
+         if (moment(startTimeStr).isBefore(now) && moment(endTimeStr).isAfter(now)) {
+            auction.dataValues.status = "active";
+         } else if (moment(startTimeStr).isAfter(now)) {
+            auction.dataValues.status = "upcoming";
+         } else {
+            auction.dataValues.status = "ended";
+         }
 
-    // Tính trạng thái
-    const now = moment().tz("Asia/Ho_Chi_Minh");
-    if (moment(startTimeStr).isBefore(now) && moment(endTimeStr).isAfter(now)) {
-      auction.dataValues.status = "active";
-    } else if (moment(startTimeStr).isAfter(now)) {
-      auction.dataValues.status = "upcoming";
-    } else {
-      auction.dataValues.status = "ended";
-    }
-
-    return res.status(200).json({
-      status: 200,
-      message: "Lấy thông tin phiên đấu giá thành công",
-      data: auction,
-    });
-  } catch (error) {
-    console.error("Lỗi server:", error);
-    return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
-  }
-}
+         return res.status(200).json({
+            status: 200,
+            message: "Lấy thông tin phiên đấu giá thành công",
+            data: auction,
+         });
+      } catch (error) {
+         console.error("Lỗi server:", error);
+         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+      }
+   }
 
    //--------------------------[ CREATE ]---------------------------
    static async create(req, res) {

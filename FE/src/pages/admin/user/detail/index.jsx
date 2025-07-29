@@ -6,7 +6,8 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import {
   FaTrashAlt,
-  FaEdit 
+  FaEdit,
+  FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight
 } from "react-icons/fa";
 
 function UserDetail() {
@@ -26,16 +27,25 @@ function UserDetail() {
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [addressLimit] = useState(5);
+
   useEffect(() => {
     fetchUserDetail();
-  }, []);
+  }, [currentPage]);
+
 
   const fetchUserDetail = async () => {
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/user/${id}`);
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/user/${id}?page=${currentPage}&limit=${addressLimit}`
+      );
       if (res.data.data) {
         setUser(res.data.data);
         setAddresses(res.data.data.addresses || []);
+        const pag = res.data.data.addressPagination;
+        setTotalPages(pag?.totalPages || 1);
       } else {
         setUser({});
         setAddresses([]);
@@ -69,7 +79,7 @@ function UserDetail() {
         reason: finalReason
       });
       toast.success(res.data.message);
-      fetchUserDetail(); // Tải lại dữ liệu người dùng
+      fetchUserDetail();
     } catch (error) {
       console.error("Lỗi khi cập nhật trạng thái người dùng:", error);
       toast.error("Không thể cập nhật trạng thái người dùng.");
@@ -193,8 +203,8 @@ function UserDetail() {
       <div class="container mt-3 text-left">
         <form>
           <div class="mb-4">
-            <label for="swal-address_line" class="form-label font-semibold block mb-1">Địa chỉ:</label>
-            <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${address?.address_line || ''}">
+            <label for="swal-address_line" class="form-label font-semibold block mb-1" >Địa chỉ:</label>
+            <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${address?.address_line || ''}" disabled>
           </div>
           <div class="mb-4">
             <label for="swal-province" class="form-label font-semibold block mb-1">Tỉnh/Thành phố:</label>
@@ -290,13 +300,13 @@ function UserDetail() {
 
             if (districtId) {
               wardSelect.disabled = false;
-              const wards = await fetchWards(districtId); 
+              const wards = await fetchWards(districtId);
               wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
               wards.forEach(w => {
                 const option = document.createElement("option");
                 option.value = w.WardCode;
                 option.text = w.WardName;
-                if (w.WardName === address.ward) option.selected = true; 
+                if (w.WardName === address.ward) option.selected = true;
                 wardSelect.appendChild(option);
               });
             }
@@ -393,10 +403,20 @@ function UserDetail() {
     if (addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
       if (hasDefault) {
-        toast.success("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
-        return;
+        const confirmResult = await Swal.fire({
+          title: "Đã có địa chỉ mặc định",
+          text: "Bạn có muốn thay đổi địa chỉ mặc định không?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Có, thay đổi",
+          cancelButtonText: "Không",
+        });
+        if (!confirmResult.isConfirmed) {
+          return;
+        }
       }
     }
+
     try {
       const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
       toast.success("Thêm địa chỉ thành công");
@@ -413,10 +433,20 @@ function UserDetail() {
         (addr) => addr.is_default === 1 && addr.id !== addressId
       );
       if (hasOtherDefault) {
-        toast.success("Vui lòng bỏ chọn địa chỉ mặc định hiện tại trước khi đặt địa chỉ này làm mặc định.");
-        return;
+        const confirmResult = await Swal.fire({
+          title: "Đã có địa chỉ mặc định",
+          text: "Bạn có muốn thay đổi địa chỉ mặc định không?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Có, thay đổi",
+          cancelButtonText: "Không",
+        });
+        if (!confirmResult.isConfirmed) {
+          return;
+        }
       }
     }
+
     try {
       const res = await axios.put(
         `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
@@ -446,7 +476,7 @@ function UserDetail() {
           const res = await axios.delete(
             `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`
           );
-           toast.success("Xóa địa chỉ thành công");
+          toast.success("Xóa địa chỉ thành công");
           fetchUserDetail();
         } catch (error) {
           console.error("Lỗi khi xóa địa chỉ:", error);
@@ -608,15 +638,16 @@ function UserDetail() {
         {/* Phần địa chỉ */}
         <div className="mb-8">
           <section className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
+            <h3 className="text-lg font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
               Địa chỉ
               <button
-                className="px-2 py-1 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition duration-200 ease-in-out text-sm flex items-center"
+                className="text-sm bg-[#073272] hover:bg-[#052652] text-white px-2 py-1 rounded shadow flex items-center"
                 onClick={() => showAddressModal()}
               >
-                <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ mới
+                <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ
               </button>
             </h3>
+
             {addresses.length === 0 ? (
               <p className="text-gray-600 italic">Chưa có địa chỉ nào.</p>
             ) : (
@@ -624,7 +655,7 @@ function UserDetail() {
                 <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
-                      {["ID", "Địa chỉ", "Xã/Phường", "Quận/Huyện", "Tỉnh/Thành phố", "Mặc định", "Thao tác"].map(header => (
+                      {["#", "Địa chỉ", "Địa chỉ mặc định", ""].map(header => (
                         <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                           {header}
                         </th>
@@ -632,13 +663,10 @@ function UserDetail() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {addresses.map(addr => (
+                    {addresses.map((addr, index) => (
                       <tr key={addr.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap">{addr.id}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{(currentPage - 1) * addressLimit + index + 1}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">{addr.ward}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">{addr.district}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">{addr.city}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">
                           {addr.is_default === 1 ? (
                             <span className="text-green-600">Có</span>
@@ -657,7 +685,7 @@ function UserDetail() {
                             className="text-xl p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                             onClick={() => handleDeleteAddress(addr.id)}
                           >
-                            <FaTrashAlt/>
+                            <FaTrashAlt />
                           </button>
                         </td>
                       </tr>
@@ -667,6 +695,58 @@ function UserDetail() {
               </div>
             )}
           </section>
+        </div>
+        <div className="flex justify-center mt-6">
+          <div className="flex items-center space-x-1">
+
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(1)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaAngleDoubleLeft />
+            </button>
+
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaChevronLeft />
+            </button>
+
+            {[...Array(totalPages)].map((_, i) => {
+              const page = i + 1;
+              if (page >= currentPage - 1 && page <= currentPage + 1) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 border rounded ${page === currentPage ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
+                      }`}
+                  >
+                    {page}
+                  </button>
+                );
+              }
+              return null;
+            })}
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaChevronRight />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(totalPages)}
+              className="px-2 py-1 border rounded disabled:opacity-50"
+            >
+              <FaAngleDoubleRight />
+            </button>
+          </div>
         </div>
 
         {/* Nút quay lại */}

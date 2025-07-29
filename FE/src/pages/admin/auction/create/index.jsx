@@ -90,7 +90,6 @@ const AuctionCreate = () => {
         let isValid = true;
         const newErrors = { ...errors };
 
-        // Validate từng trường
         if (!form.auctions_product_id) {
             newErrors.auctions_product_id = "Vui lòng chọn sản phẩm";
             isValid = false;

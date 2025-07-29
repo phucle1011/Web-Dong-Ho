@@ -41,7 +41,6 @@ class AddressController {
       is_default = false,
     } = req.body;
 
-    // Validate dữ liệu bắt buộc
     if (
       address_line.trim() === "" ||
       district.trim() === "" ||

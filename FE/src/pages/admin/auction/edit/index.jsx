@@ -43,31 +43,45 @@ const AuctionEdit = () => {
         }
     };
 
-    const fetchAuction = async () => {
-    try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/admin/auctions/${id}`);
-        const auction = res.data.data;
-        
-        setAuctionStatus(auction.status);
-        if (auction.status !== "upcoming") {
-            toast.error("Chỉ có thể chỉnh sửa phiên đấu giá sắp diễn ra");
-            navigate("/admin/auctions/getAll");
-            return;
-        }
+    const parseUTCStringAsLocal = (utcString) => {
+        const m = moment.utc(utcString);
+        return new Date(
+            m.year(),
+            m.month(),
+            m.date(),
+            m.hour(),
+            m.minute(),
+            m.second()
+        );
+    };
 
-        setForm({
-            auctions_product_id: auction.auctions_product_id,
-            start_price: formatCurrency(auction.start_price.toString()), // Thêm formatCurrency
-            priceStep: formatCurrency(auction.priceStep.toString()), // Thêm formatCurrency
-            start_time: new Date(auction.start_time),
-            end_time: new Date(auction.end_time),
-        });
-        setInitialLoad(false);
-    } catch (err) {
-        toast.error("Không tìm thấy phiên đấu giá");
-        navigate("/admin/auctions/getAll");
-    }
-};
+    const fetchAuction = async () => {
+        try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/auctions/${id}`);
+            const auction = res.data.data;
+
+            setAuctionStatus(auction.status);
+            if (auction.status !== "upcoming") {
+                toast.error("Chỉ có thể chỉnh sửa phiên đấu giá sắp diễn ra");
+                navigate("/admin/auctions/getAll");
+                return;
+            }
+
+            setForm({
+                auctions_product_id: auction.auctions_product_id,
+                start_price: formatCurrency(auction.start_price.toString()),
+                priceStep: formatCurrency(auction.priceStep.toString()),
+                start_time: parseUTCStringAsLocal(auction.start_time),
+                end_time: parseUTCStringAsLocal(auction.end_time),
+
+            });
+
+            setInitialLoad(false);
+        } catch (err) {
+            toast.error("Không tìm thấy phiên đấu giá");
+            navigate("/admin/auctions/getAll");
+        }
+    };
 
     useEffect(() => {
         fetchProducts();
@@ -87,7 +101,7 @@ const AuctionEdit = () => {
 
     const validateField = (name, value) => {
         let error = "";
-        
+
         if (!value) {
             error = "Trường này không được bỏ trống";
         } else if ((name === "start_price" || name === "priceStep") && parseCurrency(value) <= 0) {
@@ -170,7 +184,7 @@ const AuctionEdit = () => {
 
         setLoading(true);
         try {
-            const res = await axios.put(`${Constants.DOMAIN_API}/admin/auctions/${id}`, payload);
+            const res = await axios.put(`${Constants.DOMAIN_API}/admin/auctions/edit/${id}`, payload);
             toast.success("Cập nhật phiên đấu giá thành công!");
             navigate("/admin/auctions/getAll");
         } catch (err) {
@@ -215,7 +229,7 @@ const AuctionEdit = () => {
                         </label>
                         <div className="relative">
                             <input
-                                type="text"  
+                                type="text"
                                 className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.start_price ? "border-red-500" : ""}`}
                                 placeholder="Nhập giá khởi điểm"
                                 value={form.start_price}
@@ -237,7 +251,7 @@ const AuctionEdit = () => {
                         </label>
                         <div className="relative">
                             <input
-                                type="text"  
+                                type="text"
                                 className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.priceStep ? "border-red-500" : ""}`}
                                 placeholder="Nhập bước giá"
                                 value={form.priceStep}

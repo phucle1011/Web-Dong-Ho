@@ -81,26 +81,40 @@ class UserController {
     static async getById(req, res) {
         try {
             const { id } = req.params;
+            const { page = 1, limit = 5 } = req.query;
+            const offset = (page - 1) * limit;
+
             const user = await UserModel.findByPk(id, {
                 attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
-                include: [{
-                    model: AddressModel,
-                    as: 'addresses',
-                    attributes: ['id', 'address_line', 'district',  'city',  'ward', 'is_default', 'created_at', 'updated_at']
-                }]
             });
 
             if (!user) {
                 return res.status(404).json({ message: "Người dùng không tồn tại" });
             }
 
-            res.status(200).json({
+            const { count, rows: addresses } = await AddressModel.findAndCountAll({
+                where: { user_id: id },
+                attributes: ['id', 'address_line', 'district', 'city', 'ward', 'is_default', 'created_at', 'updated_at'],
+                offset,
+                limit: parseInt(limit),
+                order: [['is_default', 'DESC'], ['created_at', 'DESC']],
+            });
+
+            return res.status(200).json({
                 status: 200,
-                data: user,
+                data: {
+                    ...user.toJSON(),
+                    addresses,
+                    addressPagination: {
+                        currentPage: parseInt(page),
+                        totalPages: Math.ceil(count / limit),
+                        totalItems: count,
+                    },
+                },
             });
         } catch (error) {
             console.error("Lỗi khi lấy chi tiết người dùng:", error);
-            res.status(500).json({ error: error.message });
+            return res.status(500).json({ error: error.message });
         }
     }
 

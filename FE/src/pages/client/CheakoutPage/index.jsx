@@ -273,7 +273,7 @@ export default function CheckoutPage() {
         <form>
           <div class="mb-4">
             <label for="swal-address_line" class="form-label font-semibold block mb-1">Địa chỉ:</label>
-            <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${address?.address_line || ''}">
+            <input type="text" id="swal-address_line" class="form-input w-full border rounded px-3 py-2" value="${address?.address_line || ''}" disabled>
           </div>
           <div class="mb-4">
             <label for="swal-province" class="form-label font-semibold block mb-1">Tỉnh/Thành phố:</label>
@@ -461,21 +461,39 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleAddAddress = async (addressData) => {
-    try {
-      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+const handleAddAddress = async (addressData) => {
+  try {
+    const hasDefault = allAddresses.some(addr => addr.is_default === 1);
 
-      if (addressData.is_default === 1) {
-        setDefaultAddress(res.data);
+    if (hasDefault && addressData.is_default === 1) {
+      const result = await Swal.fire({
+        title: "Đã có địa chỉ mặc định",
+        text: "Bạn muốn thay thế địa chỉ mặc định hiện tại bằng địa chỉ mới này?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Có, thay thế",
+        cancelButtonText: "Không",
+      });
+
+      if (!result.isConfirmed) {
+        toast.info("Bạn đã hủy thao tác thêm địa chỉ mặc định mới.");
+        return;
       }
-
-      fetchAllAddresses();
-      toast.success("Thêm địa chỉ thành công");
-    } catch (error) {
-      console.error("Lỗi khi thêm địa chỉ:", error);
-      toast.error("Thêm địa chỉ thất bại");
     }
-  };
+
+    const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+
+    if (addressData.is_default === 1) {
+      setDefaultAddress(res.data);
+    }
+
+    fetchAllAddresses();
+    toast.success("Thêm địa chỉ thành công");
+  } catch (error) {
+    console.error("Lỗi khi thêm địa chỉ:", error);
+    toast.error("Thêm địa chỉ thất bại");
+  }
+};
 
   const handleUpdateAddress = async (addressId, addressData) => {
     const hasOtherDefault = allAddresses.some(
