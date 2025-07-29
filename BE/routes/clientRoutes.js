@@ -41,6 +41,7 @@ const AuctionBidController = require('../controllers/Client/AuctionBidController
 router.get('/auctions/balance', checkJWT, AuctionController.getBalance);
 router.post('/auctions/entry-otp', checkJWT, AuctionController.requestEntryOTP);
 router.post('/auctions/entry-otp/verify', checkJWT, AuctionController.verifyEntryOTP);
+router.get('/auctions', AuctionController.get);
 
 //------------------[ HOME]------------------
 router.get("/products/getallnew", HomeController.getAllNewProducts);

@@ -4,6 +4,11 @@ const UsersModel = require('../../models/usersModel');
 const ProductVariantModel = require('../../models/productVariantsModel');
 const AuctionModel = require('../../models/auctionsModel');
 const ProductModel = require('../../models/productsModel');
+const CategoryModel = require('../../models/categoriesModel');
+const BrandModel = require('../../models/brandsModel');
+const ProductVariantAttributeValuesModel = require('../../models/productVariantAttributeValuesModel');
+const ProductAttributeModel = require('../../models/productAttributesModel');
+const VariantImageModel = require('../../models/variantImagesModel');
 
 class auctionController {
 
@@ -38,15 +43,40 @@ class auctionController {
             include: [
                {
                   model: ProductVariantModel,
-                  as: "variant",
+                  as: 'variant',
                   include: [
                      {
                         model: ProductModel,
-                        as: "product"
-                     }
-                  ]
-               }
-            ]
+                        as: 'product',
+                        include: [
+                           {
+                              model: CategoryModel,
+                              as: 'category',
+                           },
+                           {
+                              model: BrandModel,
+                              as: "brand"
+                           }
+                        ],
+                     },
+                     {
+                        model: ProductVariantAttributeValuesModel,
+                        as: 'attributeValues', 
+                        include: [
+                           {
+                              model: ProductAttributeModel,
+                              as: 'attribute', // lấy tên thuộc tính (vd: Màu sắc, Size...)
+                           },
+                        ],
+                     },
+                     {
+                        model: VariantImageModel,
+                        as: 'images', // nếu muốn lấy danh sách ảnh của variant
+                     },
+                  ],
+               },
+            ],
+            // order: [['start_time', 'ASC']],
          });
 
          const statusCounts = {

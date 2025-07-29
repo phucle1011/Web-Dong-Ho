@@ -1,5 +1,10 @@
 const nodemailer = require("nodemailer");
+const moment = require('moment-timezone');
 const UserModel = require('../../models/usersModel');
+const AuctionModel = require('../../models/auctionsModel');
+const ProductVariantModel = require('../../models/productsModel');
+const ProductModel = require('../../models/productsModel');
+
 const { Op } = require('sequelize');
 
 const otpStore = new Map();
@@ -7,30 +12,31 @@ const otpStore = new Map();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS, 
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
 class AuctionController {
-static async getBalance(req, res) {
-        try {
-            const userId = req.user.id;
 
-            const user = await UserModel.findByPk(userId);
-            if (!user) {
-                return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
-            }
+  static async getBalance(req, res) {
+    try {
+      const userId = req.user.id;
 
-            return res.status(200).json({
-                success: true,
-                balance: user.balance || 0,
-            });
-        } catch (error) {
-            console.error('Lỗi khi lấy balance:', error);
-            return res.status(500).json({ success: false, message: 'Lỗi server' });
-        }
+      const user = await UserModel.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+      }
+
+      return res.status(200).json({
+        success: true,
+        balance: user.balance || 0,
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy balance:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server' });
     }
+  }
 
   static async requestEntryOTP(req, res) {
     try {
@@ -50,7 +56,7 @@ static async getBalance(req, res) {
       }
 
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 10 * 60 * 1000; 
+      const expiresAt = Date.now() + 10 * 60 * 1000;
       otpStore.set(userId, { code, expiresAt });
 
       await transporter.sendMail({
@@ -108,6 +114,91 @@ static async getBalance(req, res) {
       return res.status(500).json({ success: false, message: 'Lỗi server khi xác thực OTP' });
     }
   }
+
+ static async get(req, res) {
+      try {
+         const page = parseInt(req.query.page) || 1;
+         const limit = parseInt(req.query.limit) || 10;
+         const offset = (page - 1) * limit;
+
+         const { searchTerm, startDate, endDate, status } = req.query;
+         const whereClause = {};
+
+         if (searchTerm) {
+            whereClause.product_variant_id = {
+               [Op.like]: `%${searchTerm}%`,
+            };
+         }
+
+         if (startDate || endDate) {
+            whereClause.start_time = {};
+            if (startDate) {
+               whereClause.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
+            }
+            if (endDate) {
+               whereClause.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
+            }
+         }
+
+         const allAuctions = await AuctionModel.findAll({
+            where: whereClause,
+            include: [
+               {
+                  model: ProductVariantModel,
+                  as: "variant",
+                  include: [
+                     {
+                        model: ProductModel,
+                        as: "product"
+                     }
+                  ]
+               }
+            ]
+         });
+
+         const statusCounts = {
+            all: allAuctions.length,
+            upcoming: allAuctions.filter(a => a.status === "upcoming").length,
+            active: allAuctions.filter(a => a.status === "active").length,
+            ended: allAuctions.filter(a => a.status === "ended").length,
+         };
+
+         let filteredAuctions = allAuctions;
+         if (status === "upcoming" || status === "active" || status === "ended") {
+            filteredAuctions = allAuctions.filter(a => a.status === status);
+         }
+
+         const statusPriority = { active: 1, upcoming: 2, ended: 3 };
+
+         filteredAuctions.sort((a, b) => {
+            const priorityA = statusPriority[a.status] || 99;
+            const priorityB = statusPriority[b.status] || 99;
+
+            if (priorityA === priorityB) {
+               return new Date(a.start_time) - new Date(b.start_time);
+            }
+
+            return priorityA - priorityB;
+         });
+
+         const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
+
+         return res.status(200).json({
+            status: 200,
+            message: "Lấy danh sách phiên đấu giá thành công",
+            data: paginatedAuctions,
+            pagination: {
+               currentPage: page,
+               totalPages: Math.ceil(filteredAuctions.length / limit),
+               totalItems: filteredAuctions.length,
+            },
+            statusCounts,
+         });
+      } catch (error) {
+         console.error("Lỗi khi lấy danh sách đấu giá:", error);
+         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+      }
+   }
 }
 
 module.exports = AuctionController;
