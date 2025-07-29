@@ -165,6 +165,8 @@ router.get('/brand/:id', BrandController.getById);
 router.post('/brand/create', BrandController.create);
 router.put('/brand/update/:id', BrandController.update);
 router.delete('/brand/delete/:id', BrandController.delete);
+router.put('/brand/:id/logo', BrandController.updateLogo);
+
 
 //------------------[ PROMOTION-USER ]------------------\
 router.get('/promotionusers/list', PromotionUserController.get);

@@ -164,7 +164,7 @@ function UserList() {
     };
 
     return (
-        <div className="container mx-auto p-2">
+        <div className="container mx-auto p-6">
             <div className="bg-white p-4 shadow rounded-md">
                 <h2 className="text-xl font-semibold mb-4">Danh sách người dùng</h2>
 
@@ -225,7 +225,6 @@ function UserList() {
                                     <th className="p-2 border">Avatar</th>
                                     <th className="p-2 border">Vai trò</th>
                                     <th className="p-2 border">Trạng thái</th>
-                                    <th className="p-2 border">Ngày tạo</th>
                                     <th className="p-2 border"></th>
                                 </tr>
                             </thead>
@@ -260,7 +259,6 @@ function UserList() {
                                                     <option value="locked">Bị khóa</option>
                                                 </select>
                                             </td>
-                                            <td className="p-2 border">{new Date(user.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
                                             <td className="p-2 border text-center">
                                                 <Link
                                                     to={`/admin/user/detail/${user.id}`}

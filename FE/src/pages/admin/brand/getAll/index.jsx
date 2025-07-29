@@ -68,24 +68,30 @@ function BrandList() {
             cancelButtonColor: '#d33',
             confirmButtonText: 'Có',
             cancelButtonText: 'Hủy'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${brandId}`, { status: newStatus })
-                    .then(response => {
-                        toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
-                        if (response.data.counts) {
-                            setBrandCounts(response.data.counts);
-                        }
-                        if (isSearching) {
-                            handleSearchSubmit(currentPage);
-                        } else {
-                            fetchBrands(currentPage, filterStatus);
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Lỗi khi cập nhật trạng thái thương hiệu:", error);
-                        toast.error("Lỗi khi cập nhật trạng thái thương hiệu");
-                    });
+                try {
+                    const response = await axios.put(`${Constants.DOMAIN_API}/admin/brand/update/${brandId}`, { status: newStatus });
+                    toast.success(`Cập nhật trạng thái thành công thành: ${getVietnameseStatus(newStatus)}`);
+
+                    // Cập nhật brandCounts từ phản hồi API
+                    if (response.data.counts) {
+                        setBrandCounts(response.data.counts);
+                    }
+
+                    // Làm mới danh sách dựa trên trạng thái tìm kiếm hoặc lọc
+                    if (isSearching) {
+                        handleSearchSubmit(currentPage);
+                    } else {
+                        fetchBrands(currentPage, filterStatus);
+                    }
+
+                    console.log("▶️ Đã đổi trạng thái thành:", newStatus);
+                    console.log("🔁 Đang ở filterStatus:", filterStatus);
+                } catch (error) {
+                    console.error("Lỗi khi cập nhật trạng thái thương hiệu:", error);
+                    toast.error("Lỗi khi cập nhật trạng thái thương hiệu");
+                }
             }
         });
     };
@@ -209,7 +215,7 @@ function BrandList() {
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Vâng, xóa!',
+            confirmButtonText: 'Xóa',
             cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
@@ -315,7 +321,7 @@ function BrandList() {
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Logo</th>
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Mô tả</th>
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Trạng thái</th>
-                                        <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Ngày tạo</th>
+                                        {/* <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap">Ngày tạo</th> */}
                                         <th className="px-6 py-3 border border-gray-300 font-semibold whitespace-nowrap"></th>
                                     </tr>
                                 </thead>
@@ -338,19 +344,20 @@ function BrandList() {
                                                     )}
                                                 </td>
                                                 <td className="p-2 border border-gray-300">
-                                                    {brand.description && brand.description.length > 50 ? (
+                                                    {brand.description && brand.description.replace(/<[^>]+>/g, '').length > 50 ? (
                                                         <span
                                                             className="cursor-pointer hover:underline"
                                                             onClick={() => openDescriptionDialog(brand.description)}
                                                             title="Nhấn để xem đầy đủ mô tả"
                                                         >
-                                                            {shortenDescription(brand.description)}...
+                                                            {shortenDescription(brand.description.replace(/<[^>]+>/g, ''))}...
                                                             <span className="text-blue-600 ml-1">Xem thêm</span>
                                                         </span>
                                                     ) : (
-                                                        brand.description || ""
+                                                        <span dangerouslySetInnerHTML={{ __html: shortenDescription(brand.description) }} />
                                                     )}
                                                 </td>
+
                                                 <td className="p-2 border border-gray-300">
                                                     <div className="rounded p-2">
                                                         <div className="form-check form-switch m-0">
@@ -370,7 +377,7 @@ function BrandList() {
                                                     </div>
                                                 </td>
 
-                                                <td className="p-2 border border-gray-300">{new Date(brand.created_at).toLocaleString("vi-VN", { hour12: false })}</td>
+                                                {/* <td className="p-2 border border-gray-300">{new Date(brand.created_at).toLocaleString("vi-VN", { hour12: false })}</td> */}
                                                 <td className="p-2 border border-gray-300 text-center align-middle">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <Link
@@ -484,18 +491,22 @@ function BrandList() {
             {/* Dialog hiển thị mô tả đầy đủ */}
             {selectedDescription && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-md p-6 w-1/2 max-w-lg">
+                    <div className="bg-white rounded-md p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-lg">
                         <h2 className="text-lg font-semibold mb-2">Mô tả đầy đủ</h2>
-                        <p className="text-gray-700 whitespace-pre-line">{selectedDescription}</p>
+                        <div
+                            className="text-gray-700 prose"
+                            dangerouslySetInnerHTML={{ __html: selectedDescription }}
+                        ></div>
                         <button
                             onClick={closeDescriptionDialog}
-                            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded mt-4"
+                            className="mt-6 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded"
                         >
                             Đóng
                         </button>
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

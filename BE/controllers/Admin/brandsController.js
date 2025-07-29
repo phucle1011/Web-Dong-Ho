@@ -160,30 +160,83 @@ class BrandController {
 
             const updateData = {};
             const fields = ['name', 'country', 'description', 'status', 'logo'];
+
             for (const field of fields) {
                 if (req.body[field] !== undefined) {
                     updateData[field] = req.body[field];
                 }
             }
 
-            if (req.file) {
-                updateData.logo = `/uploads/brands/${req.file.filename}`;
+            // Kiểm tra slug mới nếu có name
+            if (updateData.name) {
+                const newSlug = slugify(updateData.name, { lower: true, locale: 'vi' });
+                const existingBrand = await BrandModel.findOne({
+                    where: {
+                        slug: newSlug,
+                        id: { [Op.ne]: id }
+                    }
+                });
+
+                if (existingBrand) {
+                    return res.status(400).json({
+                        status: 400,
+                        message: "Thương hiệu đã tồn tại với tên hoặc slug này.",
+                        errors: { name: "Tên thương hiệu này đã tồn tại." }
+                    });
+                }
+
+                updateData.slug = newSlug;
             }
 
             await BrandModel.update(updateData, { where: { id } });
             const updated = await BrandModel.findByPk(id);
 
+            // Tính toán lại số lượng brands
+            const allStatuses = ['active', 'inactive'];
+            const countPromises = allStatuses.map(s =>
+                BrandModel.count({ where: { status: s } })
+            );
+            const countsByStatus = await Promise.all(countPromises);
+
+            const counts = {
+                all: await BrandModel.count(),
+                active: countsByStatus[0],
+                inactive: countsByStatus[1],
+            };
+
             return res.status(200).json({
                 status: 200,
                 message: "Cập nhật thương hiệu thành công!",
-                data: updated
+                data: updated,
+                counts // Trả về counts
             });
         } catch (error) {
             console.error("Lỗi khi cập nhật thương hiệu:", error);
             return res.status(500).json({ status: 500, message: "Lỗi máy chủ", error: error.message });
         }
     }
+    static async updateLogo(req, res) {
+        try {
+            const { id } = req.params;
+            const { logo } = req.body;
 
+            const brand = await BrandModel.findByPk(id);
+            if (!brand) {
+                return res.status(404).json({ message: "Thương hiệu không tồn tại." });
+            }
+
+            brand.logo = logo;
+            await brand.save();
+
+            return res.status(200).json({
+                message: "Cập nhật logo thành công.",
+                data: brand,
+            });
+        } catch (error) {
+            console.error("Lỗi khi cập nhật logo:", error);
+            return res.status(500).json({ message: "Lỗi server.", error: error.message });
+        }
+    }
 
 
     static async delete(req, res) {

@@ -4,8 +4,7 @@ import Constants from "../../../../Constants";
 import { toast } from "react-toastify";
 import axios from "axios";
 import Swal from 'sweetalert2';
-
-// Import hàm upload lên Cloudinary
+import { Editor } from "@tinymce/tinymce-react";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary";
 
 function BrandDetail() {
@@ -86,10 +85,10 @@ function BrandDetail() {
 
     const handleUpdate = async () => {
         const newErrors = {};
-        if (!editableBrand.name || editableBrand.name.trim() === '') {
+        if (!editableBrand.name?.trim()) {
             newErrors.name = "Tên thương hiệu không được để trống.";
         }
-        if (!editableBrand.country || editableBrand.country.trim() === '') {
+        if (!editableBrand.country?.trim()) {
             newErrors.country = "Quốc gia không được để trống.";
         }
         if (Object.keys(newErrors).length > 0) {
@@ -98,34 +97,55 @@ function BrandDetail() {
             return;
         }
 
-        const newLogoUrl = await uploadLogo();
-        const updatedData = { ...editableBrand, logo: newLogoUrl };
-        const url = `${Constants.DOMAIN_API}/admin/brand/update/${id}`;
-
-
         Swal.fire({
-            title: 'Xác nhận cập nhật',
+            title: "Xác nhận cập nhật",
             text: `Bạn có chắc chắn muốn cập nhật thông tin thương hiệu "${originalBrand.name}" không?`,
-            icon: 'info',
+            icon: "info",
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Cập nhật',
-            cancelButtonText: 'Hủy'
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Cập nhật",
+            cancelButtonText: "Hủy",
         }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    const res = await axios.put(url, updatedData);
-                    toast.success("Cập nhật thông tin thương hiệu thành công!");
-                    setBrand(res.data.data);
-                    setOriginalBrand(res.data.data);
-                    setEditableBrand(res.data.data);
-                } catch (error) {
-                    toast.error(error.response?.data?.message || "Lỗi khi cập nhật thương hiệu.");
+            if (!result.isConfirmed) return;
+
+            try {
+                // Cập nhật thông tin trừ logo
+                const url = `${Constants.DOMAIN_API}/admin/brand/update/${id}`;
+                const { logo, ...updateWithoutLogo } = editableBrand;
+                const res = await axios.put(url, updateWithoutLogo);
+                const updatedBrand = res.data.data;
+
+                toast.success("Cập nhật thông tin thành công!");
+
+                if (logoFile) {
+                    setIsUploading(true);
+                    try {
+                        const { url: logoUrl } = await uploadToCloudinary(logoFile);
+                        await axios.put(`${Constants.DOMAIN_API}/admin/brand/${id}/logo`, { logo: logoUrl });
+                        updatedBrand.logo = logoUrl;
+                        toast.success("Cập nhật logo thành công!");
+                    } catch (logoErr) {
+                        toast.error("Cập nhật thành công nhưng lỗi khi upload logo.");
+                    } finally {
+                        setIsUploading(false);
+                    }
                 }
+
+                setBrand(updatedBrand);
+                setOriginalBrand(updatedBrand);
+                setEditableBrand(updatedBrand);
+                setLogoFile(null);
+            } catch (error) {
+                const resError = error.response?.data;
+                if (resError?.errors) {
+                    setErrors(resError.errors);
+                }
+                toast.error(error.response?.data?.message || "Lỗi khi cập nhật thương hiệu.");
             }
         });
     };
+
 
     const handleStatusChange = async (newStatus) => {
         if (newStatus === editableBrand.status) return;
@@ -314,14 +334,22 @@ function BrandDetail() {
                     {/* Description */}
                     <div className="mb-6">
                         <strong className="text-gray-600 block mb-1">Mô tả:</strong>
-                        <textarea
-                            name="description"
-                            rows="4"
-                            value={editableBrand.description || ''}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                        <Editor
+                            apiKey="your_tinymce_api_key" // Hoặc để trống nếu dùng community
+                            value={editableBrand.description || ""}
+                            onEditorChange={(newValue) =>
+                                setEditableBrand((prev) => ({ ...prev, description: newValue }))
+                            }
+                            init={{
+                                height: 250,
+                                menubar: false,
+                                plugins: "link image code lists",
+                                toolbar:
+                                    "undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | removeformat",
+                            }}
                         />
                     </div>
+
 
                     {/* Actions */}
                     <div className="flex justify-start gap-2 mt-6">

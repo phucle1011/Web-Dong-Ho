@@ -79,7 +79,6 @@ function UserDetail() {
     }
   };
 
-
   // Danh sách lý do theo trạng thái
   const getReasonOptionsForStatus = (status) => {
     switch (status) {
@@ -128,12 +127,10 @@ function UserDetail() {
     switch (englishStatus) {
       case "active": return "Hoạt động";
       case "inactive": return "Ngưng hoạt động";
-      // case "pending": return "Chờ duyệt";
       case "locked": return "Bị khóa";
       default: return "Không xác định";
     }
   };
-
 
   // Phần address
   useEffect(() => {
@@ -460,223 +457,227 @@ function UserDetail() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white-50 min-h-screen">
-      {/* Thông tin người dùng */}
-      <div className="bg-white shadow-lg rounded-xl p-6 mb-8 border border-gray-200">
-        <h1 className="text-xl font-semibold">
-          Thông Tin người dùng
-        </h1>
+    <div className="container mx-auto p-6">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-md">
+        {/* Thông tin người dùng */}
+        <div className="mb-8">
+          <h1 className="text-xl font-semibold">
+            Thông tin người dùng
+          </h1>
 
-        {/* Layout: Avatar bên trái - Thông tin bên phải */}
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Avatar bên trái */}
-          <div className="md:w-1/3 flex justify-center md:justify-center">
-            {user.avatar ? (
-              <img
-                src={user.avatar.startsWith('http') ? user.avatar : `${Constants.DOMAIN_API}/uploads/${user.avatar}`}
-                alt={user.name}
-                className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
-              />
-            ) : (
-              <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-full border-2 border-dashed border-gray-300">
-                <span className="text-gray-400 text-sm text-center px-2">Không có avatar</span>
+          {/* Layout: Avatar bên trái - Thông tin bên phải */}
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Avatar bên trái */}
+            <div className="md:w-1/3 flex justify-center md:justify-center">
+              {user.avatar ? (
+                <img
+                  src={user.avatar.startsWith('http') ? user.avatar : `${Constants.DOMAIN_API}/Uploads/${user.avatar}`}
+                  alt={user.name}
+                  className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
+                />
+              ) : (
+                <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-full border-2 border-dashed border-gray-300">
+                  <span className="text-gray-400 text-sm text-center px-2">Không có avatar</span>
+                </div>
+              )}
+            </div>
+            {/* Thông tin bên phải */}
+            <div className="md:w-2/3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-6 -ml-6 w-full">
+                <div className="flex items-center">
+                  <strong className="text-gray-600 w-24">Họ tên:</strong>
+                  <input
+                    type="text"
+                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                    value={user.name || ''}
+                    readOnly
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="flex items-center">
+                  <strong className="text-gray-600 w-24">Email:</strong>
+                  <input
+                    type="text"
+                    className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer  focus:outline-none"
+                    value={user.email || ''}
+                    readOnly
+                    onClick={() => user.email && window.open(`mailto:${user.email}`)}
+                  />
+                </div>
+
+                {/* Vai trò */}
+                <div className="flex items-center">
+                  <strong className="text-gray-600 w-24">Vai trò:</strong>
+                  <input
+                    type="text"
+                    className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
+                    value={user.role || ''}
+                    readOnly
+                  />
+                </div>
+
+                {/* Trạng thái */}
+                <div className="flex items-center">
+                  <strong className="text-gray-600 w-24">Trạng thái:</strong>
+                  <select
+                    value={user.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                  >
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Ngưng hoạt động</option>
+                    <option value="locked">Bị khóa</option>
+                  </select>
+                </div>
+
+                {/* Ngày tạo */}
+                <div className="flex items-center">
+                  <strong className="text-gray-600 w-24">Ngày tạo:</strong>
+                  <input
+                    type="text"
+                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                    value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
+                    readOnly
+                  />
+                </div>
+
+                {/* Ngày cập nhật */}
+                <div className="flex items-center">
+                  <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
+                  <input
+                    type="text"
+                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                    value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ''}
+                    readOnly
+                  />
+                </div>
               </div>
-            )}
+            </div>
           </div>
-          {/* Thông tin bên phải */}
-          <div className="md:w-2/3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-6 -ml-6 w-full">
-              <div className="flex items-center">
-                <strong className="text-gray-600 w-24">Họ tên:</strong>
-                <input
-                  type="text"
-                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                  value={user.name || ''}
-                  readOnly
-                />
-              </div>
+        </div>
 
-              {/* Email */}
-              <div className="flex items-center">
-                <strong className="text-gray-600 w-24">Email:</strong>
-                <input
-                  type="text"
-                  className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer  focus:outline-none"
-                  value={user.email || ''}
-                  readOnly
-                  onClick={() => user.email && window.open(`mailto:${user.email}`)}
-                />
-              </div>
-
-              {/* Vai trò */}
-              <div className="flex items-center">
-                <strong className="text-gray-600 w-24">Vai trò:</strong>
-                <input
-                  type="text"
-                  className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
-                  value={user.role || ''}
-                  readOnly
-                />
-              </div>
-
-              {/* Trạng thái */}
-              <div className="flex items-center">
-                <strong className="text-gray-600 w-24">Trạng thái:</strong>
-                <select
-                  value={user.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+        {/* Modal chọn lý do */}
+        {showReasonModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">
+                Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
+              </h3>
+              <label className="block mb-2">Chọn lý do mẫu:</label>
+              <select
+                value={reasonOption}
+                onChange={(e) => {
+                  setReasonOption(e.target.value);
+                  setCustomReason('');
+                }}
+                className="w-full border rounded px-3 py-2 mb-4"
+              >
+                {getReasonOptionsForStatus(selectedNewStatus)}
+              </select>
+              {reasonOption === 'Khác' && (
+                <>
+                  <label className="block mb-2">Nhập lý do khác:</label>
+                  <input
+                    type="text"
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="Nhập lý do..."
+                  />
+                </>
+              )}
+              <div className="flex justify-end mt-4 space-x-2">
+                <button
+                  onClick={() => setShowReasonModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded"
                 >
-                  <option value="active">Hoạt động</option>
-                  <option value="inactive">Ngưng hoạt động</option>
-                  <option value="locked">Bị khóa</option>
-                </select>
-              </div>
-
-              {/* Ngày tạo */}
-              <div className="flex items-center">
-                <strong className="text-gray-600 w-24">Ngày tạo:</strong>
-                <input
-                  type="text"
-                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                  value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
-                  readOnly
-                />
-              </div>
-
-              {/* Ngày cập nhật */}
-              <div className="flex items-center">
-                <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
-                <input
-                  type="text"
-                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                  value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ''}
-                  readOnly
-                />
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSubmitReason}
+                  className="px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                  Xác nhận
+                </button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal chọn lý do */}
-      {showReasonModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
-              Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
-            </h3>
-            <label className="block mb-2">Chọn lý do mẫu:</label>
-            <select
-              value={reasonOption}
-              onChange={(e) => {
-                setReasonOption(e.target.value);
-                setCustomReason('');
-              }}
-              className="w-full border rounded px-3 py-2 mb-4"
-            >
-              {getReasonOptionsForStatus(selectedNewStatus)}
-            </select>
-            {reasonOption === 'Khác' && (
-              <>
-                <label className="block mb-2">Nhập lý do khác:</label>
-                <input
-                  type="text"
-                  value={customReason}
-                  onChange={(e) => setCustomReason(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
-                  placeholder="Nhập lý do..."
-                />
-              </>
-            )}
-            <div className="flex justify-end mt-4 space-x-2">
-              <button
-                onClick={() => setShowReasonModal(false)}
-                className="px-4 py-2 bg-gray-300 rounded"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSubmitReason}
-                className="px-4 py-2 bg-blue-500 text-white rounded"
-              >
-                Xác nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Phần địa chỉ */}
-      <section className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h3 className="text-xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
-          Địa chỉ
-          <button
-            className="px-2 py-1 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition duration-200 ease-in-out text-sm flex items-center"
-            onClick={() => showAddressModal()}
-          >
-            <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ mới
-          </button>
-        </h3>
-        {addresses.length === 0 ? (
-          <p className="text-gray-600 italic">Chưa có địa chỉ nào.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  {["ID", "Địa chỉ", "Xã/Phường", "Quận/Huyện", "Tỉnh/Thành phố", "Mặc định", "Thao tác"].map(header => (
-                    <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {addresses.map(addr => (
-                  <tr key={addr.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.id}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.ward}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.district}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{addr.city}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">
-                      {addr.is_default === 1 ? (
-                        <span className="text-green-600">Có</span>
-                      ) : (
-                        <span className="text-gray-400">Không</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap space-x-2">
-                      <button
-                        className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                        onClick={() => showAddressModal(addr)}
-                      >
-                        <FaEdit size={20} />
-                      </button>
-                      <button
-                        className="text-xl p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                        onClick={() => handleDeleteAddress(addr.id)}
-                      >
-                        <FaTrashAlt/>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
-      </section>
 
-      {/* Nút quay lại */}
-      <div className="mt-4 text-left">
-        <button
-          onClick={() => navigate("/admin/user/getAll")}
-          className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out"
-        >
-          Quay lại
-        </button>
+        {/* Phần địa chỉ */}
+        <div className="mb-8">
+          <section className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-xl font-semibold mb-4 border-b border-gray-200 pb-2 text-gray-700 flex justify-between items-center">
+              Địa chỉ
+              <button
+                className="px-2 py-1 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition duration-200 ease-in-out text-sm flex items-center"
+                onClick={() => showAddressModal()}
+              >
+                <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ mới
+              </button>
+            </h3>
+            {addresses.length === 0 ? (
+              <p className="text-gray-600 italic">Chưa có địa chỉ nào.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      {["ID", "Địa chỉ", "Xã/Phường", "Quận/Huyện", "Tỉnh/Thành phố", "Mặc định", "Thao tác"].map(header => (
+                        <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {addresses.map(addr => (
+                      <tr key={addr.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap">{addr.id}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{addr.ward}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{addr.district}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{addr.city}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">
+                          {addr.is_default === 1 ? (
+                            <span className="text-green-600">Có</span>
+                          ) : (
+                            <span className="text-gray-400">Không</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap space-x-2">
+                          <button
+                            className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                            onClick={() => showAddressModal(addr)}
+                          >
+                            <FaEdit size={20} />
+                          </button>
+                          <button
+                            className="text-xl p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                            onClick={() => handleDeleteAddress(addr.id)}
+                          >
+                            <FaTrashAlt/>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Nút quay lại */}
+        <div className="mt-4 text-left">
+          <button
+            onClick={() => navigate("/admin/user/getAll")}
+            className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 ease-in-out"
+          >
+            Quay lại
+          </button>
+        </div>
       </div>
     </div>
   );
