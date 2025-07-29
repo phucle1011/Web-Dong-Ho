@@ -89,6 +89,8 @@ import PromotionOrderListModal from "./pages/admin/promotions/Promotiondetail";
 import AuctionGetAll from "./pages/admin/auction/getAll/index.jsx";
 import AuctionCreate from "./pages/admin/auction/create/index.jsx";
 import AuctionEdit from "./pages/admin/auction/edit/index.jsx";
+import AuctionsProductDetail from "./pages/client/Auctions/AcutionsDetail/index.jsx";
+import AuctionRoom from "./pages/client/Auctions/Room/index.jsx";
 
 // Protected Route
 import GuestRoute from "./components/Auth/GuestRoute/index.jsx";
@@ -149,9 +151,11 @@ const AppRoutes = () => {
           <Route path="/auth/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/Auctions" element={<AuctionProductDetail />} />
+          <Route path="/AcutionsDetail" element={<AuctionsProductDetail />} />
 
 
         </Route>
+        <Route path="/Room" element={<AuctionRoom />} />
 
         {/*--------------------ADMIN-------------------- */}
         <Route
@@ -221,7 +225,7 @@ const AppRoutes = () => {
             <Route path="getAll" element={<PromotionGetAll />} />
             <Route path="create" element={<PromotionCreate />} />
             <Route path="edit/:id" element={<PromotionEdit />} />
-             <Route path="Promotiondetail" element={<PromotionOrderListModal />} />
+            <Route path="Promotiondetail" element={<PromotionOrderListModal />} />
           </Route>
           <Route path="promotion-products">
             <Route path="getAll" element={<PromotionProductList />} />
