@@ -94,6 +94,11 @@ import AdminProfile from "./components/admin/profile/index.jsx";
 import GeminiChatbox from "./GeminiChatbox";
 
 
+import AuctionProduct from "./pages/admin/auctionProduct/getAll/index.jsx";
+import AuctionProductcreate from "./pages/admin/auctionProduct/create/index.jsx";
+import AuctionProductEdit from "./pages/admin/auctionProduct/edit/index.jsx";
+
+
 const AppRoutes = () => {
   const navigate = useNavigate();
   const auth = useAuth(); // Lấy toàn bộ context
@@ -250,6 +255,12 @@ const AppRoutes = () => {
             <Route path="getAll" element={<NotificationList />} />
             <Route path="create" element={<NotificationSendAll />} />
             <Route path="edit/:id" element={<NotificationEdit />} />
+
+          </Route>
+          <Route path="auctionProduct">
+            <Route path="getAll" element={<AuctionProduct />} />
+            <Route path="create" element={<AuctionProductcreate />} /> 
+            <Route path="edit/:id" element={<AuctionProductEdit />} /> 
 
           </Route>
           <Route path="promotionusers">

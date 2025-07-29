@@ -19,10 +19,6 @@ const OrderModel = connection.define('orders', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
-    auction_product_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    },
     total_price: {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: true

@@ -114,7 +114,8 @@ function AddVariantForm() {
 <div className="flex flex-col md:flex-row gap-4">
   {/* SKU */}
   <div className="w-full md:w-1/3">
-    <label className="block font-medium mb-2">Mã SKU *</label>
+    <label className="block font-medium mb-2">Mã SKU <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
     <input
       type="text"
       value={sku}
@@ -128,7 +129,8 @@ function AddVariantForm() {
 
   {/* Giá */}
   <div className="w-full md:w-1/3">
-    <label className="block font-medium mb-2">Giá *</label>
+    <label className="block font-medium mb-2">Giá <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
     <input
       type="number"
       value={price}
@@ -142,7 +144,8 @@ function AddVariantForm() {
 
   {/* Tồn kho */}
   <div className="w-full md:w-1/3">
-    <label className="block font-medium mb-2">Số lượng tồn kho *</label>
+    <label className="block font-medium mb-2">Số lượng tồn kho <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
     <input
       type="number"
       value={stock}
@@ -160,7 +163,8 @@ function AddVariantForm() {
 <div className="flex flex-col md:flex-row gap-4">
   {/* Thuộc tính biến thể */}
   <div className="w-full md:w-1/2">
-    <label className="block font-medium mb-2">Thuộc tính biến thể *</label>
+    <label className="block font-medium mb-2">Thuộc tính biến thể <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
     {attributes.map((attr, index) => {
       const selectedAttr = allAttributes.find(
         (a) => a.id.toString() === attr.attribute_id.toString()

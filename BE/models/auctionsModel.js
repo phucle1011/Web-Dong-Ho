@@ -7,9 +7,9 @@ const AuctionsModel = connection.define('auctions', {
         autoIncrement: true,
         primaryKey: true
     },
-    auctions_product_id: {
+    product_variant_id: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: false
     },
     start_price: {
         type: DataTypes.DECIMAL(20, 2),

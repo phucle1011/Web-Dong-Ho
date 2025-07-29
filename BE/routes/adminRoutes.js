@@ -30,6 +30,8 @@ const AuctionController = require('../controllers/Admin/auctionController');
 //------------------[ ADMIN ROUTES ]------------------
 router.post('/auctionBid', AuctionBidController.placeBid);
 
+
+
 //------------------[ AUCTION ]------------------\
 router.get('/auction-products', AuctionController.getAuctionProduct);
 router.get('/auctions', AuctionController.get);

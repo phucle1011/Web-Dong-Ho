@@ -226,20 +226,21 @@ const AddProduct = () => {
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Tên sản phẩm */}
-          {/* Tên sản phẩm */}
-          <div className="col-span-1 border p-3 rounded">
-            <div className="flex items-center justify-between mb-1">
-              <label className="form-label">Tên sản phẩm</label>
-            </div>
-            <input
-              type="text"
-              className="form-control"
-              {...register("name", { required: "Vui lòng nhập tên sản phẩm" })}
-            />
-            {errors.name && (
-              <small className="text-danger">{errors.name.message}</small>
-            )}
+  {/* Tên sản phẩm */}
+  {/* Tên sản phẩm */}
+<div className="col-span-1 border p-3 rounded">
+  <div className="flex items-center justify-between mb-1">
+    <label className="form-label">Tên sản phẩm<span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
+  </div>
+  <input
+    type="text"
+    className="form-control"
+    {...register("name", { required: "Vui lòng nhập tên sản phẩm" })}
+  />
+  {errors.name && (
+    <small className="text-danger">{errors.name.message}</small>
+  )}
 
             <div className="flex items-center justify-between mb-1 pt-4">
               <label className="form-label">Slug</label>
@@ -267,19 +268,20 @@ const AddProduct = () => {
 
 
 
-          {/* Thương hiệu */}
-          <div className="col-span-1 border p-3 rounded">
-            {/* ========== THƯƠNG HIỆU ========== */}
-            <div className="flex items-center justify-between mb-1">
-              <label className="form-label">Thương hiệu</label>
-              <button
-                type="button"
-                onClick={() => setShowBrandModal(true)}
-                className="text-blue-600  text-sm"
-              >
-                + Thêm thương hiệu
-              </button>
-            </div>
+  {/* Thương hiệu */}
+<div className="col-span-1 border p-3 rounded">
+  {/* ========== THƯƠNG HIỆU ========== */}
+  <div className="flex items-center justify-between mb-1">
+    <label className="form-label">Thương hiệu<span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
+    <button
+      type="button"
+      onClick={() => setShowBrandModal(true)}
+      className="text-blue-600  text-sm"
+    >
+      + Thêm thương hiệu
+    </button>
+  </div>
 
             <Select
               options={brandOptions}
@@ -312,19 +314,19 @@ const AddProduct = () => {
               />
             )}
 
-            {/* ========== DANH MỤC ========== */}
-            {/* ========== DANH MỤC ========== */}
-            {/* ========== DANH MỤC ========== */}
-            <div className="flex items-center justify-between mt-4 mb-1">
-              <label className="form-label">Danh mục</label>
-              <button
-                type="button"
-                onClick={() => setShowCategoryModal(true)}
-                className="text-blue-600  text-sm"
-              >
-                + Thêm danh mục
-              </button>
-            </div>
+  {/* ========== DANH MỤC ========== */}
+ 
+<div className="flex items-center justify-between mt-4 mb-1">
+  <label className="form-label">Danh mục<span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
+  <button
+    type="button"
+    onClick={() => setShowCategoryModal(true)}
+    className="text-blue-600  text-sm"
+  >
+    + Thêm danh mục
+  </button>
+</div>
 
             <Select
               isMulti
@@ -368,24 +370,24 @@ const AddProduct = () => {
 
 
 
-          {/* Ảnh sản phẩm */}
-          {/* Cột trái: upload ảnh */}
-          <div className="col-span-1 border p-3 rounded">
-            <label className="block font-medium mb-1 text-sm">Ảnh sản phẩm *</label>
-            <input
-              type="file"
-              className="w-full border px-3 py-2 rounded text-sm"
-              accept="image/*"
-              onChange={handleThumbnailChange}
-            />
-            {thumbnailUrl && (
-              <img
-                src={thumbnailUrl.url}
-                alt="Preview"
-                className="mt-2 w-full h-auto max-h-48 object-contain border rounded"
-              />
-            )}
-          </div>
+  {/* Cột trái: upload ảnh */}
+  <div className="col-span-1 border p-3 rounded">
+    <label className="block font-medium mb-1 text-sm">Ảnh sản phẩm <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+</label>
+    <input
+      type="file"
+      className="w-full border px-3 py-2 rounded text-sm"
+      accept="image/*"
+      onChange={handleThumbnailChange}
+    />
+    {thumbnailUrl && (
+      <img
+        src={thumbnailUrl.url}
+        alt="Preview"
+        className="mt-2 w-full h-auto max-h-48 object-contain border rounded"
+      />
+    )}
+  </div>
 
           {/* Cột phải: trạng thái + nút */}
           <div className="border p-3 rounded flex flex-col justify-between">

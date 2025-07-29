@@ -148,7 +148,7 @@ const NotificationList = () => {
         <div className="text-center text-red-600 py-6">{error}</div>
       ) : paginatedNotifications.length === 0 ? (
         <div className="text-center text-gray-500 py-6">
-          Không có khuyến mãi nào.
+          Không có thông báo khuyến mãi nào.
         </div>
       ) : (
         <div className="overflow-x-auto">
