@@ -55,7 +55,7 @@ class OrderController {
 
                 if (endDate) {
                     const endOfDay = new Date(endDate);
-                    endOfDay.setHours(23, 59, 59, 999); // Đặt thành cuối ngày
+                    endOfDay.setHours(23, 59, 59, 999); 
                     whereClause.created_at[Op.lte] = endOfDay;
                 }
             }

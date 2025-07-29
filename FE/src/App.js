@@ -83,6 +83,9 @@ import WalletDetail from "./pages/admin/washlet/detail";
 import Blogcategory from "./pages/admin/blogcategory/getall/index.jsx";
 import BlogCategoryadd from "./pages/admin/blogcategory/add/index.jsx";
 import BlogCategoryEdit from "./pages/admin/blogcategory/edit/index.jsx";
+import AuctionGetAll from "./pages/admin/auction/getAll/index.jsx";
+import AuctionCreate from "./pages/admin/auction/create/index.jsx";
+import AuctionEdit from "./pages/admin/auction/edit/index.jsx";
 
 // Protected Route
 import GuestRoute from "./components/Auth/GuestRoute/index.jsx";
@@ -173,6 +176,11 @@ const AppRoutes = () => {
           <Route path="washlets">
             <Route path="getAll" element={<WashletGetAll />} />
             <Route path="user/:userId" element={<WalletDetail />} />
+          </Route>
+          <Route path="auctions">
+            <Route path="getAll" element={<AuctionGetAll />} />
+            <Route path="create" element={<AuctionCreate />} />
+            <Route path="edit/:id" element={<AuctionEdit />} />
           </Route>
           <Route path="user">
             <Route path="getAll" element={<UserList />} />

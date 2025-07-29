@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { Op } = require('sequelize');
 const UsersModel = require('../../models/usersModel');
-
+const AuctionProductModel = require('../../models/auctionsProductModel')
 const AuctionModel = require('../../models/auctionsModel');
 
 class auctionController {
@@ -9,13 +9,76 @@ class auctionController {
    //--------------------------[ GET ALL ]---------------------------
    static async get(req, res) {
       try {
-         const auctions = await AuctionModel.findAll();
+         const page = parseInt(req.query.page) || 1;
+         const limit = parseInt(req.query.limit) || 10;
+         const offset = (page - 1) * limit;
 
-         res.status(200).json({
-            status: 200,
-            message: "Lấy danh sách thành công",
-            data: auctions
+         const { searchTerm, startDate, endDate, status } = req.query;
+         const whereClause = {};
+
+         if (searchTerm) {
+            whereClause.auctions_product_id = {
+               [Op.like]: `%${searchTerm}%`,
+            };
+         }
+
+         if (startDate || endDate) {
+            whereClause.start_time = {};
+            if (startDate) {
+               whereClause.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
+            }
+            if (endDate) {
+               whereClause.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
+            }
+         }
+
+         const allAuctions = await AuctionModel.findAll({
+            where: whereClause,
+            include: [
+               {
+                  model: AuctionProductModel,
+                  as: "auctionProduct",
+               },
+            ],
          });
+
+         const statusCounts = {
+            all: allAuctions.length,
+            upcoming: allAuctions.filter(a => a.status === "upcoming").length,
+            active: allAuctions.filter(a => a.status === "active").length,
+            ended: allAuctions.filter(a => a.status === "ended").length,
+         };
+
+         let filteredAuctions = allAuctions;
+         if (status === "upcoming" || status === "active" || status === "ended") {
+            filteredAuctions = allAuctions.filter(a => a.status === status);
+         }
+
+         filteredAuctions.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+         const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
+
+         return res.status(200).json({
+            status: 200,
+            message: "Lấy danh sách phiên đấu giá thành công",
+            data: paginatedAuctions,
+            pagination: {
+               currentPage: page,
+               totalPages: Math.ceil(filteredAuctions.length / limit),
+               totalItems: filteredAuctions.length,
+            },
+            statusCounts,
+         });
+      } catch (error) {
+         console.error("Lỗi khi lấy danh sách đấu giá:", error);
+         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+      }
+   }
+
+   static async getAuctionProduct(req, res) {
+      try {
+         const auctionProducts = await AuctionProductModel.findAll();
+
+         return res.status(200).json({ data: auctionProducts });
       } catch (error) {
          console.error("Lỗi server:", error);
          return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
@@ -23,34 +86,47 @@ class auctionController {
    }
 
    //--------------------------[ GET ID ]---------------------------
-   // static async getId(req, res) {
-   //    try {   
-   //       const { id } = req.params;
+   static async getId(req, res) {
+  try {
+    const { id } = req.params;
+    const moment = require("moment-timezone");
 
-   //       const auctions = await AuctionModel.findOne({
-   //          where: { id },
-   //          include: [
-   //             {
-   //                model: UsersModel,
-   //                as: 'user_id',
-   //             }
-   //          ]
-   //       });
+    const auction = await AuctionModel.findOne({
+      where: { id },
+      include: [{ model: AuctionProductModel, as: "auctionProduct" }],
+    });
 
-   //       if (!auctions) {
-   //          return res.status(404).json({ message: "Phiên đấu giá không tồn tại!" });
-   //       }
+    if (!auction) {
+      return res.status(404).json({ message: "Phiên đấu giá không tồn tại!" });
+    }
 
-   //       res.status(200).json({
-   //          status: 200,
-   //          message: "Lấy danh sách thành công",
-   //          data: auctions
-   //       });
-   //    } catch (error) {
-   //       console.error("Lỗi server:", error);
-   //       return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
-   //    }
-   // }
+    const startTimeStr = moment(auction.start_time).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
+    const endTimeStr = moment(auction.end_time).tz("Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
+
+    // Gán lại giá trị để trả ra FE
+    auction.dataValues.start_time = startTimeStr;
+    auction.dataValues.end_time = endTimeStr;
+
+    // Tính trạng thái
+    const now = moment().tz("Asia/Ho_Chi_Minh");
+    if (moment(startTimeStr).isBefore(now) && moment(endTimeStr).isAfter(now)) {
+      auction.dataValues.status = "active";
+    } else if (moment(startTimeStr).isAfter(now)) {
+      auction.dataValues.status = "upcoming";
+    } else {
+      auction.dataValues.status = "ended";
+    }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Lấy thông tin phiên đấu giá thành công",
+      data: auction,
+    });
+  } catch (error) {
+    console.error("Lỗi server:", error);
+    return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+  }
+}
 
    //--------------------------[ CREATE ]---------------------------
    static async create(req, res) {
@@ -63,10 +139,12 @@ class auctionController {
             priceStep,
          } = req.body;
 
-         const now = new Date();
+         const now = new Date(new Date().toISOString());
 
-         const startTime = new Date(start_time);
-         const endTime = new Date(end_time);
+         const moment = require('moment-timezone');
+
+         const startTime = moment.tz(start_time, "YYYY-MM-DD HH:mm:ss", "Asia/Ho_Chi_Minh").toDate();
+         const endTime = moment.tz(end_time, "YYYY-MM-DD HH:mm:ss", "Asia/Ho_Chi_Minh").toDate();
 
          if (startTime.getTime() === endTime.getTime()) {
             return res.status(400).json({
@@ -120,8 +198,8 @@ class auctionController {
             auctions_product_id,
             start_price,
             priceStep,
-            start_time,
-            end_time,
+            start_time: startTime,
+            end_time: endTime,
             status: "upcoming",
          });
 
@@ -150,9 +228,11 @@ class auctionController {
             priceStep,
          } = req.body;
 
-         const now = new Date();
-         const startTime = new Date(start_time);
-         const endTime = new Date(end_time);
+         const now = new Date(new Date().toISOString());
+         const moment = require('moment-timezone');
+
+         const startTime = moment.tz(start_time, "YYYY-MM-DD HH:mm:ss", "Asia/Ho_Chi_Minh").toDate();
+         const endTime = moment.tz(end_time, "YYYY-MM-DD HH:mm:ss", "Asia/Ho_Chi_Minh").toDate();
 
          if (startTime.getTime() === endTime.getTime()) {
             return res.status(400).json({
@@ -211,8 +291,8 @@ class auctionController {
                auctions_product_id,
                start_price,
                priceStep,
-               start_time,
-               end_time,
+               start_time: startTime,
+               end_time: endTime,
             },
             {
                where: { id },
