@@ -60,7 +60,9 @@ router.get('/products/search', SearchController.searchProducts);
 router.post("/chatbox",chatWithBot.chatWithBot);
 
 //------------------[ PRODUCTS ]------------------
-router.get('/products/:id/variants', ProductController.getVariantsWithPromotion);
+router.get('/products/:id/variants', ProductController.getNonAuctionVariantsWithPromotion);
+router.get('/products/:id/auction-variants', ProductController.getAuctionVariants);
+
 router.get('/products/:id/similar', ProductController.getSimilarProducts);
 
 //------------------[ CATEGORY ]------------------
