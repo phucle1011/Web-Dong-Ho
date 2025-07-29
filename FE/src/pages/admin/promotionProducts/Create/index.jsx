@@ -17,6 +17,7 @@ const PromotionProductForm = ({ onSuccess }) => {
   const [isFetching, setIsFetching] = useState(true);
   const [selectedPromotionId, setSelectedPromotionId] = useState(null);
   const [selectedVariantIds, setSelectedVariantIds] = useState([]);
+  const [variantQuantities, setVariantQuantities] = useState({});
 
   const {
     register,
@@ -28,7 +29,8 @@ const PromotionProductForm = ({ onSuccess }) => {
   } = useForm();
 
   const getPromotionStatus = (startDate, endDate) => {
-    if (!startDate || !endDate) return { status: "Không xác định", className: "text-gray-500" };
+    if (!startDate || !endDate)
+      return { status: "Không xác định", className: "text-gray-500" };
     const currentDate = new Date();
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -43,7 +45,9 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const fetchPromotions = async () => {
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`);
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/promotions/ss/all`
+      );
       const data = Array.isArray(res.data.data) ? res.data.data : [];
       setPromotions(data);
     } catch (error) {
@@ -58,7 +62,9 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const fetchProductVariants = async () => {
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/product-variants`
+      );
       setProductVariants(res.data.data || []);
     } catch (error) {
       console.error("Lỗi khi tải danh sách biến thể sản phẩm:", {
@@ -75,11 +81,16 @@ const PromotionProductForm = ({ onSuccess }) => {
       const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotion`, {
         params: { limit: 1000 },
       });
-      const promotionProducts = Array.isArray(res.data.data) ? res.data.data : [];
+      const promotionProducts = Array.isArray(res.data.data)
+        ? res.data.data
+        : [];
       const usedVariantIds = [
         ...new Set(
           promotionProducts
-            .filter((item) => item.product_variant_id && !isNaN(item.product_variant_id))
+            .filter(
+              (item) =>
+                item.product_variant_id && !isNaN(item.product_variant_id)
+            )
             .map((item) => item.product_variant_id)
         ),
       ];
@@ -94,11 +105,14 @@ const PromotionProductForm = ({ onSuccess }) => {
       setUsedVariantIds(usedVariantIds);
       setUsedPromotionIds(usedPromotionIds);
     } catch (error) {
-      console.error("Lỗi khi tải danh sách biến thể hoặc khuyến mãi đã sử dụng:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      console.error(
+        "Lỗi khi tải danh sách biến thể hoặc khuyến mãi đã sử dụng:",
+        {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+        }
+      );
       toast.error("Không thể tải danh sách đã sử dụng!");
     }
   };
@@ -123,7 +137,9 @@ const PromotionProductForm = ({ onSuccess }) => {
   const onSubmit = async (data) => {
     if (isLoading) return; // Ngăn gửi trùng lặp
 
-    const selectedPromotion = promotions.find((p) => p.id === parseInt(data.promotion_id));
+    const selectedPromotion = promotions.find(
+      (p) => p.id === parseInt(data.promotion_id)
+    );
     if (!selectedPromotion) {
       toast.error("Khuyến mãi không hợp lệ!");
       return;
@@ -145,7 +161,9 @@ const PromotionProductForm = ({ onSuccess }) => {
         .map((id) => {
           const variant = productVariants.find((v) => v.id === parseInt(id));
           return variant
-            ? `${variant.sku} (${variant.product?.name || "Tên không xác định"})`
+            ? `${variant.sku} (${
+                variant.product?.name || "Tên không xác định"
+              })`
             : id;
         })
         .join(", ");
@@ -158,11 +176,13 @@ const PromotionProductForm = ({ onSuccess }) => {
     const payload = {
       promotion_id: parseInt(data.promotion_id),
       product_variant_id: data.product_variant_id.map((id) => parseInt(id)),
+      variant_quantity: data.product_variant_id.map(
+        (id) => parseInt(variantQuantities[id]) || 1
+      ),
     };
 
     setIsLoading(true);
     try {
-    
       const response = await axios.post(
         `${Constants.DOMAIN_API}/admin/promotion-products`,
         payload
@@ -171,14 +191,15 @@ const PromotionProductForm = ({ onSuccess }) => {
       toast.success("Thêm sản phẩm khuyến mãi thành công!");
 
       // Cập nhật lại dữ liệu
-      await Promise.all([
-        fetchPromotions(),
-        fetchUsedVariantsAndPromotions(),
-      ]);
+      await Promise.all([fetchPromotions(), fetchUsedVariantsAndPromotions()]);
 
       // Cập nhật danh sách đã sử dụng
-      setUsedVariantIds((prev) => [...new Set([...prev, ...data.product_variant_id])]);
-      setUsedPromotionIds((prev) => [...new Set([...prev, parseInt(data.promotion_id)])]);
+      setUsedVariantIds((prev) => [
+        ...new Set([...prev, ...data.product_variant_id]),
+      ]);
+      setUsedPromotionIds((prev) => [
+        ...new Set([...prev, parseInt(data.promotion_id)]),
+      ]);
 
       reset();
       setSelectedPromotionId(null);
@@ -198,7 +219,8 @@ const PromotionProductForm = ({ onSuccess }) => {
       if (err.response?.status === 400) {
         errorMessage = err.response.data.error || "Dữ liệu không hợp lệ!";
       } else if (err.response?.status === 409) {
-        errorMessage = err.response.data.error || "Cặp promotion-product đã tồn tại!";
+        errorMessage =
+          err.response.data.error || "Cặp promotion-product đã tồn tại!";
       } else if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       }
@@ -220,7 +242,9 @@ const PromotionProductForm = ({ onSuccess }) => {
     )
     .map((variant) => ({
       value: variant.id,
-      label: `${variant.sku} (${variant.product?.name || "Tên SP không xác định"})`,
+      label: `${variant.sku} (${
+        variant.product?.name || "Tên SP không xác định"
+      })`,
     }));
 
   const CustomOption = ({ innerProps, label, data }) => (
@@ -243,7 +267,10 @@ const PromotionProductForm = ({ onSuccess }) => {
   );
 
   const promotionOptions = availablePromotions.map((promo) => {
-    const { status, className } = getPromotionStatus(promo.start_date, promo.end_date);
+    const { status, className } = getPromotionStatus(
+      promo.start_date,
+      promo.end_date
+    );
     return {
       value: promo.id,
       label: `${promo.name} (${status}, Còn: ${promo.quantity})`,
@@ -267,7 +294,10 @@ const PromotionProductForm = ({ onSuccess }) => {
               options={promotionOptions}
               className="basic-single-select"
               classNamePrefix="select"
-              components={{ Option: CustomOption, SingleValue: CustomSingleValue }}
+              components={{
+                Option: CustomOption,
+                SingleValue: CustomSingleValue,
+              }}
               onChange={(selectedOption) => {
                 const value = selectedOption ? selectedOption.value : "";
                 setSelectedPromotionId(value);
@@ -284,21 +314,27 @@ const PromotionProductForm = ({ onSuccess }) => {
               type="hidden"
               {...register("promotion_id", {
                 required: "Vui lòng chọn khuyến mãi",
-                validate: (value) => !isNaN(value) || "ID khuyến mãi không hợp lệ",
+                validate: (value) =>
+                  !isNaN(value) || "ID khuyến mãi không hợp lệ",
               })}
             />
             {errors.promotion_id && (
-              <small className="text-danger">{errors.promotion_id.message}</small>
+              <small className="text-danger">
+                {errors.promotion_id.message}
+              </small>
             )}
             {promotionOptions.length === 0 && (
               <small className="text-warning">
-                Không có khuyến mãi nào khả dụng. Vui lòng tạo khuyến mãi mới hoặc kiểm tra các khuyến mãi đã sử dụng.
+                Không có khuyến mãi nào khả dụng. Vui lòng tạo khuyến mãi mới
+                hoặc kiểm tra các khuyến mãi đã sử dụng.
               </small>
             )}
           </div>
 
           <div className="mb-4">
-            <label className="form-label mb-2">Chọn các biến thể sản phẩm</label>
+            <label className="form-label mb-2">
+              Chọn các biến thể sản phẩm
+            </label>
             <Select
               isMulti
               options={availableVariants}
@@ -311,7 +347,10 @@ const PromotionProductForm = ({ onSuccess }) => {
                 const selectedPromotion = promotions.find(
                   (p) => p.id === parseInt(selectedPromotionId)
                 );
-                if (selectedPromotion && selectedIds.length > selectedPromotion.quantity) {
+                if (
+                  selectedPromotion &&
+                  selectedIds.length > selectedPromotion.quantity
+                ) {
                   toast.error(
                     `Không thể chọn ${selectedIds.length} biến thể. Khuyến mãi chỉ còn ${selectedPromotion.quantity} lượt khả dụng.`
                   );
@@ -320,10 +359,123 @@ const PromotionProductForm = ({ onSuccess }) => {
                 setSelectedVariantIds(selectedIds);
                 setValue("product_variant_id", selectedIds);
                 trigger("product_variant_id");
+                const newQuantities = {};
+                selectedIds.forEach((id) => {
+                  newQuantities[id] = variantQuantities[id] || 1;
+                });
+                setVariantQuantities(newQuantities);
               }}
               isDisabled={!selectedPromotionId}
               placeholder="Chọn các biến thể sản phẩm..."
             />
+        
+
+            {/* --- Hiển thị table --- */}
+            {selectedVariantIds.length > 0 && (
+                       <div className="mt-6">
+                         <label className="form-label block mb-2 text-lg font-semibold">
+                           Nhập số lượng áp dụng cho từng biến thể:
+                         </label>
+                         <div className="overflow-x-auto border rounded shadow-sm">
+                           <table className="w-full table-auto text-sm text-left text-gray-800">
+                             <thead className="bg-gray-100 sticky top-0 z-0">
+                               <tr>
+                                 <th className="px-4 py-2 border text-center">#</th>
+                                 <th className="px-4 py-2 border">SKU</th>
+                                 <th className="px-4 py-2 border">Tên sản phẩm</th>
+                                 <th className="px-4 py-2 border text-center">Tồn kho</th>
+                                 <th className="px-4 py-2 border text-center">
+                                   Số lượng áp dụng
+                                 </th>
+                               </tr>
+                             </thead>
+                             <tbody>
+                               {selectedVariantIds.map((id, index) => {
+                                 const variant = productVariants.find(
+                                   (v) => v.id === parseInt(id)
+                                 );
+                                 const stock = variant?.stock || 1;
+           
+                                 return (
+                                   <tr
+                                     key={id}
+                                     className="bg-white hover:bg-gray-50 transition"
+                                   >
+                                     <td className="px-4 py-2 border text-center">
+                                       {index + 1}
+                                     </td>
+                                     <td className="px-4 py-2 border">{variant?.sku}</td>
+                                     <td className="px-4 py-2 border">
+                                       {variant?.product?.name || "Tên SP không xác định"}
+                                     </td>
+                                     <td className="px-4 py-2 border text-center">
+                                       {stock}
+                                     </td>
+                                     <td className="px-4 py-2 border text-center">
+                                       <input
+                                         type="number"
+                                         min="1"
+                                         max={stock}
+                                         value={variantQuantities[id] || 1}
+                                         onWheel={(e) => e.target.blur()}
+                                         onKeyDown={(e) => {
+                                           const currentVal = variantQuantities[id] || 1;
+                                           if (e.key === "ArrowUp") {
+                                             if (currentVal >= stock) {
+                                               e.preventDefault();
+                                               toast.warning(
+                                                 `Số lượng không được vượt quá tồn kho (${stock})!`
+                                               );
+                                             } else {
+                                               setVariantQuantities((prev) => ({
+                                                 ...prev,
+                                                 [id]: currentVal + 1,
+                                               }));
+                                               e.preventDefault();
+                                             }
+                                           }
+                                           if (e.key === "ArrowDown") {
+                                             if (currentVal <= 1) {
+                                               e.preventDefault();
+                                               toast.warning("Số lượng tối thiểu là 1!");
+                                             } else {
+                                               setVariantQuantities((prev) => ({
+                                                 ...prev,
+                                                 [id]: currentVal - 1,
+                                               }));
+                                               e.preventDefault();
+                                             }
+                                           }
+                                         }}
+                                         onChange={(e) => {
+                                           const val = parseInt(e.target.value, 10);
+                                           if (isNaN(val) || val <= 0) {
+                                             setVariantQuantities((prev) => ({
+                                               ...prev,
+                                               [id]: 1,
+                                             }));
+                                           } else if (val > stock) {
+                                             toast.warning(
+                                               `Số lượng không được vượt quá tồn kho (${stock})!`
+                                             );
+                                           } else {
+                                             setVariantQuantities((prev) => ({
+                                               ...prev,
+                                               [id]: val,
+                                             }));
+                                           }
+                                         }}
+                                         className="border px-2 py-1 w-24 rounded text-center"
+                                       />
+                                     </td>
+                                   </tr>
+                                 );
+                               })}
+                             </tbody>
+                           </table>
+                         </div>
+                       </div>
+                     )}
             <input
               type="hidden"
               {...register("product_variant_id", {
@@ -335,18 +487,23 @@ const PromotionProductForm = ({ onSuccess }) => {
               })}
             />
             {errors.product_variant_id && (
-              <small className="text-danger">{errors.product_variant_id.message}</small>
+              <small className="text-danger">
+                {errors.product_variant_id.message}
+              </small>
             )}
             {availableVariants.length === 0 && (
               <small className="text-warning">
-                Không có biến thể nào khả dụng. Tất cả biến thể đã được sử dụng hoặc đã chọn.
+                Không có biến thể nào khả dụng. Tất cả biến thể đã được sử dụng
+                hoặc đã chọn.
               </small>
             )}
             <p className="text-xs text-gray-600 mt-2">
-              Chỉ có thể chọn các biến thể chưa được sử dụng trong bất kỳ khuyến mãi nào.
+              Chỉ có thể chọn các biến thể chưa được sử dụng trong bất kỳ khuyến
+              mãi nào.
               {selectedPromotionId &&
                 ` Số lượng biến thể tối đa: ${
-                  promotions.find((p) => p.id === parseInt(selectedPromotionId))?.quantity
+                  promotions.find((p) => p.id === parseInt(selectedPromotionId))
+                    ?.quantity
                 }`}
             </p>
           </div>

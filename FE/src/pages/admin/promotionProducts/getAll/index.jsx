@@ -102,7 +102,8 @@ const PromotionProductList = () => {
         limit: response.data.pagination?.limit || pagination.limit,
         totalPages:
           response.data.pagination?.totalPages ||
-          Math.ceil(totalPromotions / pagination.limit) || 1,
+          Math.ceil(totalPromotions / pagination.limit) ||
+          1,
       });
     } catch (err) {
       console.error("Lỗi khi lấy dữ liệu:", err);
@@ -204,7 +205,24 @@ const PromotionProductList = () => {
     });
   };
 
-  const groupedProducts = groupByPromotionName(promotionProducts);
+const groupedProducts = groupByPromotionName(promotionProducts).sort(
+  ([, itemsA], [, itemsB]) => {
+    const getSortIndex = (promo) => {
+      const status = getPromotionStatus(promo.start_date, promo.end_date);
+      return {
+        active: 0,
+        upcoming: 1,
+        expired: 2,
+        inactive: 3,
+      }[status] ?? 3;
+    };
+
+    const promoA = itemsA[0]?.promotion || {};
+    const promoB = itemsB[0]?.promotion || {};
+    return getSortIndex(promoA) - getSortIndex(promoB);
+  }
+);
+
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= pagination.totalPages) {
@@ -240,7 +258,11 @@ const PromotionProductList = () => {
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`px-3 py-1 border rounded ${pageNum === page ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"}`}
+                  className={`px-3 py-1 border rounded ${
+                    pageNum === page
+                      ? "bg-blue-600 text-white"
+                      : "bg-white hover:bg-blue-100"
+                  }`}
                 >
                   {pageNum}
                 </button>
@@ -332,7 +354,7 @@ const PromotionProductList = () => {
               <th className="border p-2">Ngày kết thúc</th>
               <th className="border p-2">Trạng thái</th>
               <th className="border p-2">Số lượng biến thể</th>
-              <th className="border p-2">Số lượt khuyến mãi</th>
+              <th className="border p-2">Tổng lượt áp dụng</th>
               <th className="border p-2"></th>
             </tr>
           </thead>
@@ -390,8 +412,12 @@ const PromotionProductList = () => {
                           {variantCount}
                         </td>
                         <td className="border p-2 text-center">
-                          {quantity === 0 ? "Hết lượt" : quantity}
+                          {items.reduce(
+                            (sum, item) => sum + (item.variant_quantity || 0),
+                            0
+                          )}
                         </td>
+
                         <td className="p-2 flex items-center justify-end space-x-2">
                           {promotionId ? (
                             <button
@@ -439,8 +465,9 @@ const PromotionProductList = () => {
                                   <th className="border p-2">Phần trăm</th>
                                   <th className="border p-2">SKU biến thể</th>
                                   <th className="border p-2">
-                                    Số lượt khuyến mãi
+                                    Tổng lượt áp dụng
                                   </th>
+
                                   <th className="border p-2">Trạng thái</th>
                                   <th className="border p-2"></th>
                                 </tr>
@@ -473,8 +500,9 @@ const PromotionProductList = () => {
                                           "-"}
                                       </td>
                                       <td className="border p-2 text-center">
-                                        {quantity === 0 ? "Hết lượt" : quantity}
+                                        {item.variant_quantity || "-"}
                                       </td>
+
                                       <td className="border p-2 text-center">
                                         <span
                                           className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(

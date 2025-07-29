@@ -14,7 +14,12 @@ const PromotionProductModel = connection.define('promotion_products', {
   product_variant_id: {
     type: DataTypes.INTEGER,
     allowNull: false
-  },                                                    
+  },  
+  variant_quantity: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+  }                                            
 
 },{
   tableName: 'promotion_products',

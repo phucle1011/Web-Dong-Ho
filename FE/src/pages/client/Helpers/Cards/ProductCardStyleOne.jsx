@@ -28,44 +28,72 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const navigate = useNavigate();
 
   // Memoize product and variants
-  const product = useMemo(() => datas || {}, [datas]);
-  const variants = useMemo(() => Array.isArray(product.variants) ? product.variants : [], [product.variants]);
-  const representativeVariant = useMemo(() => product.representativeVariant || {}, [product.representativeVariant]);
+ const product = useMemo(() => datas || {}, [datas]);
+
+const representativeVariant = useMemo(() => {
+  return productData?.representativeVariant || product?.representativeVariant || {};
+}, [productData?.representativeVariant, product?.representativeVariant]);
+
+const variants = useMemo(() => {
+  if (productData?.variants?.length) return productData.variants;
+  if (product?.variants?.length) return product.variants;
+  return [];
+}, [productData?.variants, product?.variants]);
 
   useEffect(() => {
     if (!product.id) return;
 
-    async function fetchProduct() {
-      try {
-        setLoading(true);
-        const res = await axios.get(`${Constants.DOMAIN_API}/products/${product.id}/variants`);
-        const { product: fetchedProduct } = res.data;
-        setProductData(fetchedProduct);
-        setVariantImages(fetchedProduct.variants[0]?.images || []);
-        setSelectedImage(fetchedProduct.thumbnail || fetchedProduct.variants[0]?.images[0]?.image_url || "/images/no-image.jpg");
-        setAvgRating(parseFloat(fetchedProduct.averageRating) || 0);
-        setRatingCount(parseInt(fetchedProduct.ratingCount) || 0);
+async function fetchProduct() {
+  try {
+    setLoading(true);
+    const res = await axios.get(
+      `${Constants.DOMAIN_API}/products/${product.id}/variants`
+    );
+    const { product: fetchedProduct } = res.data;
 
-        if (fetchedProduct.variants.length > 0) {
-          const validVariants = fetchedProduct.variants.filter(
-            (variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
-          );
-          const firstValidVariant = validVariants[0] || fetchedProduct.variants[0];
-          setSelectedVariant(firstValidVariant);
-          setVariantImages(firstValidVariant.images || []);
-          setSelectedImage(
-            firstValidVariant.images[0]?.image_url || fetchedProduct.thumbnail || "/images/no-image.jpg"
-          );
-          setAvgRating(parseFloat(firstValidVariant.averageRating) || 0);
-          setRatingCount(parseInt(firstValidVariant.ratingCount) || 0);
-          checkWishlistStatus(firstValidVariant.id);
-        }
-      } catch (err) {
-        setError(err.message || "Không thể tải thông tin sản phẩm");
-      } finally {
-        setLoading(false);
-      }
+    // Sắp xếp: Biến thể có promotion lên trước
+   const sortedVariants = [...fetchedProduct.variants].sort((a, b) => {
+  const aDiscount = a.promotion?.discount_percent || 0;
+  const bDiscount = b.promotion?.discount_percent || 0;
+  return bDiscount - aDiscount; // giảm giá cao hơn lên đầu
+});
+
+    fetchedProduct.variants = sortedVariants;
+    setProductData(fetchedProduct);
+
+    setVariantImages(sortedVariants[0]?.images || []);
+    setSelectedImage(
+      fetchedProduct.thumbnail ||
+        sortedVariants[0]?.images[0]?.image_url ||
+        "/images/no-image.jpg"
+    );
+    setAvgRating(parseFloat(fetchedProduct.averageRating) || 0);
+    setRatingCount(parseInt(fetchedProduct.ratingCount) || 0);
+
+    if (sortedVariants.length > 0) {
+      const validVariants = sortedVariants.filter(
+        (variant) =>
+          parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
+      );
+      const firstValidVariant = validVariants[0] || sortedVariants[0];
+      setSelectedVariant(firstValidVariant);
+      setVariantImages(firstValidVariant.images || []);
+      setSelectedImage(
+        firstValidVariant.images[0]?.image_url ||
+          fetchedProduct.thumbnail ||
+          "/images/no-image.jpg"
+      );
+      setAvgRating(parseFloat(firstValidVariant.averageRating) || 0);
+      setRatingCount(parseInt(firstValidVariant.ratingCount) || 0);
+      checkWishlistStatus(firstValidVariant.id);
     }
+  } catch (err) {
+    setError(err.message || "Không thể tải thông tin sản phẩm");
+  } finally {
+    setLoading(false);
+  }
+}
+
 
     fetchProduct();
   }, [product.id]);
@@ -76,7 +104,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       setRatingCount(parseInt(selectedVariant.ratingCount) || 0);
       setVariantImages(selectedVariant.images || []);
       setSelectedImage(
-        selectedVariant.images[0]?.image_url || productData?.thumbnail || "/images/no-image.jpg"
+        selectedVariant.images[0]?.image_url ||
+          productData?.thumbnail ||
+          "/images/no-image.jpg"
       );
     } else if (productData) {
       setAvgRating(parseFloat(productData.averageRating) || 0);
@@ -86,13 +116,22 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
   }, [selectedVariant, productData]);
 
-  const totalStock = useMemo(() =>
-    parseInt(productData?.total_stock) || variants.reduce((sum, variant) => sum + (parseInt(variant.stock) || 0), 0),
+  const totalStock = useMemo(
+    () =>
+      parseInt(productData?.total_stock) ||
+      variants.reduce(
+        (sum, variant) => sum + (parseInt(variant.stock) || 0),
+        0
+      ),
     [productData, variants]
   );
 
-  const validVariants = useMemo(() =>
-    variants.filter((variant) => parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0),
+  const validVariants = useMemo(
+    () =>
+      variants.filter(
+        (variant) =>
+          parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
+      ),
     [variants]
   );
 
@@ -111,66 +150,133 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
     const safeParseDiscount = (value) => {
       const parsed = parseFloat(value);
-      return isNaN(parsed) || parsed < 0 || parsed > 100 ? 0 : Math.round(parsed);
+      return isNaN(parsed) || parsed < 0 || parsed > 100
+        ? 0
+        : Math.round(parsed);
     };
 
     if (selectedVariant) {
       displayOriginalPrice = safeParsePrice(selectedVariant.price);
-      displayPrice = safeParsePrice(selectedVariant.final_price || selectedVariant.promotion?.discounted_price || selectedVariant.price);
+      displayPrice = safeParsePrice(
+        selectedVariant.final_price ||
+          selectedVariant.promotion?.discounted_price ||
+          selectedVariant.price
+      );
       discountType = selectedVariant.promotion?.discount_type || null;
-      if (selectedVariant.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+      if (
+        selectedVariant.promotion?.meets_conditions &&
+        displayPrice < displayOriginalPrice
+      ) {
         discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(selectedVariant.promotion?.discount_percent || 0);
+        discountPercent = safeParseDiscount(
+          selectedVariant.promotion?.discount_percent || 0
+        );
         if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+          discountPercent = Math.round(
+            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
+          );
         }
       }
     } else if (representativeVariant && representativeVariant.price) {
       displayOriginalPrice = safeParsePrice(representativeVariant.price);
-      displayPrice = safeParsePrice(representativeVariant.final_price || representativeVariant.promotion?.discounted_price || representativeVariant.price);
+      displayPrice = safeParsePrice(
+        representativeVariant.final_price ||
+          representativeVariant.promotion?.discounted_price ||
+          representativeVariant.price
+      );
       discountType = representativeVariant.promotion?.discount_type || null;
-      if (representativeVariant.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+      if (
+        representativeVariant.promotion?.meets_conditions &&
+        displayPrice < displayOriginalPrice
+      ) {
         discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(representativeVariant.promotion?.discount_percent || 0);
+        discountPercent = safeParseDiscount(
+          representativeVariant.promotion?.discount_percent || 0
+        );
         if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+          discountPercent = Math.round(
+            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
+          );
         }
       }
     } else if (validVariants.length > 0) {
       const initialVariant = validVariants[0];
       displayOriginalPrice = safeParsePrice(initialVariant.price);
-      displayPrice = safeParsePrice(initialVariant.final_price || initialVariant.promotion?.discounted_price || initialVariant.price);
+      displayPrice = safeParsePrice(
+        initialVariant.final_price ||
+          initialVariant.promotion?.discounted_price ||
+          initialVariant.price
+      );
       discountType = initialVariant.promotion?.discount_type || null;
-      if (initialVariant.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+      if (
+        initialVariant.promotion?.meets_conditions &&
+        displayPrice < displayOriginalPrice
+      ) {
         discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(initialVariant.promotion?.discount_percent || 0);
+        discountPercent = safeParseDiscount(
+          initialVariant.promotion?.discount_percent || 0
+        );
         if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+          discountPercent = Math.round(
+            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
+          );
         }
       }
     } else {
       hasStock = false;
       displayOriginalPrice = safeParsePrice(productData?.price);
-      displayPrice = safeParsePrice(productData?.promotion?.discounted_price || productData?.price);
+      displayPrice = safeParsePrice(
+        productData?.promotion?.discounted_price || productData?.price
+      );
       discountType = productData?.promotion?.discount_type || null;
-      if (productData?.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+      if (
+        productData?.promotion?.meets_conditions &&
+        displayPrice < displayOriginalPrice
+      ) {
         discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(productData?.promotion?.discount_percent || 0);
+        discountPercent = safeParseDiscount(
+          productData?.promotion?.discount_percent || 0
+        );
         if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+          discountPercent = Math.round(
+            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
+          );
         }
       }
     }
 
-    return { displayPrice, displayOriginalPrice, hasStock, discountPercent, discountAmount, discountType };
-  }, [productData, variants, selectedVariant, totalStock, representativeVariant]);
+    return {
+      displayPrice,
+      displayOriginalPrice,
+      hasStock,
+      discountPercent,
+      discountAmount,
+      discountType,
+    };
+  }, [
+    productData,
+    variants,
+    selectedVariant,
+    totalStock,
+    representativeVariant,
+  ]);
 
-  const { displayPrice, displayOriginalPrice, hasStock, discountPercent, discountAmount, discountType } = priceInfo;
-  const thumbnail = selectedImage || productData?.thumbnail?.trim() || "/images/no-image.jpg";
-  const productName = productData?.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
+  const {
+    displayPrice,
+    displayOriginalPrice,
+    hasStock,
+    discountPercent,
+    discountAmount,
+    discountType,
+  } = priceInfo;
+  const thumbnail =
+    selectedImage || productData?.thumbnail?.trim() || "/images/no-image.jpg";
+  const productName =
+    productData?.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
 
   const maxStock = 5;
-  const stockPercentage = totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
+  const stockPercentage =
+    totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
 
   const handleAddToCart = async (variantId, quantity) => {
     if (!variantId) {
@@ -229,10 +335,13 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       return;
     }
     if (quantity > (selectedVariant?.stock || totalStock)) {
-      toast.error(`Chỉ còn ${selectedVariant?.stock || totalStock} sản phẩm trong kho`);
+      toast.error(
+        `Chỉ còn ${selectedVariant?.stock || totalStock} sản phẩm trong kho`
+      );
       return;
     }
-    const variantToAdd = selectedVariant || (validVariants.length > 0 ? validVariants[0] : null);
+    const variantToAdd =
+      selectedVariant || (validVariants.length > 0 ? validVariants[0] : null);
     if (variantToAdd) {
       handleAddToCart(variantToAdd.id, quantity);
     } else {
@@ -243,15 +352,19 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const description = product.description || "Không có mô tả";
   const maxLength = 80;
   const isLongDescription = description.length > maxLength;
-  const truncatedDescription = isLongDescription && !isExpanded
-    ? description.slice(0, maxLength) + "..."
-    : description;
+  const truncatedDescription =
+    isLongDescription && !isExpanded
+      ? description.slice(0, maxLength) + "..."
+      : description;
 
   const handleVariantSelect = (variant) => {
-    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0) return;
+    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0)
+      return;
 
     if (!variant.attributeValues || variant.attributeValues.length === 0) {
-      const fullVariant = productData?.variants?.find((v) => v.id === variant.id);
+      const fullVariant = productData?.variants?.find(
+        (v) => v.id === variant.id
+      );
       if (fullVariant) {
         variant.attributeValues = fullVariant.attributeValues || [];
         variant.images = fullVariant.images || [];
@@ -264,7 +377,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     const newImages = variant.images || [];
     setVariantImages(newImages);
     setSelectedImage(
-      newImages.length > 0 ? newImages[0].image_url || productData.thumbnail : productData.thumbnail
+      newImages.length > 0
+        ? newImages[0].image_url || productData.thumbnail
+        : productData.thumbnail
     );
     setAvgRating(parseFloat(variant.averageRating || 0));
     setRatingCount(parseInt(variant.ratingCount || 0));
@@ -309,7 +424,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     const userId = decoded?.id;
 
     if (!token || !userId) {
-      toast.error("Bạn cần đăng nhập để thêm sản phẩm vào danh sách yêu thích.");
+      toast.error(
+        "Bạn cần đăng nhập để thêm sản phẩm vào danh sách yêu thích."
+      );
       return;
     }
 
@@ -318,12 +435,15 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         userId,
         productVariantId: selectedVariant.id,
       });
-      toast.success(response.data.message || "Đã thêm vào danh sách yêu thích!");
+      toast.success(
+        response.data.message || "Đã thêm vào danh sách yêu thích!"
+      );
       setIsInWishlist(true);
       await checkWishlistStatus(selectedVariant.id);
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message || "Lỗi khi thêm vào danh sách yêu thích.";
+        error.response?.data?.message ||
+        "Lỗi khi thêm vào danh sách yêu thích.";
       toast.error(errorMessage);
     }
   };
@@ -339,7 +459,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     const userId = decoded?.id;
 
     if (!token || !userId) {
-      toast.error("Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
+      toast.error(
+        "Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích."
+      );
       return;
     }
 
@@ -355,7 +477,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       await checkWishlistStatus(selectedVariant.id);
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message || "Lỗi khi xóa khỏi danh sách yêu thích.";
+        error.response?.data?.message ||
+        "Lỗi khi xóa khỏi danh sách yêu thích.";
       toast.error(errorMessage);
     }
   };
@@ -418,7 +541,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </div>
             {discountPercent > 0 && displayOriginalPrice > displayPrice && (
               <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
-                {discountType === "percentage" ? `-${discountPercent}%` : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
+                {discountType === "percentage"
+                  ? `-${discountPercent}%`
+                  : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
               </span>
             )}
             <div className="grid grid-cols-4 gap-1.5 mt-5 max-h-28 overflow-y-auto">
@@ -427,7 +552,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                   key={img.id || img.image_url}
                   onClick={() => setSelectedImage(img.image_url)}
                   className={`w-[60px] h-[60px] p-1 border rounded-md cursor-pointer ${
-                    selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
+                    selectedImage === img.image_url
+                      ? "border-blue-500"
+                      : "border-gray-200"
                   } hover:border-blue-400 transition-colors`}
                 >
                   <img
@@ -440,24 +567,39 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </div>
           </div>
           <div className="flex flex-col space-y-3">
-            <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">{productName}</h2>
+            <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">
+              {productName}
+            </h2>
             <div className="flex items-center gap-2 mb-2">
               <StarRating rating={avgRating} readOnly />
               <span className="text-sm text-gray-600"></span>
             </div>
             {variants.length > 0 && (
               <div>
-                <span className="block text-xs font-medium text-gray-600 mb-1">Biến thể:</span>
+                <span className="block text-xs font-medium text-gray-600 mb-1">
+                  Biến thể:
+                </span>
                 <div className="grid grid-cols-2 gap-2">
                   {variants.map((variant) => {
                     const name = variant.name || variant.sku || "Unnamed";
                     const originalPrice = Number(variant.price || 0);
-                    const salePrice = Number(variant.final_price || variant.promotion?.discounted_price || originalPrice);
+                    const salePrice = Number(
+                      variant.final_price ||
+                        variant.promotion?.discounted_price ||
+                        originalPrice
+                    );
                     const variantDiscountPercent = Math.round(
-                      Number(variant.promotion?.discount_percent || (salePrice < originalPrice ? ((originalPrice - salePrice) / originalPrice) * 100 : 0))
+                      Number(
+                        variant.promotion?.discount_percent ||
+                          (salePrice < originalPrice
+                            ? ((originalPrice - salePrice) / originalPrice) *
+                              100
+                            : 0)
+                      )
                     );
                     const variantDiscountAmount = originalPrice - salePrice;
-                    const variantDiscountType = variant.promotion?.discount_type || null;
+                    const variantDiscountType =
+                      variant.promotion?.discount_type || null;
                     const inStock = variant.stock > 0;
                     const isSelected = selectedVariant?.id === variant.id;
                     return (
@@ -477,16 +619,21 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                         <p className="text-qred font-semibold">
                           {salePrice.toLocaleString("vi-VN")}₫
                         </p>
-                        {variantDiscountPercent > 0 && salePrice < originalPrice && (
-                          <div className="flex items-center justify-center space-x-1">
-                            <p className="text-qgray line-through text-[10px]">
-                              {originalPrice.toLocaleString("vi-VN")}₫
-                            </p>
-                            <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
-                              {variantDiscountType === "percentage" ? `-${variantDiscountPercent}%` : `-${variantDiscountAmount.toLocaleString("vi-VN")}₫`}
-                            </span>
-                          </div>
-                        )}
+                        {variantDiscountPercent > 0 &&
+                          salePrice < originalPrice && (
+                            <div className="flex items-center justify-center space-x-1">
+                              <p className="text-qgray line-through text-[10px]">
+                                {originalPrice.toLocaleString("vi-VN")}₫
+                              </p>
+                              <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
+                                {variantDiscountType === "percentage"
+                                  ? `-${variantDiscountPercent}%`
+                                  : `-${variantDiscountAmount.toLocaleString(
+                                      "vi-VN"
+                                    )}₫`}
+                              </span>
+                            </div>
+                          )}
                         <p className="text-[10px] font-medium">
                           {inStock ? `Còn: ${variant.stock}` : "Hết hàng"}
                         </p>
@@ -498,7 +645,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             )}
             {selectedVariant && selectedVariant.attributeValues?.length > 0 && (
               <div className="text-xs mt-2">
-                <span className="block font-semibold text-gray-700 mb-1">Thuộc tính:</span>
+                <span className="block font-semibold text-gray-700 mb-1">
+                  Thuộc tính:
+                </span>
                 <div
                   className={`overflow-x-auto transition-all duration-300 border border-gray-300 ${
                     expanded ? "max-h-none" : "max-h-24 overflow-y-hidden"
@@ -512,9 +661,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                         return (
                           <tr key={index} className="border-t border-gray-200">
                             <td className="w-1/2 border border-gray-300 p-1 text-gray-600 font-medium whitespace-nowrap">
-                            <b>
-                              {attrName}
-                              </b>
+                              <b>{attrName}</b>
                             </td>
                             <td className="w-1/2 border border-gray-300 p-1 text-gray-800 whitespace-nowrap">
                               {attrName.toLowerCase() === "color" ? (
@@ -549,22 +696,38 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             <div className="flex items-center space-x-2">
               {hasStock ? (
                 <>
-                  <span className="text-qred font-semibold text-sm">
-                    {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                  <span className="text-qred font-semibold text-xl">
+                    {Number(displayPrice).toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })}
                   </span>
-                  {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                    <div className="flex flex-col">
-                      <span className="text-qgray line-through text-xs">
-                        {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                      </span>
-                      <span className="text-qgreen text-xs">
-                        Tiết kiệm: {discountType === "percentage" ? `-${discountPercent}%` : `${Number(discountAmount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}`}
-                      </span>
-                    </div>
-                  )}
+
+                  {discountPercent > 0 &&
+                    displayOriginalPrice > displayPrice && (
+                      <div className="flex flex-col">
+                        <span className="text-qgray line-through text-xs">
+                          {Number(displayOriginalPrice).toLocaleString(
+                            "vi-VN",
+                            { style: "currency", currency: "VND" }
+                          )}
+                        </span>
+                        <span className="text-qgreen text-xs">
+                          Tiết kiệm:{" "}
+                          {discountType === "percentage"
+                            ? `-${discountPercent}%`
+                            : `${Number(discountAmount).toLocaleString(
+                                "vi-VN",
+                                { style: "currency", currency: "VND" }
+                              )}`}
+                        </span>
+                      </div>
+                    )}
                 </>
               ) : (
-                <span className="text-qred font-semibold text-sm">Sản phẩm hết hàng</span>
+                <span className="text-qred font-semibold text-sm">
+                  Sản phẩm hết hàng
+                </span>
               )}
             </div>
             {hasStock && (
@@ -576,7 +739,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                     const scrollTop = dialogRef.current?.scrollTop;
                     setQuantity((prev) => Math.max(1, prev - 1));
                     setTimeout(() => {
-                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                      if (dialogRef.current)
+                        dialogRef.current.scrollTop = scrollTop;
                     }, 0);
                   }}
                   disabled={quantity <= 1 || !hasStock}
@@ -588,9 +752,18 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                   value={quantity}
                   onChange={(e) => {
                     const scrollTop = dialogRef.current?.scrollTop;
-                    setQuantity(Math.max(1, Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))));
+                    setQuantity(
+                      Math.max(
+                        1,
+                        Math.min(
+                          selectedVariant?.stock || totalStock,
+                          Number(e.target.value)
+                        )
+                      )
+                    );
                     setTimeout(() => {
-                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                      if (dialogRef.current)
+                        dialogRef.current.scrollTop = scrollTop;
                     }, 0);
                   }}
                   className="w-12 text-center border border-gray-300 rounded text-sm"
@@ -604,12 +777,18 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     const scrollTop = dialogRef.current?.scrollTop;
-                    setQuantity((prev) => Math.min(selectedVariant?.stock || totalStock, prev + 1));
+                    setQuantity((prev) =>
+                      Math.min(selectedVariant?.stock || totalStock, prev + 1)
+                    );
                     setTimeout(() => {
-                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                      if (dialogRef.current)
+                        dialogRef.current.scrollTop = scrollTop;
                     }, 0);
                   }}
-                  disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
+                  disabled={
+                    quantity >= (selectedVariant?.stock || totalStock) ||
+                    !hasStock
+                  }
                 >
                   +
                 </button>
@@ -620,15 +799,21 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 type="button"
                 onClick={addToCart}
                 className={`flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${
-                  !hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+                  !hasStock || (variants.length > 0 && !selectedVariant)
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
                 }`}
-                disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
+                disabled={
+                  !hasStock || (variants.length > 0 && !selectedVariant)
+                }
               >
                 <FiShoppingCart size={18} className="inline mr-2" />
                 Thêm giỏ hàng
               </button>
               <button
-                onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+                onClick={
+                  isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist
+                }
                 className="px-3 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
               >
                 <ThinLove
@@ -681,7 +866,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         </div>
         {discountPercent > 0 && displayOriginalPrice > displayPrice && (
           <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10 sm:text-sm sm:px-3 sm:py-1.5">
-            {discountType === "percentage" ? `-${discountPercent}%` : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
+            {discountType === "percentage"
+              ? `-${discountPercent}%`
+              : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
           </span>
         )}
       </div>
@@ -690,7 +877,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           <button
             type="button"
             className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${
-              !hasStock || (variants.length > 0 && !selectedVariant) ? "opacity-50 cursor-not-allowed" : ""
+              !hasStock || (variants.length > 0 && !selectedVariant)
+                ? "opacity-50 cursor-not-allowed"
+                : ""
             }`}
             disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
             onClick={addToCart}
@@ -777,7 +966,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           onClick={async (e) => {
             e.preventDefault();
             try {
-              const res = await axios.get(`${Constants.DOMAIN_API}/products/${product.id}/variants`);
+              const res = await axios.get(
+                `${Constants.DOMAIN_API}/products/${product.id}/variants`
+              );
               const fetchedProduct = res.data.product;
               const allVariants = [];
               fetchedProduct.variants.forEach((variant) => {
@@ -798,14 +989,20 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 });
               });
               const clickedVariant = allVariants.find(
-                (v) => v.productId === product.id && v.variantId === (selectedVariant?.id || fetchedProduct.variants?.[0]?.id)
+                (v) =>
+                  v.productId === product.id &&
+                  v.variantId ===
+                    (selectedVariant?.id || fetchedProduct.variants?.[0]?.id)
               );
               if (!clickedVariant) {
                 toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
                 return;
               }
-              const current = JSON.parse(localStorage.getItem("compareList")) || [];
-              const exists = current.find((item) => item.variantId === clickedVariant.variantId);
+              const current =
+                JSON.parse(localStorage.getItem("compareList")) || [];
+              const exists = current.find(
+                (item) => item.variantId === clickedVariant.variantId
+              );
               if (!exists) {
                 const updated = [...current, clickedVariant].slice(0, 4);
                 localStorage.setItem("compareList", JSON.stringify(updated));
