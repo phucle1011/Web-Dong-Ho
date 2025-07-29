@@ -6,6 +6,7 @@ import Constants from "../../../Constants";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const MIN_BALANCE = 10_000_000;
 
@@ -108,7 +109,7 @@ function AuctionProductDetail() {
             toast.success(verifyRes.data?.message || "Xác thực OTP thành công. Đang vào phòng đấu giá...");
             setOtp("");
             setOtpRequested(false);
-            navigate("/auction-room");
+            navigate("/room");
         } catch (error) {
             console.error("Lỗi xác thực OTP:", error);
             const msg = error.response?.data?.message || "Xác thực OTP thất bại. Vui lòng thử lại.";
@@ -222,11 +223,12 @@ function AuctionProductDetail() {
                                             <strong>{auction.start_time.replace("T", " ").substring(0, 19)}</strong>
                                         </div>
 
-                                        <button
-                                            className="w-full py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
+                                        <Link
+                                            to="/AcutionsDetail"
+                                            className="w-full block text-center py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
                                         >
                                             Xem chi tiết
-                                        </button>
+                                        </Link>
                                     </div>
                                 </div>
                             ))}
