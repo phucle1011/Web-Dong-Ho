@@ -103,31 +103,37 @@ const handleBrandChange = (e) => {
     fetchCategories();
   }, [categoryPagination.currentPage, categoryPagination.limit]);
 
-  useEffect(() => {
-    async function fetchBrands() {
-      try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/brand/list`, {
-          params: { page: brandPagination.currentPage, limit: brandPagination.limit },
-        });
+useEffect(() => {
+  async function fetchBrands() {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/brand/list`, {
+        params: {
+          page: brandPagination.currentPage,
+          limit: brandPagination.limit,
+          status: "active", // ✅ Thêm dòng này để lọc chỉ thương hiệu đang hoạt động
+             hasProduct: true 
+        },
+      });
 
-        if (Array.isArray(res.data.data)) {
-          setBrandList(res.data.data);
-          setBrandPagination((prev) => ({
-            ...prev,
-            totalPages: res.data.pagination?.totalPages || 1,
-            currentPage: res.data.pagination?.currentPage || 1,
-          }));
-        } else {
-          setBrandList([]);
-        }
-      } catch (error) {
-        console.error('Error fetching brands:', error);
+      if (Array.isArray(res.data.data)) {
+        setBrandList(res.data.data);
+        setBrandPagination((prev) => ({
+          ...prev,
+          totalPages: res.data.pagination?.totalPages || 1,
+          currentPage: res.data.pagination?.currentPage || 1,
+        }));
+      } else {
         setBrandList([]);
       }
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      setBrandList([]);
     }
+  }
 
-    fetchBrands();
-  }, [brandPagination.currentPage, brandPagination.limit]);
+  fetchBrands();
+}, [brandPagination.currentPage, brandPagination.limit]);
+
 
 
 

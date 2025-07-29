@@ -305,10 +305,10 @@ export default function AllProductPage() {
               </div>
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 ">
               <div className="products-sorting w-full bg-white h-auto md:h-[70px] flex flex-col md:flex-row md:items-center justify-between p-6 mb-10 rounded-lg shadow-sm">
-                <div>
-                  <p className="font-medium text-sm text-gray-600">
+                <div className="w-full flex justify-center">
+                  <p className="font-medium text-sm text-gray-600 ">
                     Hiển thị{" "}
                     {products.length > 0
                       ? `${(pagination.currentPage - 1) * pagination.limit + 1}–${Math.min(
@@ -319,7 +319,7 @@ export default function AllProductPage() {
                     và {pagination.totalProducts} kết quả
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                {/* <div className="flex items-center gap-3">
                   <span className="font-medium text-sm text-gray-600">
                     Sắp xếp theo:
                   </span>
@@ -337,7 +337,7 @@ export default function AllProductPage() {
                       <path d="M1 1L5 5L9 1" stroke="#9A9A9A" />
                     </svg>
                   </div>
-                </div>
+                </div> */}
                 <button
                   onClick={() => setToggle(!filterToggle)}
                   type="button"

@@ -460,9 +460,13 @@ const SHORT_DESC_LIMIT = 30;
                 <tbody>
                   {selectedVariant.attributeValues.map((attr, index) => (
                     <tr key={index}>
+                      
                       <td className="p-2 border border-gray-300">
+                        <b>
                         {attr.attribute?.name || "Không xác định"}
+                        </b>
                       </td>
+                     
                       <td className="p-2 border border-gray-300">
                         {attr.attribute?.name.toLowerCase() === "màu sắc" ? (
                           <div className="flex items-center gap-2">

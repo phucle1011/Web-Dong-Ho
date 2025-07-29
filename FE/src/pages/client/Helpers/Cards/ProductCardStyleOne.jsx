@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo,useRef  } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -12,7 +12,7 @@ import { FiShoppingCart } from "react-icons/fi";
 import StarRating from "../StarRating";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
- const dialogRef = useRef();
+  const dialogRef = useRef();
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -101,6 +101,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     let displayOriginalPrice = 0;
     let hasStock = totalStock > 0;
     let discountPercent = 0;
+    let discountAmount = 0;
+    let discountType = null;
 
     const safeParsePrice = (value) => {
       const parsed = parseFloat(value);
@@ -114,32 +116,56 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
     if (selectedVariant) {
       displayOriginalPrice = safeParsePrice(selectedVariant.price);
-      displayPrice = safeParsePrice(selectedVariant.promotion?.discounted_price || selectedVariant.price);
-      discountPercent = safeParseDiscount(selectedVariant.promotion?.discount_percent);
+      displayPrice = safeParsePrice(selectedVariant.final_price || selectedVariant.promotion?.discounted_price || selectedVariant.price);
+      discountType = selectedVariant.promotion?.discount_type || null;
+      if (selectedVariant.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+        discountAmount = displayOriginalPrice - displayPrice;
+        discountPercent = safeParseDiscount(selectedVariant.promotion?.discount_percent || 0);
+        if (discountPercent === 0 && discountType !== "percentage") {
+          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+        }
+      }
     } else if (representativeVariant && representativeVariant.price) {
       displayOriginalPrice = safeParsePrice(representativeVariant.price);
-      displayPrice = safeParsePrice(representativeVariant.promotion?.discounted_price || representativeVariant.price);
-      discountPercent = safeParseDiscount(representativeVariant.promotion?.discount_percent);
+      displayPrice = safeParsePrice(representativeVariant.final_price || representativeVariant.promotion?.discounted_price || representativeVariant.price);
+      discountType = representativeVariant.promotion?.discount_type || null;
+      if (representativeVariant.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+        discountAmount = displayOriginalPrice - displayPrice;
+        discountPercent = safeParseDiscount(representativeVariant.promotion?.discount_percent || 0);
+        if (discountPercent === 0 && discountType !== "percentage") {
+          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+        }
+      }
     } else if (validVariants.length > 0) {
       const initialVariant = validVariants[0];
       displayOriginalPrice = safeParsePrice(initialVariant.price);
-      displayPrice = safeParsePrice(initialVariant.promotion?.discounted_price || initialVariant.price);
-      discountPercent = safeParseDiscount(initialVariant.promotion?.discount_percent);
+      displayPrice = safeParsePrice(initialVariant.final_price || initialVariant.promotion?.discounted_price || initialVariant.price);
+      discountType = initialVariant.promotion?.discount_type || null;
+      if (initialVariant.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+        discountAmount = displayOriginalPrice - displayPrice;
+        discountPercent = safeParseDiscount(initialVariant.promotion?.discount_percent || 0);
+        if (discountPercent === 0 && discountType !== "percentage") {
+          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+        }
+      }
     } else {
       hasStock = false;
       displayOriginalPrice = safeParsePrice(productData?.price);
       displayPrice = safeParsePrice(productData?.promotion?.discounted_price || productData?.price);
-      discountPercent = safeParseDiscount(productData?.promotion?.discount_percent);
+      discountType = productData?.promotion?.discount_type || null;
+      if (productData?.promotion?.meets_conditions && displayPrice < displayOriginalPrice) {
+        discountAmount = displayOriginalPrice - displayPrice;
+        discountPercent = safeParseDiscount(productData?.promotion?.discount_percent || 0);
+        if (discountPercent === 0 && discountType !== "percentage") {
+          discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
+        }
+      }
     }
 
-    if (displayPrice < displayOriginalPrice && discountPercent === 0) {
-      discountPercent = Math.round(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100);
-    }
-
-    return { displayPrice, displayOriginalPrice, hasStock, discountPercent };
+    return { displayPrice, displayOriginalPrice, hasStock, discountPercent, discountAmount, discountType };
   }, [productData, variants, selectedVariant, totalStock, representativeVariant]);
 
-  const { displayPrice, displayOriginalPrice, hasStock, discountPercent } = priceInfo;
+  const { displayPrice, displayOriginalPrice, hasStock, discountPercent, discountAmount, discountType } = priceInfo;
   const thumbnail = selectedImage || productData?.thumbnail?.trim() || "/images/no-image.jpg";
   const productName = productData?.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
 
@@ -224,7 +250,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const handleVariantSelect = (variant) => {
     if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0) return;
 
-    // Fallback if variant lacks attributeValues
     if (!variant.attributeValues || variant.attributeValues.length === 0) {
       const fullVariant = productData?.variants?.find((v) => v.id === variant.id);
       if (fullVariant) {
@@ -363,7 +388,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             zIndex: 1000,
           }}
           onClick={(e) => e.stopPropagation()}
-
         >
           <button
             onClick={() => setIsQuickViewOpen(false)}
@@ -394,7 +418,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             </div>
             {discountPercent > 0 && displayOriginalPrice > displayPrice && (
               <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
-                -{discountPercent}%
+                {discountType === "percentage" ? `-${discountPercent}%` : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
               </span>
             )}
             <div className="grid grid-cols-4 gap-1.5 mt-5 max-h-28 overflow-y-auto">
@@ -428,10 +452,12 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                   {variants.map((variant) => {
                     const name = variant.name || variant.sku || "Unnamed";
                     const originalPrice = Number(variant.price || 0);
-                    const salePrice = Number(variant.promotion?.discounted_price || originalPrice);
+                    const salePrice = Number(variant.final_price || variant.promotion?.discounted_price || originalPrice);
                     const variantDiscountPercent = Math.round(
                       Number(variant.promotion?.discount_percent || (salePrice < originalPrice ? ((originalPrice - salePrice) / originalPrice) * 100 : 0))
                     );
+                    const variantDiscountAmount = originalPrice - salePrice;
+                    const variantDiscountType = variant.promotion?.discount_type || null;
                     const inStock = variant.stock > 0;
                     const isSelected = selectedVariant?.id === variant.id;
                     return (
@@ -457,7 +483,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                               {originalPrice.toLocaleString("vi-VN")}₫
                             </p>
                             <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
-                              -{variantDiscountPercent}%
+                              {variantDiscountType === "percentage" ? `-${variantDiscountPercent}%` : `-${variantDiscountAmount.toLocaleString("vi-VN")}₫`}
                             </span>
                           </div>
                         )}
@@ -486,7 +512,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                         return (
                           <tr key={index} className="border-t border-gray-200">
                             <td className="w-1/2 border border-gray-300 p-1 text-gray-600 font-medium whitespace-nowrap">
+                            <b>
                               {attrName}
+                              </b>
                             </td>
                             <td className="w-1/2 border border-gray-300 p-1 text-gray-800 whitespace-nowrap">
                               {attrName.toLowerCase() === "color" ? (
@@ -525,9 +553,14 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                     {Number(displayPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                   </span>
                   {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                    <span className="text-qgray line-through text-xs">
-                      {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-qgray line-through text-xs">
+                        {Number(displayOriginalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                      </span>
+                      <span className="text-qgreen text-xs">
+                        Tiết kiệm: {discountType === "percentage" ? `-${discountPercent}%` : `${Number(discountAmount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}`}
+                      </span>
+                    </div>
                   )}
                 </>
               ) : (
@@ -535,54 +568,53 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               )}
             </div>
             {hasStock && (
-  <div className="flex items-center space-x-2">
-    <button
-      className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
-      onClick={(e) => {
-        e.stopPropagation();
-        const scrollTop = dialogRef.current?.scrollTop;
-        setQuantity((prev) => Math.max(1, prev - 1));
-        setTimeout(() => {
-          if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
-        }, 0);
-      }}
-      disabled={quantity <= 1 || !hasStock}
-    >
-      -
-    </button>
-    <input
-      type="number"
-      value={quantity}
-      onChange={(e) => {
-        const scrollTop = dialogRef.current?.scrollTop;
-        setQuantity(Math.max(1, Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))));
-        setTimeout(() => {
-          if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
-        }, 0);
-      }}
-      className="w-12 text-center border border-gray-300 rounded text-sm"
-      min="1"
-      max={selectedVariant?.stock || totalStock}
-      disabled={!hasStock}
-      onClick={(e) => e.stopPropagation()}
-    />
-    <button
-      className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
-      onClick={(e) => {
-        e.stopPropagation();
-        const scrollTop = dialogRef.current?.scrollTop;
-        setQuantity((prev) => Math.min(selectedVariant?.stock || totalStock, prev + 1));
-        setTimeout(() => {
-          if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
-        }, 0);
-      }}
-      disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
-    >
-      +
-    </button>
-  </div>
-)}
-
+              <div className="flex items-center space-x-2">
+                <button
+                  className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const scrollTop = dialogRef.current?.scrollTop;
+                    setQuantity((prev) => Math.max(1, prev - 1));
+                    setTimeout(() => {
+                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                    }, 0);
+                  }}
+                  disabled={quantity <= 1 || !hasStock}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => {
+                    const scrollTop = dialogRef.current?.scrollTop;
+                    setQuantity(Math.max(1, Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))));
+                    setTimeout(() => {
+                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                    }, 0);
+                  }}
+                  className="w-12 text-center border border-gray-300 rounded text-sm"
+                  min="1"
+                  max={selectedVariant?.stock || totalStock}
+                  disabled={!hasStock}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <button
+                  className="px-1.5 py-0.5 bg-gray-200 rounded text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const scrollTop = dialogRef.current?.scrollTop;
+                    setQuantity((prev) => Math.min(selectedVariant?.stock || totalStock, prev + 1));
+                    setTimeout(() => {
+                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                    }, 0);
+                  }}
+                  disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
+                >
+                  +
+                </button>
+              </div>
+            )}
             <div className="flex items-center space-x-2">
               <button
                 type="button"
@@ -640,20 +672,6 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       style={{ boxShadow: "0px 15px 64px 0px rgba(0, 0, 0, 0.05)" }}
     >
       <div className="product-card-img w-full h-[300px] overflow-hidden relative">
-        {totalStock > 0 && totalStock < 5 && (
-          <div className="absolute top-0 left-0 right-0 px-6 py-0.5 z-10">
-            <div className="progress-title flex justify-between">
-              <span className="text-xs text-qblack font-400 leading-6">Còn lại</span>
-              <span className="text-sm text-qblack font-600 leading-6">{totalStock}</span>
-            </div>
-            <div className="progress w-full h-[5px] rounded-[22px] bg-primarygray relative overflow-hidden">
-              <div
-                className={`h-full ${type === 3 ? "bg-qyellow" : "bg-qred"}`}
-                style={{ width: `${stockPercentage}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
         <div className="w-full h-full flex items-center justify-center">
           <img
             src={thumbnail}
@@ -663,7 +681,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         </div>
         {discountPercent > 0 && displayOriginalPrice > displayPrice && (
           <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10 sm:text-sm sm:px-3 sm:py-1.5">
-            -{discountPercent}%
+            {discountType === "percentage" ? `-${discountPercent}%` : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
           </span>
         )}
       </div>
@@ -707,15 +725,19 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 })}
               </span>
               {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                <span className="main-price text-qgray line-through font-600 text-[16px]">
-                  {Number(displayOriginalPrice).toLocaleString("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  })}
-                </span>
+                <div className="flex flex-col">
+                  <span className="main-price text-qgray line-through font-600 text-[16px]">
+                    {Number(displayOriginalPrice).toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })}
+                  </span>
+                  {/* <span className="text-qgreen text-xs">
+                    Tiết kiệm: {discountType === "percentage" ? `-${discountPercent}%` : `${Number(discountAmount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}`}
+                  </span> */}
+                </div>
               )}
             </div>
-           
           </div>
         ) : (
           <p className="price text-qred font-600 text-[16px] group-hover:hidden">
