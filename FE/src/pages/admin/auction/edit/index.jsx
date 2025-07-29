@@ -13,15 +13,13 @@ const AuctionEdit = () => {
     const { id } = useParams();
     const [products, setProducts] = useState([]);
     const [form, setForm] = useState({
-        auctions_product_id: null,
-        start_price: "",
+        product_variant_id: null,
         priceStep: "",
         start_time: null,
         end_time: null,
     });
     const [errors, setErrors] = useState({
-        auctions_product_id: "",
-        start_price: "",
+        product_variant_id: "",
         priceStep: "",
         start_time: "",
         end_time: "",
@@ -35,7 +33,7 @@ const AuctionEdit = () => {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`);
             const options = res.data.data.map((p) => ({
                 value: p.id,
-                label: p.sku,
+                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku})`,
             }));
             setProducts(options);
         } catch (err) {
@@ -68,8 +66,7 @@ const AuctionEdit = () => {
             }
 
             setForm({
-                auctions_product_id: auction.auctions_product_id,
-                start_price: formatCurrency(auction.start_price.toString()),
+                product_variant_id: auction.product_variant_id,
                 priceStep: formatCurrency(auction.priceStep.toString()),
                 start_time: parseUTCStringAsLocal(auction.start_time),
                 end_time: parseUTCStringAsLocal(auction.end_time),
@@ -79,6 +76,7 @@ const AuctionEdit = () => {
             setInitialLoad(false);
         } catch (err) {
             toast.error("Không tìm thấy phiên đấu giá");
+            
             navigate("/admin/auctions/getAll");
         }
     };
@@ -104,7 +102,7 @@ const AuctionEdit = () => {
 
         if (!value) {
             error = "Trường này không được bỏ trống";
-        } else if ((name === "start_price" || name === "priceStep") && parseCurrency(value) <= 0) {
+        } else if ((name === "priceStep") && parseCurrency(value) <= 0) {
             error = "Giá trị phải lớn hơn 0";
         } else if (name === "end_time" && form.start_time && value <= form.start_time) {
             error = "Thời gian kết thúc phải sau thời gian bắt đầu";
@@ -115,7 +113,7 @@ const AuctionEdit = () => {
     };
 
     const handleChange = (key, value) => {
-        if (key === "start_price" || key === "priceStep") {
+        if (key === "priceStep") {
             const formattedValue = formatCurrency(value);
             setForm({ ...form, [key]: formattedValue });
             validateField(key, formattedValue);
@@ -133,15 +131,8 @@ const AuctionEdit = () => {
         let isValid = true;
         const newErrors = { ...errors };
 
-        if (!form.auctions_product_id) {
-            newErrors.auctions_product_id = "Vui lòng chọn sản phẩm";
-            isValid = false;
-        }
-        if (!form.start_price) {
-            newErrors.start_price = "Vui lòng nhập giá khởi điểm";
-            isValid = false;
-        } else if (parseCurrency(form.start_price) <= 0) {
-            newErrors.start_price = "Giá khởi điểm phải lớn hơn 0";
+        if (!form.product_variant_id) {
+            newErrors.product_variant_id = "Vui lòng chọn sản phẩm";
             isValid = false;
         }
         if (!form.priceStep) {
@@ -176,7 +167,6 @@ const AuctionEdit = () => {
 
         const payload = {
             ...form,
-            start_price: parseCurrency(form.start_price),
             priceStep: parseCurrency(form.priceStep),
             start_time: formatToMySQL(form.start_time),
             end_time: formatToMySQL(form.end_time),
@@ -204,42 +194,22 @@ const AuctionEdit = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    <div className="md:col-span-6">
+                    <div className="md:col-span-12">
                         <label className="block mb-1 font-medium">
                             Sản phẩm đấu giá <span className="text-red-500">*</span>
                         </label>
                         <Select
                             options={products}
-                            value={products.find(p => p.value === form.auctions_product_id)}
+                            value={products.find(p => String(p.value) === String(form.product_variant_id))}
                             onChange={(selected) =>
-                                handleChange("auctions_product_id", selected?.value || null)
+                                handleChange("product_variant_id", selected?.value || null)
                             }
                             placeholder="Chọn sản phẩm"
-                            className={errors.auctions_product_id ? "border-red-500" : ""}
+                            className={errors.product_variant_id ? "border-red-500" : ""}
                             isDisabled={loading}
                         />
-                        {errors.auctions_product_id && (
-                            <p className="text-red-500 text-sm mt-1">{errors.auctions_product_id}</p>
-                        )}
-                    </div>
-
-                    <div className="md:col-span-6">
-                        <label className="block mb-1 font-medium">
-                            Giá khởi điểm <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.start_price ? "border-red-500" : ""}`}
-                                placeholder="Nhập giá khởi điểm"
-                                value={form.start_price}
-                                onChange={(e) => handleChange("start_price", e.target.value)}
-                                onBlur={(e) => validateField("start_price", e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-                        {errors.start_price && (
-                            <p className="text-red-500 text-sm mt-1">{errors.start_price}</p>
+                        {errors.product_variant_id && (
+                            <p className="text-red-500 text-sm mt-1">{errors.product_variant_id}</p>
                         )}
                     </div>
                 </div>
@@ -265,7 +235,7 @@ const AuctionEdit = () => {
                         )}
                     </div>
 
-                    <div className="md:col-span-3">
+                    <div className="md:col-span-3 ml-auto">
                         <label className="block mb-1 font-medium">
                             Thời gian bắt đầu <span className="text-red-500">*</span>
                         </label>

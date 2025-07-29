@@ -228,13 +228,20 @@ function AuctionGetAll() {
                             {auctions.length > 0 ? auctions.map((item, index) => (
                                 <tr key={item.id}>
                                     <td className="p-2 border text-center">{(currentPage - 1) * recordsPerPage + index + 1}</td>
-                                    <td className="p-2 border text-center">{item.auctionProduct?.sku || 'N/A'}</td>
-                                    <td className="p-2 border text-center">{Number(item.start_price).toLocaleString("vi-VN")} ₫</td>
+                                    <td className="p-2 border text-center">
+                                        {item.variant?.product?.name
+                                            ? `${item.variant.product.name} (${item.variant.sku})`
+                                            : 'Không có tên sản phẩm'}
+                                    </td>
+                                    <td className="p-2 border text-center">{Number(item.variant.price).toLocaleString("vi-VN")} ₫</td>
                                     <td className="p-2 border text-center">{Number(item.priceStep).toLocaleString("vi-VN")} ₫</td>
                                     <td className="p-2 border text-center">{item.start_time?.replace("T", " ").substring(0, 19)}</td>
                                     <td className="p-2 border text-center">{item.end_time?.replace("T", " ").substring(0, 19)}</td>
-                                    <td className="p-2 border text-center">
-                                        <span className={`px-2 py-1 rounded text-sm font-medium ${STATUS_COLORS[item.status] || "bg-gray-100 text-gray-700"}`}>
+                                    <td className="p-2 border text-center whitespace-nowrap">
+                                        <span
+                                            className={`px-2 py-1 rounded text-sm font-medium ${STATUS_COLORS[item.status] || "bg-gray-100 text-gray-700"
+                                                }`}
+                                        >
                                             {STATUS_LABELS[item.status] || "Không xác định"}
                                         </span>
                                     </td>
@@ -335,7 +342,9 @@ function AuctionGetAll() {
                     isOpen={true}
                     onClose={() => setSelectedAuction(null)}
                     onConfirm={deleteAuction}
-                    message={`Bạn có chắc chắn muốn xóa phiên đấu giá của sản phẩm "${selectedAuction.auctionProduct?.sku}" không?`}
+                    message={`Bạn có chắc chắn muốn xóa phiên đấu giá của sản phẩm "${selectedAuction.variant?.product?.name
+                        ? `${selectedAuction.variant.product.name} (${selectedAuction.variant.sku})`
+                        : 'Không có tên sản phẩm'}" không?`}
                 />
             )}
         </div>

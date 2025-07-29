@@ -32,9 +32,15 @@ const notificationClientController = require('../controllers/Client/notification
 const SearchController = require('../controllers/Client/SearchController')
 const FlashSaleController = require('../controllers/Client/flashSaleController');
 const WalletsController = require('../controllers/Client/walletsController');
+const AuctionController = require('../controllers/Client/auctionsController');
 const AuctionBidController = require('../controllers/Client/AuctionBidController');
 
 //------------------[ CLIENT ROUTES ]------------------
+
+//------------------[ AUCTION ]------------------
+router.get('/auctions/balance', checkJWT, AuctionController.getBalance);
+router.post('/auctions/entry-otp', checkJWT, AuctionController.requestEntryOTP);
+router.post('/auctions/entry-otp/verify', checkJWT, AuctionController.verifyEntryOTP);
 
 //------------------[ HOME]------------------
 router.get("/products/getallnew", HomeController.getAllNewProducts);

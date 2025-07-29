@@ -12,14 +12,14 @@ const AuctionCreate = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [form, setForm] = useState({
-        auctions_product_id: null,
+        product_variant_id: null,
         start_price: "",
         priceStep: "",
         start_time: null,
         end_time: null,
     });
     const [errors, setErrors] = useState({
-        auctions_product_id: "",
+        product_variant_id: "",
         start_price: "",
         priceStep: "",
         start_time: "",
@@ -33,7 +33,7 @@ const AuctionCreate = () => {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`);
             const options = res.data.data.map((p) => ({
                 value: p.id,
-                label: p.sku,
+                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku})`,
             }));
             setProducts(options);
         } catch (err) {
@@ -90,15 +90,8 @@ const AuctionCreate = () => {
         let isValid = true;
         const newErrors = { ...errors };
 
-        if (!form.auctions_product_id) {
-            newErrors.auctions_product_id = "Vui lòng chọn sản phẩm";
-            isValid = false;
-        }
-        if (!form.start_price) {
-            newErrors.start_price = "Vui lòng nhập giá khởi điểm";
-            isValid = false;
-        } else if (parseCurrency(form.start_price) <= 0) {
-            newErrors.start_price = "Giá khởi điểm phải lớn hơn 0";
+        if (!form.product_variant_id) {
+            newErrors.product_variant_id = "Vui lòng chọn sản phẩm";
             isValid = false;
         }
         if (!form.priceStep) {
@@ -157,45 +150,29 @@ const AuctionCreate = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    <div className="md:col-span-6">
+                    <div className="md:col-span-12">
                         <label className="block mb-1 font-medium">
                             Sản phẩm đấu giá <span className="text-red-500">*</span>
                         </label>
                         <Select
                             options={products}
                             onChange={(selected) =>
-                                handleChange("auctions_product_id", selected?.value || null)
+                                handleChange("product_variant_id", selected?.value || null)
                             }
                             placeholder="Chọn sản phẩm"
-                            className={errors.auctions_product_id ? "border-red-500" : ""}
+                            className={errors.product_variant_id ? "border-red-500" : ""}
                         />
-                        {errors.auctions_product_id && (
-                            <p className="text-red-500 text-sm mt-1">{errors.auctions_product_id}</p>
+                        {errors.product_variant_id && (
+                            <p className="text-red-500 text-sm mt-1">{errors.product_variant_id}</p>
                         )}
                     </div>
 
-                    <div className="md:col-span-6">
-                        <label className="block mb-1 font-medium">
-                            Giá khởi điểm <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.start_price ? "border-red-500" : ""}`}
-                                placeholder="Nhập giá khởi điểm"
-                                value={form.start_price}
-                                onChange={(e) => handleChange("start_price", e.target.value)}
-                                onBlur={(e) => validateField("start_price", e.target.value)}
-                            />
-                        </div>
-                        {errors.start_price && (
-                            <p className="text-red-500 text-sm mt-1">{errors.start_price}</p>
-                        )}
-                    </div>
+                    
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div className="md:col-span-6">
+                        <div className="md:col-span-6">
                         <label className="block mb-1 font-medium">
                             Bước giá <span className="text-red-500">*</span>
                         </label>
@@ -213,8 +190,8 @@ const AuctionCreate = () => {
                             <p className="text-red-500 text-sm mt-1">{errors.priceStep}</p>
                         )}
                     </div>
-
-                    <div className="md:col-span-3">
+                    </div>
+                    <div className="md:col-span-3 ml-auto">
                         <label className="block mb-1 font-medium">
                             Thời gian bắt đầu <span className="text-red-500">*</span>
                         </label>
@@ -225,7 +202,7 @@ const AuctionCreate = () => {
                             timeFormat="HH:mm"
                             timeIntervals={15}
                             dateFormat="yyyy-MM-dd HH:mm:ss"
-                            className={`w-full px-3 py-2 border rounded ${errors.start_time ? "border-red-500" : ""}`}
+                            className={`w-full px-3 py-2 border rounded ${errors.start_time ? "border-red-500" : ""} style: "with: 1500px"` }
                             placeholderText="Chọn thời gian bắt đầu"
                             onBlur={() => validateField("start_time", form.start_time)}
                         />

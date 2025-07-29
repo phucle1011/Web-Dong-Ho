@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const UsersModel = require('../../models/usersModel');
 const ProductVariantModel = require('../../models/productVariantsModel');
 const AuctionModel = require('../../models/auctionsModel');
+const ProductModel = require('../../models/productsModel');
 
 class auctionController {
 
@@ -17,7 +18,7 @@ class auctionController {
          const whereClause = {};
 
          if (searchTerm) {
-            whereClause.auctions_product_id = {
+            whereClause.product_variant_id = {
                [Op.like]: `%${searchTerm}%`,
             };
          }
@@ -38,8 +39,14 @@ class auctionController {
                {
                   model: ProductVariantModel,
                   as: "variant",
-               },
-            ],
+                  include: [
+                     {
+                        model: ProductModel,
+                        as: "product"
+                     }
+                  ]
+               }
+            ]
          });
 
          const statusCounts = {
@@ -54,18 +61,18 @@ class auctionController {
             filteredAuctions = allAuctions.filter(a => a.status === status);
          }
 
-const statusPriority = { active: 1, upcoming: 2, ended: 3 };
+         const statusPriority = { active: 1, upcoming: 2, ended: 3 };
 
-filteredAuctions.sort((a, b) => {
-   const priorityA = statusPriority[a.status] || 99;
-   const priorityB = statusPriority[b.status] || 99;
+         filteredAuctions.sort((a, b) => {
+            const priorityA = statusPriority[a.status] || 99;
+            const priorityB = statusPriority[b.status] || 99;
 
-   if (priorityA === priorityB) {
-      return new Date(a.start_time) - new Date(b.start_time);
-   }
+            if (priorityA === priorityB) {
+               return new Date(a.start_time) - new Date(b.start_time);
+            }
 
-   return priorityA - priorityB;
-});
+            return priorityA - priorityB;
+         });
 
          const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
 
@@ -88,7 +95,14 @@ filteredAuctions.sort((a, b) => {
 
    static async getAuctionProduct(req, res) {
       try {
-         const auctionProducts = await ProductVariantModel.findAll();
+         const auctionProducts = await ProductVariantModel.findAll({
+            include: [
+               {
+                  model: ProductModel,
+                  as: "product",
+               }
+            ]
+         });
 
          return res.status(200).json({ data: auctionProducts });
       } catch (error) {
@@ -139,8 +153,7 @@ filteredAuctions.sort((a, b) => {
    static async create(req, res) {
       try {
          const {
-            auctions_product_id,
-            start_price,
+            product_variant_id,
             start_time,
             end_time,
             priceStep,
@@ -173,7 +186,7 @@ filteredAuctions.sort((a, b) => {
 
          const conflict = await AuctionModel.findOne({
             where: {
-               auctions_product_id,
+               product_variant_id,
                [Op.or]: [
                   {
                      start_time: {
@@ -202,8 +215,7 @@ filteredAuctions.sort((a, b) => {
          }
 
          const auctions = await AuctionModel.create({
-            auctions_product_id,
-            start_price,
+            product_variant_id,
             priceStep,
             start_time: startTime,
             end_time: endTime,
@@ -228,8 +240,7 @@ filteredAuctions.sort((a, b) => {
       try {
          const { id } = req.params;
          const {
-            auctions_product_id,
-            start_price,
+            product_variant_id,
             start_time,
             end_time,
             priceStep,
@@ -273,7 +284,7 @@ filteredAuctions.sort((a, b) => {
          const conflict = await AuctionModel.findOne({
             where: {
                id: { [Op.ne]: id },
-               auctions_product_id,
+               product_variant_id,
                [Op.or]: [
                   { start_time: { [Op.between]: [startTime, endTime] } },
                   { end_time: { [Op.between]: [startTime, endTime] } },
@@ -295,8 +306,7 @@ filteredAuctions.sort((a, b) => {
 
          await AuctionModel.update(
             {
-               auctions_product_id,
-               start_price,
+               product_variant_id,
                priceStep,
                start_time: startTime,
                end_time: endTime,
