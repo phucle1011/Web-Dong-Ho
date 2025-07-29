@@ -13,7 +13,7 @@ import {
   FaTrashAlt,
   FaTrash,
   FaEdit,
-  FaPlus
+  FaPlus,
 } from "react-icons/fa";
 import Select from "react-select";
 import { useForm } from "react-hook-form";
@@ -34,7 +34,8 @@ const AdminProductList = () => {
   const [publicationStatus, setPublicationStatus] = useState("published");
   const [publishedCount, setPublishedCount] = useState(0);
   const [draftCount, setDraftCount] = useState(0);
-const {
+  const [auctionCount, setAuctionCount] = useState(0);
+  const {
     register,
     handleSubmit,
     setValue,
@@ -42,13 +43,13 @@ const {
     formState: { errors },
   } = useForm();
   const brandOptions = brands.map((brand) => ({
-  value: brand.id,
-  label: brand.name,
-}));
-const categoryOptions = categories.map((cat) => ({
-  label: cat.name,
-  value: cat.id,
-}));
+    value: brand.id,
+    label: brand.name,
+  }));
+  const categoryOptions = categories.map((cat) => ({
+    label: cat.name,
+    value: cat.id,
+  }));
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -77,27 +78,26 @@ const categoryOptions = categories.map((cat) => ({
     fetchCategories();
   }, []);
   useEffect(() => {
-  const hasSearch = searchTerm || selectedCategory || selectedBrand;
+    const hasSearch = searchTerm || selectedCategory || selectedBrand;
 
-  if (hasSearch) {
-    searchProducts(
-      currentPage,
-      searchTerm,
-      selectedCategory?.value || "",
-      selectedBrand?.value || "", // thêm kiểm tra null
-      publicationStatus
-    );
-  } else {
-    fetchProducts(currentPage, searchTerm);
-  }
-}, [
-  currentPage,
-  searchTerm,
-  selectedCategory,
-  selectedBrand,
-  publicationStatus,
-]);
-
+    if (hasSearch) {
+      searchProducts(
+        currentPage,
+        searchTerm,
+        selectedCategory?.value || "",
+        selectedBrand?.value || "", // thêm kiểm tra null
+        publicationStatus
+      );
+    } else {
+      fetchProducts(currentPage, searchTerm);
+    }
+  }, [
+    currentPage,
+    searchTerm,
+    selectedCategory,
+    selectedBrand,
+    publicationStatus,
+  ]);
 
   // Tách hàm search riêng
   const searchProducts = async (
@@ -168,67 +168,79 @@ const categoryOptions = categories.map((cat) => ({
   };
 
   const fetchProducts = async (page, search = "") => {
-    try {
-      const params = { page, limit: 10 };
-      let url = "";
-      let fetchMainData;
+  try {
+    const params = { page, limit: 10 };
+    let url = "";
+    let fetchMainData;
 
-      // Nếu có tìm kiếm
-      if (search) {
-        url = `${Constants.DOMAIN_API}/admin/products/productList/search`;
-        params.searchTerm = search;
-        if (publicationStatus) {
-          params.publicationStatus = publicationStatus;
-        }
-
-        // Gọi API search chính
-        fetchMainData = axios.get(url, { params });
-
-        // Gọi API thống kê draft và published song song
-        const [resMain, resPublished, resDraft] = await Promise.all([
-          fetchMainData,
-          axios.get(`${Constants.DOMAIN_API}/admin/products/published`, {
-            params: { page: 1, limit: 1 },
-          }),
-          axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, {
-            params: { page: 1, limit: 1 },
-          }),
-        ]);
-
-        setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
-        setDraftCount(resDraft.data.pagination?.totalProducts || 0);
-        setProducts(resMain.data.data);
-        setTotalPages(resMain.data.pagination?.totalPages || 1);
-      } else {
-        // Không có tìm kiếm
-        if (publicationStatus === "published") {
-          url = `${Constants.DOMAIN_API}/admin/products/published`;
-        } else if (publicationStatus === "draft") {
-          url = `${Constants.DOMAIN_API}/admin/products/draft`;
-        }
-
-        // Gọi API chính và 2 API thống kê song song
-        const [resMain, resPublished, resDraft] = await Promise.all([
-          axios.get(url, { params }),
-          axios.get(`${Constants.DOMAIN_API}/admin/products/published`, {
-            params: { page: 1, limit: 1 },
-          }),
-          axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, {
-            params: { page: 1, limit: 1 },
-          }),
-        ]);
-
-        setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
-        setDraftCount(resDraft.data.pagination?.totalProducts || 0);
-        setProducts(resMain.data.data);
-        setTotalPages(resMain.data.pagination?.totalPages || 1);
+    // Nếu có tìm kiếm
+    if (search) {
+      url = `${Constants.DOMAIN_API}/admin/products/productList/search`;
+      params.searchTerm = search;
+      if (publicationStatus) {
+        params.publicationStatus = publicationStatus;
       }
-    } catch (error) {
-      console.error("Lỗi khi lấy sản phẩm:", error);
-      setProducts([]);
-      setTotalPages(1);
+
+      // Gọi API chính
+      fetchMainData = axios.get(url, { params });
+
+      // Gọi song song 3 API đếm số lượng các trạng thái
+      const [resMain, resPublished, resDraft, resAuction] = await Promise.all([
+        fetchMainData,
+        axios.get(`${Constants.DOMAIN_API}/admin/products/published`, {
+          params: { page: 1, limit: 1 },
+        }),
+        axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, {
+          params: { page: 1, limit: 1 },
+        }),
+        axios.get(`${Constants.DOMAIN_API}/admin/published-auction-products`, {
+          params: { page: 1, limit: 1 },
+        }),
+      ]);
+
+      setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
+      setDraftCount(resDraft.data.pagination?.totalProducts || 0);
+      setAuctionCount(resAuction.data.pagination?.totalProducts || 0);
+
+      setProducts(resMain.data.data);
+      setTotalPages(resMain.data.pagination?.totalPages || 1);
+    } else {
+      // Không có tìm kiếm
+      if (publicationStatus === "published") {
+        url = `${Constants.DOMAIN_API}/admin/products/published`;
+      } else if (publicationStatus === "draft") {
+        url = `${Constants.DOMAIN_API}/admin/products/draft`;
+      } else if (publicationStatus === "auction") {
+        url = `${Constants.DOMAIN_API}/admin/published-auction-products`; // API mới
+      }
+
+      const [resMain, resPublished, resDraft, resAuction] = await Promise.all([
+        axios.get(url, { params }),
+        axios.get(`${Constants.DOMAIN_API}/admin/products/published`, {
+          params: { page: 1, limit: 1 },
+        }),
+        axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, {
+          params: { page: 1, limit: 1 },
+        }),
+        axios.get(`${Constants.DOMAIN_API}/admin/published-auction-products`, {
+          params: { page: 1, limit: 1 },
+        }),
+      ]);
+
+      setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
+      setDraftCount(resDraft.data.pagination?.totalProducts || 0);
+      setAuctionCount(resAuction.data.pagination?.totalProducts || 0);
+
+      setProducts(resMain.data.data);
+      setTotalPages(resMain.data.pagination?.totalPages || 1);
     }
-  };
+  } catch (error) {
+    console.error("Lỗi khi lấy sản phẩm:", error);
+    setProducts([]);
+    setTotalPages(1);
+  }
+};
+
 
   const handleSearchInputChange = (e) => {
     setSearchInput(e.target.value);
@@ -302,20 +314,29 @@ const categoryOptions = categories.map((cat) => ({
             <h2 className="text-xl font-semibold">Danh sách sản phẩm</h2>
             <div className="flex items-center gap-2">
               {[
-                {
-                  key: "published",
-                  label: "Đã đăng",
-                  color: "bg-green-300",
-                  textColor: "text-green-800",
-                  count: publishedCount,
-                },
-                {
-                  key: "draft",
-                  label: "Nháp",
-                  color: "bg-yellow-300",
-                  textColor: "text-yellow-800",
-                  count: draftCount,
-                },
+                
+                  {
+                    key: "published",
+                    label: "Đã đăng",
+                    color: "bg-green-300",
+                    textColor: "text-green-800",
+                    count: publishedCount,
+                  },
+                  {
+                    key: "draft",
+                    label: "Nháp",
+                    color: "bg-yellow-300",
+                    textColor: "text-yellow-800",
+                    count: draftCount,
+                  },
+                  {
+                    key: "auction",
+                    label: "Đấu giá",
+                    color: "bg-purple-300",
+                    textColor: "text-purple-800",
+                    count: auctionCount, // bạn có thể thêm đếm nếu muốn
+                  },
+                
               ].map(({ key, label, color, textColor, count }) => (
                 <button
                   key={key}
@@ -370,45 +391,43 @@ const categoryOptions = categories.map((cat) => ({
             className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
           />
-       <Select
-  options={categoryOptions}
-  className="basic-single-select"
-  classNamePrefix="select"
-  value={selectedCategory}
-  onChange={(selectedOption) => {
-    setSelectedCategory(selectedOption);
-    setValue("category_id", selectedOption?.value || "");
-    trigger("category_id");
-  }}
-  placeholder="Chọn danh mục..."
-  isClearable
-  isSearchable
-  menuPortalTarget={document.body}
-  styles={{
-    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-  }}
-/>
+          <Select
+            options={categoryOptions}
+            className="basic-single-select"
+            classNamePrefix="select"
+            value={selectedCategory}
+            onChange={(selectedOption) => {
+              setSelectedCategory(selectedOption);
+              setValue("category_id", selectedOption?.value || "");
+              trigger("category_id");
+            }}
+            placeholder="Chọn danh mục..."
+            isClearable
+            isSearchable
+            menuPortalTarget={document.body}
+            styles={{
+              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+            }}
+          />
 
-
-<Select
-  options={brandOptions}
-  className="basic-single-select"
-  classNamePrefix="select"
-  value={selectedBrand}
-  onChange={(selectedOption) => {
-    setSelectedBrand(selectedOption); // ✅ Lưu lại đối tượng đã chọn
-    setValue("brand_id", selectedOption?.value || ""); // Gán vào react-hook-form nếu cần
-    trigger("brand_id");
-  }}
-  placeholder="Chọn thương hiệu..."
-  isClearable
-  isSearchable
-  menuPortalTarget={document.body}
-  styles={{
-    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-  }}
-/>
-
+          <Select
+            options={brandOptions}
+            className="basic-single-select"
+            classNamePrefix="select"
+            value={selectedBrand}
+            onChange={(selectedOption) => {
+              setSelectedBrand(selectedOption); // ✅ Lưu lại đối tượng đã chọn
+              setValue("brand_id", selectedOption?.value || ""); // Gán vào react-hook-form nếu cần
+              trigger("brand_id");
+            }}
+            placeholder="Chọn thương hiệu..."
+            isClearable
+            isSearchable
+            menuPortalTarget={document.body}
+            styles={{
+              menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+            }}
+          />
 
           <button
             onClick={handleSearchSubmit}

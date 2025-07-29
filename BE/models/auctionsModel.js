@@ -11,10 +11,6 @@ const AuctionsModel = connection.define('auctions', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    start_price: {
-        type: DataTypes.DECIMAL(20, 2),
-        allowNull: true
-    },
     priceStep: {
         type: DataTypes.DECIMAL(20, 2),
         allowNull: false

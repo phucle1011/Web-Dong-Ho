@@ -38,6 +38,10 @@ const AdminProductDetail = () => {
   const [description, setDescription] = useState("");
  const [categoryOptions, setCategoryOptions] = useState([]);
   const [brandOptions, setBrandOptions] = useState([]);
+  const [attrExpanded, setAttrExpanded] = useState({}); 
+
+const toggleAttr = (variantId) =>
+  setAttrExpanded(prev => ({ ...prev, [variantId]: !prev[variantId] }));
   const handleImageClick = (images, index) => {
     setSelectedImages(images);
     setStartIndex(index);
@@ -481,85 +485,143 @@ console.log(res.data?.data);
             <h3 className="text-lg font-semibold mb-2">Biến thể sản phẩm:</h3>
             <table className="w-full border-collapse border border-gray-300">
               <thead>
-                <tr className="bg-gray-200">
-                  <th className="p-2 border">#</th> {/* Cột thứ tự */}
-                  <th className="p-2 border">SKU</th>
-                  <th className="p-2 border">Giá</th>
-                  <th className="p-2 border">Kho</th>
-                  <th className="p-2 border">Thuộc tính</th>
-                  <th className="p-2 border">Ảnh</th>
-                  <th className="p-2 border">Hành động</th>
-                </tr>
-              </thead>
+  <tr className="bg-gray-200">
+    <th className="p-2 border">#</th>
+    <th className="p-2 border">SKU</th>
+    <th className="p-2 border">Loại</th>
+    <th className="p-2 border">Giá</th>
+    <th className="p-2 border">Kho</th>
+    <th className="p-2 border">Thuộc tính</th>
+    <th className="p-2 border">Ảnh</th>
+    <th className="p-2 border">Hành động</th>
+  </tr>
+</thead>
+
               <tbody>
-                {variants.map((variant, index) => (
-                  <tr key={variant.id} className="border-b">
-                    <td className="p-2 border text-center">{index + 1}</td>{" "}
-                    {/* Hiển thị STT */}
-                    <td className="p-2 border">{variant.sku}</td>
-                    <td className="p-2 border">
-                      {Number(variant.price).toLocaleString()} đ
-                    </td>
-                    <td className="p-2 border">
-                      {variant.stock !== undefined ? variant.stock : "Chưa có"}
-                    </td>
-                    <td className="p-2 border">
-                      {variant.attributeValues?.map((av) => (
-                        <div
-                          key={av.id}
-                          className="flex items-center gap-2 mb-1"
-                        >
-                          <strong>{av.attribute?.name}:</strong>
-                          {av.attribute?.name.toLowerCase() === "color" ? (
-                            <div
-                              className="w-6 h-6 rounded border"
-                              style={{ backgroundColor: av.value }}
-                              title={av.value}
-                            ></div>
-                          ) : (
-                            <span>{av.value}</span>
-                          )}
-                        </div>
-                      ))}
-                    </td>
-                    <td className="p-2 border text-center">
-                      <div className="flex justify-center items-center h-full">
-                        {variant.images && variant.images.length > 0 ? (
-                          <img
-                            key={variant.images[0].id}
-                            src={variant.images[0].image_url}
-                            alt="Variant"
-                            width="60"
-                            className="cursor-pointer rounded border"
-                            onClick={() => handleImageClick(variant.images, 0)}
-                          />
-                        ) : (
-                          <span>Không có ảnh</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-2 border text-center">
-                      <div className="flex gap-2 justify-center">
-                        <Link
-                          to={`/admin/products/editVariant/${variant.id}`}
-                          className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                        >
-                          <FaEdit size={20} className="font-bold" />
-                        </Link>
-                        {variant.canDelete && (
-                          <button
-                            onClick={() => setSelectedProduct(variant)}
-                            className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
-                            title="Xoá biến thể"
-                          >
-                            <FaTrashAlt size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+  {variants.map((variant, index) => {
+    const isAuction =
+      variant.is_auction_only === 1 ||
+      variant.is_auction_only === "1" ||
+      variant.is_auction_only === true;
+
+    return (
+      <tr key={variant.id} className="border-b">
+        <td className="p-2 border text-center">{index + 1}</td>
+        <td className="p-2 border">{variant.sku}</td>
+
+        {/* 🔹 HIỂN THỊ LOẠI */}
+        <td className="p-2 border">
+          {isAuction ? (
+            <span className="inline-block px-2 py-0.5 rounded text-xs border border-purple-300 bg-purple-100 text-purple-700">
+              Đang đấu giá
+            </span>
+          ) : (
+            <span className="inline-block px-2 py-0.5 rounded text-xs border border-gray-300 bg-gray-100 text-gray-700">
+              Bán thường
+            </span>
+          )}
+        </td>
+
+        <td className="p-2 border">
+          {Number(variant.price).toLocaleString()} đ
+        </td>
+
+        {/* 🔹 (Tuỳ chọn) Thể hiện stock rõ hơn khi là đấu giá */}
+        <td className="p-2 border">
+          {isAuction ? (
+            <span title="Biến thể đấu giá luôn có stock = 1">1</span>
+          ) : (
+            variant.stock ?? "Chưa có"
+          )}
+        </td>
+
+        {/* ... giữ nguyên các cột còn lại */}
+        <td className="p-2 border">
+  {(() => {
+    const MAX = 4;
+    const attrs = variant.attributeValues || [];
+    const isExpanded = !!attrExpanded[variant.id];
+    const visible = isExpanded ? attrs : attrs.slice(0, MAX);
+
+    // Hàm nhận diện thuộc tính màu (hỗ trợ cả "Màu sắc" và "Color")
+    const isColorAttr = (name) => {
+      if (!name) return false;
+      const n = String(name).trim().toLowerCase();
+      return n === "màu sắc" || n === "color";
+    };
+
+    return (
+      <>
+        {visible.map((av) => (
+          <div key={av.id} className="flex items-center gap-2 mb-1">
+            <strong>{av.attribute?.name}:</strong>
+            {isColorAttr(av.attribute?.name) ? (
+              <div
+                className="w-6 h-6 rounded border"
+                style={{ backgroundColor: av.value }}
+                title={av.value}
+              />
+            ) : (
+              <span>{av.value}</span>
+            )}
+          </div>
+        ))}
+
+        {/* Nút Xem thêm / Thu gọn khi có hơn MAX dòng */}
+        {attrs.length > MAX && (
+          <button
+            type="button"
+            onClick={() => toggleAttr(variant.id)}
+            className="mt-1 text-xs text-blue-600 "
+          >
+            {isExpanded ? "Thu gọn" : `Xem thêm (${attrs.length - MAX})`}
+          </button>
+        )}
+      </>
+    );
+  })()}
+</td>
+
+        <td className="p-2 border text-center">
+          <div className="flex justify-center items-center h-full">
+            {variant.images && variant.images.length > 0 ? (
+              <img
+                key={variant.images[0].id}
+                src={variant.images[0].image_url}
+                alt="Variant"
+                width="60"
+                className="cursor-pointer rounded border"
+                onClick={() => handleImageClick(variant.images, 0)}
+              />
+            ) : (
+              <span>Không có ảnh</span>
+            )}
+          </div>
+        </td>
+        <td className="p-2 border text-center">
+          <div className="flex gap-2 justify-center">
+            <Link
+              to={`/admin/products/editVariant/${variant.id}`}
+              className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+            >
+              <FaEdit size={20} className="font-bold" />
+            </Link>
+            {variant.canDelete && (
+              <button
+                onClick={() => setSelectedProduct(variant)}
+                className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                title="Xoá biến thể"
+              >
+                <FaTrashAlt size={16} />
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
+
             </table>
             <div className="w-full flex justify-center mt-4">
               <div className="inline-flex items-center space-x-1">

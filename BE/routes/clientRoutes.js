@@ -32,6 +32,7 @@ const notificationClientController = require('../controllers/Client/notification
 const SearchController = require('../controllers/Client/SearchController')
 const FlashSaleController = require('../controllers/Client/flashSaleController');
 const WalletsController = require('../controllers/Client/walletsController');
+const AuctionBidController = require('../controllers/Client/AuctionBidController');
 
 //------------------[ CLIENT ROUTES ]------------------
 
@@ -169,6 +170,7 @@ router.patch('/notifications/mark-all-read', notificationClientController.create
 router.get('/client/flashSale', FlashSaleController.getAll);
 router.get('/client/flashSale/list/:notification_id', FlashSaleController.getDiscountedProductsByNotificationId);
 
-
+//------------------[ AuctionBidController ]------------------
+ router.post('/placeBid', AuctionBidController.placeBid);
 
 module.exports = router;

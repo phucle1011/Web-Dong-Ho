@@ -51,14 +51,14 @@ function AttributeEdit() {
 
     return (
        <div className="max-w-screen-md mx-auto bg-white p-8 rounded shadow mt-8">
-  <h2 className="text-2xl font-semibold mb-6">Cập nhật thuộc tính</h2>
+  <h2 className="text-xl font-semibold">Cập nhật thuộc tính</h2>
 
   <form onSubmit={handleSubmit(onSubmit)} noValidate>
     <div className="mb-6">
       <label className="block font-medium mb-2">Tên thuộc tính *</label>
       <input
         type="text"
-        className="w-full border px-4 py-3 rounded"
+        className="w-full border px-4 py-2 rounded"
         placeholder="VD: Màu sắc, Chất liệu dây..."
         {...register("name", {
           required: "Tên thuộc tính không được để trống",

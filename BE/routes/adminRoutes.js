@@ -117,6 +117,7 @@ router.get("/variants/:variant_id", ProductController.getVariantById);
 router.get('/product-variants', ProductController.getAllVariants);
 router.delete('/product-variants/deleteAttributeValueById/:id', ProductController.deleteAttributeValueById);
 router.post('/products/imagesClauding', ProductController.deleteImagesClauding);
+router.get('/published-auction-products', ProductController.getPublishedAuctionProducts);
 
 //------------------[ ProductAttributeController ]------------------\
 router.get('/attribute', ProductAttributeController.getAll);

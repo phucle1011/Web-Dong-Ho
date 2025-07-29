@@ -192,6 +192,68 @@ static async getPublishedProducts(req, res) {
   }
 }
 
+static async getPublishedAuctionProducts(req, res) {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count: totalProducts, rows: products } = await Product.findAndCountAll({
+      where: { publication_status: 'published' },
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+      distinct: true,      // ✅ quan trọng để COUNT DISTINCT theo Product
+      subQuery: false,     // ✅ tránh subquery làm sai phân trang trong 1 số DB
+      include: [
+        {
+          model: ProductVariant,
+          as: 'variants',
+          where: { is_auction_only: 1 }, // chỉ biến thể đấu giá
+          required: true, // phải có ít nhất 1 biến thể đấu giá
+          include: [
+            {
+              model: ProductVariantAttributeValue,
+              as: 'attributeValues',
+              include: [{ model: ProductAttribute, as: 'attribute' }],
+            },
+            { model: VariantImage, as: 'images' },
+          ],
+        },
+        { model: CategoryModel, as: 'category', attributes: ['id', 'name'] },
+        { model: BrandModel, as: 'brand', attributes: ['id', 'name'] },
+      ],
+    });
+
+    // Lưu ý: do đang filter variants is_auction_only=1,
+    // product.variants ở dưới CHỈ là các biến thể đấu giá.
+    const data = products.map((product) => {
+      const j = product.toJSON();
+      j.variantCount = product.variants?.length || 0;
+      return j;
+    });
+
+    const totalVariants = products.reduce(
+      (sum, p) => sum + (p.variants?.length || 0),
+      0
+    );
+
+    return res.status(200).json({
+      status: 200,
+      message: 'Lấy danh sách sản phẩm đấu giá đã xuất bản thành công',
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+      },
+      totalVariants,
+    });
+  } catch (error) {
+    console.error('Lỗi getPublishedAuctionProducts:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
 
 
   // Lấy chi tiết theo ID
@@ -343,144 +405,152 @@ static async createProduct(req, res) {
 
 
 
-  static async addVariant(req, res) {
+ static async addVariant(req, res) {
+  const t = await ProductVariant.sequelize.transaction();
+  try {
+    const { product_id } = req.params;
+    const { sku, price, stock, attributes, images, is_auction_only } = req.body;
 
-    
-    const t = await ProductVariant.sequelize.transaction();
-    try {
-      const { product_id } = req.params;
-      const { sku, price, stock, attributes, images } = req.body;
-
-      // Kiểm tra sản phẩm tồn tại
-      const product = await Product.findByPk(product_id);
-      if (!product) {
-        await t.rollback();
-        return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-      }
-
-      // Tạo biến thể sản phẩm
-      const variant = await ProductVariant.create(
-        {
-          product_id,
-          sku,
-          price,
-          stock,
-        },
-        { transaction: t }
-      );
-
-      // Tạo các thuộc tính biến thể (nếu có)
-      if (Array.isArray(attributes)) {
-        for (const attr of attributes) {
-          await ProductVariantAttributeValue.create(
-            {
-              product_variant_id: variant.id,
-              product_attribute_id: attr.attribute_id,
-              value: attr.value,
-            },
-            { transaction: t }
-          );
-        }
-      }
-
-      // Tạo ảnh biến thể (nếu có)
-      if (Array.isArray(images)) {
-        for (const imageUrl of images) {
-          await VariantImage.create(
-            {
-              variant_id: variant.id,
-              image_url: imageUrl,
-            },
-            { transaction: t }
-          );
-        }
-      }
-
-      await t.commit();
-      res.status(201).json({ message: "Tạo biến thể thành công", variant });
-    } catch (error) {
+    // Kiểm tra sản phẩm tồn tại
+    const product = await Product.findByPk(product_id);
+    if (!product) {
       await t.rollback();
-      if (error instanceof Sequelize.UniqueConstraintError) {
-  return res.status(400).json({
-    message: "SKU đã tồn tại.",
-    fields: error.errors.map(e => e.path)
-  });
-}
-
-res.status(500).json({ error: error.message });
-
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
-  }
-  // Cập nhật biến thể sản phẩm
-  static async updateVariant(req, res) {
-    const t = await ProductVariant.sequelize.transaction();
-    try {
-      const { variant_id } = req.params;
-      const { sku, price, stock, attributes, images } = req.body;
 
-      const variant = await ProductVariant.findByPk(variant_id);
-      if (!variant) {
-        await t.rollback();
-        return res.status(404).json({ message: "Biến thể không tồn tại" });
-      }
+    // 👉 Nếu là sản phẩm đấu giá thì ép stock = 1
+    const finalStock = is_auction_only === 1 || is_auction_only === "1" ? 1 : stock;
 
-      // Cập nhật thông tin cơ bản
-      if (sku !== undefined) variant.sku = sku;
-      if (price !== undefined) variant.price = price;
-      if (stock !== undefined) variant.stock = stock;
-      await variant.save({ transaction: t });
-
-      // Xóa các thuộc tính cũ và tạo mới
-      await ProductVariantAttributeValue.destroy({
-        where: { product_variant_id: variant_id },
-        transaction: t,
-      });
-
-      if (Array.isArray(attributes)) {
-        for (const attr of attributes) {
-          await ProductVariantAttributeValue.create(
-            {
-              product_variant_id: variant_id,
-              product_attribute_id: attr.attribute_id,
-              value: attr.value,
-            },
-            { transaction: t }
-          );
-        }
-      }
-
-      // Xóa ảnh cũ và thêm ảnh mới
-      await VariantImage.destroy({
-        where: { variant_id },
-        transaction: t,
-      });
-
-      if (Array.isArray(images)) {
-        for (const image of images) {
-  const url = typeof image === "string" ? image : image?.url || "";
-  if (url) {
-    await VariantImage.create(
+    // Tạo biến thể sản phẩm
+    const variant = await ProductVariant.create(
       {
-        variant_id,
-        image_url: url,
+        product_id,
+        sku,
+        price,
+        stock: finalStock,
+        is_auction_only: is_auction_only || 0
       },
       { transaction: t }
     );
+
+    // Tạo các thuộc tính biến thể (nếu có)
+    if (Array.isArray(attributes)) {
+      for (const attr of attributes) {
+        await ProductVariantAttributeValue.create(
+          {
+            product_variant_id: variant.id,
+            product_attribute_id: attr.attribute_id,
+            value: attr.value,
+          },
+          { transaction: t }
+        );
+      }
+    }
+
+    // Tạo ảnh biến thể (nếu có)
+    if (Array.isArray(images)) {
+      for (const imageUrl of images) {
+        await VariantImage.create(
+          {
+            variant_id: variant.id,
+            image_url: imageUrl,
+          },
+          { transaction: t }
+        );
+      }
+    }
+
+    await t.commit();
+    res.status(201).json({ message: "Tạo biến thể thành công", variant });
+  } catch (error) {
+    await t.rollback();
+    if (error instanceof Sequelize.UniqueConstraintError) {
+      return res.status(400).json({
+        message: "SKU đã tồn tại.",
+        fields: error.errors.map(e => e.path)
+      });
+    }
+
+    res.status(500).json({ error: error.message });
   }
 }
 
-      }
 
-      await t.commit();
-      res
-        .status(200)
-        .json({ message: "Cập nhật biến thể thành công", variant });
-    } catch (error) {
+  // Cập nhật biến thể sản phẩm
+  static async updateVariant(req, res) {
+  const t = await ProductVariant.sequelize.transaction();
+  try {
+    const { variant_id } = req.params;
+    const { sku, price, stock, attributes, images, is_auction_only } = req.body;
+
+    const variant = await ProductVariant.findByPk(variant_id);
+    if (!variant) {
       await t.rollback();
-      console.error("Lỗi khi cập nhật biến thể:", error);
-      res.status(500).json({ error: error.message });
+      return res.status(404).json({ message: "Biến thể không tồn tại" });
     }
+
+    // ✅ Nếu có is_auction_only = 1 thì ép stock = 1
+    const updatedStock = is_auction_only === 1 || is_auction_only === "1" ? 1 : stock;
+
+    // Cập nhật thông tin cơ bản
+    if (sku !== undefined) variant.sku = sku;
+    if (price !== undefined) variant.price = price;
+    if (updatedStock !== undefined) variant.stock = updatedStock;
+    if (is_auction_only !== undefined) variant.is_auction_only = is_auction_only;
+    await variant.save({ transaction: t });
+
+    // Xóa các thuộc tính cũ và tạo mới
+    await ProductVariantAttributeValue.destroy({
+      where: { product_variant_id: variant_id },
+      transaction: t,
+    });
+
+    if (Array.isArray(attributes)) {
+      for (const attr of attributes) {
+        await ProductVariantAttributeValue.create(
+          {
+            product_variant_id: variant_id,
+            product_attribute_id: attr.attribute_id,
+            value: attr.value,
+          },
+          { transaction: t }
+        );
+      }
+    }
+
+    // Xóa ảnh cũ và thêm ảnh mới
+    await VariantImage.destroy({
+      where: { variant_id },
+      transaction: t,
+    });
+
+    if (Array.isArray(images)) {
+      for (const image of images) {
+        const url = typeof image === "string" ? image : image?.url || "";
+        if (url) {
+          await VariantImage.create(
+            {
+              variant_id,
+              image_url: url,
+            },
+            { transaction: t }
+          );
+        }
+      }
+    }
+
+    await t.commit();
+    res.status(200).json({
+      message: "Cập nhật biến thể thành công",
+      variant,
+    });
+  } catch (error) {
+    await t.rollback();
+    console.error("Lỗi khi cập nhật biến thể:", error);
+    res.status(500).json({ error: error.message });
   }
+}
+
 
   // Thêm ảnh mới cho biến thể
   static async addVariantImages(req, res) {

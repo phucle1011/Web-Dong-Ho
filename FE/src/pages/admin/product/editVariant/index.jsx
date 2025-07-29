@@ -12,13 +12,15 @@ const EditVariantForm = () => {
   const [attributesList, setAttributesList] = useState([]);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    id: "",
-    sku: "",
-    price: "",
-    stock: "",
-    attributes: [],
-    images: [],
-  });
+  id: "",
+  sku: "",
+  price: "",
+  stock: "",
+  attributes: [],
+  images: [],
+  is_auction_only: 0,
+});
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +52,8 @@ const EditVariantForm = () => {
               id: img.id,
               url: img.image_url,
             })) || [],
+          is_auction_only: Number(data.is_auction_only) || 0,
+
         });
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu:", err);
@@ -160,9 +164,11 @@ const EditVariantForm = () => {
     e.preventDefault();
 
     const preparedData = {
-      ...formData,
-      images: formData.images.map((img) => img.url),
-    };
+  ...formData,
+  images: formData.images.map((img) => img.url),
+  is_auction_only: Number(formData.is_auction_only) || 0,
+};
+
 
     try {
       await axios.put(
@@ -184,9 +190,16 @@ const EditVariantForm = () => {
       onSubmit={handleSubmit}
       className="max-w-5xl mx-auto p-10 bg-white shadow-lg rounded-lg space-y-8"
     >
-      <h2 className="text-3xl font-bold text-center mb-6">
-        Chỉnh sửa biến thể
-      </h2>
+     <h2 className="text-3xl font-bold text-center mb-6">
+  Chỉnh sửa biến thể
+  {/* {Number(formData.is_auction_only) === 1 && (
+    <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-700 border border-purple-200">
+      Đấu giá
+    </span>
+  )} */}
+</h2>
+
+      
 
       {/* Thông tin cơ bản */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -230,6 +243,8 @@ const EditVariantForm = () => {
             onChange={handleChange}
             className="w-full border p-2 rounded"
             placeholder="Tồn kho"
+            disabled={Number(formData.is_auction_only) === 1}
+
           />
         </div>
       </div>
@@ -391,21 +406,50 @@ const EditVariantForm = () => {
       </div>
 
       {/* Nút submit */}
-      <div className="flex gap-x-3 justify-start">
-        <button
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-4 rounded text-sm"
-        >
-          Cập nhật
-        </button>
+ <div className="flex flex-col md:flex-row items-start md:items-center gap-2 justify-start">
 
-        <Link
-          to={`/admin/products/detail/${formData.product_id}`}
-          className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
-        >
-          Quay lại
-        </Link>
-      </div>
+  <button
+    type="submit"
+    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
+  >
+    Cập nhật
+  </button>
+  <Link
+    to={`/admin/products/detail/${formData.product_id}`}
+    className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+  >
+    Quay lại
+  </Link>
+
+ {/* Toggle is_auction_only */}
+ <div className="form-check form-switch d-flex align-items-center gap-2">
+   <input
+     className="form-check-input"
+     type="checkbox"
+     id="auctionSwitch"
+     checked={Number(formData.is_auction_only) === 1}
+     onChange={(e) => {
+       const checked = e.target.checked;
+       setFormData((prev) => ({
+        ...prev,
+         is_auction_only: checked ? 1 : 0,
+         // Nếu bật đấu giá thì ép stock = 1 (tuỳ yêu cầu)
+         stock: checked ? 1 : prev.stock,
+       }));
+     }}
+     // ✅ Nếu đang là đấu giá (1) thì không cho đổi
+     disabled={Number(formData.is_auction_only) === 1}
+   />
+   <label className="form-check-label ms-2" htmlFor="auctionSwitch">
+    {Number(formData.is_auction_only) === 1
+       ? "Biến thể đấu giá (không thể thay đổi)"
+       : "Đặt là biến thể đấu giá"}
+   </label>
+ </div>
+
+  
+</div>
+
     </form>
   );
 };

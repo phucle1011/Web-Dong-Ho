@@ -45,14 +45,13 @@ function AttributeCreate() {
 
     return (
        <div className="max-w-screen-xl mx-auto bg-white p-8 rounded shadow mt-8">
-  <h2 className="text-2xl font-semibold mb-6">Thêm thuộc tính mới</h2>
-
+  <h2 className="text-xl font-semibold">Thêm thuộc tính mới</h2>
   <form onSubmit={handleSubmit(onSubmit)} noValidate>
     <div className="mb-6">
       <label className="block font-medium mb-2">Tên thuộc tính *</label>
       <input
         type="text"
-        className="w-full border px-4 py-3 rounded"
+        className="w-full border px-4 py-2 rounded"
         placeholder="VD: Màu sắc, Kích thước..."
         {...register("name", {
           required: "Tên thuộc tính không được để trống",
