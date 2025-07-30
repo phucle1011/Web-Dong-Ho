@@ -81,7 +81,7 @@ function AuctionProductDetail() {
       );
       toast.success(
         otpRes.data?.message ||
-          "Đã gửi OTP đến email của bạn. Vui lòng kiểm tra hộp thư."
+        "Đã gửi OTP đến email của bạn. Vui lòng kiểm tra hộp thư."
       );
       setOtpRequested(true);
     } catch (error) {
@@ -120,7 +120,7 @@ function AuctionProductDetail() {
 
       toast.success(
         verifyRes.data?.message ||
-          "Xác thực OTP thành công. Đang vào phòng đấu giá..."
+        "Xác thực OTP thành công. Đang vào phòng đấu giá..."
       );
       setOtp("");
       setOtpRequested(false);
@@ -153,22 +153,23 @@ function AuctionProductDetail() {
         >
           <div className="container-x mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-4 max-w-4xl mx-auto -mt-16 z-10 relative">
-              <div className="bg-white rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10">
-                <FaBookOpen className="text-blue-600 text-4xl mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-gray-800 mb-1">
-                  HƯỚNG DẪN ĐẤU GIÁ
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  Xem cách tham gia đấu giá
-                </p>
-              </div>
+              <Link to="/AuctionGuide">
+                <div className="bg-white rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10">
+                  <FaBookOpen className="text-blue-600 text-4xl mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">
+                    HƯỚNG DẪN ĐẤU GIÁ
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    Xem cách tham gia đấu giá
+                  </p>
+                </div>
+              </Link>
 
               <div
-                className={`bg-white rounded-2xl p-6 text-center shadow-xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10 ${
-                  loading
+                className={`bg-white rounded-2xl p-6 text-center shadow-xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10 ${loading
                     ? "opacity-70 pointer-events-none"
                     : "hover:shadow-2xl"
-                }`}
+                  }`}
                 onClick={handleEnterAuctionRoom}
                 title="Vào phòng đấu giá"
               >
@@ -219,9 +220,8 @@ function AuctionProductDetail() {
 
                   <div className="p-4">
                     <h3
-                      className={`text-lg font-semibold text-gray-800 mb-2 ${
-                        showFullName ? "" : "line-clamp-2"
-                      }`}
+                      className={`text-lg font-semibold text-gray-800 mb-2 ${showFullName ? "" : "line-clamp-2"
+                        }`}
                     >
                       {auction.variant?.product?.name ||
                         "Không có tên sản phẩm"}
@@ -359,9 +359,8 @@ function AuctionProductDetail() {
                   Hủy
                 </button>
                 <button
-                  className={`px-5 py-2 rounded-lg text-white ${
-                    verifying ? "bg-blue-300" : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  className={`px-5 py-2 rounded-lg text-white ${verifying ? "bg-blue-300" : "bg-blue-600 hover:bg-blue-700"
+                    }`}
                   onClick={handleVerifyOtp}
                   disabled={verifying || !otp.trim()}
                 >
