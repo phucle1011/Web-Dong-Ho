@@ -6,6 +6,8 @@ const ProductAttribute = require("../../models/productAttributesModel");
 const ProductModel = require('../../models/productsModel');
 const PromotionProductModel = require('../../models/promotionProductsModel');
 const PromotionModel = require('../../models/promotionsModel');
+const AuctionBidModel = require('../../models/auctionBidsModel');
+const AuctionModel = require('../../models/auctionsModel');
 
 const { Op } = require('sequelize');
 
@@ -62,8 +64,20 @@ class CartController {
                                     },
                                 ],
                                 required: false,
+                            },
+                            {
+                                model: AuctionModel,
+                                as: 'auctions',
+                                where: { status: 'ended' },
+                                required: false,
+                                include: [
+                                    {
+                                        model: AuctionBidModel,
+                                        as: 'bids',
+                                        required: false,
+                                    }
+                                ]
                             }
-
                         ]
                     }
                 ],

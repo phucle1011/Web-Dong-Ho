@@ -557,6 +557,7 @@ class OrderController {
             res.status(500).json({ error: error.message });
         }
     }
+
     static async create(req, res) {
         const {
             products,
@@ -761,6 +762,16 @@ class OrderController {
             }));
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
+
+            const successfullyOrderedProductIds = products.map(p => p.variant.id);
+
+await CartModel.destroy({
+    where: {
+        user_id,
+        product_variant_id: successfullyOrderedProductIds
+    },
+    transaction: t
+});
 
             await t.commit();
 
@@ -1217,7 +1228,7 @@ class OrderController {
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
-            const successfullyOrderedProductIds = products.map((p) => p.variant.id);
+            const successfullyOrderedProductIds = products.map((p) => p.variant.id || p.variant_id);
 
             await CartModel.destroy({
                 where: {
@@ -1414,10 +1425,7 @@ class OrderController {
             const sortedParams = OrderController.sortObject(vnpParams);
 
             const signData = Object.entries(sortedParams)
-                .map(
-                    ([key, val]) =>
-                        `${key}=${encodeURIComponent(val).replace(/%20/g, "+")}`
-                )
+                .map(([key, val]) => `${key}=${encodeURIComponent(val).replace(/%20/g, "+")}`)
                 .join("&");
 
             const secretKey = process.env.VNPAY_HASH_SECRET.trim();
@@ -1432,9 +1440,7 @@ class OrderController {
             }
 
             if (vnpParams.vnp_ResponseCode !== "00") {
-                console.error(
-                    `Giao dịch thất bại - Mã lỗi: ${vnpParams.vnp_ResponseCode}`
-                );
+                console.error(`Giao dịch thất bại - Mã lỗi: ${vnpParams.vnp_ResponseCode}`);
                 return res.redirect(
                     `${process.env.FRONTEND_URL}/payment/failed?error=Transaction_failed&code=${vnpParams.vnp_ResponseCode}&orderId=${orderId}`
                 );
@@ -1442,9 +1448,7 @@ class OrderController {
 
             let minimalInfo;
             try {
-                minimalInfo = JSON.parse(
-                    Buffer.from(orderInfo, "base64").toString("utf-8")
-                );
+                minimalInfo = JSON.parse(Buffer.from(orderInfo, "base64").toString("utf-8"));
                 if (!minimalInfo.redisKey) {
                     throw new Error("Thiếu thông tin redisKey trong orderInfo");
                 }
@@ -1456,14 +1460,12 @@ class OrderController {
             }
 
             const decoded = await RedisService.getData(minimalInfo.redisKey);
-
             if (!decoded) {
                 console.error("Không tìm thấy dữ liệu đơn hàng trong Redis");
                 return res.redirect(
                     `${process.env.FRONTEND_URL}/payment/failed?error=Order_data_expired&orderId=${orderId}`
                 );
             }
-
             await RedisService.deleteData(minimalInfo.redisKey);
 
             const {
@@ -1482,7 +1484,6 @@ class OrderController {
             } = decoded;
 
             const usedFromWallet = Number(decoded.wallet_balance || 0);
-
             if (usedFromWallet > 0) {
                 const user = await UserModel.findByPk(user_id, {
                     transaction: t,
@@ -1501,37 +1502,23 @@ class OrderController {
                 await user.save({ transaction: t });
             }
 
-            const updatedProducts = await Promise.all(
-                products.map(async (item) => {
-                    const variant = await ProductVariantModel.findByPk(item.variant_id, {
-                        include: ["product", "attributeValues", "images"],
-                    });
-                    return {
-                        ...item,
-                        variant,
-                    };
-                })
-            );
-
             let totalPrice = 0;
             const detailedCart = [];
+            const emailProducts = [];
 
             for (const item of products) {
-                if (!item.variant_id || !item.price) {
-                    console.error("Sản phẩm không hợp lệ:", item);
+                if (!item.variant_id) {
+                    console.error("Sản phẩm không hợp lệ (thiếu variant_id):", item);
                     await t.rollback();
                     return res.redirect(
                         `${process.env.FRONTEND_URL}/payment/failed?error=Invalid_product_data&orderId=${orderId}`
                     );
                 }
 
-                const productVariant = await ProductVariantModel.findByPk(
-                    item.variant_id,
-                    {
-                        transaction: t,
-                        lock: t.LOCK.UPDATE,
-                    }
-                );
+                const productVariant = await ProductVariantModel.findByPk(item.variant_id, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE,
+                });
 
                 if (!productVariant) {
                     console.error(`Không tìm thấy sản phẩm: ${item.variant_id}`);
@@ -1543,6 +1530,7 @@ class OrderController {
 
                 const price = parseFloat(productVariant.price);
                 totalPrice += price * item.quantity;
+
                 detailedCart.push({
                     product_id: item.variant_id,
                     name: productVariant.sku,
@@ -1551,61 +1539,94 @@ class OrderController {
                     total: price * item.quantity,
                 });
 
+                emailProducts.push({
+                    quantity: item.quantity,
+                    variant: {
+                        id: productVariant.id,
+                        sku: productVariant.sku,
+                        price: price,
+                        name: productVariant?.product?.name || productVariant.sku
+                    }
+                });
+
+                if (productVariant.stock < item.quantity) {
+                    await t.rollback();
+                    return res.redirect(
+                        `${process.env.FRONTEND_URL}/payment/failed?error=Insufficient_stock&productId=${item.variant_id}&orderId=${orderId}`
+                    );
+                }
                 productVariant.stock -= item.quantity;
                 await productVariant.save({ transaction: t });
             }
 
             if (promotion) {
-                const selectedVoucher = await PromotionModel.findByPk(promotion, {
+                const normalPromotion = await PromotionModel.findByPk(promotion, {
                     transaction: t,
                     lock: t.LOCK.UPDATE,
                 });
 
-                if (selectedVoucher) {
+                if (normalPromotion && !normalPromotion.special_promotion) {
                     const now = new Date();
                     if (
-                        selectedVoucher.status !== "active" ||
-                        now < selectedVoucher.start_date ||
-                        now > selectedVoucher.end_date ||
-                        selectedVoucher.quantity <= 0 ||
-                        totalPrice < parseFloat(selectedVoucher.min_price_threshold)
+                        normalPromotion.status !== "active" ||
+                        now < normalPromotion.start_date ||
+                        now > normalPromotion.end_date ||
+                        normalPromotion.quantity <= 0 ||
+                        totalPrice < parseFloat(normalPromotion.min_price_threshold)
                     ) {
-                        console.error("Khuyến mãi không hợp lệ");
                         await t.rollback();
                         return res.redirect(
-                            `${process.env.FRONTEND_URL}/payment/failed?error=Invalid_promotion&orderId=${orderId}`
+                            `${process.env.FRONTEND_URL}/payment/failed?error=Invalid_normal_promotion&orderId=${orderId}`
                         );
                     }
 
-                    if (selectedVoucher && promotion_user_id) {
-                        const promoUser = await PromotionUserModel.findOne({
-                            where: {
-                                id: parseInt(promotion_user_id),
-                                user_id,
-                                used: false,
-                                email_sent: true,
-                            },
-                            transaction: t,
-                            lock: t.LOCK.UPDATE,
-                        });
-
-                        if (!promoUser) {
-                            console.error(
-                                "Người dùng không có quyền sử dụng khuyến mãi đặc biệt"
-                            );
-                            await t.rollback();
-                            return res.redirect(
-                                `${process.env.FRONTEND_URL}/payment/failed?error=Unauthorized_promotion&orderId=${orderId}`
-                            );
-                        }
-
-                        promoUser.used = true;
-                        await promoUser.save({ transaction: t });
-                    }
-
-                    selectedVoucher.quantity -= 1;
-                    await selectedVoucher.save({ transaction: t });
+                    normalPromotion.quantity = Math.max(0, normalPromotion.quantity - 1);
+                    await normalPromotion.save({ transaction: t });
                 }
+            }
+
+            let promoUser = null;
+            if (promotion_user_id) {
+                promoUser = await PromotionUserModel.findOne({
+                    where: {
+                        id: parseInt(promotion_user_id),
+                        user_id,
+                        email_sent: true,
+                        used: false,
+                    },
+                    include: [
+                        { model: PromotionModel, as: "promotion", required: true },
+                    ],
+                    transaction: t,
+                    lock: t.LOCK.UPDATE,
+                });
+
+                if (!promoUser || !promoUser.promotion) {
+                    await t.rollback();
+                    return res.redirect(
+                        `${process.env.FRONTEND_URL}/payment/failed?error=Invalid_special_promotion&orderId=${orderId}`
+                    );
+                }
+
+                const specialPromotion = promoUser.promotion;
+                const now = new Date();
+                if (
+                    specialPromotion.status !== "active" ||
+                    now < specialPromotion.start_date ||
+                    now > specialPromotion.end_date ||
+                    specialPromotion.quantity <= 0 ||
+                    totalPrice < specialPromotion.min_price_threshold
+                ) {
+                    await t.rollback();
+                    return res.redirect(
+                        `${process.env.FRONTEND_URL}/payment/failed?error=Invalid_special_promotion&orderId=${orderId}`
+                    );
+                }
+
+                promoUser.used = true;
+                await promoUser.save({ transaction: t });
+                specialPromotion.quantity = Math.max(0, specialPromotion.quantity - 1);
+                await specialPromotion.save({ transaction: t });
             }
 
             if (!decoded.address) {
@@ -1620,7 +1641,7 @@ class OrderController {
                 {
                     user_id,
                     promotion_id: promotion || null,
-                    promotion_user_id: promotion_user_id || null,
+                    promotion_user_id: promoUser?.id || null,
                     name: decoded.name || "",
                     phone: decoded.phone || "",
                     email: decoded.email,
@@ -1647,10 +1668,9 @@ class OrderController {
                 quantity: item.quantity,
                 price: item.price,
             }));
-
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
-            const successfullyOrderedProductIds = products.map((p) => p.variant_id);
+            const successfullyOrderedProductIds = products.map((p) => p.variant_id || p.variant_id);
             await CartModel.destroy({
                 where: {
                     user_id,
@@ -1661,19 +1681,27 @@ class OrderController {
 
             await t.commit();
 
-            await OrderController.sendOrderConfirmationEmail(
-                newOrder,
-                { name, phone },
-                updatedProducts,
-                email,
-                new Date()
-            );
+            try {
+                await OrderController.sendOrderConfirmationEmail(
+                    newOrder,
+                    { name, phone },
+                    emailProducts,
+                    email,
+                    new Date()
+                );
+            } catch (mailErr) {
+                console.error("Lỗi gửi email xác nhận đơn hàng:", mailErr);
+            }
 
             return res.redirect("http://localhost:3000/cart");
         } catch (error) {
-            await t.rollback();
-            console.error("Lỗi callback VNPay:", error.message);
-            console.error("Chi tiết lỗi:", error.stack);
+            if (t && t.finished !== "commit") {
+                try {
+                    await t.rollback();
+                } catch (rbErr) {
+                    console.error("Rollback error:", rbErr);
+                }
+            }
             const orderId = req.query.vnp_TxnRef || "unknown";
             return res.redirect(
                 `${process.env.FRONTEND_URL}/payment/failed?error=Server_error&orderId=${orderId}`

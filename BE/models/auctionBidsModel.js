@@ -9,19 +9,20 @@ const AuctionBidModel = connection.define('auction_bids', {
     },
     auction_id: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: false 
     },
     user_id: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: false 
     },
     bidAmount: {
-        type: DataTypes.DECIMAL(20, 2),
+        type: DataTypes.DECIMAL(30, 2),
         allowNull: false
     },
     bidTime: {
-        type: DataTypes.TIME,
-        allowNull: false
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
     }
 }, {
     tableName: 'auction_bids',

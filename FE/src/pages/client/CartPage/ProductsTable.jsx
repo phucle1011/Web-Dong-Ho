@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Constants from "../../../Constants";
-import { FaTrashAlt } from "react-icons/fa";
 import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
+import { FaTrashAlt, FaTrophy } from "react-icons/fa";
+import { decodeToken } from "../Helpers/jwtDecode";
 
 const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCartItemsChange }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -14,6 +15,53 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const [selectedItems, setSelectedItems] = useState([]);
   const [showAllMap, setShowAllMap] = useState({});
 
+  const meId = (() => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = decodeToken(token);
+      return Number(payload?.id || payload?.user_id || 0);
+    } catch {
+      return 0;
+    }
+  })();
+
+  const getTopBid = (bids = []) => {
+    if (!Array.isArray(bids) || bids.length === 0) return null;
+    const sorted = [...bids].sort((a, b) => {
+      const diff = Number(b.bidAmount) - Number(a.bidAmount);
+      if (diff !== 0) return diff;
+      const atA = new Date(a.bidTime || a.created_at || a.updated_at || 0);
+      const atB = new Date(b.bidTime || b.created_at || b.updated_at || 0);
+      return atA - atB;
+    });
+    return sorted[0];
+  };
+
+  const getAuctionInfo = (variant, userId) => {
+    const auctions = variant?.auctions || [];
+    for (const au of auctions) {
+
+      if (au?.status !== "ended") continue;
+
+      const top = getTopBid(au?.bids || []);
+      if (top && Number(top.user_id) === Number(userId)) {
+
+        const endedAt = au?.end_time || au?.ended_at || null;
+        const wonAt = endedAt || top?.bidTime || top?.created_at || null;
+        const deadline = addDays(wonAt, 1);
+
+        return {
+          isAuction: true,
+          bidAmount: Number(top.bidAmount) || 0,
+          wonAt,
+          deadline,
+          endedAt
+        };
+      }
+    }
+    return { isAuction: false, bidAmount: 0, wonAt: null, deadline: null, endedAt: null };
+  };
+
   const toggleShowAll = (id) => {
     setShowAllMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -22,6 +70,29 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const toggleShowName = (id) => {
     setShowNameMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
+
+  const addDays = (d, days) => {
+    if (!d) return null;
+    const x = new Date(d);
+    x.setDate(x.getDate() + days);
+    return x;
+  };
+
+  const formatDateLocal = (dateString) => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+
+    // Lấy giờ UTC để tránh cộng +7 giờ
+    const year = d.getUTCFullYear();
+    const month = `${d.getUTCMonth() + 1}`.padStart(2, "0");
+    const day = `${d.getUTCDate()}`.padStart(2, "0");
+    const hours = `${d.getUTCHours()}`.padStart(2, "0");
+    const minutes = `${d.getUTCMinutes()}`.padStart(2, "0");
+    const seconds = `${d.getUTCSeconds()}`.padStart(2, "0");
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
 
   useEffect(() => {
     const selectedTotal = calculateSelectedTotal();
@@ -63,6 +134,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
+      const auctionInfo = getAuctionInfo(item.variant, meId);
       const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
       const quantity = parseInt(item.quantity || 0);
       return total + price * quantity;
@@ -72,6 +144,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const calculateSelectedTotal = () => {
     return cartItems.reduce((total, item) => {
       if (selectedItems.includes(item.product_variant_id)) {
+        const auctionInfo = getAuctionInfo(item.variant, meId);
         const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
         const quantity = parseInt(item.quantity || 0);
         return total + price * quantity;
@@ -266,21 +339,29 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                 const variant = item.variant;
                 const image = variant?.images?.[0]?.image_url || "";
                 const originalPrice = parseFloat(variant.price || 0);
-                const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                // const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
                 const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
                 const quantity = item.quantity;
                 const stock = variant.stock;
-                const total = price * quantity;
+
                 const name = variant.product.name;
                 const attributes = item.variant.attributeValues || [];
                 const showAll = !!showAllMap[item.id];
                 const displayedAttrs = showAll ? attributes : attributes.slice(0, 2);
                 const showFullName = !!showNameMap[item.id];
 
+                const auctionInfo = getAuctionInfo(variant, meId);
+                const isAuction = auctionInfo.isAuction;
+                const price = isAuction
+                  ? auctionInfo.bidAmount
+                  : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                const total = price * quantity;
+
                 return (
                   <tr
                     key={item.id}
-                    className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""}`}
+                    className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""
+                      } ${isAuction ? "bg-white border-b hover:bg-gray-50" : ""}`}
                   >
                     <td className="text-center">
                       {stock === 0 ? (
@@ -337,7 +418,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                           const val = attr.value;
                           const isColor = name?.toLowerCase() === "color";
                           return (
-                              <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
+                            <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
                               <span className="font-semibold">{name}</span>
                               {isColor
                                 ? <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: val }} title={val} />
@@ -362,6 +443,16 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                       <div className="flex flex-col items-center gap-1">
                         <span className={`font-semibold ${discountPercent > 0 ? "text-red-500" : "text-black"}`}>
                           {Number(price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                          {isAuction && (
+                            <>
+                              <div className="mt-1 text-red-700">
+                                Hạn thanh toán đến:
+                                <span className="ml-1 font-semibold text-red-700">
+                                  {formatDateLocal(auctionInfo.deadline)}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </span>
                         {discountPercent > 0 && price < originalPrice && (
                           <span className="text-black-400 line-through text-xs">
@@ -375,16 +466,25 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                         <span className="text-sm text-red-500">Hết hàng</span>
                       ) : (
                         <div className="flex flex-col items-center justify-center gap-2">
-                          <QuantityInput
-                            quantity={quantity}
-                            stock={stock}
-                            onChange={(newQuantity) =>
-                              handleQuantityChange(item.product_variant_id, newQuantity)
-                            }
-                          />
-                          <span className="text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                            Còn lại: {stock}
-                          </span>
+
+                          {isAuction ? (
+                            <span className="text-sm text-gray-700"><span className="ml-2 text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">
+                              <FaTrophy className="inline mr-1" />
+                              Đấu giá
+                            </span></span>
+                          ) : (
+                            <>
+                              <QuantityInput
+                                quantity={quantity}
+                                stock={stock}
+                                onChange={(newQuantity) => handleQuantityChange(item.product_variant_id, newQuantity)}
+                              />
+                              <span className="text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                                Còn lại: {stock}
+                              </span>
+                            </>
+                          )}
+
                         </div>
                       )}
                     </td>
@@ -393,9 +493,13 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                     </td>
                     <td className="text-right py-4">
                       <button
-                        onClick={() => handleConfirmDelete(item.product_variant_id)}
-                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                        title="Xóa sản phẩm"
+                        onClick={() => !isAuction && handleConfirmDelete(item.product_variant_id)}
+                        disabled={isAuction}
+                        className={`p-2 rounded-full ${isAuction
+                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-red-50 text-red-500 hover:bg-red-100"
+                          }`}
+                        title={isAuction ? "Không thể xóa sản phẩm đấu giá" : "Xóa sản phẩm"}
                       >
                         <FaTrashAlt size={20} className="font-bold" />
                       </button>

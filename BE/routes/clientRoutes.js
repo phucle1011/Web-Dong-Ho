@@ -42,6 +42,8 @@ router.get('/auctions/balance', checkJWT, AuctionController.getBalance);
 router.post('/auctions/entry-otp', checkJWT, AuctionController.requestEntryOTP);
 router.post('/auctions/entry-otp/verify', checkJWT, AuctionController.verifyEntryOTP);
 router.get('/auctions', AuctionController.get);
+router.get('/auctions/:auctionId/bids', AuctionController.getBids);
+router.post('/auctions/:auctionId/bids', checkJWT, AuctionController.placeBid);
 
 //------------------[ HOME]------------------
 router.get("/products/getallnew", HomeController.getAllNewProducts);

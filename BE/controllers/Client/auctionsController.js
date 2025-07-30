@@ -2,8 +2,9 @@ const nodemailer = require("nodemailer");
 const moment = require('moment-timezone');
 const UserModel = require('../../models/usersModel');
 const AuctionModel = require('../../models/auctionsModel');
-const ProductVariantModel = require('../../models/productsModel');
+const ProductVariantModel = require('../../models/productVariantsModel');
 const ProductModel = require('../../models/productsModel');
+const AuctionBidModel = require('../../models/auctionBidsModel');
 
 const { Op } = require('sequelize');
 
@@ -115,90 +116,288 @@ class AuctionController {
     }
   }
 
- static async get(req, res) {
-      try {
-         const page = parseInt(req.query.page) || 1;
-         const limit = parseInt(req.query.limit) || 10;
-         const offset = (page - 1) * limit;
+  static async get(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
 
-         const { searchTerm, startDate, endDate, status } = req.query;
-         const whereClause = {};
+      const { searchTerm, startDate, endDate, status } = req.query;
+      const whereClause = {};
 
-         if (searchTerm) {
-            whereClause.product_variant_id = {
-               [Op.like]: `%${searchTerm}%`,
-            };
-         }
-
-         if (startDate || endDate) {
-            whereClause.start_time = {};
-            if (startDate) {
-               whereClause.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
-            }
-            if (endDate) {
-               whereClause.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
-            }
-         }
-
-         const allAuctions = await AuctionModel.findAll({
-            where: whereClause,
-            include: [
-               {
-                  model: ProductVariantModel,
-                  as: "variant",
-                  include: [
-                     {
-                        model: ProductModel,
-                        as: "product"
-                     }
-                  ]
-               }
-            ]
-         });
-
-         const statusCounts = {
-            all: allAuctions.length,
-            upcoming: allAuctions.filter(a => a.status === "upcoming").length,
-            active: allAuctions.filter(a => a.status === "active").length,
-            ended: allAuctions.filter(a => a.status === "ended").length,
-         };
-
-         let filteredAuctions = allAuctions;
-         if (status === "upcoming" || status === "active" || status === "ended") {
-            filteredAuctions = allAuctions.filter(a => a.status === status);
-         }
-
-         const statusPriority = { active: 1, upcoming: 2, ended: 3 };
-
-         filteredAuctions.sort((a, b) => {
-            const priorityA = statusPriority[a.status] || 99;
-            const priorityB = statusPriority[b.status] || 99;
-
-            if (priorityA === priorityB) {
-               return new Date(a.start_time) - new Date(b.start_time);
-            }
-
-            return priorityA - priorityB;
-         });
-
-         const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
-
-         return res.status(200).json({
-            status: 200,
-            message: "Lấy danh sách phiên đấu giá thành công",
-            data: paginatedAuctions,
-            pagination: {
-               currentPage: page,
-               totalPages: Math.ceil(filteredAuctions.length / limit),
-               totalItems: filteredAuctions.length,
-            },
-            statusCounts,
-         });
-      } catch (error) {
-         console.error("Lỗi khi lấy danh sách đấu giá:", error);
-         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+      if (searchTerm) {
+        whereClause.product_variant_id = {
+          [Op.like]: `%${searchTerm}%`,
+        };
       }
-   }
+
+      if (startDate || endDate) {
+        whereClause.start_time = {};
+        if (startDate) {
+          whereClause.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
+        }
+        if (endDate) {
+          whereClause.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
+        }
+      }
+
+      const allAuctions = await AuctionModel.findAll({
+        where: whereClause,
+        include: [
+          {
+            model: ProductVariantModel,
+            as: "variant",
+            include: [
+              {
+                model: ProductModel,
+                as: "product"
+              }
+            ]
+          }
+        ]
+      });
+
+      const statusCounts = {
+        all: allAuctions.length,
+        upcoming: allAuctions.filter(a => a.status === "upcoming").length,
+        active: allAuctions.filter(a => a.status === "active").length,
+        ended: allAuctions.filter(a => a.status === "ended").length,
+      };
+
+      let filteredAuctions = allAuctions;
+      if (status === "upcoming" || status === "active" || status === "ended") {
+        filteredAuctions = allAuctions.filter(a => a.status === status);
+      }
+
+      const statusPriority = { active: 1, upcoming: 2, ended: 3 };
+
+      filteredAuctions.sort((a, b) => {
+        const priorityA = statusPriority[a.status] || 99;
+        const priorityB = statusPriority[b.status] || 99;
+
+        if (priorityA === priorityB) {
+          return new Date(a.start_time) - new Date(b.start_time);
+        }
+
+        return priorityA - priorityB;
+      });
+
+      const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
+
+      return res.status(200).json({
+        status: 200,
+        message: "Lấy danh sách phiên đấu giá thành công",
+        data: paginatedAuctions,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(filteredAuctions.length / limit),
+          totalItems: filteredAuctions.length,
+        },
+        statusCounts,
+      });
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách đấu giá:", error);
+      return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+    }
+  }
+
+  static async getBids(req, res) {
+    try {
+      const { auctionId } = req.params;
+
+      const bids = await AuctionBidModel.findAll({
+        where: { auction_id: auctionId },
+        include: [
+          { model: UserModel, as: 'user', attributes: ['id', 'name', 'email'] }
+        ],
+        order: [['created_at', 'DESC']],
+      });
+
+      const data = bids.map(b => ({
+        id: b.id,
+        user_id: b.user_id,
+        user_name: b.user?.name || `User#${b.user_id}`,
+        bidAmount: Number(b.bidAmount),
+        bidTime: b.bidTime || b.created_at,
+      }));
+
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      console.error('Lỗi khi lấy lịch sử đấu giá:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+  }
+
+  static async placeBid(req, res) {
+    const t = await AuctionModel.sequelize.transaction();
+    try {
+      const { auctionId } = req.params;
+      const userId = req.user.id;
+      const { bidAmount } = req.body;
+
+      const amount = Number(bidAmount);
+      if (amount <= 0) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Giá đặt không hợp lệ' });
+      }
+
+      const auction = await AuctionModel.findOne({
+        where: { id: auctionId },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      if (!auction) {
+        await t.rollback();
+        return res.status(404).json({ success: false, message: 'Không tìm thấy phiên đấu giá' });
+      }
+
+      const now = new Date();
+      if (auction.status !== 'active' || new Date(auction.end_time) <= now) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Phiên đấu giá đã kết thúc' });
+      }
+
+      const currentPrice = Number(auction.current_price || auction.start_price || 0);
+      if (amount <= currentPrice) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Giá đặt phải cao hơn giá hiện tại' });
+      }
+
+      const bid = await AuctionBidModel.create({
+        auction_id: auctionId,
+        user_id: userId,
+        bidAmount: amount,
+        bidTime: new Date(),
+      }, { transaction: t });
+
+      auction.current_price = amount;
+      await auction.save({ transaction: t });
+
+      await t.commit();
+
+      const io = req.app.get('io');
+      io.to(`auction:${auctionId}`).emit('bid:new', {
+        auctionId: Number(auctionId),
+        currentPrice: amount,
+        highestBidUserId: userId,
+        bid: {
+          id: bid.id,
+          user_id: userId,
+          user_name: req.user.name || `User#${userId}`,
+          bidAmount: amount,
+          bidTime: bid.bidTime,
+        }
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Đặt giá thành công',
+        data: {
+          id: bid.id,
+          auction_id: bid.auction_id,
+          user_id: bid.user_id,
+          bidAmount: amount,
+          bidTime: bid.bidTime,
+          currentPrice: amount,
+        },
+      });
+    } catch (err) {
+      await t.rollback();
+      console.error('Lỗi placeBid:', err?.message, err?.stack);
+      return res.status(500).json({ success: false, message: err.message || 'Lỗi server' });
+    }
+
+  }
+
+    static async finalize(req, res) {
+    const { auctionId } = req.params;
+    const io = req.app.get("io");
+    const t = await AuctionModel.sequelize.transaction();
+
+    try {
+
+      const auction = await AuctionModel.findOne({
+        where: { id: auctionId },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!auction) {
+        await t.rollback();
+        return res
+          .status(404)
+          .json({ success: false, message: "Không tìm thấy phiên đấu giá" });
+      }
+
+      if (auction.status === "ended") {
+        await t.commit();
+        return res
+          .status(200)
+          .json({ success: true, message: "Phiên đã kết thúc từ trước" });
+      }
+
+      const topBid = await AuctionBidModel.findOne({
+        where: { auction_id: auctionId },
+        order: [
+          ["bidAmount", "DESC"],
+          ["created_at", "ASC"],
+        ],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (topBid) {
+        await AuctionBidModel.destroy({
+          where: {
+            auction_id: auctionId,
+            id: { [Op.ne]: topBid.id },
+          },
+          transaction: t,
+        });
+
+        auction.status = "ended";
+        auction.current_price = topBid.bidAmount;
+        await auction.save({ transaction: t });
+      } else {
+
+        await AuctionBidModel.destroy({
+          where: { auction_id: auctionId },
+          transaction: t,
+        });
+
+        auction.status = "ended";
+        await auction.save({ transaction: t });
+      }
+
+      await t.commit();
+
+      if (io) {
+        io.to(`auction:${auctionId}`).emit("auction:status", {
+          auctionId: Number(auctionId),
+          status: "ended",
+          winner: topBid
+            ? {
+                user_id: topBid.user_id,
+                bidAmount: Number(topBid.bidAmount),
+              }
+            : null,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Đã kết thúc phiên đấu giá",
+        data: topBid || null,
+      });
+    } catch (error) {
+      await t.rollback();
+      console.error("Finalize Auction Error:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Lỗi server khi kết thúc phiên" });
+    }
+  }
+
 }
 
 module.exports = AuctionController;

@@ -1,5 +1,4 @@
 require('dotenv').config();
-require('./config/middleware/auctionStatusJob');
 
 const express = require('express');
 const cors = require('cors');
@@ -80,7 +79,7 @@ app.use(cors({
 }));
 
 app.use(apiRoutes);
-app.use(clientRoutes);
+// app.use(clientRoutes);
 app.use('/admin', adminRoutes);
 app.use('/', authenticate, updateLastActive, clientRoutes);
 
@@ -96,14 +95,28 @@ const io = new Server(server, {
   },
 });
 
+// (tuỳ chọn) xác thực token ở handshake
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  // TODO: verify token -> socket.user = decoded
+  next();
+});
+
+// Join room theo auctionId
 io.on('connection', (socket) => {
-  socket.on('join', (userId) => {
-    socket.join(userId);
+  socket.on('auction:join', ({ auctionId }) => {
+    if (!auctionId) return;
+    socket.join(`auction:${auctionId}`);
   });
 
-  socket.on('disconnect', () => {
-  });
+  socket.on('disconnect', () => {});
 });
+
+// để controller dùng được io
+app.set('io', io);
+
+const runAuctionStatusJob = require('./config/middleware/auctionStatusJob');
+runAuctionStatusJob(io);
 
 server.listen(port, () => {
   console.log(`Server chạy tại http://localhost:${port}`);

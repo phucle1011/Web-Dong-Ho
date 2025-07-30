@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Layout from "../../Partials/LayoutHomeThree";
 import { FaGavel } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -6,8 +6,24 @@ import { decodeToken } from "../../Helpers/jwtDecode";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 import axios from "axios";
 import Constants from "../../../../Constants";
+import { io } from 'socket.io-client';
+import { useNavigate } from "react-router-dom";
 
 export default function AuctionRoom() {
+
+    const modalRef = useRef(null);
+
+    const navigate = useNavigate();
+    const [exitLocked, setExitLocked] = useState(false);
+    const guardedNavigate = (to) => {
+        if (exitLocked && countdown.ms > 0) {
+            toast.warning("Bạn đã đặt giá, không thể rời phòng cho đến khi phiên kết thúc.");
+            return;
+        }
+        navigate(to);
+    };
+    const socketRef = useRef(null);
+    const currentAuctionIdRef = useRef(null);
 
     const [activeAuction, setActiveAuction] = useState(null);
     const [loadingAuction, setLoadingAuction] = useState(true);
@@ -30,48 +46,245 @@ export default function AuctionRoom() {
 
     const [showAllAttributes, setShowAllAttributes] = useState(false);
 
+    const minAllowed = useMemo(() => {
+        const step = Number(activeAuction?.priceStep || bidStep || 0);
+        const base = Number(currentPrice || 0);
+        return step > 0 ? base + step : base + 1;
+    }, [activeAuction?.priceStep, bidStep, currentPrice]);
+
+    const [highestBidUserId, setHighestBidUserId] = useState(null);
+
+    const meId = Number(user?.id || user?.user_id);
+    const isMyHighest = meId && highestBidUserId && meId === Number(highestBidUserId);
+
     const formatVnd = (n) => (Number(n) || 0).toLocaleString("vi-VN") + " ₫";
 
-    const toVietnameseMillions = (n) => {
-        if (n % 1_000_000 !== 0) return null;
-        const millions = Math.round(n / 1_000_000);
-        const d = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-        const read2 = (x) => {
-            if (x < 10) return d[x];
-            const ch = Math.floor(x / 10), dv = x % 10;
-            if (ch === 1) return "mười" + (dv ? " " + (dv === 5 ? "lăm" : dv === 1 ? "mốt" : d[dv]) : "");
-            return d[ch] + " mươi" + (dv ? " " + (dv === 5 ? "lăm" : dv === 1 ? "mốt" : d[dv]) : "");
-        };
-        const read3 = (x) => {
-            if (x < 10) return d[x];
-            if (x < 100) return read2(x);
-            const tr = Math.floor(x / 100), du = x % 100;
-            return d[tr] + " trăm" + (du ? " " + (du < 10 ? "lẻ " + d[du] : read2(du)) : "");
-        };
-        return (read3(millions) + " triệu đồng").replace(/\s+/g, " ").trim();
-    };
-    const amountInWords = toVietnameseMillions(newBidPrice);
+    const [showWinModal, setShowWinModal] = useState(false);
+    const [winInfo, setWinInfo] = useState(null);
+    const handledWinRef = useRef(false);
 
-    const renderStars = (avgRating) => {
-        const full = Math.floor(avgRating);
-        const half = avgRating % 1 >= 0.5;
-        const empty = 5 - full - (half ? 1 : 0);
-        return (
-            <>
-                {Array(full)
-                    .fill()
-                    .map((_, i) => (
-                        <Star key={`f-${i}`} className="text-yellow-400 w-4 h-4" />
-                    ))}
-                {half && <StarHalf className="text-yellow-400 w-4 h-4" />}
-                {Array(empty)
-                    .fill()
-                    .map((_, i) => (
-                        <StarOutline key={`e-${i}`} className="text-gray-300 w-4 h-4" />
-                    ))}
-            </>
-        );
+    const [cooldownUntil, setCooldownUntil] = useState(null);
+    const [cooldownLeft, setCooldownLeft] = useState(0);
+
+    const [countdown, setCountdown] = useState({
+        label: "",
+        text: "",
+        ms: 0,
+    });
+
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const formatDuration = (ms) => {
+        const total = Math.max(0, Math.floor(ms / 1000));
+        const days = Math.floor(total / 86400);
+        const hours = Math.floor((total % 86400) / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const seconds = total % 60;
+        return days > 0
+            ? `${days}d ${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`
+            : `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
     };
+
+    const parseDbLocal = (iso) => {
+        if (!iso) return null;
+        const s = String(iso).replace('Z', '').replace(/\.\d+$/, '');
+        const [datePart, timePart = '00:00:00'] = s.split('T');
+        if (!datePart) return null;
+        const [y, m, d] = datePart.split('-').map(Number);
+        const [hh = 0, mm = 0, ss = 0] = timePart.split(':').map(Number);
+
+        return new Date(y, m - 1, d, hh, mm, ss);
+    };
+
+    useEffect(() => {
+        const s = io(Constants.DOMAIN_API, {
+            transports: ["websocket"],
+            auth: { token: localStorage.getItem("token") },
+        });
+        socketRef.current = s;
+
+        const onStatus = (payload) => {
+
+            const isCurrent = !!currentAuctionIdRef.current &&
+                String(payload.auctionId) === String(currentAuctionIdRef.current);
+
+            if (
+                payload.status === "ended" &&
+                payload.winner &&
+                Number(payload.winner.user_id) === Number(meId) &&
+                !handledWinRef.current
+            ) {
+                handledWinRef.current = true;
+                const name = activeAuction?.variant?.product?.name || "Sản phẩm đấu giá";
+                const sku = activeAuction?.variant?.sku ? ` (${activeAuction.variant.sku})` : "";
+                const productName = name + sku;
+
+                setWinInfo({
+                    productName,
+                    amount: Number(payload.winner.bidAmount || 0),
+                    auctionId: payload.auctionId,
+                });
+                setShowWinModal(true);
+            }
+
+            if (isCurrent) {
+                if (payload.status === "active") {
+                    if (payload.currentPrice != null) setCurrentPrice(Number(payload.currentPrice));
+                    setActiveAuction((prev) => (prev ? { ...prev, status: "active" } : prev));
+                    toast.success("Phiên đấu giá đã bắt đầu!");
+                } else if (payload.status === "ended") {
+                    toast.error("Phiên đấu giá đã kết thúc!");
+                    setExitLocked(false);
+                    setBids([]);
+                    setHighestBidUserId(null);
+                    setCurrentPrice(0);
+                    setImages([]);
+                    setSelectedImage("");
+                    setShowAllAttributes(false);
+                    currentAuctionIdRef.current = null;
+                    setActiveAuction(null);
+                    setLoadingAuction(false);
+                    fetchActiveAuction();
+                } else {
+                    setActiveAuction((prev) => (prev ? { ...prev, status: payload.status } : prev));
+                    if (payload.currentPrice != null) setCurrentPrice(Number(payload.currentPrice));
+                }
+            } else {
+                if (payload.status === "active") {
+                    fetchActiveAuction();
+                    socketRef.current?.emit("auction:join", { auctionId: payload.auctionId });
+                    toast.success("Có phiên mới vừa bắt đầu!");
+                }
+            }
+        };
+
+        const onBidNew = (payload) => {
+            if (String(payload.auctionId) !== String(currentAuctionIdRef.current)) return;
+
+            setCurrentPrice(Number(payload.currentPrice) || 0);
+            setHighestBidUserId(Number(payload.highestBidUserId) || null);
+            setBids((prev) => [
+                {
+                    user: payload.bid.user_name,
+                    amount: Number(payload.bid.bidAmount),
+                    time: new Date(payload.bid.bidTime).toLocaleTimeString("vi-VN"),
+                },
+                ...prev,
+            ]);
+            setCooldownUntil(new Date(Date.now() + 10_000));
+        };
+
+        s.on("auction:status", onStatus);
+        s.on("bid:new", onBidNew);
+
+        return () => {
+            s.off("auction:status", onStatus);
+            s.off("bid:new", onBidNew);
+            s.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
+        currentAuctionIdRef.current = activeAuction?.id ?? null;
+        if (socketRef.current && activeAuction?.id) {
+            socketRef.current.emit("auction:join", { auctionId: activeAuction.id });
+        }
+    }, [activeAuction?.id]);
+
+    useEffect(() => {
+        if (!activeAuction?.start_time || !activeAuction?.end_time) {
+            setCountdown({ label: "", text: "", ms: 0 });
+            return;
+        }
+
+        const startAt = parseDbLocal(activeAuction.start_time);
+        const endAt = parseDbLocal(activeAuction.end_time);
+
+        const tick = () => {
+            const now = new Date();
+            if (now < startAt) {
+                const ms = startAt - now;
+                setCountdown({ label: "Bắt đầu sau", text: formatDuration(ms), ms });
+                return;
+            }
+            if (now >= startAt && now < endAt) {
+                const ms = endAt - now;
+                setCountdown({ label: "Kết thúc sau", text: formatDuration(ms), ms });
+                return;
+            }
+            setCountdown({ label: "Đã kết thúc", text: "00:00:00", ms: 0 });
+        };
+
+        tick();
+        const itv = setInterval(tick, 1000);
+        return () => clearInterval(itv);
+    }, [activeAuction?.start_time, activeAuction?.end_time]);
+
+    const numberToVietnamese = (input) => {
+        let n = Math.round(Number(input) || 0);
+        if (n === 0) return "Không";
+
+        const d = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+        const units = ["", " nghìn", " triệu", " tỷ", " nghìn tỷ", " triệu tỷ"];
+
+        const readTens = (num) => {
+            const ch = Math.floor(num / 10);
+            const dv = num % 10;
+            if (ch === 0) return dv ? d[dv] : "";
+            if (ch === 1) {
+                if (dv === 0) return "mười";
+                if (dv === 5) return "mười lăm";
+                return "mười " + (dv === 1 ? "một" : d[dv]);
+            }
+            let res = d[ch] + " mươi";
+            if (dv === 0) return res;
+            if (dv === 1) return res + " mốt";
+            if (dv === 5) return res + " lăm";
+            return res + " " + d[dv];
+        };
+
+        const readHundreds = (num, full, isHighestBlock) => {
+            const tr = Math.floor(num / 100);
+            const du = num % 100;
+
+            if (isHighestBlock && tr === 0) {
+                if (du === 0) return "";
+                if (du < 10) return d[du];
+                return readTens(du);
+            }
+
+            let res = "";
+            if (full || tr > 0) {
+                res += d[tr] + " trăm";
+                if (du > 0 && du < 10) res += " lẻ " + d[du];
+                else if (du >= 10) res += " " + readTens(du);
+            } else {
+                if (du > 0 && du < 10) res += d[du];
+                else if (du >= 10) res += readTens(du);
+            }
+            return res.trim();
+        };
+
+        let parts = [];
+        let i = 0;
+        while (n > 0 && i < units.length) {
+            const block = n % 1000;
+            if (block > 0) {
+                const full = parts.length > 0;
+                const isHighestBlock = Math.floor(n / 1000) === 0;
+                const text = readHundreds(block, full, isHighestBlock);
+                if (text) parts.unshift(text + units[i]);
+            }
+            n = Math.floor(n / 1000);
+            i++;
+        }
+
+        const result = parts.join(" ").replace(/\s+/g, " ").trim();
+        return result.charAt(0).toUpperCase() + result.slice(1);
+    };
+
+    const amountInWords = useMemo(() => {
+        return numberToVietnamese(newBidPrice) + " đồng";
+    }, [newBidPrice]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -87,32 +300,38 @@ export default function AuctionRoom() {
             });
 
             const auction = res.data?.data?.[0];
+
             if (!auction) {
                 setActiveAuction(null);
-                toast.info("Hiện không có phiên đấu giá nào đang diễn ra.");
+                // toast.info("Hiện không có phiên đấu giá nào đang diễn ra.");
                 return;
             }
 
             setActiveAuction(auction);
 
-            const startPrice = Number(auction.start_price || 0);
-            const variantPrice = Number(auction.variant?.price || 0);
-            const initialPrice = startPrice || variantPrice || 0;
+            const initialPrice = Number(
+                auction?.current_price ??
+                auction?.start_price ??
+                auction?.variant?.price ??
+                0
+            );
             setCurrentPrice(initialPrice);
 
             if (auction.priceStep) setBidStep(Number(auction.priceStep));
 
             const imgList = [];
-            if (auction.variant?.product?.thumbnail) imgList.push(auction.variant.product.thumbnail);
-
+            if (auction.variant?.product?.thumbnail) {
+                imgList.push(auction.variant.product.thumbnail);
+            }
             if (imgList.length === 0) {
                 imgList.push("https://via.placeholder.com/800x600?text=No+Image");
             }
             setImages(imgList);
             setSelectedImage(imgList[0]);
+
         } catch (error) {
             console.error("Lỗi lấy phiên đang diễn ra:", error);
-            toast.error("Không thể tải phiên đấu giá đang diễn ra.");
+            // toast.error("Không thể tải phiên đấu giá đang diễn ra.");
         } finally {
             setLoadingAuction(false);
         }
@@ -124,54 +343,364 @@ export default function AuctionRoom() {
         return desc || "Sản phẩm đang được đấu giá với nhiều ưu đãi hấp dẫn.";
     }, [activeAuction]);
 
-
-    const handleBid = () => {
-        if (!activeAuction) {
-            toast.warning("Chưa có phiên đấu giá để đặt giá.");
-            return;
-        }
-        if (newBidPrice <= currentPrice) {
-            toast.warning("Giá đấu phải cao hơn giá hiện tại");
-            return;
-        }
-        const newBid = {
-            user: user?.name || "Người dùng ẩn danh",
-            amount: newBidPrice,
-            time: new Date().toLocaleTimeString("vi-VN"),
-        };
-        setBids((prev) => [newBid, ...prev]);
-        setCurrentPrice(newBidPrice);
-        setStepCount(1);
-    };
-
-
     const productName = activeAuction?.variant?.product?.name || "Sản phẩm";
     const productSku = activeAuction?.variant?.sku ? ` (${activeAuction.variant.sku})` : "";
     const fullName = productName + productSku;
     const brand = activeAuction?.variant?.product?.brand.name;
     const selectedVariant = activeAuction?.variant;
 
+    const handleBid = async () => {
+        if (!activeAuction) return;
+        if (isCooldown) return;
+        if (newBidPrice < minAllowed) {
+            toast.warning(`Giá tối thiểu phải từ ${formatVnd(minAllowed)}`);
+            return;
+        }
+        if (isMyHighest) {
+            toast.info('Bạn đang giữ giá cao nhất, chờ người khác trả.');
+            return;
+        }
+
+        try {
+            await axios.post(
+                `${Constants.DOMAIN_API}/auctions/${activeAuction.id}/bids`,
+                { bidAmount: newBidPrice },
+                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+            );
+            setCooldownUntil(new Date(Date.now() + 10_000));
+            setExitLocked(true);
+            setStepCount(1);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Lỗi khi đặt giá');
+        }
+    };
+
+    useEffect(() => {
+        if (!activeAuction) return;
+        fetchBids();
+    }, [activeAuction]);
+
+    const fetchBids = async () => {
+        try {
+            const res = await axios.get(`${Constants.DOMAIN_API}/auctions/${activeAuction.id}/bids`);
+            const rows = res.data?.data || [];
+
+            let top = null;
+            for (const b of rows) {
+                if (!top || Number(b.bidAmount) > Number(top.bidAmount)) top = b;
+            }
+
+            if (top) {
+                setCurrentPrice(Number(top.bidAmount));
+                setHighestBidUserId(Number(top.user_id));
+            } else {
+                setHighestBidUserId(null);
+
+                setCurrentPrice(prev => Number(activeAuction?.current_price ?? prev ?? 0));
+            }
+
+            const mapped = rows
+                .sort((a, b) => Number(b.bidAmount) - Number(a.bidAmount))
+                .map((b) => ({
+                    user: b.user_name,
+                    amount: Number(b.bidAmount),
+                    time: new Date(b.bidTime).toLocaleTimeString('vi-VN', { timeZone: 'UTC' })
+                }));
+
+            setBids(mapped);
+        } catch (e) {
+
+        }
+    };
+
+    const fireworks = useMemo(() => {
+        if (!showWinModal) return [];
+        const colors = ['#ff4081', '#ffd740', '#40c4ff', '#69f0ae'];
+        return Array.from({ length: 12 }).map((_, i) => ({
+            top: `${Math.random() * 100}%`,
+            left: `${Math.random() * 100}%`,
+            color: colors[i % colors.length],
+            delay: `${Math.random() * 0.6}s`,
+        }));
+    }, [showWinModal]);
+
+    useEffect(() => {
+        if (!showWinModal) return;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setShowWinModal(false);
+                navigate('/room');
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [showWinModal, navigate]);
+
+    useEffect(() => {
+        if (countdown.ms <= 0) {
+            setExitLocked(false);
+        }
+    }, [countdown.ms]);
+
+    useEffect(() => {
+
+        const shouldBlock = exitLocked && countdown.ms > 0;
+        if (!shouldBlock) return;
+
+        const onBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = "";
+        };
+        window.addEventListener("beforeunload", onBeforeUnload);
+
+        const push = () => window.history.pushState(null, "", window.location.href);
+        push();
+        const onPopState = (e) => {
+            push();
+            toast.info("Bạn đã đặt giá, không thể rời phòng cho đến khi phiên kết thúc.");
+        };
+        window.addEventListener("popstate", onPopState);
+
+        const onDocumentClick = (e) => {
+            const a = e.target.closest("a");
+            if (a && a.getAttribute("href")) {
+                e.preventDefault();
+                toast.warning("Bạn đã đặt giá, không thể rời phòng cho đến khi phiên kết thúc.");
+            }
+        };
+        document.addEventListener("click", onDocumentClick, true);
+
+        return () => {
+            window.removeEventListener("beforeunload", onBeforeUnload);
+            window.removeEventListener("popstate", onPopState);
+            document.removeEventListener("click", onDocumentClick, true);
+        };
+    }, [exitLocked, countdown.ms]);
+
+    const minPrice = currentPrice + bidStep;
+
+    useEffect(() => {
+        if (!showWinModal) return;
+
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const swallow = (e) => {
+            if (!modalRef.current) return;
+            if (!modalRef.current.contains(e.target)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+        document.addEventListener('click', swallow, true);
+        document.addEventListener('mousedown', swallow, true);
+        document.addEventListener('touchstart', swallow, true);
+
+        const onKeyDown = (e) => {
+            const allowed = ['Enter', ' '];
+            if (!allowed.includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+        document.addEventListener('keydown', onKeyDown, true);
+
+        const onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', onBeforeUnload);
+
+        const push = () => window.history.pushState(null, '', window.location.href);
+        push();
+        const onPopState = () => {
+            push();
+            toast.info('Bạn đã thắng phiên đấu giá, vui lòng xác nhận.');
+        };
+        window.addEventListener('popstate', onPopState);
+
+        return () => {
+            document.body.style.overflow = prevOverflow;
+            document.removeEventListener('click', swallow, true);
+            document.removeEventListener('mousedown', swallow, true);
+            document.removeEventListener('touchstart', swallow, true);
+            document.removeEventListener('keydown', onKeyDown, true);
+            window.removeEventListener('beforeunload', onBeforeUnload);
+            window.removeEventListener('popstate', onPopState);
+        };
+    }, [showWinModal]);
+
+    const onBidNew = (payload) => {
+        if (String(payload.auctionId) !== String(currentAuctionIdRef.current)) return;
+
+        setCurrentPrice(Number(payload.currentPrice) || 0);
+        setHighestBidUserId(Number(payload.highestBidUserId) || null);
+
+        // Cập nhật lịch sử
+        setBids((prev) => [
+            {
+                user: payload.bid.user_name,
+                amount: Number(payload.bid.bidAmount),
+                time: new Date(payload.bid.bidTime).toLocaleTimeString("vi-VN"),
+            },
+            ...prev,
+        ]);
+
+        setCooldownUntil(new Date(Date.now() + 10_000));
+    };
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (!cooldownUntil) {
+                setCooldownLeft(0);
+                return;
+            }
+            const left = cooldownUntil - Date.now();
+            if (left <= 0) {
+                setCooldownUntil(null);
+                setCooldownLeft(0);
+            } else {
+                setCooldownLeft(left);
+            }
+        }, 500);
+        return () => clearInterval(timer);
+    }, [cooldownUntil]);
+
+    const isCooldown = !!cooldownUntil && Date.now() < cooldownUntil;
+
     return (
         <Layout>
+            <style>
+                {`
+    @keyframes fadeInZoom {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes glow {
+      0% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+      50% { box-shadow: 0 0 20px rgba(255,255,255,0.8); }
+      100% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+    }
+    .animate-glow {
+      animation: glow 1.8s ease-in-out infinite;
+    }
+
+    /* Hiệu ứng pop in modal */
+    @keyframes popIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      70% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    .animate-pop-in {
+      animation: popIn 0.6s ease-out forwards;
+    }
+
+    /* Pháo hoa */
+    .firework {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0;
+      animation: explode 1.2s ease-out forwards;
+    }
+    @keyframes explode {
+      0% { transform: scale(0); opacity: 1; }
+      80% { transform: scale(1.5); opacity: 1; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+      /* Pop-in: nhỏ -> lớn có nhẹ bounce */
+@keyframes popIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-pop-in { animation: popIn 0.6s ease-out forwards; }
+
+/* Overlay mờ dần */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.overlay-fade { animation: fadeIn .25s ease-out; }
+
+/* Pháo hoa */
+.firework {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0;
+  animation: explode 1.2s ease-out forwards;
+}
+@keyframes explode {
+  0%   { transform: scale(0);   opacity: 1; }
+  80%  { transform: scale(1.5); opacity: 1; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+  `}
+            </style>
 
             <div
-                className="relative bg-center bg-cover h-[400px] flex items-center justify-center text-white text-4xl font-bold"
+                className="relative bg-center bg-cover h-[400px] flex flex-col items-center justify-center"
                 style={{
                     backgroundImage:
                         "url('https://res.cloudinary.com/disgf4yl7/image/upload/v1753806364/ayx4l3umypbc3cwswdza.avif')",
                 }}
             >
-                <div className="bg-black bg-opacity-50 px-6 py-3 rounded">
-                    Phòng Đấu Giá Trực Tuyến
+                <div className="absolute inset-0 bg-black/40"></div>
+
+                {/* Tiêu đề */}
+                <div
+                    className="relative z-10 px-8 py-4 rounded-xl 
+     from-[#ff416c]/80 to-[#ff4b2b]/80
+    text-3xl md:text-5xl font-extrabold text-white shadow-2xl
+    animate-[fadeInZoom_1s_ease-out]"
+                >
+                    <span className="tracking-wide drop-shadow-lg">
+                        Phòng Đấu Giá Trực Tuyến
+                    </span>
                 </div>
+
+                {countdown.text && (
+                    <div
+                        className={`relative z-10 mt-4 px-6 py-2 rounded-2xl shadow-lg text-xl font-bold tracking-wider flex items-center gap-2
+      ${countdown.label === "Kết thúc sau"
+                                ? "bg-gradient-to-r from-blue-500 to-blue-700 text-white animate-pulse animate-glow"
+                                : "bg-gradient-to-r from-blue-500 to-blue-700 text-white animate-glow"
+                            }`}
+                    >
+                        <span className="text-2xl">Kết thúc sau:</span>
+                        <span>{countdown.text}</span>
+                    </div>
+                )}
+                <style>
+                    {`
+      @keyframes fadeInZoom {
+        0% { opacity: 0; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+      @keyframes glow {
+        0% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+        50% { box-shadow: 0 0 20px rgba(255,255,255,0.8); }
+        100% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+      }
+      .animate-glow {
+        animation: glow 1.8s ease-in-out infinite;
+      }
+    `}
+                </style>
             </div>
 
             <div className="container-x mx-auto py-12 px-4">
                 {loadingAuction ? (
                     <div className="text-center text-gray-500 py-12">Đang tải phiên đang diễn ra...</div>
                 ) : !activeAuction ? (
-                    <div className="text-center text-gray-500 py-12">
-                        Hiện không có phiên đấu giá nào đang diễn ra.
+                    <div className="text-center py-12">
+                        <div className="inline-block px-6 py-4 
+                  bg-gradient-to-r from-blue-400 to-blue-600
+                  text-white text-lg font-bold rounded-xl shadow-lg animate-bounce mt-5">
+                            Hiện không có phiên đấu giá nào đang diễn ra
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -346,14 +875,14 @@ export default function AuctionRoom() {
                             <div className="rounded-2xl bg-slate-900 text-slate-100 p-6 shadow-xl ring-1 ring-slate-800">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-base font-semibold flex items-center gap-2">Giá hiện tại</h2>
-                                    <div className="text-lg font-bold">{formatVnd(currentPrice)}</div>
+                                    <div className="text-lg font-bold text-red-500">{formatVnd(currentPrice)}</div>
                                 </div>
 
                                 <div className="mt-4">
                                     <div className="text-xs text-slate-400 mb-2">Bước giá</div>
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="px-4 py-2 bg-slate-800 rounded-lg font-semibold">
-                                            {bidStep.toLocaleString("vi-VN")}
+                                            {formatVnd(bidStep)}
                                         </div>
                                         <div className="text-slate-400 font-bold">×</div>
                                         <div className="flex items-center gap-3 bg-slate-800 rounded-lg px-3 py-2">
@@ -363,7 +892,7 @@ export default function AuctionRoom() {
                                                 className="w-7 h-7 grid place-content-center rounded-full border border-slate-600 text-slate-200"
                                                 aria-label="Giảm"
                                             >
-                                                –
+                                                -
                                             </button>
                                             <div className="min-w-[24px] text-center font-semibold">{stepCount}</div>
                                             <button
@@ -380,22 +909,48 @@ export default function AuctionRoom() {
 
                                 <div className="my-4 h-px bg-slate-800" />
 
-                                <div className="text-center text-slate-300 font-medium">
-                                    {incrementAmount.toLocaleString("vi-VN")}
+                                <div className="text-center font-medium text-green-500">
+                                    {formatVnd(minPrice)}
+                                </div>
+                                <div className="text-center text-xs text-slate-400 mt-1">
+                                    Giá tối thiểu có thể đặt
                                 </div>
 
+                                {/* <button
+                                    type="button"
+                                    onClick={handleBid}
+                                    disabled={!activeAuction || isMyHighest}
+                                    className={`mt-4 w-full h-12 rounded-full font-semibold shadow
+    ${isMyHighest
+                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                            : 'bg-blue-200 hover:bg-blue-300 text-blue-900'}
+  `}
+                                >
+                                    Trả giá <span className="font-extrabold">{formatVnd(newBidPrice)}</span>
+                                </button> */}
                                 <button
                                     type="button"
                                     onClick={handleBid}
-                                    disabled={!activeAuction}
-                                    className="mt-4 w-full h-12 rounded-full font-semibold shadow 
-                    bg-blue-200 hover:bg-blue-300 text-blue-900 disabled:opacity-50"
+                                    disabled={!activeAuction || isMyHighest || isCooldown}
+                                    className={`mt-4 w-full h-12 rounded-full font-semibold shadow
+    ${isCooldown || isMyHighest
+                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                            : 'bg-blue-200 hover:bg-blue-300 text-blue-900'}
+  `}
                                 >
-                                    Trả giá <span className="font-extrabold">{formatVnd(newBidPrice)}</span>
+                                    {isCooldown
+                                        ? `Đang tạm khóa (${Math.ceil(cooldownLeft / 1000)}s)`
+                                        : <>Trả giá <span className="font-extrabold">{formatVnd(newBidPrice)}</span></>}
                                 </button>
 
+                                {isMyHighest && (
+                                    <div className="mt-2 text-center text-amber-400 text-sm">
+                                        Bạn đang giữ giá cao nhất, hãy chờ người khác trả giá.
+                                    </div>
+                                )}
+
                                 <div className="mt-2 text-center text-slate-400 text-sm">
-                                    {amountInWords || `${formatVnd(newBidPrice)} (đồng)`}
+                                    {amountInWords}
                                 </div>
                             </div>
 
@@ -421,6 +976,73 @@ export default function AuctionRoom() {
                     </div>
                 )}
             </div>
+            {showWinModal && winInfo && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center"
+                    onClick={() => {
+                        setShowWinModal(false);
+                        navigate("/room");
+                    }}
+                >
+
+                    <div className="absolute inset-0 bg-black/50 overlay-fade" />
+
+                    {fireworks.map((fw, idx) => (
+                        <div
+                            key={idx}
+                            className="firework"
+                            style={{
+                                top: fw.top,
+                                left: fw.left,
+                                background: fw.color,
+                                animationDelay: fw.delay,
+                            }}
+                        />
+                    ))}
+
+                    <div
+                        className="relative mx-4 w-full max-w-md rounded-2xl bg-blue-to-r from-pink-500 via-red-400 to-yellow-400 p-1 shadow-2xl animate-pop-in"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="bg-white rounded-2xl p-6 relative">
+
+                            <div className="flex items-center justify-center">
+                                <div className="h-16 w-16 rounded-full bg-green-100 grid place-content-center">
+                                    <span className="text-3xl">🎉</span>
+                                </div>
+                            </div>
+                            <h3 className="mt-4 text-center text-2xl font-extrabold text-pink-600">
+                                Chúc mừng! Bạn đã thắng phiên đấu giá
+                            </h3>
+                            <p className="mt-3 text-center text-gray-700 text-lg">
+                                <span className="font-bold text-purple-600">{winInfo.productName}</span> đã được thêm vào giỏ hàng!
+                            </p>
+                            <p className="mt-2 text-center text-gray-800 font-medium">
+                                Giá chiến thắng:
+                                <span className="text-red-600 font-bold">
+                                    {" "}{Number(winInfo.amount || 0).toLocaleString("vi-VN")} ₫
+                                </span>
+                            </p>
+                            <p className="mt-2 text-center text-sm text-gray-600">
+                                Vui lòng thanh toán ngay, sản phẩm sẽ bị xóa nếu không thanh toán trong vòng 24h.
+                            </p>
+
+                            <div className="mt-6 grid gap-3 text-center">
+                                <button
+                                    onClick={() => {
+                                        setShowWinModal(false);
+                                        navigate("/cart");
+                                    }}
+                                    className="h-11 rounded-xl bg-gradient-to-r from-blue-400 to-blue-600 font-semibold text-white hover:from-pink-600 hover:to-red-600 text-center"
+                                >
+                                    Thanh toán ngay
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </Layout>
     );
 }
