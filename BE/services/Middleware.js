@@ -10,7 +10,7 @@ const authenticate = async (req, res, next) => {
     const user = await User.findByPk(decoded.id);
     if (!user) return res.status(401).json({ message: "Xác thực thất bại." });
 
-    req.user = { id: user.id }; // bạn có thể gán thêm email, name nếu muốn
+    req.user = { id: user.id }; 
     next();
   } catch (err) {
     return res.status(401).json({ message: "Token không hợp lệ." });

@@ -73,7 +73,7 @@ function BlogCategoryadd() {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="mb-6">
-          <label className="block font-medium mb-2">Tên danh mục *</label>
+          <label className="block font-medium mb-2">Tên danh mục </label>
           <input
             type="text"
             className="w-full border px-4 py-3 rounded"
@@ -81,6 +81,7 @@ function BlogCategoryadd() {
             {...register("name", {
               required: "Tên danh mục không được để trống",
               minLength: { value: 4, message: "Phải ít nhất 4 ký tự" },
+              maxLength: { value: 100, message: "Tên danh mục quá dài " },
             })}
           />
           {errors.name && (
@@ -88,8 +89,8 @@ function BlogCategoryadd() {
           )}
         </div>
 
-        <div className="mb-6">
-          <label className="block font-medium mb-2">Mô tả *</label>
+        {/* <div className="mb-6">
+          <label className="block font-medium mb-2">Mô tả </label>
           <textarea
             rows={4}
             className="w-full border px-4 py-3 rounded"
@@ -101,10 +102,10 @@ function BlogCategoryadd() {
           {errors.description && (
             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
           )}
-        </div>
+        </div> */}
 
         <div className="mb-6">
-          <label className="block font-medium mb-2">Trạng thái *</label>
+          <label className="block font-medium mb-2">Trạng thái </label>
           <select
             className="w-full border px-4 py-3 rounded"
             {...register("status", {

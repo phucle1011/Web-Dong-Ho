@@ -10,7 +10,8 @@ import {
   FaAngleDoubleLeft,
   FaAngleDoubleRight,
   FaEdit,
-  FaTrashAlt
+  FaTrashAlt,
+  FaSearch 
 } from "react-icons/fa";
 
 function Blogcategory() {
@@ -20,6 +21,7 @@ function Blogcategory() {
   const [totalPages, setTotalPages] = useState(1);
   const perPage = 10;
   const navigate = useNavigate();
+  const [showFullId, setShowFullId] = useState(null);
 
   // Modal xóa
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -45,10 +47,47 @@ function Blogcategory() {
     }
   };
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchCategories(1, searchTerm);
+  const handleSearch = async () => {
+    try {
+      if (!searchTerm.trim()) {
+        toast.info("Vui lòng nhập từ khóa tìm kiếm.");
+        return;
+      }
+
+      // Gọi API đã có lọc searchTerm để lấy toàn bộ danh mục khớp
+      const filteredRes = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
+        params: { page: 1, limit: 1000, searchTerm: searchTerm.trim() }
+      });
+
+      const filteredData = filteredRes.data.data || [];
+
+      if (filteredData.length === 0) {
+        toast.info("Không tìm thấy danh mục nào.");
+        setCategories([]);
+        setTotalPages(1);
+        setCurrentPage(1);
+        return;
+      }
+
+      // Tìm vị trí dòng đầu tiên chứa kết quả
+      const index = 0;
+      const pageOfResult = Math.floor(index / perPage) + 1;
+
+      // Gọi lại API chính xác trang đang chứa kết quả đầu tiên
+      const resultRes = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
+        params: { page: pageOfResult, limit: perPage, searchTerm: searchTerm.trim() }
+      });
+
+      setCategories(resultRes.data.data || []);
+      setTotalPages(resultRes.data.pagination?.totalPages || 1);
+      setCurrentPage(pageOfResult);
+    } catch (err) {
+      toast.error("Lỗi tìm kiếm.");
+      console.error(err);
+    }
   };
+
+
 
   const confirmDelete = async ({ id }) => {
     try {
@@ -61,10 +100,12 @@ function Blogcategory() {
       }
     } catch (error) {
       console.error("Lỗi khi xóa danh mục:", error);
-      toast.error("Không thể xóa danh mục.");
+      const message = error.response?.data?.message || "Không thể xóa danh mục.";
+      toast.error(message);
     }
-    setIsDeleteOpen(false); // đóng modal sau khi xử lý
+    setIsDeleteOpen(false);
   };
+
 
   const renderPagination = () => {
     const pages = [];
@@ -108,34 +149,59 @@ function Blogcategory() {
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           className="border rounded w-full px-3 py-2"
         />
-        <button onClick={handleSearch} className="bg-[#073272] text-white px-4 py-2 rounded">Tìm</button>
+        <button onClick={handleSearch} className="bg-[#073272] text-white px-4 py-2 rounded"><FaSearch /></button>
       </div>
 
       <table className="w-full table-auto border border-collapse border-gray-300">
         <thead className="bg-gray-100">
           <tr>
-            <th className="border p-2">#</th>
-            <th className="border p-2">Tên danh mục</th>
-            <th className="border p-2">Slug</th>
-            <th className="border p-2">Trạng thái</th>
-            <th className="border p-2">Ngày tạo</th>
-            <th className="border p-2">Hành động</th>
+            <th className="border p-2 text-center">#</th>
+            <th className="border p-2 text-center">Tên danh mục</th>
+            <th className="border p-2 text-center">Trạng thái</th>
+            <th className="border p-2 text-center"></th>
           </tr>
         </thead>
+
         <tbody>
           {categories.map((cat, index) => (
-            <tr key={cat.id} className="hover:bg-gray-50">
-              <td className="border p-2 text-center">{(currentPage - 1) * perPage + index + 1}</td>
-              <td className="border p-2">{cat.name}</td>
-              <td className="border p-2">{cat.slug}</td>
-              <td className="border p-2 text-center">
-                <span className={`px-2 py-1 rounded-full text-xs ${cat.status ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+            <tr key={cat.id} className="hover:bg-gray-50 text-center">
+              {/* STT */}
+              <td className="border p-2">{(currentPage - 1) * perPage + index + 1}</td>
+
+              {/* Tên danh mục */}
+              <td className="border p-2 max-w-[300px] text-left whitespace-nowrap overflow-hidden text-ellipsis">
+                {cat.name.length <= 50 ? (
+                  cat.name
+                ) : (
+                  <>
+                    {showFullId === cat.id ? cat.name : `${cat.name.slice(0, 50)} `}
+                    {showFullId !== cat.id && (
+                      <button
+                        onClick={() => setShowFullId(cat.id)}
+                        className="text-blue-500 underline ml-1"
+                      >
+                        ...
+                      </button>
+                    )}
+                  </>
+                )}
+              </td>
+
+              {/* Trạng thái */}
+              <td className="border p-2">
+                <span
+                  className={`px-2 py-1 rounded-full text-xs ${cat.status
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                    }`}
+                >
                   {cat.status ? "Hiển thị" : "Ẩn"}
                 </span>
               </td>
-              <td className="border p-2 text-center">{new Date(cat.created_at).toLocaleDateString("vi-VN")}</td>
-              <td>
-                <div className="flex gap-2 justify-center">
+
+              {/* Hành động */}
+              <td className="border p-2">
+                <div className="flex justify-center gap-2">
                   <button
                     className="btn btn-warning btn-sm"
                     onClick={() => navigate(`/admin/blogcategory/edit/${cat.id}`)}
@@ -149,13 +215,14 @@ function Blogcategory() {
                       setIsDeleteOpen(true);
                     }}
                   >
-                    <FaTrashAlt size={20} className="font-bold" />
+                    <FaTrashAlt size={20} />
                   </button>
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
+
       </table>
 
       {renderPagination()}

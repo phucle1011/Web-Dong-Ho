@@ -8,14 +8,18 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaAngleDoubleRight,
-  FaEye
+  FaEye,
+  FaSearch
 } from "react-icons/fa";
+import { toast } from "react-toastify";
+import { decodeToken } from "../../../client/Helpers/jwtDecode";
 
 function CommentPage() {
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [unrepliedComments, setUnrepliedComments] = useState([]);
@@ -31,8 +35,13 @@ function CommentPage() {
   }, [allProducts, statusFilter]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+    setTotalPages(Math.ceil(filteredProducts.length / limit));
+  }, [filteredProducts]);
+
+  const currentData = filteredProducts.slice(
+    (currentPage - 1) * limit,
+    currentPage * limit
+  );
 
   const applyFilter = () => {
     if (statusFilter === "reply") return;
@@ -47,55 +56,44 @@ function CommentPage() {
         data.sort((a, b) => parseFloat(b.average_rating) - parseFloat(a.average_rating));
         break;
       case "lowest_rating":
-        data = data.filter((p) => parseFloat(p.average_rating) <= 2);
-        data.sort((a, b) => parseFloat(a.average_rating) - parseFloat(b.average_rating));
+        data = data.sort((a, b) => parseFloat(a.average_rating) - parseFloat(b.average_rating));
         break;
       default:
-        data.sort((a, b) => a.product_sku.localeCompare(b.product_sku));
+        data.sort((a, b) => (a.product_name || "").localeCompare(b.product_name || ""));
     }
     setFilteredProducts(data);
     setCurrentPage(1);
   };
 
-  const filteredAndSearched = filteredProducts.filter((product) =>
-    product.product_sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredAndSearched.length / limit);
-  const currentData = filteredAndSearched.slice(
-    (currentPage - 1) * limit,
-    currentPage * limit
-  );
-
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/list`);
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/list?includeReplies=true`);
       const comments = response.data.data || [];
       const productMap = {};
       const unrepliedList = [];
 
       comments.forEach((comment) => {
-        const productId = comment?.orderDetail?.product_variant_id;
-        const sku = comment?.orderDetail?.variant?.sku;
+        const productId = comment?.orderDetail?.variant?.product?.id;
+        const productName = comment?.orderDetail?.variant?.product?.name;
         const rating = comment?.rating;
         const parentId = comment?.parent_id;
 
-        if (!productId || !sku) return;
+        if (!productId || !productName) return;
 
         if (!productMap[productId]) {
           productMap[productId] = {
             product_id: productId,
-            product_sku: sku,
+            product_name: productName,
             total_comments: 0,
             total_rating: 0,
             unreplied_comments: 0,
           };
         }
 
-        productMap[productId].total_comments += 1;
-        productMap[productId].total_rating += rating || 0;
-
         if (parentId === null) {
+          productMap[productId].total_comments += 1;
+          productMap[productId].total_rating += rating || 0;
+
           const hasReply = comments.some((c) => c.parent_id === comment.id);
           if (!hasReply) {
             productMap[productId].unreplied_comments += 1;
@@ -113,25 +111,78 @@ function CommentPage() {
       }));
 
       setAllProducts(result);
+      setFilteredProducts(result); // 👈 Gán dữ liệu mặc định để hiển thị
       setUnrepliedComments(unrepliedList);
     } catch (error) {
       console.error("Lỗi lấy danh sách bình luận:", error);
     }
   };
 
+  const handleSearch = () => {
+    const term = searchTerm.trim().toLowerCase();
+    const result = allProducts.filter(product =>
+      product.product_name?.toLowerCase().includes(term)
+    );
+    setFilteredProducts(result);
+    setCurrentPage(1);
+
+    if (result.length === 0) {
+      toast.info("Không tìm thấy sản phẩm nào.");
+    }
+  };
+
   const handleReplySubmit = async (parentId) => {
     if (!replyText.trim()) return;
+
+    const token = localStorage.getItem("token");
+    const decoded = decodeToken(token);
+    const userId = decoded?.id;
+
+    if (!userId) {
+      toast.error("Không xác định được user_id từ token.");
+      return;
+    }
+
     try {
       await axios.post(`${Constants.DOMAIN_API}/admin/comment/reply`, {
         parent_id: parentId,
         comment_text: replyText,
+        user_id: userId,
       });
+
+      toast.success("Đã gửi trả lời thành công");
       setReplyText("");
       setExpandedCommentId(null);
       fetchComments();
     } catch (error) {
-      console.error("Lỗi gửi trả lời:", error);
+      toast.error("Gửi trả lời thất bại");
     }
+  };
+
+  const renderPagination = () => {
+    const pages = [];
+    const start = Math.max(1, currentPage - 1);
+    const end = Math.min(totalPages, currentPage + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`px-3 py-1 border rounded ${i === currentPage ? "bg-blue-600 text-white" : "bg-white"}`}
+        >
+          {i}
+        </button>
+      );
+    }
+    return (
+      <div className="flex justify-center gap-2 mt-4">
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)}><FaAngleDoubleLeft /></button>
+        <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}><FaChevronLeft /></button>
+        {pages}
+        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}><FaChevronRight /></button>
+        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)}><FaAngleDoubleRight /></button>
+      </div>
+    );
   };
 
   return (
@@ -142,6 +193,7 @@ function CommentPage() {
             <div className="card-body p-4">
               <h5 className="card-title fw-semibold mb-4">Bình luận theo sản phẩm</h5>
 
+              {/* Tabs */}
               <div className="flex flex-wrap items-center gap-6 border-b border-gray-200 px-6 py-4 mb-4">
                 {[{
                   key: "all", label: "Tất cả sản phẩm"
@@ -157,8 +209,7 @@ function CommentPage() {
                   <button
                     key={key}
                     onClick={() => setStatusFilter(key)}
-                    className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"
-                      }`}
+                    className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${statusFilter === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
                   >
                     <span>{label}</span>
                     {key === "reply" && (
@@ -168,38 +219,28 @@ function CommentPage() {
                 ))}
               </div>
 
-              {/* Tìm kiếm */}
-              {statusFilter !== "reply" && (
-                <div className="mb-4 d-flex" style={{ maxWidth: "100%" }}>
-                  <input
-                    type="text"
-                    className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
-                    placeholder="Tìm sản phẩm ..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2"
+              {/* Search input */}
+              <div className="mb-4 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Tìm sản phẩm..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="border rounded w-full px-3 py-2"
+                />
+                <button onClick={handleSearch} className="bg-[#073272] text-white px-4 py-2 rounded"><FaSearch /></button>
+              </div>
 
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-
-              {/* Hiển thị bảng */}
+              {/* Table */}
               {statusFilter !== "reply" ? (
                 <div className="table-responsive">
                   <table className="table text-nowrap mb-0 align-middle">
                     <thead className="text-dark fs-4">
                       <tr>
-                        <th>STT</th>
+                        <th>#</th>
                         <th>Sản phẩm</th>
                         <th>Tổng bình luận</th>
-                        <th>Chưa trả lời</th>
                         <th>Trung bình đánh giá</th>
                         <th>Hành động</th>
                       </tr>
@@ -208,9 +249,8 @@ function CommentPage() {
                       {currentData.map((product, index) => (
                         <tr key={product.product_id}>
                           <td>{(currentPage - 1) * limit + index + 1}</td>
-                          <td>{product.product_sku}</td>
+                          <td>{product.product_name}</td>
                           <td>{product.total_comments}</td>
-                          <td>{product.unreplied_comments || 0}</td>
                           <td>{product.average_rating}</td>
                           <td>
                             <Link to={`/admin/comments/detail/${product.product_id}`} className="bg-blue-500 text-white p-2 rounded w-10 h-10 inline-flex items-center justify-center"><FaEye size={16} className="font-bold" /></Link>
@@ -219,13 +259,14 @@ function CommentPage() {
                       ))}
                     </tbody>
                   </table>
+                  {renderPagination()}
                 </div>
               ) : (
                 <div className="table-responsive">
                   <table className="table text-nowrap mb-0 align-middle">
                     <thead className="text-dark fs-4">
                       <tr>
-                        <th>STT</th>
+                        <th>#</th>
                         <th>Người dùng</th>
                         <th>Nội dung</th>
                         <th>Số sao</th>

@@ -84,7 +84,7 @@ function BlogCategoryEdit() {
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         {/* Tên danh mục */}
         <div className="mb-6">
-          <label className="block font-medium mb-2">Tên danh mục *</label>
+          <label className="block font-medium mb-2">Tên danh mục </label>
           <input
             type="text"
             className="w-full border px-4 py-3 rounded"
@@ -95,6 +95,7 @@ function BlogCategoryEdit() {
                 value: 4,
                 message: "Tên danh mục phải ít nhất 4 ký tự",
               },
+              maxLength: { value: 100, message: "Tên danh mục quá dài " }
             })}
           />
           {errors.name && (
@@ -102,7 +103,7 @@ function BlogCategoryEdit() {
           )}
         </div>
 
-        {/* Slug */}
+        {/* Slug
         <div className="mb-6">
           <label className="block font-medium mb-2">Slug *</label>
           <input
@@ -116,11 +117,11 @@ function BlogCategoryEdit() {
           {errors.slug && (
             <p className="text-red-500 text-sm mt-1">{errors.slug.message}</p>
           )}
-        </div>
+        </div> */}
 
         {/* Trạng thái */}
         <div className="mb-6">
-          <label className="block font-medium mb-2">Trạng thái *</label>
+          <label className="block font-medium mb-2">Trạng thái </label>
           <select
             className="w-full border px-4 py-3 rounded"
             {...register("status", {

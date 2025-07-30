@@ -16,10 +16,8 @@ function CommentDetailPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
   const [startIndex, setStartIndex] = useState(0);
-
-  // Phân trang state
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5; // số bình luận mỗi trang
+  const ITEMS_PER_PAGE = 5;
 
   useEffect(() => {
     fetchCommentsByProduct();
@@ -27,24 +25,18 @@ function CommentDetailPage() {
 
   const fetchCommentsByProduct = async () => {
     try {
-      const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/list`);
+      const response = await axios.get(`${Constants.DOMAIN_API}/admin/comment/product/${productId}`);
       const allComments = response.data.data || [];
-
-      const filteredComments = allComments.filter(
-        (comment) => comment.orderDetail?.product_variant_id === Number(productId)
-      );
-
-      setComments(filteredComments);
-      setCurrentPage(1); // reset trang khi load mới
+      const filtered = allComments.filter(c => c.parent_id === null);
+      setComments(filtered);
+      setCurrentPage(1);
     } catch (error) {
       console.error("Lỗi lấy bình luận sản phẩm:", error);
     }
   };
 
-  // Tính tổng số trang
   const totalPages = Math.ceil(comments.length / ITEMS_PER_PAGE);
 
-  // Lấy dữ liệu của trang hiện tại
   const currentComments = comments.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -106,21 +98,20 @@ function CommentDetailPage() {
                 <table className="table table-striped align-middle">
                   <thead>
                     <tr>
-                      <th>ID</th>
+                      <th>STT</th>
                       <th>Người dùng</th>
                       <th>Đánh giá</th>
                       <th>Nội dung</th>
                       <th>Ảnh</th>
-                      <th>Ngày tạo</th>
-                      <th>Ngày cập nhật</th>
+
                     </tr>
                   </thead>
                   <tbody>
                     {currentComments.length > 0 ? (
-                      currentComments.map((comment) => (
+                      currentComments.map((comment, index) => (
                         <tr key={comment.id}>
-                          <td>{comment.id}</td>
-                          <td>{comment.user?.name || "N/A"}</td>
+                          <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                          <td>{comment.user?.name || "Ẩn danh"}</td>
                           <td>{renderStars(comment.rating)}</td>
                           <td>{comment.comment_text || "Không có nội dung"}</td>
                           <td>
@@ -138,8 +129,7 @@ function CommentDetailPage() {
                               "Không có ảnh"
                             )}
                           </td>
-                          <td>{formatDate(comment.created_at)}</td>
-                          <td>{formatDate(comment.updated_at)}</td>
+
                         </tr>
                       ))
                     ) : (
@@ -153,7 +143,6 @@ function CommentDetailPage() {
                 </table>
               </div>
 
-              {/* Phân trang */}
               {totalPages > 0 && (
                 <div className="flex justify-center mt-4 items-center">
                   <div className="flex items-center space-x-1">
@@ -181,7 +170,8 @@ function CommentDetailPage() {
                             onClick={() => handlePageChange(page)}
                             className={`px-3 py-1 border rounded ${
                               currentPage === page
-                                ? "bg-blue-600 text-white" : "bg-white hover:bg-blue-100"
+                                ? "bg-blue-600 text-white"
+                                : "bg-white hover:bg-blue-100"
                             }`}
                           >
                             {page}
@@ -209,7 +199,10 @@ function CommentDetailPage() {
                 </div>
               )}
 
-              <Link to="/admin/comments/getAll" className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+              <Link
+                to="/admin/comments/getAll"
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mt-4 inline-block"
+              >
                 Quay lại danh sách
               </Link>
             </div>
@@ -217,7 +210,6 @@ function CommentDetailPage() {
         </div>
       </div>
 
-      {/* Modal hiển thị ảnh lớn */}
       <Modal
         show={showModal}
         onHide={() => setShowModal(false)}

@@ -6,47 +6,64 @@ const ProductVariantModel = require('../../models/productVariantsModel');
 const CommentImageModel = require('../../models/commentImagesModel');
 
 class CommentController {
-    static async getAllComments(req, res) {
-        try {
-            const comments = await CommentModel.findAll({
-                attributes: [
-                    'id',
-                    'user_id',
-                    'order_detail_id',
-                    'parent_id',
-                    'rating',
-                    'comment_text',
-                    'created_at',
-                    'updated_at'
-                ],
-                include: [
-                    { model: UserModel, as: 'user', attributes: ['id', 'name', 'email'] },
-                    {
-                        model: OrderDetailModel,
-                        as: 'orderDetail',
-                        attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
-                        include: [
-                            {
-                                model: ProductVariantModel,
-                                as: 'variant',
-                                attributes: ['id', 'sku', 'price']
-                            }
-                        ]
-                    },
-                    {
-                        model: CommentImageModel,
-                        as: 'commentImages',
-                        attributes: ['id', 'image_url']
-                    }
-                ],
-                order: [['created_at', 'DESC']]
-            });
-            return res.status(200).json({ success: true, data: comments });
-        } catch (error) {
-            console.error('Error in getAllComments:', error);
-            return res.status(500).json({ success: false, message: 'Lỗi server khi lấy danh sách bình luận' });
+   static async getAllComments(req, res) {
+  try {
+    const includeReplies = req.query.includeReplies === 'true';
+
+    const whereClause = includeReplies ? {} : { parent_id: null };
+
+    const comments = await CommentModel.findAll({
+      attributes: [
+        'id', 'user_id', 'order_detail_id', 'parent_id',
+        'rating', 'comment_text', 'created_at', 'updated_at'
+      ],
+      where: whereClause,
+      include: [
+        {
+          model: UserModel,
+          as: 'user',
+          attributes: ['id', 'name', 'email']
+        },
+        {
+          model: OrderDetailModel,
+          as: 'orderDetail',
+          attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
+          include: [
+            {
+              model: ProductVariantModel,
+              as: 'variant',
+              attributes: ['id', 'sku', 'price'],
+              include: [
+                {
+                  model: ProductModel,
+                  as: 'product',
+                  attributes: ['id', 'name'],
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: CommentImageModel,
+          as: 'commentImages',
+          attributes: ['id', 'image_url']
         }
-    }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: comments
+    });
+  } catch (error) {
+    console.error('Error in getAllComments:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi lấy danh sách bình luận' });
+  }
+}
+
+
+
     static async getCommentById(req, res) {
         try {
             const { id } = req.params;
@@ -71,7 +88,14 @@ class CommentController {
                             {
                                 model: ProductVariantModel,
                                 as: 'variant',
-                                attributes: ['id', 'sku', 'price'] 
+                                attributes: ['id', 'sku', 'price'] ,
+                                include: [
+    {
+      model: ProductModel,
+      as: 'product',
+      attributes: ['id', 'name'], // 👈 lấy thêm tên sản phẩm
+    }
+  ],
                             }
                         ]
                     },
@@ -144,67 +168,10 @@ class CommentController {
         }
     }
     static async getCommentsByProductId(req, res) {
-    try {
-        const { id } = req.params; // id ở đây là product_id
-
-        const comments = await CommentModel.findAll({
-            attributes: [
-                'id',
-                'user_id',
-                'order_detail_id',
-                'parent_id',
-                'rating',
-                'comment_text',
-                'created_at',
-                'updated_at'
-            ],
-            include: [
-                {
-                    model: OrderDetailModel,
-                    as: 'orderDetail',
-                    attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
-                    include: [
-                        {
-                            model: ProductVariantModel,
-                            as: 'variant',
-                            attributes: ['id', 'sku', 'price', 'product_id'],
-                            where: { product_id: id } 
-                        }
-                    ]
-                },
-                {
-                    model: UserModel,
-                    as: 'user',
-                    attributes: ['id', 'name', 'email']
-                },
-                {
-                    model: CommentImageModel,
-                    as: 'commentImages',
-                    attributes: ['id', 'image_url']
-                }
-            ],
-            order: [['created_at', 'DESC']]
-        });
-
-        return res.status(200).json({ success: true, data: comments });
-    } catch (error) {
-        console.error('Error in getCommentsByProductId:', error);
-        return res.status(500).json({ success: false, message: 'Lỗi server khi lấy bình luận theo sản phẩm' });
-    }
-}
-static async replyComment(req, res) {
   try {
-    const { parent_id, comment_text } = req.body;
+    const { id } = req.params; // id ở đây là product_id
 
-    if (!parent_id || !comment_text) {
-      return res.status(400).json({
-        success: false,
-        message: "Thiếu parent_id hoặc nội dung trả lời.",
-      });
-    }
-
-    // Lấy comment gốc kèm theo các quan hệ liên quan
-    const parentComment = await CommentModel.findByPk(parent_id, {
+    const comments = await CommentModel.findAll({
       attributes: [
         'id',
         'user_id',
@@ -215,21 +182,26 @@ static async replyComment(req, res) {
         'created_at',
         'updated_at'
       ],
+      where: {
+        parent_id: null, 
+      },
       include: [
         {
-          model: OrderDetailModel,
-          as: 'orderDetail',
-          attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
-          required: true,
-          include: [
-            {
-              model: ProductVariantModel,
-              as: 'variant',
-              attributes: ['id', 'sku', 'price', 'product_id'],
-              required: true,
-            }
-          ]
-        },
+  model: OrderDetailModel,
+  as: 'orderDetail',
+  attributes: ['id', 'order_id', 'product_variant_id', 'quantity', 'price'],
+  required: true, 
+  include: [
+    {
+      model: ProductVariantModel,
+      as: 'variant',
+      attributes: ['id', 'sku', 'price', 'product_id'],
+      required: true, 
+      where: { product_id: id } 
+    }
+  ]
+},
+
         {
           model: UserModel,
           as: 'user',
@@ -239,6 +211,49 @@ static async replyComment(req, res) {
           model: CommentImageModel,
           as: 'commentImages',
           attributes: ['id', 'image_url']
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    return res.status(200).json({ success: true, data: comments });
+  } catch (error) {
+    console.error('Error in getCommentsByProductId:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server khi lấy bình luận theo sản phẩm' });
+  }
+}
+
+static async replyComment(req, res) {
+  try {
+    const { parent_id, comment_text, user_id } = req.body;
+    
+    if (!parent_id || !comment_text || !user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu parent_id, user_id hoặc nội dung trả lời.",
+      });
+    }
+
+    // Lấy comment gốc để lấy thông tin order_detail_id
+    const parentComment = await CommentModel.findByPk(parent_id, {
+      attributes: [
+        'id',
+        'order_detail_id',
+      ],
+      include: [
+        {
+          model: OrderDetailModel,
+          as: 'orderDetail',
+          attributes: ['id'],
+          required: true,
+          include: [
+            {
+              model: ProductVariantModel,
+              as: 'variant',
+              attributes: ['id', 'product_id'],
+              required: true,
+            }
+          ]
         }
       ]
     });
@@ -250,12 +265,9 @@ static async replyComment(req, res) {
       });
     }
 
-    // Dùng user_id đại diện cho admin, hoặc bạn có thể để null nếu cần
-    const adminUserId = 1;
-
     // Tạo bình luận trả lời
     const reply = await CommentModel.create({
-      user_id: adminUserId,
+      user_id, // ✅ lấy từ req.body giống BlogController
       order_detail_id: parentComment.order_detail_id,
       parent_id,
       rating: 0,
@@ -276,6 +288,7 @@ static async replyComment(req, res) {
     });
   }
 }
+
 
 
   }

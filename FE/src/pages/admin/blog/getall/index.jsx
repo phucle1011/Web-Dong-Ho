@@ -25,6 +25,18 @@ function BlogList() {
   const [selectedIdToDelete, setSelectedIdToDelete] = useState(null);
   const navigate = useNavigate();
   const debounceTimer = useRef(null);
+  const [expandedTitles, setExpandedTitles] = useState({});
+  const toggleExpanded = (id) => {
+    setExpandedTitles((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+  const decodeHtml = (html) => {
+    const txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+  };
 
   const fetchBlogs = async (page = 1, search = "") => {
     try {
@@ -43,16 +55,10 @@ function BlogList() {
     fetchBlogs(currentPage, searchTerm);
   }, [currentPage]);
 
-  useEffect(() => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      setCurrentPage(1);
-      fetchBlogs(1, searchTerm);
-    }, 500);
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, [searchTerm]);
+  const handleSearchClick = () => {
+  setCurrentPage(1);
+  fetchBlogs(1, searchTerm);
+};
 
   const confirmDelete = (id) => {
     setSelectedIdToDelete(id);
@@ -103,32 +109,71 @@ function BlogList() {
                 />
                 <button
                   className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded ms-2"
-                  onClick={() => fetchBlogs(1, searchTerm)}
+                  onClick={handleSearchClick}
                 >
                   <FaSearch />
                 </button>
               </div>
 
               <div className="table-responsive">
-                <table className="table text-nowrap mb-0 align-middle">
-                  <thead className="text-dark fs-4">
+
+                <table className="w-full table-auto border border-collapse border-gray-300 text-sm">
+                  <thead className="bg-gray-100">
                     <tr>
-                      <th>ID</th>
-                      <th>Tiêu đề</th>
-                      <th>Hình ảnh</th>
-                      <th>Nội dung</th>
-                      <th>Người viết</th>
-                      <th>Danh mục</th>
-                      <th>Ngày tạo</th>
-                      <th>Hành động</th>
+                      <th className="border p-2 text-center">#</th>
+                      <th className="border p-2 text-left">Tiêu đề</th>
+                      <th className="border p-2 text-center">Hình ảnh</th>
+                      <th className="border p-2 text-left">Nội dung</th>
+                      <th className="border p-2 text-center">Người viết</th>
+                      <th className="border p-2 text-center">Danh mục</th>
+                      <th className="border p-2 text-center"></th>
                     </tr>
                   </thead>
+
+
                   <tbody>
                     {blogs.length > 0 ? (
                       blogs.map((blog, index) => (
                         <tr key={blog.id}>
                           <td>{(currentPage - 1) * limit + index + 1}</td>
-                          <td>{blog.title}</td>
+                          <td className="max-w-[400px] whitespace-pre-wrap">
+                            {(() => {
+                              const maxLength = 50;
+                              const isLongTitle = blog.title.length > maxLength;
+                              const shortTitle = blog.title.slice(0, maxLength);
+
+                              const isExpanded = expandedTitles[blog.id];
+
+                              return (
+                                <>
+                                  {isExpanded || !isLongTitle ? (
+                                    <>
+                                      {blog.title}
+                                      {isLongTitle && (
+                                        <button
+                                          onClick={() => toggleExpanded(blog.id)}
+                                          className="text-blue-500  ml-1"
+                                        >
+                                          Thu gọn
+                                        </button>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {shortTitle}...
+                                      <button
+                                        onClick={() => toggleExpanded(blog.id)}
+                                        className="text-blue-500  ml-1"
+                                      >
+                                        Xem thêm
+                                      </button>
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </td>
+
                           <td>
                             <img
                               src={blog.image_url}
@@ -136,10 +181,17 @@ function BlogList() {
                               style={{ width: "100px", height: "auto" }}
                             />
                           </td>
-                          <td>{blog.content.replace(/<[^>]*>?/gm, '').slice(0, 30)}...</td>
+                          <td>
+                            {decodeHtml(
+                              blog.content
+                                .replace(/<[^>]*>?/gm, '')
+                                .slice(0, 50)
+                            ) + "..."}
+                          </td>
+
                           <td>{blog.user?.name || "Không xác định"}</td>
                           <td>{blog.category?.name || "Không rõ"}</td>
-                          <td>{new Date(blog.created_at).toLocaleDateString("vi-VN")}</td>
+
                           <td>
                             <div className="d-flex gap-2">
                               <button

@@ -68,10 +68,12 @@ router.get('/products/:id/similar', ProductController.getSimilarProducts);
 //------------------[ CATEGORY ]------------------
 router.get("/category/list", categoryController.getCategories);
 
-//------------------[ Blogs ]------------------
-router.get('/blogs/search', BlogController.searchBlogs);
-router.get('/blogs', BlogController.getAllBlogs);
-router.get('/blogs/:id', BlogController.getBlogById);
+//------------------[ Blogs ]------------------        
+router.post("/blogs/:id/view", BlogController.trackView);     
+router.get("/blogs/hot", BlogController.getHot);             
+router.get("/blogs/search", BlogController.searchBlogs);
+router.get("/blogs/:id", BlogController.getBlogById);
+router.get("/blogs", BlogController.getAllBlogs);
 
 //------------------[ Contact ]------------------
 router.post("/contact", ContactController.sendContactEmail);
