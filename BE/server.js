@@ -47,7 +47,7 @@ cron.schedule('* * * * *', async () => {
   }
 });
 
-cron.schedule('0 0 * * *', () => {
+cron.schedule('* * * * *', () => {
   cleanupRememberTokens();
 });
 

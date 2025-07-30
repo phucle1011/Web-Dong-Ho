@@ -5,6 +5,8 @@ import Thumbnail from "./Thumbnail";
 import { Link, useNavigate } from "react-router-dom";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary";
 import { toast } from 'react-toastify';
+import Constants from "../../../../Constants";
+
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ export default function Signup() {
 
     // Validate tên
     if (!formData.name.trim()) {
-      newErrors.name = "Tên người dùng không được để trống!";
+      newErrors.name = "Họ và tên không được để trống!";
       isValid = false;
     } else if (formData.name.length > 30) {
       newErrors.name = "Tên không được vượt quá 30 ký tự!";
@@ -96,7 +98,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      let avatarUrl = "default-avatar.png";
+      let avatarUrl = "https://res.cloudinary.com/disgf4yl7/image/upload/v1753861568/user_zeaool.jpg";
 
       // Nếu người dùng chọn ảnh thì upload lên cloudinary trước
       if (avatar) {
@@ -104,7 +106,7 @@ export default function Signup() {
         avatarUrl = uploaded.url;
       }
 
-      const response = await fetch("http://localhost:5000/auth/register", {
+      const response = await fetch(`${Constants.DOMAIN_API}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

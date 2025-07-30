@@ -16,7 +16,7 @@ function WishlistDetail() {
     const [searchInput, setSearchInput] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const limit = 10;
+    const limit = 5;
 
     const formatCurrency = (price) => {
         if (!price) return "0 ₫";
@@ -56,7 +56,6 @@ function WishlistDetail() {
             const res = await axios.get(
                 `${Constants.DOMAIN_API}/admin/users/${userId}/wishlist/search?searchTerm=${value}&page=1&limit=${limit}`
             );
-
             setWishlistItems(res.data.data || []);
             setTotalPages(res.data.totalPages || 1);
             setCurrentPage(1);
@@ -245,7 +244,7 @@ function WishlistDetail() {
                                     </tr>
                                 ) : (
                                     wishlistItems.map((item, index) => {
-    
+
                                         const variant = item.variant;
                                         const product = variant.product;
 

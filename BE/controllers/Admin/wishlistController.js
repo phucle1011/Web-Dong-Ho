@@ -66,6 +66,7 @@ class WishlistController {
                 limit: limit,
                 offset: offset,
                 order: [['id', 'DESC']],
+                distinct: true, // đảm bảo count đúng số wishlist item
                 include: [
                     {
                         model: ProductVariantsModel,
@@ -249,6 +250,7 @@ class WishlistController {
                 limit,
                 offset,
                 order: [['id', 'DESC']],
+                distinct: true, // đảm bảo count đúng số wishlist item
                 include: [
                     {
                         model: ProductVariantsModel,
@@ -299,6 +301,7 @@ class WishlistController {
         try {
             const limit = parseInt(req.query.limit) || 5;
             const variants = await WishlistModel.findAll({
+                paranoid: false, // nếu đã bật soft delete để giữ lịch sử
                 attributes: [
                     'product_variant_id',
                     [fn('COUNT', col('product_variant_id')), 'favoriteCount'],
@@ -308,18 +311,20 @@ class WishlistController {
                         model: ProductVariantsModel,
                         as: 'variant',
                         attributes: ['id', 'sku', 'price'],
+                        required: true, // ép INNER JOIN để loại record thiếu variant
                         include: [
                             {
                                 model: ProductModel,
                                 as: 'product',
                                 attributes: ['id', 'name', 'thumbnail'],
+                                required: true, // ép INNER JOIN để loại record thiếu product
                             },
                         ],
                     },
                 ],
                 group: ['product_variant_id', 'variant.id', 'variant->product.id'],
                 order: [[fn('COUNT', col('product_variant_id')), 'DESC']],
-                limit: limit,
+                limit,
                 raw: true,
                 nest: true,
             });
@@ -339,18 +344,21 @@ class WishlistController {
         try {
             const limit = parseInt(req.query.limit) || 5;
             const variants = await WishlistModel.findAll({
-                limit: limit,
+                paranoid: false, // nếu đã bật soft delete để giữ lịch sử
+                limit,
                 order: [['created_at', 'DESC']],
                 include: [
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
                         attributes: ['id', 'sku', 'price'],
+                        required: true, // ép INNER JOIN
                         include: [
                             {
                                 model: ProductModel,
                                 as: 'product',
                                 attributes: ['id', 'name', 'thumbnail'],
+                                required: true, // ép INNER JOIN
                             },
                         ],
                     },
@@ -374,6 +382,7 @@ class WishlistController {
             res.status(500).json({ error: error.message });
         }
     }
+
 }
 
 module.exports = WishlistController;

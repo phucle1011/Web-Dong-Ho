@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { checkJWT, isAdmin } = require('../services/authCheck');
+const authenticate = require('../services/Middleware');
 const upload = require('../config/middleware/upload');
 
 const OrderController = require('../controllers/Admin/ordersController');
@@ -61,7 +62,7 @@ router.get('/wallets/topups', checkJWT, WalletsController.getTopupHistory);
 router.get('/user/list', UserController.get);
 router.get('/user/search', UserController.searchUser);
 router.get('/user/:id', UserController.getById);
-router.put('/user/:id/status', UserController.updateUserStatus);
+router.put('/user/:id/status', authenticate, UserController.updateUserStatus);
 
 //------------------[ WISHLIST ]------------------\
 router.get('/wishlist', WishlistController.getAllWishlists);

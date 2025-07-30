@@ -20,38 +20,46 @@ function WishlistList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const limit = 10;
 
+  const sanitizedMost = useMemo(
+    () => mostFavoritedVariants.filter(v => v?.variant?.product?.name),
+    [mostFavoritedVariants]
+  );
+  const sanitizedRecent = useMemo(
+    () => recentlyFavoritedVariants.filter(v => v?.variant?.product?.name),
+    [recentlyFavoritedVariants]
+  );
 
-  const pieSeries = useMemo(() => mostFavoritedVariants.map(item => item.favoriteCount), [mostFavoritedVariants]);
+  const pieSeries = useMemo(
+    () => sanitizedMost.map(item => Number(item.favoriteCount || 0)),
+    [sanitizedMost]
+  );
   const pieOptions = useMemo(() => ({
     title: { text: 'Top sản phẩm được yêu thích nhiều nhất', align: 'center' },
-    labels: mostFavoritedVariants.map(item => item.variant?.product?.name || 'Unknown'),
+    labels: sanitizedMost.map(item => item.variant.product.name),
     legend: { position: 'bottom' },
     responsive: [{ breakpoint: 480, options: { chart: { width: 300 }, legend: { position: 'bottom' } } }]
-  }), [mostFavoritedVariants]);
+  }), [sanitizedMost]);
 
-  const barSeries = useMemo(() => {
-    const counts = {};
-    recentlyFavoritedVariants.forEach(item => {
-      const name = item.variant?.product?.name || 'Unknown';
-      counts[name] = (counts[name] || 0) + 1;
-    });
-    return [{ name: 'Số lượt', data: Object.values(counts) }];
-  }, [recentlyFavoritedVariants]);
-  const barOptions = useMemo(() => {
-    const categories = [];
-    const seen = {};
-    recentlyFavoritedVariants.forEach(item => {
-      const name = item.variant?.product?.name || 'Unknown';
-      if (!seen[name]) { seen[name] = true; categories.push(name); }
+  const barData = useMemo(() => {
+    const map = new Map();
+    sanitizedRecent.forEach(item => {
+      const name = item.variant.product.name;
+      map.set(name, (map.get(name) || 0) + 1);
     });
     return {
-      chart: { type: 'bar', height: 350 },
-      title: { text: 'Sản phẩm được yêu thích gần đây', align: 'center' },
-      plotOptions: { bar: { borderRadius: 4 } },
-      xaxis: { categories },
-      dataLabels: { enabled: false }
+      categories: Array.from(map.keys()),
+      series: [{ name: 'Số lượt', data: Array.from(map.values()) }]
     };
-  }, [recentlyFavoritedVariants]);
+  }, [sanitizedRecent]);
+
+  const barSeries = barData.series;
+  const barOptions = useMemo(() => ({
+    chart: { type: 'bar', height: 350 },
+    title: { text: 'Sản phẩm được yêu thích gần đây', align: 'center' },
+    plotOptions: { bar: { borderRadius: 4 } },
+    xaxis: { categories: barData.categories },
+    dataLabels: { enabled: false }
+  }), [barData]);
 
   useEffect(() => {
     fetchGroupedWishlist(currentPage);
@@ -110,9 +118,7 @@ function WishlistList() {
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleSearchSubmit = () => { setCurrentPage(1); setAppliedSearchTerm(searchTerm.trim()); };
-  const handleKeyDown = e => {
-    if (e.key === 'Enter') handleSearchSubmit();
-  };
+  const handleKeyDown = e => { if (e.key === 'Enter') handleSearchSubmit(); };
   const handlePageChange = (page) => setCurrentPage(page);
   const formatCurrency = (price) => price ? parseFloat(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '';
 
@@ -136,7 +142,7 @@ function WishlistList() {
         <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
-            placeholder="Tìm kiếm..."
+            placeholder="Tìm kiếm tên người..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
@@ -157,7 +163,7 @@ function WishlistList() {
                 <th className="p-2 border">#</th>
                 <th className="p-2 border">Người dùng</th>
                 <th className="p-2 border">Yêu thích</th>
-                <th className="p-2 border">Hành động</th>
+                <th className="p-2 border"></th>
               </tr>
             </thead>
             <tbody>
@@ -166,15 +172,20 @@ function WishlistList() {
               ) : groupedWishlistItems.length > 0 ? (
                 groupedWishlistItems.map((grp, idx) => (
                   <tr key={grp.user.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2 border">{(currentPage - 1) * limit + idx + 1}</td>
-                    <td className="p-2 border font-medium max-w-[150px] truncate">{grp.user.name}</td>
+                    <td className="p-2 border">
+                      {(currentPage - 1) * limit + idx + 1}
+                    </td>
+                    <td className="p-2 border font-medium w-[180px] whitespace-nowrap overflow-hidden text-ellipsis">
+                      {grp.user.name}
+                    </td>
+
                     <td className="p-2 border">
                       <div className="grid grid-cols-4 gap-1 p-1">
                         {grp.wishlistItems.slice(0, 4).map(item => {
                           const prod = item.variant?.product;
                           return (
                             <div key={item.id} className="border p-1 rounded-md text-center max-w-[120]">
-                              {prod?.thumbnail && <img src={prod.thumbnail.startsWith('http') ? prod.thumbnail : `${Constants.DOMAIN_API}/Uploads/${prod.thumbnail}`} alt={prod.name} className="w-10 h-10 object-cover rounded mx-auto" />}
+                              {prod?.thumbnail && <img src={prod.thumbnail.startsWith('http') ? prod.thumbnail : `${Constants.DOMAIN_API}/Uploads/${prod.thumbnail}`} alt={prod?.name} className="w-10 h-10 object-cover rounded mx-auto" />}
                               <div className="text-sm font-medium truncate w-full">{prod?.name}</div>
                               <div className="text-xs text-gray-600">{formatCurrency(item.variant?.price)}</div>
                             </div>
@@ -188,7 +199,8 @@ function WishlistList() {
                       </div>
                     </td>
                     <td className="p-2 border text-center">
-                      <Link to={`/admin/wishlist/detail/${grp.user.id}`} className="bg-blue-500 text-white p-2 rounded inline-flex justify-center">
+                      <Link to={`/admin/wishlist/detail/${grp.user.id}`}
+                        className="bg-blue-500 text-white p-2 rounded inline-flex justify-center">
                         <FaEye size={16} />
                       </Link>
                     </td>
@@ -277,17 +289,28 @@ function WishlistList() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-3/4 max-w-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Danh sách yêu thích</h3>
-              <button onClick={closeModal} className="text-gray-700 hover:text-black">✕</button>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg w-11/12 md:w-3/4 max-w-3xl p-6 relative max-h-[80vh] overflow-y-auto">
+            {/* Nút đóng */}
+            <button
+              onClick={closeModal}
+              className="absolute top-3 right-3 text-gray-700 hover:text-black text-xl font-bold"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-lg font-semibold mb-4">Danh sách yêu thích</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {modalItems.map(item => {
                 const prod = item.variant?.product;
                 return (
                   <div key={item.id} className="border p-3 rounded-md text-center">
-                    {prod?.thumbnail && <img src={prod.thumbnail.startsWith('http') ? prod.thumbnail : `${Constants.DOMAIN_API}/Uploads/${prod.thumbnail}`} alt={prod.name} className="w-full h-32 object-cover mb-2 rounded" />}
+                    {prod?.thumbnail && (
+                      <img
+                        src={prod.thumbnail.startsWith('http') ? prod.thumbnail : `${Constants.DOMAIN_API}/Uploads/${prod.thumbnail}`}
+                        alt={prod?.name}
+                        className="w-full h-32 object-cover mb-2 rounded"
+                      />
+                    )}
                     <div className="font-medium truncate">{prod?.name}</div>
                     <div className="text-sm text-gray-600">{formatCurrency(item.variant?.price)}</div>
                   </div>

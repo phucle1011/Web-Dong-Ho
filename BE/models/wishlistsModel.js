@@ -18,7 +18,8 @@ const WishlistModel = connection.define('wishlists', {
 }, {
     tableName: 'wishlists',
     timestamps: false,
-    createdAt: 'created_at'
+    createdAt: 'created_at',
+    paranoid: true,
 });
 
 module.exports = WishlistModel;

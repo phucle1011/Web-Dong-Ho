@@ -95,20 +95,31 @@ function UserList() {
             toast.warning("Vui lòng nhập lý do thay đổi trạng thái.");
             return;
         }
+
         try {
             const res = await axios.put(`${Constants.DOMAIN_API}/admin/user/${selectedUserId}/status`, {
                 status: selectedNewStatus,
-                reason: finalReason
+                reason: finalReason,
             });
+
             toast.success(res.data.message);
-            fetchData(currentPage, filterStatus, searchTerm);
+            fetchData(currentPage, filterStatus, appliedSearchTerm); // Sử dụng appliedSearchTerm thay vì searchTerm
         } catch (error) {
-            console.error("Lỗi khi cập nhật trạng thái:", error);
-            toast.error("Không thể cập nhật trạng thái người dùng.");
+            toast.error(`Không thể cập nhật trạng thái người dùng: ${error.response?.data?.message || error.message}`);
         } finally {
             setShowReasonModal(false);
             setSelectedUserId(null);
             setSelectedNewStatus('');
+            setReasonOption('');
+            setCustomReason('');
+
+            try {
+                const checkUser = await axios.get(`${Constants.DOMAIN_API}/admin/user/list`, {
+                    params: { page: currentPage, limit, status: filterStatus, searchTerm: appliedSearchTerm },
+                });
+            } catch (checkError) {
+                console.error('Lỗi khi kiểm tra danh sách người dùng:', checkError.message);
+            }
         }
     };
 
@@ -247,7 +258,7 @@ function UserList() {
                                                     <span className="text-gray-400">Không có avatar</span>
                                                 )}
                                             </td>
-                                            <td className="p-2 border capitalize">{user.role}</td>
+                                            <td className="p-2 border capitalize whitespace-nowrap">{user.role}</td>
                                             <td className="p-2 border capitalize">
                                                 <select
                                                     value={user.status}

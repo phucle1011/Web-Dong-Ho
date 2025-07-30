@@ -1,7 +1,7 @@
 const UserModel = require('../../models/usersModel');
 const AddressModel = require('../../models/addressesModel');
 const nodemailer = require('nodemailer');
-const getEmailTemplate = require('../../utils/emailTemplate');
+const { getEmailTemplate } = require('../../utils/emailTemplate');
 const { Op } = require('sequelize');
 
 const transporter = nodemailer.createTransport({
@@ -86,6 +86,11 @@ class UserController {
 
             const user = await UserModel.findByPk(id, {
                 attributes: ['id', 'name', 'email', 'phone', 'avatar', 'role', 'status', 'created_at', 'updated_at'],
+                include: [{
+                    model: AddressModel,
+                    as: 'addresses',
+                    attributes: ['id', 'address_line', 'district', 'city', 'ward', 'is_default', 'created_at', 'updated_at']
+                }]
             });
 
             if (!user) {
@@ -122,6 +127,13 @@ class UserController {
         try {
             const { id } = req.params;
             const { status, reason } = req.body;
+
+            // Kiểm tra không cho tự cập nhật trạng thái chính mình
+            if (req.user && req.user.id && parseInt(id) === parseInt(req.user.id)) {
+                return res.status(403).json({
+                    message: "Bạn không thể tự thay đổi trạng thái tài khoản của chính mình."
+                });
+            }
 
             if (!['active', 'inactive', 'locked'].includes(status)) {
                 return res.status(400).json({ message: "Trạng thái không hợp lệ." });

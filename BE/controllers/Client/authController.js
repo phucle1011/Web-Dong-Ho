@@ -18,13 +18,16 @@ class AuthController {
     static async register(req, res) {
         try {
             const { name, email, password, phone, avatar } = req.body;
+            const defaultAvatar =
+                process.env.DEFAULT_AVATAR_URL ||
+                "https://res.cloudinary.com/disgf4yl7/image/upload/v1753861568/user_zeaool.jpg"; // fallback nếu quên set .env
 
+            // Kiểm tra tên
             if (!name || typeof name !== 'string') {
                 return errorResponse(res, "Họ tên không được để trống!", 400);
             }
 
             const trimmedName = name.trim();
-
             if (trimmedName.length < 2 || trimmedName.length > 50) {
                 return errorResponse(res, "Họ tên phải từ 2 đến 50 ký tự!", 400);
             }
@@ -34,30 +37,41 @@ class AuthController {
                 return errorResponse(res, "Họ tên chỉ chứa chữ cái và dấu cách!", 400);
             }
 
+            // Kiểm tra email
             if (!email || !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
                 return errorResponse(res, "Email không hợp lệ!", 400);
             }
 
+            // Kiểm tra password
             if (!password || password.length < 6) {
                 return errorResponse(res, "Mật khẩu phải ít nhất 6 ký tự!", 400);
             }
 
+            // Kiểm tra email đã tồn tại
             const existingUser = await UserModel.findOne({ where: { email } });
             if (existingUser) {
                 return errorResponse(res, "Email này đã được đăng ký!", 400);
             }
 
-            const hashedPassword = await bcrypt.hash(password, 10);
+            // **Kiểm tra số điện thoại đã tồn tại**
+            if (phone) {
+                const existingPhone = await UserModel.findOne({ where: { phone } });
+                if (existingPhone) {
+                    return errorResponse(res, "Số điện thoại này đã được sử dụng!", 400);
+                }
+            }
 
+            // Hash password và tạo user
+            const hashedPassword = await bcrypt.hash(password, 10);
             const verifyToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: "1h" });
 
             const user = await UserModel.create({
-                name,
+                name: trimmedName,
                 email,
                 balance: null,
                 password: hashedPassword,
                 phone: phone || null,
-                avatar: avatar || "default-avatar.png",
+                avatar: avatar || "user.png",
                 role: "user",
                 email_verified_at: null,
                 status: "active"
@@ -78,6 +92,7 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
+
 
     static async verifyEmail(req, res) {
         const { token } = req.query;
@@ -251,47 +266,47 @@ class AuthController {
     }
 
     static async googleLogin(req, res) {
-    try {
-      const { idToken, rememberMe } = req.body;
-      // Verify ID token
-      const ticket = await googleClient.verifyIdToken({
-        idToken,
-        audience: CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      const { email, sub: googleId, name, picture } = payload;
+        try {
+            const { idToken, rememberMe } = req.body;
+            // Verify ID token
+            const ticket = await googleClient.verifyIdToken({
+                idToken,
+                audience: CLIENT_ID,
+            });
+            const payload = ticket.getPayload();
+            const { email, sub: googleId, name, picture } = payload;
 
-      // Tìm hoặc tạo user
-      let user = await UserModel.findOne({ where: { email } });
-      if (!user) {
-        user = await UserModel.create({
-          name,
-          email,
-          avatar: picture,
-          googleId,
-          email_verified_at: new Date(),
-          role: 'user',
-          status: 'active',
-        });
-      } else if (!user.googleId) {
-        // Lần đầu login bằng Google, lưu googleId + avatar
-        await user.update({ googleId, avatar: picture });
-      }
+            // Tìm hoặc tạo user
+            let user = await UserModel.findOne({ where: { email } });
+            if (!user) {
+                user = await UserModel.create({
+                    name,
+                    email,
+                    avatar: picture,
+                    googleId,
+                    email_verified_at: new Date(),
+                    role: 'user',
+                    status: 'active',
+                });
+            } else if (!user.googleId) {
+                // Lần đầu login bằng Google, lưu googleId + avatar
+                await user.update({ googleId, avatar: picture });
+            }
 
-      // Sinh JWT
-      const expiresIn = rememberMe ? '30d' : '2h';
-      const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn });
+            // Sinh JWT
+            const expiresIn = rememberMe ? '30d' : '2h';
+            const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn });
 
-      if (rememberMe) {
-        await user.update({ remember_token: token });
-      }
+            if (rememberMe) {
+                await user.update({ remember_token: token });
+            }
 
-      return successResponse(res, 'Đăng nhập Google thành công!', { token, user }, 200);
-    } catch (err) {
-      console.error(err);
-      return errorResponse(res, 'Token Google không hợp lệ!', 401);
+            return successResponse(res, 'Đăng nhập Google thành công!', { token, user }, 200);
+        } catch (err) {
+            console.error(err);
+            return errorResponse(res, 'Token Google không hợp lệ!', 401);
+        }
     }
-  }
 
     //-------------------[ RESET PASSWORD ]--------------------------
     static async resetPassword(req, res) {
@@ -402,7 +417,20 @@ class AuthController {
                 return errorResponse(res, "Không tìm thấy người dùng!", 404);
             }
 
-            // Kiểm tra tên hợp lệ
+            // Kiểm tra số điện thoại không trùng
+            if (phone) {
+                const phoneExists = await UserModel.findOne({
+                    where: {
+                        phone,
+                        id: { [Op.ne]: id } // loại trừ user đang cập nhật
+                    }
+                });
+                if (phoneExists) {
+                    return errorResponse(res, "Số điện thoại này đã được sử dụng!", 400);
+                }
+            }
+
+            // Kiểm tra tên
             if (name) {
                 const trimmedName = name.trim();
                 const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
@@ -432,8 +460,6 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
-
-
 
 }
 

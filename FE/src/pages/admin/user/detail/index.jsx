@@ -16,9 +16,9 @@ function UserDetail() {
   const [user, setUser] = useState({});
   const [addresses, setAddresses] = useState([]);
   const [showReasonModal, setShowReasonModal] = useState(false);
-  const [selectedNewStatus, setSelectedNewStatus] = useState('');
-  const [reasonOption, setReasonOption] = useState('');
-  const [customReason, setCustomReason] = useState('');
+  const [selectedNewStatus, setSelectedNewStatus] = useState("");
+  const [reasonOption, setReasonOption] = useState("");
+  const [customReason, setCustomReason] = useState("");
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
@@ -57,27 +57,25 @@ function UserDetail() {
     }
   };
 
-  // Hàm xử lý chọn trạng thái mới -> mở modal chọn lý do
   const handleStatusChange = (newStatus) => {
     setSelectedNewStatus(newStatus);
-    setReasonOption('');
-    setCustomReason('');
+    setReasonOption("");
+    setCustomReason("");
     setShowReasonModal(true);
   };
 
-  // Gửi lý do + cập nhật trạng thái
   const handleSubmitReason = async () => {
-    const finalReason = reasonOption === 'Khác' ? customReason : reasonOption;
+    const finalReason = reasonOption === "Khác" ? customReason : reasonOption;
     if (!finalReason || !finalReason.trim()) {
       toast.warning("Vui lòng nhập lý do thay đổi trạng thái.");
       return;
     }
 
     try {
-      const res = await axios.put(`${Constants.DOMAIN_API}/admin/user/${id}/status`, {
-        status: selectedNewStatus,
-        reason: finalReason
-      });
+      const res = await axios.put(
+        `${Constants.DOMAIN_API}/admin/user/${id}/status`,
+        { status: selectedNewStatus, reason: finalReason }
+      );
       toast.success(res.data.message);
       fetchUserDetail();
     } catch (error) {
@@ -85,19 +83,22 @@ function UserDetail() {
       toast.error("Không thể cập nhật trạng thái người dùng.");
     } finally {
       setShowReasonModal(false);
-      setSelectedNewStatus('');
+      setSelectedNewStatus("");
     }
   };
 
-  // Danh sách lý do theo trạng thái
   const getReasonOptionsForStatus = (status) => {
     switch (status) {
       case "inactive":
         return (
           <>
             <option value="">-- Chọn lý do --</option>
-            <option value="Không hoạt động trong thời gian dài">Không hoạt động trong thời gian dài</option>
-            <option value="Yêu cầu tạm dừng của người dùng">Yêu cầu tạm dừng của người dùng</option>
+            <option value="Không hoạt động trong thời gian dài">
+              Không hoạt động trong thời gian dài
+            </option>
+            <option value="Yêu cầu tạm dừng của người dùng">
+              Yêu cầu tạm dừng của người dùng
+            </option>
             <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
             <option value="Khác">Khác</option>
           </>
@@ -106,7 +107,9 @@ function UserDetail() {
         return (
           <>
             <option value="">-- Chọn lý do --</option>
-            <option value="Vi phạm chính sách cộng đồng">Vi phạm chính sách cộng đồng</option>
+            <option value="Vi phạm chính sách cộng đồng">
+              Vi phạm chính sách cộng đồng
+            </option>
             <option value="Hoạt động đáng ngờ">Hoạt động đáng ngờ</option>
             <option value="Spam hoặc lạm dụng">Spam hoặc lạm dụng</option>
             <option value="Khác">Khác</option>
@@ -132,17 +135,20 @@ function UserDetail() {
     }
   };
 
-  // Hiển thị tên trạng thái tiếng Việt
   const getVietnameseStatus = (englishStatus) => {
     switch (englishStatus) {
-      case "active": return "Hoạt động";
-      case "inactive": return "Ngưng hoạt động";
-      case "locked": return "Bị khóa";
-      default: return "Không xác định";
+      case "active":
+        return "Hoạt động";
+      case "inactive":
+        return "Ngưng hoạt động";
+      case "locked":
+        return "Bị khóa";
+      default:
+        return "Không xác định";
     }
   };
 
-  // Phần address
+  // GHN APIs for addresses
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -152,13 +158,11 @@ function UserDetail() {
         console.error("Lỗi khi lấy danh sách tỉnh:", error);
       }
     };
-
     fetchProvinces();
   }, []);
 
   useEffect(() => {
     if (!selectedProvince) return;
-
     const fetchDistricts = async () => {
       try {
         const res = await axios.get(
@@ -172,13 +176,11 @@ function UserDetail() {
         console.error("Lỗi khi lấy danh sách quận:", error);
       }
     };
-
     fetchDistricts();
   }, [selectedProvince]);
 
   useEffect(() => {
     if (!selectedDistrict) return;
-
     const fetchWards = async () => {
       try {
         const res = await axios.get(
@@ -190,7 +192,6 @@ function UserDetail() {
         console.error("Lỗi khi lấy danh sách phường:", error);
       }
     };
-
     fetchWards();
   }, [selectedDistrict]);
 
@@ -240,32 +241,32 @@ function UserDetail() {
 
         const fetchDistricts = async (provinceId) => {
           try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${provinceId}`);
+            const res = await axios.get(
+              `${Constants.DOMAIN_API}/apiRoutes/districts?provinceId=${provinceId}`
+            );
             return res.data;
-          } catch (err) {
-            console.error("Lỗi tải quận:", err);
+          } catch {
             return [];
           }
         };
 
         const fetchWards = async (districtId) => {
           try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${districtId}`);
+            const res = await axios.get(
+              `${Constants.DOMAIN_API}/apiRoutes/wards?districtId=${districtId}`
+            );
             return res.data;
-          } catch (err) {
-            console.error("Lỗi tải phường:", err);
+          } catch {
             return [];
           }
         };
 
-        // Hàm cập nhật địa chỉ đầy đủ vào ô input
         const updateFullAddress = () => {
           const provinceName = provinceSelect.options[provinceSelect.selectedIndex]?.text || "";
           const districtName = districtSelect.options[districtSelect.selectedIndex]?.text || "";
           const wardName = wardSelect.options[wardSelect.selectedIndex]?.text || "";
 
           let fullAddress = "";
-
           if (wardName && districtName && provinceName) {
             fullAddress = `${wardName}, ${districtName}, ${provinceName}`;
           } else if (districtName && provinceName) {
@@ -273,20 +274,18 @@ function UserDetail() {
           } else if (provinceName) {
             fullAddress = `${provinceName}`;
           }
-
           addressInput.value = fullAddress;
         };
 
-        // Load dữ liệu cũ nếu là edit
         if (isEdit && address) {
-          const province = provinces.find(p => p.ProvinceName === address.city);
+          const province = provinces.find((p) => p.ProvinceName === address.city);
           if (province) {
             provinceSelect.value = province.ProvinceID;
 
             districtSelect.disabled = false;
-            const districts = await fetchDistricts(province.ProvinceID);
+            const dList = await fetchDistricts(province.ProvinceID);
             districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
-            districts.forEach(d => {
+            dList.forEach((d) => {
               const option = document.createElement("option");
               option.value = d.DistrictID;
               option.text = d.DistrictName;
@@ -294,15 +293,14 @@ function UserDetail() {
               districtSelect.appendChild(option);
             });
 
-            // Lấy DistrictID từ dropdown quận đã chọn
             const selectedDistrictOption = districtSelect.options[districtSelect.selectedIndex];
             const districtId = selectedDistrictOption?.value;
 
             if (districtId) {
               wardSelect.disabled = false;
-              const wards = await fetchWards(districtId);
+              const wards = await fetchWards(districtId); 
               wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-              wards.forEach(w => {
+              wList.forEach((w) => {
                 const option = document.createElement("option");
                 option.value = w.WardCode;
                 option.text = w.WardName;
@@ -311,60 +309,50 @@ function UserDetail() {
               });
             }
           }
-
           updateFullAddress();
         }
 
-        // Sự kiện chọn tỉnh
         provinceSelect.addEventListener("change", async (e) => {
           const provinceId = e.target.value;
           districtSelect.disabled = !provinceId;
           wardSelect.disabled = true;
           districtSelect.innerHTML = '<option value="">Chọn quận/huyện</option>';
           wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-
           if (!provinceId) return;
-
-          const districts = await fetchDistricts(provinceId);
-          districts.forEach(d => {
+          const dList = await fetchDistricts(provinceId);
+          dList.forEach((d) => {
             const option = document.createElement("option");
             option.value = d.DistrictID;
             option.text = d.DistrictName;
             districtSelect.appendChild(option);
           });
-
           updateFullAddress();
         });
 
-        // Sự kiện chọn quận
         districtSelect.addEventListener("change", async (e) => {
           const districtId = e.target.value;
           wardSelect.disabled = !districtId;
           wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
-
           if (!districtId) return;
-
-          const wards = await fetchWards(districtId);
-          wards.forEach(w => {
+          const wList = await fetchWards(districtId);
+          wList.forEach((w) => {
             const option = document.createElement("option");
             option.value = w.WardCode;
             option.text = w.WardName;
             wardSelect.appendChild(option);
           });
-
           updateFullAddress();
         });
 
-        // Sự kiện chọn phường
-        wardSelect.addEventListener("change", () => {
-          updateFullAddress();
-        });
+        wardSelect.addEventListener("change", () => updateFullAddress());
       },
       showCancelButton: true,
       confirmButtonText: isEdit ? "Cập nhật" : "Thêm",
       cancelButtonText: "Hủy",
       preConfirm: () => {
-        const address_line = Swal.getPopup().querySelector("#swal-address_line").value.trim();
+        const address_line = Swal.getPopup()
+          .querySelector("#swal-address_line")
+          .value.trim();
         const provinceSelect = Swal.getPopup().querySelector("#swal-province");
         const districtSelect = Swal.getPopup().querySelector("#swal-district");
         const wardSelect = Swal.getPopup().querySelector("#swal-ward");
@@ -379,13 +367,7 @@ function UserDetail() {
           return false;
         }
 
-        return {
-          address_line,
-          city,
-          district,
-          ward,
-          is_default,
-        };
+        return { address_line, city, district, ward, is_default };
       },
     }).then(async (result) => {
       if (result.isConfirmed) {
@@ -399,7 +381,7 @@ function UserDetail() {
     });
   };
 
-  const handleAddAddress = async (addressData) => {
+ const handleAddAddress = async (addressData) => {
     if (addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
       if (hasDefault) {
@@ -414,11 +396,10 @@ function UserDetail() {
         if (!confirmResult.isConfirmed) {
           return;
         }
-      }
     }
 
     try {
-      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+      await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
       toast.success("Thêm địa chỉ thành công");
       fetchUserDetail();
     } catch (error) {
@@ -428,12 +409,7 @@ function UserDetail() {
   };
 
   const handleUpdateAddress = async (addressId, addressData) => {
-    if (addressData.is_default === 1) {
-      const hasOtherDefault = addresses.some(
-        (addr) => addr.is_default === 1 && addr.id !== addressId
-      );
-      if (hasOtherDefault) {
-        const confirmResult = await Swal.fire({
+     const confirmResult = await Swal.fire({
           title: "Đã có địa chỉ mặc định",
           text: "Bạn có muốn thay đổi địa chỉ mặc định không?",
           icon: "warning",
@@ -448,7 +424,7 @@ function UserDetail() {
     }
 
     try {
-      const res = await axios.put(
+      await axios.put(
         `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`,
         addressData
       );
@@ -473,7 +449,7 @@ function UserDetail() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const res = await axios.delete(
+          await axios.delete(
             `${Constants.DOMAIN_API}/admin/user/${id}/addresses/${addressId}`
           );
           toast.success("Xóa địa chỉ thành công");
@@ -491,97 +467,98 @@ function UserDetail() {
       <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-md">
         {/* Thông tin người dùng */}
         <div className="mb-8">
-          <h1 className="text-xl font-semibold">
-            Thông tin người dùng
-          </h1>
+          <h1 className="text-xl font-semibold mb-4">Thông tin người dùng</h1>
 
-          {/* Layout: Avatar bên trái - Thông tin bên phải */}
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Avatar bên trái */}
-            <div className="md:w-1/3 flex justify-center md:justify-center">
+          {/* LAYOUT: Avatar 2 cột | Thông tin 5 + 5 cột */}
+          <div className="grid grid-cols-12 gap-6 items-start">
+            {/* Avatar (2/12) */}
+            <div className="col-span-12 md:col-span-2 flex justify-center md:justify-start">
               {user.avatar ? (
                 <img
-                  src={user.avatar.startsWith('http') ? user.avatar : `${Constants.DOMAIN_API}/Uploads/${user.avatar}`}
+                  src={
+                    user.avatar.startsWith("http")
+                      ? user.avatar
+                      : `${Constants.DOMAIN_API}/Uploads/${user.avatar}`
+                  }
                   alt={user.name}
                   className="w-32 h-32 object-cover rounded-full shadow-md border-2 border-gray-300"
                 />
               ) : (
                 <div className="w-32 h-32 flex items-center justify-center bg-gray-100 rounded-full border-2 border-dashed border-gray-300">
-                  <span className="text-gray-400 text-sm text-center px-2">Không có avatar</span>
+                  <span className="text-gray-400 text-sm text-center px-2">
+                    Không có avatar
+                  </span>
                 </div>
               )}
             </div>
-            {/* Thông tin bên phải */}
-            <div className="md:w-2/3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mb-6 -ml-6 w-full">
-                <div className="flex items-center">
-                  <strong className="text-gray-600 w-24">Họ tên:</strong>
-                  <input
-                    type="text"
-                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                    value={user.name || ''}
-                    readOnly
-                  />
-                </div>
 
-                {/* Email */}
-                <div className="flex items-center">
-                  <strong className="text-gray-600 w-24">Email:</strong>
-                  <input
-                    type="text"
-                    className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer  focus:outline-none"
-                    value={user.email || ''}
-                    readOnly
-                    onClick={() => user.email && window.open(`mailto:${user.email}`)}
-                  />
-                </div>
+            {/* Cột thông tin trái (5/12) */}
+            <div className="col-span-12 md:col-span-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <strong className="text-gray-600 w-28 shrink-0">Họ tên:</strong>
+                <input
+                  type="text"
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                  value={user.name || ""}
+                  readOnly
+                />
+              </div>
 
-                {/* Vai trò */}
-                <div className="flex items-center">
-                  <strong className="text-gray-600 w-24">Vai trò:</strong>
-                  <input
-                    type="text"
-                    className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
-                    value={user.role || ''}
-                    readOnly
-                  />
-                </div>
+              <div className="flex items-center gap-2">
+                <strong className="text-gray-600 w-28 shrink-0">Vai trò:</strong>
+                <input
+                  type="text"
+                  className="capitalize px-3 py-1.5 border border-gray-200 rounded bg-blue-100 text-blue-800 text-sm font-medium w-full focus:outline-none"
+                  value={user.role || ""}
+                  readOnly
+                />
+              </div>
 
-                {/* Trạng thái */}
-                <div className="flex items-center">
-                  <strong className="text-gray-600 w-24">Trạng thái:</strong>
-                  <select
-                    value={user.status}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                  >
-                    <option value="active">Hoạt động</option>
-                    <option value="inactive">Ngưng hoạt động</option>
-                    <option value="locked">Bị khóa</option>
-                  </select>
-                </div>
+              <div className="flex items-center gap-2">
+                <strong className="text-gray-600 w-28 shrink-0">Ngày tạo:</strong>
+                <input
+                  type="text"
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none whitespace-nowrap"
+                  value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ""}
+                  readOnly
+                />
+              </div>
+            </div>
 
-                {/* Ngày tạo */}
-                <div className="flex items-center">
-                  <strong className="text-gray-600 w-24">Ngày tạo:</strong>
-                  <input
-                    type="text"
-                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                    value={user.created_at ? new Date(user.created_at).toLocaleDateString() : ''}
-                    readOnly
-                  />
-                </div>
+            {/* Cột thông tin phải (5/12) */}
+            <div className="col-span-12 md:col-span-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <strong className="text-gray-600 w-28 shrink-0">Email:</strong>
+                <input
+                  type="text"
+                  className="text-blue-600 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full cursor-pointer focus:outline-none"
+                  value={user.email || ""}
+                  readOnly
+                  onClick={() => user.email && window.open(`mailto:${user.email}`)}
+                />
+              </div>
 
-                {/* Ngày cập nhật */}
-                <div className="flex items-center">
-                  <strong className="text-gray-600 w-24">Ngày cập nhật:</strong>
-                  <input
-                    type="text"
-                    className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
-                    value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ''}
-                    readOnly
-                  />
-                </div>
+              <div className="flex items-center gap-2">
+                <strong className="text-gray-600 w-28 shrink-0">Trạng thái:</strong>
+                <select
+                  value={user.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
+                >
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Ngưng hoạt động</option>
+                  <option value="locked">Bị khóa</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <strong className="text-gray-600 w-28 shrink-0">Ngày cập nhật:</strong>
+                <input
+                  type="text"
+                  className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none whitespace-nowrap"
+                  value={user.updated_at ? new Date(user.updated_at).toLocaleDateString() : ""}
+                  readOnly
+                />
               </div>
             </div>
           </div>
@@ -592,20 +569,21 @@ function UserDetail() {
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">
-                Lý do thay đổi trạng thái sang: <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
+                Lý do thay đổi trạng thái sang:{" "}
+                <span className="text-blue-600">{getVietnameseStatus(selectedNewStatus)}</span>
               </h3>
               <label className="block mb-2">Chọn lý do mẫu:</label>
               <select
                 value={reasonOption}
                 onChange={(e) => {
                   setReasonOption(e.target.value);
-                  setCustomReason('');
+                  setCustomReason("");
                 }}
                 className="w-full border rounded px-3 py-2 mb-4"
               >
                 {getReasonOptionsForStatus(selectedNewStatus)}
               </select>
-              {reasonOption === 'Khác' && (
+              {reasonOption === "Khác" && (
                 <>
                   <label className="block mb-2">Nhập lý do khác:</label>
                   <input
@@ -618,16 +596,10 @@ function UserDetail() {
                 </>
               )}
               <div className="flex justify-end mt-4 space-x-2">
-                <button
-                  onClick={() => setShowReasonModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded"
-                >
+                <button onClick={() => setShowReasonModal(false)} className="px-4 py-2 bg-gray-300 rounded">
                   Hủy
                 </button>
-                <button
-                  onClick={handleSubmitReason}
-                  className="px-4 py-2 bg-blue-500 text-white rounded"
-                >
+                <button onClick={handleSubmitReason} className="px-4 py-2 bg-blue-500 text-white rounded">
                   Xác nhận
                 </button>
               </div>
@@ -644,7 +616,7 @@ function UserDetail() {
                 className="text-sm bg-[#073272] hover:bg-[#052652] text-white px-2 py-1 rounded shadow flex items-center"
                 onClick={() => showAddressModal()}
               >
-                <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ
+                <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ mới
               </button>
             </h3>
 
@@ -655,7 +627,7 @@ function UserDetail() {
                 <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
-                      {["#", "Địa chỉ", "Địa chỉ mặc định", ""].map(header => (
+                      {["ID", "Địa chỉ", "Xã/Phường", "Quận/Huyện", "Tỉnh/Thành phố", "Mặc định", "Thao tác"].map(header => (
                         <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                           {header}
                         </th>
@@ -663,7 +635,7 @@ function UserDetail() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {addresses.map((addr, index) => (
+                    {addresses.map(addr => (
                       <tr key={addr.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 whitespace-nowrap">{(currentPage - 1) * addressLimit + index + 1}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
