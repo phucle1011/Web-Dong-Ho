@@ -1,5 +1,12 @@
 // Helpers/StarRating.jsx
-const StarRating = ({ rating, ratingHandler, hoverRating, hoverHandler }) => {
+import PropTypes from "prop-types";
+
+const StarRating = ({
+  rating = 0,
+  ratingHandler = () => {},
+  hoverRating = 0,
+  hoverHandler = () => {},
+}) => {
   return (
     <div className="flex">
       {[1, 2, 3, 4, 5].map((star) => {
@@ -12,6 +19,7 @@ const StarRating = ({ rating, ratingHandler, hoverRating, hoverHandler }) => {
             onMouseLeave={() => hoverHandler(0)}
             onClick={() => ratingHandler(star)}
             className="focus:outline-none"
+            aria-label={`Đánh giá ${star} sao`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -27,6 +35,13 @@ const StarRating = ({ rating, ratingHandler, hoverRating, hoverHandler }) => {
       })}
     </div>
   );
+};
+
+StarRating.propTypes = {
+  rating: PropTypes.number,
+  ratingHandler: PropTypes.func,
+  hoverRating: PropTypes.number,
+  hoverHandler: PropTypes.func,
 };
 
 export default StarRating;

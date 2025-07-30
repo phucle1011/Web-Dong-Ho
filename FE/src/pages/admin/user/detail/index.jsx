@@ -298,7 +298,7 @@ function UserDetail() {
 
             if (districtId) {
               wardSelect.disabled = false;
-              const wards = await fetchWards(districtId); 
+              const wards = await fetchWards(districtId);
               wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
               wList.forEach((w) => {
                 const option = document.createElement("option");
@@ -381,7 +381,7 @@ function UserDetail() {
     });
   };
 
- const handleAddAddress = async (addressData) => {
+  const handleAddAddress = async (addressData) => {
     if (addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
       if (hasDefault) {
@@ -396,6 +396,7 @@ function UserDetail() {
         if (!confirmResult.isConfirmed) {
           return;
         }
+      }
     }
 
     try {
@@ -404,12 +405,17 @@ function UserDetail() {
       fetchUserDetail();
     } catch (error) {
       console.error("Lỗi khi thêm địa chỉ:", error);
-      toast.success("Thêm địa chỉ thất bại");
+      toast.error("Thêm địa chỉ thất bại");
     }
   };
 
   const handleUpdateAddress = async (addressId, addressData) => {
-     const confirmResult = await Swal.fire({
+    if (addressData.is_default === 1) {
+      const hasOtherDefault = addresses.some(
+        (addr) => addr.is_default === 1 && addr.id !== addressId
+      );
+      if (hasOtherDefault) {
+        const confirmResult = await Swal.fire({
           title: "Đã có địa chỉ mặc định",
           text: "Bạn có muốn thay đổi địa chỉ mặc định không?",
           icon: "warning",
@@ -432,7 +438,7 @@ function UserDetail() {
       fetchUserDetail();
     } catch (error) {
       console.error("Lỗi khi cập nhật địa chỉ:", error);
-      toast.success("Lỗi khi cập nhật địa chỉ");
+      toast.error("Lỗi khi cập nhật địa chỉ");
     }
   };
 
@@ -627,7 +633,7 @@ function UserDetail() {
                 <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
-                      {["ID", "Địa chỉ", "Xã/Phường", "Quận/Huyện", "Tỉnh/Thành phố", "Mặc định", "Thao tác"].map(header => (
+                      {["ID", "Địa chỉ", "Mặc định", ""].map(header => (
                         <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                           {header}
                         </th>
@@ -635,9 +641,12 @@ function UserDetail() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {addresses.map(addr => (
+                    {addresses.map((addr, index) => (
                       <tr key={addr.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap">{(currentPage - 1) * addressLimit + index + 1}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {(currentPage - 1) * addressLimit + index + 1}
+                        </td>
+
                         <td className="px-4 py-3 whitespace-nowrap">{addr.address_line}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-center font-semibold">
                           {addr.is_default === 1 ? (
@@ -734,5 +743,6 @@ function UserDetail() {
     </div>
   );
 }
+
 
 export default UserDetail;
