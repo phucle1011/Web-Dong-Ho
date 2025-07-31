@@ -40,7 +40,7 @@ module.exports = (io) => {
           ? new Date(topBid.bidTime)
           : (topBid.created_at ? new Date(topBid.created_at) : new Date());
 
-        const expireAt = new Date(baseTime.getTime() + 720000);
+        const expireAt = new Date(baseTime.getTime() + 5 * 60 * 1000);
 
         await AuctionBidModel.destroy({
           where: { auction_id: auction.id, id: { [Op.ne]: topBid.id } },
@@ -52,28 +52,12 @@ module.exports = (io) => {
         await auction.save({ transaction: t });
 
         const variantId = auction.product_variant_id;
-        const existed = await CartDetail.findOne({
-          where: { user_id: topBid.user_id, product_variant_id: variantId },
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-
-        if (existed) {
-
-          const oldExpire = existed.expire_at ? new Date(existed.expire_at) : null;
-          const newExpire = oldExpire && oldExpire > expireAt ? oldExpire : expireAt;
-
-          existed.quantity = Number(existed.quantity || 0) + 1;
-          existed.expire_at = newExpire;
-          await existed.save({ transaction: t });
-        } else {
-          await CartDetail.create({
-            user_id: topBid.user_id,
-            product_variant_id: variantId,
-            quantity: 1,
-            expire_at: expireAt,
-          }, { transaction: t });
-        }
+        await CartDetail.create({
+          user_id: topBid.user_id,
+          product_variant_id: variantId,
+          quantity: 1,
+          expire_at: expireAt
+        }, { transaction: t });
 
       } else {
 
@@ -138,7 +122,7 @@ module.exports = (io) => {
       const expiredBids = await AuctionBidModel.findAll({
         where: {
           bidTime: {
-            [Op.lte]: new Date(now.getTime() - 12 * 60 * 1000), 
+            [Op.lte]: new Date(now.getTime() - 12 * 60 * 1000),
           },
         },
         include: [

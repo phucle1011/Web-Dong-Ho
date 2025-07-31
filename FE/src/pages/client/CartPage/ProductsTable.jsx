@@ -3,7 +3,6 @@ import axios from "axios";
 import Constants from "../../../Constants";
 import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
-import { notifyCartChanged } from "../Helpers/cart/cartEvents";
 import { FaTrashAlt, FaTrophy } from "react-icons/fa";
 import { decodeToken } from "../Helpers/jwtDecode";
 
@@ -38,30 +37,36 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     return sorted[0];
   };
 
-  const getAuctionInfo = (variant, userId) => {
-    const auctions = variant?.auctions || [];
-    for (const au of auctions) {
+// 1. Cập nhật getAuctionInfo để nhận thêm thời điểm createdAt của item
+const getAuctionInfo = (variant, userId, itemCreatedAt) => {
+  const auctions = variant?.auctions || [];
 
-      if (au?.status !== "ended") continue;
+  // Chỉ lấy các phiên user này thắng, và đã kết thúc trước hoặc đúng thời điểm itemCreatedAt
+  const won = auctions.filter(a =>
+    a.status === "ended" &&
+    new Date(a.end_time || a.ended_at) <= new Date(itemCreatedAt) &&
+    a.bids?.some(b => Number(b.user_id) === Number(userId))
+  );
 
-      const top = getTopBid(au?.bids || []);
-      if (top && Number(top.user_id) === Number(userId)) {
+  if (won.length === 0) {
+    return { isAuction: false, bidAmount: 0 };
+  }
 
-        const endedAt = au?.end_time || au?.ended_at || null;
-        const wonAt = endedAt || top?.bidTime || top?.created_at || null;
-        const deadline = addDays(wonAt, 1);
+  // Chọn phiên có end_time gần nhất nhưng <= itemCreatedAt
+  const target = won.reduce((best, cur) => {
+    const t1 = new Date(best.end_time || best.ended_at);
+    const t2 = new Date(cur.end_time || cur.ended_at);
+    return t2 > t1 ? cur : best;
+  });
 
-        return {
-          isAuction: true,
-          bidAmount: Number(top.bidAmount) || 0,
-          wonAt,
-          deadline,
-          endedAt
-        };
-      }
-    }
-    return { isAuction: false, bidAmount: 0, wonAt: null, deadline: null, endedAt: null };
+  const topBid = getTopBid(target.bids);
+  return {
+    isAuction: true,
+    bidAmount: Number(topBid.bidAmount) || 0,
+    auctionId: target.id,
   };
+};
+
 
   const toggleShowAll = (id) => {
     setShowAllMap(prev => ({ ...prev, [id]: !prev[id] }));
@@ -83,7 +88,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     if (!dateString) return "";
     const d = new Date(dateString);
 
-    // Lấy giờ UTC để tránh cộng +7 giờ
     const year = d.getUTCFullYear();
     const month = `${d.getUTCMonth() + 1}`.padStart(2, "0");
     const day = `${d.getUTCDate()}`.padStart(2, "0");
@@ -127,8 +131,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
         },
       });
       setCartItems(res.data.data);
-             notifyCartChanged(); 
-
     } catch (error) {
       console.error("Lỗi khi lấy giỏ hàng:", error);
       // toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
@@ -138,7 +140,9 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
       const auctionInfo = getAuctionInfo(item.variant, meId);
-      const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
+      const price = auctionInfo.isAuction
+        ? auctionInfo.bidAmount
+        : parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
       const quantity = parseInt(item.quantity || 0);
       return total + price * quantity;
     }, 0);
@@ -148,7 +152,9 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     return cartItems.reduce((total, item) => {
       if (selectedItems.includes(item.product_variant_id)) {
         const auctionInfo = getAuctionInfo(item.variant, meId);
-        const price = parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
+        const price = auctionInfo.isAuction
+          ? auctionInfo.bidAmount
+          : parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
         const quantity = parseInt(item.quantity || 0);
         return total + price * quantity;
       }
@@ -193,7 +199,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.product_variant_id !== id)
       );
-       notifyCartChanged(); 
+
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
       await fetchCart();
     } catch (error) {
@@ -244,7 +250,6 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
           }
         }
       );
-       notifyCartChanged(); 
       await fetchCart();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");
@@ -340,28 +345,32 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
               </tr>
             ) : (
               cartItems.map((item) => {
-                const variant = item.variant ??{};
-                const image = variant?.images?.[0]?.image_url ?? "";
-                const originalPrice = parseFloat(variant.price ?? 0);
+                const variant = item.variant;
+                const image = variant?.images?.[0]?.image_url || "";
+                const originalPrice = parseFloat(variant.price || 0);
                 // const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
-                const discountPercent = parseFloat(variant.promotion?.discount_percent ?? 0);
-                const quantity = item.quantity ?? 0;
-                const stock = variant.stock ?? 0;
+                const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
+                const quantity = item.quantity;
+                const stock = variant.stock;
 
-                // const name = variant.product.name ?? "Không có tên";
-                const productName = variant?.product?.name ?? "Không có tên";
-                const attributes = variant.attributeValues ?? [];
+                const name = variant.product.name;
+                const attributes = item.variant.attributeValues || [];
                 const showAll = !!showAllMap[item.id];
                 const displayedAttrs = showAll ? attributes : attributes.slice(0, 2);
                 const showFullName = !!showNameMap[item.id];
 
-                const auctionInfo = getAuctionInfo(variant, meId);
+                // const auctionInfo = getAuctionInfo(variant, meId);
+                // const isAuction = auctionInfo.isAuction;
+                // const price = isAuction
+                //   ? auctionInfo.bidAmount
+                //   : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                // const total = price * quantity;
+                const auctionInfo = getAuctionInfo(variant, meId, item.created_at);
                 const isAuction = auctionInfo.isAuction;
                 const price = isAuction
                   ? auctionInfo.bidAmount
-                  : parseFloat(variant.promotion?.discounted_price ?? variant.price ?? 0);
+                  : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
                 const total = price * quantity;
-
                 return (
                   <tr
                     key={item.id}
@@ -402,10 +411,10 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                                 : {}
                             }
                           >
-                            {productName} ({variant.sku})
+                            {name} ({variant.sku})
                           </p>
 
-                          {productName.length > 40 && (
+                          {name.length > 40 && (
                             <button
                               onClick={() => toggleShowName(item.id)}
                               className="mt-1 text-blue-600 hover:text-blue-800 text-sm"
@@ -419,7 +428,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                     <td className="py-4 px-2 w-[180px] align-top">
                       <div className="flex flex-col gap-1">
                         {displayedAttrs.map((attr) => {
-                          const name = attr.attribute?.name || "Không có tên";
+                          const name = attr.attribute?.name;
                           const val = attr.value;
                           const isColor = name?.toLowerCase() === "color";
                           return (
@@ -446,26 +455,31 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                     </td>
                     <td className="text-center py-4">
                       <div className="flex flex-col items-center gap-1">
-                        <span className={`font-semibold ${discountPercent > 0 ? "text-red-500" : "text-black"}`}>
-                          {Number(price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                          {isAuction && (
-                            <>
-                              <div className="mt-1 text-red-700">
-                                Hạn thanh toán đến:
-                                <span className="ml-1 font-semibold text-red-700">
-                                  {formatDateLocal(auctionInfo.deadline)}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </span>
-                        {discountPercent > 0 && price < originalPrice && (
-                          <span className="text-black-400 line-through text-xs">
-                            {Number(originalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                          </span>
+                        {isAuction ? (
+                          <div className="text-red-700">
+                            <div className="text-sm">Hạn thanh toán: {formatDateLocal(auctionInfo.deadline)}</div>
+                          </div>
+                        ) : (
+                          <>
+                            <span className={`font-semibold ${discountPercent > 0 ? "text-red-500" : "text-black"}`}>
+                              {Number(price).toLocaleString("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              })}
+                            </span>
+                            {discountPercent > 0 && price < originalPrice && (
+                              <span className="text-black-400 line-through text-xs">
+                                {Number(originalPrice).toLocaleString("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                })}
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
+
                     <td className="py-4 text-center align-middle">
                       {stock === 0 ? (
                         <span className="text-sm text-red-500">Hết hàng</span>
@@ -494,8 +508,37 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                       )}
                     </td>
                     <td className="text-center py-4">
-                      {Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                      {isAuction ? (
+                        /* Chỉ hiển thị Giá đấu thành công */
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="text-sm text-gray-600">Giá đấu thành công:</div>
+                          <div className="font-semibold text-red-700">
+                            {price.toLocaleString("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1">
+                          {discountPercent > 0 && price < originalPrice && (
+                            <div className="line-through text-xs text-gray-400">
+                              {originalPrice.toLocaleString("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              })}
+                            </div>
+                          )}
+                          <div className="font-semibold">
+                            {total.toLocaleString("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </td>
+
                     <td className="text-right py-4">
                       <button
                         onClick={() => !isAuction && handleConfirmDelete(item.product_variant_id)}

@@ -61,22 +61,22 @@ class auctionController {
                      },
                      {
                         model: ProductVariantAttributeValuesModel,
-                        as: 'attributeValues', 
+                        as: 'attributeValues',
                         include: [
                            {
                               model: ProductAttributeModel,
-                              as: 'attribute', // lấy tên thuộc tính (vd: Màu sắc, Size...)
+                              as: 'attribute',
                            },
                         ],
                      },
                      {
                         model: VariantImageModel,
-                        as: 'images', // nếu muốn lấy danh sách ảnh của variant
+                        as: 'images',
                      },
                   ],
                },
             ],
-            // order: [['start_time', 'ASC']],
+            order: [['start_time', 'ASC']],
          });
 
          const statusCounts = {
@@ -98,7 +98,11 @@ class auctionController {
             const priorityB = statusPriority[b.status] || 99;
 
             if (priorityA === priorityB) {
-               return new Date(a.start_time) - new Date(b.start_time);
+               if (a.status === "ended") {
+                  return new Date(b.start_time) - new Date(a.start_time);
+               } else {
+                  return new Date(a.start_time) - new Date(b.start_time);
+               }
             }
 
             return priorityA - priorityB;
@@ -123,36 +127,34 @@ class auctionController {
       }
    }
 
-   // Ví dụ: controller
-static async getAuctionProduct(req, res) {
-  try {
-    const auctionProducts = await ProductVariantModel.findAll({
-      where: {
-        is_auction_only: 1, 
-      },
-      include: [
-        {
-          model: ProductModel,
-          as: "product",
-          where: {
-            publication_status: "published", 
-            status: 1,                       
-          },
-          required: true, 
-        },
-      ],
-      
-      order: [["created_at", "DESC"]],
-    });
+   static async getAuctionProduct(req, res) {
+      try {
+         const auctionProducts = await ProductVariantModel.findAll({
+            where: {
+               is_auction_only: 1,
+            },
+            include: [
+               {
+                  model: ProductModel,
+                  as: "product",
+                  where: {
+                     publication_status: "published",
+                     status: 1,
+                  },
+                  required: true,
+               },
+            ],
 
-    
-    return res.status(200).json({ data: auctionProducts });
-  } catch (error) {
-    console.error("Lỗi server:", error);
-    return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
-  }
-}
+            order: [["created_at", "DESC"]],
+         });
 
+
+         return res.status(200).json({ data: auctionProducts });
+      } catch (error) {
+         console.error("Lỗi server:", error);
+         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+      }
+   }
 
    //--------------------------[ GET ID ]---------------------------
    static async getId(req, res) {

@@ -426,17 +426,62 @@ export default function AuctionRoom() {
         }));
     }, [showWinModal]);
 
-    useEffect(() => {
-        if (!showWinModal) return;
-        const onKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                setShowWinModal(false);
-                navigate('/room');
-            }
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, [showWinModal, navigate]);
+   useEffect(() => {
+  if (!showWinModal) return;
+
+  // Ngăn ESC, phím chuyển hướng
+  const onKeyDown = (e) => {
+    const allowed = ['Enter', ' ']; // Chỉ cho nhấn Enter và Space
+    if (!allowed.includes(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  // Ngăn context menu (chuột phải)
+  const onContextMenu = (e) => e.preventDefault();
+
+  // Ngăn đóng tab hoặc reload
+  const onBeforeUnload = (e) => {
+    e.preventDefault();
+    e.returnValue = 'Bạn đang thanh toán, vui lòng hoàn tất.';
+  };
+
+  // Ngăn nút quay lại
+  const push = () => window.history.pushState(null, '', window.location.href);
+  push();
+  const onPopState = () => {
+    push();
+    toast.info('Vui lòng thanh toán trước khi rời trang.');
+  };
+
+  // Ngăn click ra ngoài modal
+  const swallow = (e) => {
+    if (!modalRef.current) return;
+    if (!modalRef.current.contains(e.target)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  document.addEventListener('click', swallow, true);
+  document.addEventListener('mousedown', swallow, true);
+  document.addEventListener('touchstart', swallow, true);
+  document.addEventListener('contextmenu', onContextMenu, true);
+  document.addEventListener('keydown', onKeyDown, true);
+  window.addEventListener('beforeunload', onBeforeUnload);
+  window.addEventListener('popstate', onPopState);
+
+  return () => {
+    document.removeEventListener('click', swallow, true);
+    document.removeEventListener('mousedown', swallow, true);
+    document.removeEventListener('touchstart', swallow, true);
+    document.removeEventListener('contextmenu', onContextMenu, true);
+    document.removeEventListener('keydown', onKeyDown, true);
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    window.removeEventListener('popstate', onPopState);
+  };
+}, [showWinModal]);
 
     useEffect(() => {
         if (countdown.ms <= 0) {
@@ -993,13 +1038,10 @@ export default function AuctionRoom() {
                 )}
             </div>
             {showWinModal && winInfo && (
-                <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center"
-                    onClick={() => {
-                        setShowWinModal(false);
-                        navigate("/room");
-                    }}
-                >
+<div
+  className="fixed inset-0 z-[9999] flex items-center justify-center"
+  onClick={(e) => e.preventDefault()} 
+>
 
                     <div className="absolute inset-0 bg-black/50 overlay-fade" />
 
@@ -1016,7 +1058,7 @@ export default function AuctionRoom() {
                         />
                     ))}
 
-                    <div
+                    <div ref={modalRef} 
                         className="relative mx-4 w-full max-w-md rounded-2xl bg-blue-to-r from-pink-500 via-red-400 to-yellow-400 p-1 shadow-2xl animate-pop-in"
                         onClick={(e) => e.stopPropagation()}
                     >
