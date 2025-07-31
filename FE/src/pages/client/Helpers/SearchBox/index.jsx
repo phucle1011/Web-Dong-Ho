@@ -1,141 +1,116 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants";
+import { BlockPicker } from "react-color";
 
-export default function SearchBox({ className, type, onSearch }) {
+export default function SearchBox({ className, onSearch }) {
   const [keyword, setKeyword] = useState("");
-  const [brands, setBrands] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
+  const [colors, setColors] = useState([]);
+  const [isColorOpen, setIsColorOpen] = useState(false);
+  const [colorError, setColorError] = useState(null);
 
   useEffect(() => {
+    // Fetch colors
     axios
-      .get(`${Constants.DOMAIN_API}/brands/active`, { params: { page: 1, limit: 100 } })
+      .get(`${Constants.DOMAIN_API}/attribute-values`, {
+        params: { attribute_id: 35, page: 1, limit: 100 },
+      })
       .then(res => {
         if (res.data.status === 200) {
-          setBrands(res.data.data);
+          const valid = res.data.data.filter(v =>
+            /^#([0-9A-Fa-f]{6})$/.test(v.value)
+          );
+          setColors(valid);
+          if (!valid.length) {
+            setColorError("Không tìm thấy mã màu hợp lệ.");
+          }
+        } else {
+          setColorError(`Lỗi API: ${res.data.message}`);
         }
       })
-      .catch(err => console.error("SearchBox fetch brands:", err));
+      .catch(err => {
+        setColorError(`Lỗi lấy màu: ${err.message}`);
+      });
   }, []);
 
   const handleSubmit = e => {
     e.preventDefault();
     const t = keyword.trim();
-    const isSize  = /^\d+mm$/i.test(t);
+    const isSize = /^\d+mm$/i.test(t);
     const isColor = /^#([0-9A-Fa-f]{6})$/.test(t);
 
-    const params = { page: 1, limit: 10 };
-    if (selectedBrands.length) {
-      params.brand_ids = selectedBrands;
-    }
+    const params = { page: 1, limit: 10, keyword: "", attribute_values: [], attribute_ids: [] };
 
     if (isSize) {
-      params.keyword = "";
-      params.attributeValues = [];
-      params.attributeIds = [17];
+      params.attribute_ids = [17];
     } else if (isColor) {
-      params.keyword = "";
-      params.attributeValues = [t.toLowerCase()];
-      params.attributeIds = [];
+      params.attribute_values = [t.toLowerCase()];
+      params.attribute_ids = [35];
     } else {
       params.keyword = t;
-      params.attributeValues = [];
-      params.attributeIds = [];
     }
 
     onSearch(params);
   };
 
-  const toggleBrand = id =>
-    setSelectedBrands(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  const toggleAll  = () =>
-    setSelectedBrands(prev =>
-      prev.length === brands.length ? [] : brands.map(b => b.id)
-    );
+  const pickColor = c => {
+    setKeyword(c.hex);
+    setIsColorOpen(false);
+  };
 
-  const showColorSquare = /^#([0-9A-Fa-f]{6})$/.test(keyword.trim());
+  const showCircle = /^#([0-9A-Fa-f]{6})$/.test(keyword.trim());
 
   return (
-    <div className={`w-full h-full flex items-center border bg-white ${className || ""}`}>
-      <form onSubmit={handleSubmit} className="flex-1 h-full relative">
-        {showColorSquare && (
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              backgroundColor: keyword.trim(),
-              border: "1px solid #ccc",
-              borderRadius: 4,
-              position: "absolute",
-              left: 8,
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-          />
-        )}
-        <input
-          type="text"
-          className="w-full h-full px-4 py-2 text-sm focus:outline-none"
-          placeholder="Tìm sản phẩm, màu (#a75716), size (39mm)..."
-          value={keyword}
-          onChange={e => setKeyword(e.target.value)}
-          style={{ paddingLeft: showColorSquare ? 36 : undefined }}
-        />
-      </form>
-
-      <div className="w-px h-6 bg-gray-300 mx-2"></div>
-
+    <div className={`w-full flex items-center border bg-white ${className || ""}`}>
+      {/* Color picker */}
       <div className="relative px-2">
         <button
           type="button"
-          onClick={() => setIsBrandDropdownOpen(o => !o)}
-          className="text-xs text-gray-600 flex items-center"
-        >
-          Tất cả thương hiệu
-          <svg width="10" height="5" className="ml-1">
-            <path d="M0 0 L5 5 L10 0" stroke="#888" fill="none" />
-          </svg>
-        </button>
-        {isBrandDropdownOpen && (
-          <div className="absolute left-0 top-full bg-white border shadow-lg rounded mt-1 z-50 w-48 max-h-60 overflow-y-auto">
-            <ul className="p-2">
-              <li className="py-1">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.length === brands.length}
-                    onChange={toggleAll}
-                    className="form-checkbox"
-                  />
-                  <span className="text-sm text-gray-600">Tất cả</span>
-                </label>
-              </li>
-              {brands.map(b => (
-                <li key={b.id} className="py-1">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedBrands.includes(b.id)}
-                      onChange={() => toggleBrand(b.id)}
-                      className="form-checkbox"
-                    />
-                    <span className="text-sm text-gray-600">{b.name}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+          onClick={() => setIsColorOpen(o => !o)}
+          className="w-6 h-6 rounded-full border"
+          style={{ backgroundColor: showCircle ? keyword : "transparent" }}
+        />
+        {isColorOpen && (
+          <div className="absolute left-0 mt-1 p-2 bg-white border rounded shadow z-50">
+            {colors.length > 0 ? (
+              <BlockPicker
+                colors={colors.map(c => c.value)}
+                triangle="hide"
+                onChangeComplete={pickColor}
+              />
+            ) : (
+              <p className="text-sm text-red-600">{colorError}</p>
+            )}
           </div>
         )}
       </div>
 
+      <div className="w-px h-6 bg-gray-300 mx-2" />
+
+      {/* Input */}
+      <form onSubmit={handleSubmit} className="flex-1 relative">
+        {showCircle && (
+          <div
+            className="absolute left-2 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full border"
+            style={{ backgroundColor: keyword }}
+          />
+        )}
+        <input
+          type="text"
+          className="w-full px-4 py-2 text-sm focus:outline-none"
+          placeholder="Tìm sản phẩm, màu, size..."
+          value={keyword}
+          onChange={e => setKeyword(e.target.value)}
+          style={{ paddingLeft: showCircle ? 36 : undefined }}
+        />
+      </form>
+
+      <div className="w-px h-6 bg-gray-300 mx-2" />
+
+      {/* Submit */}
       <button
         onClick={handleSubmit}
-        className={`ml-2 px-4 py-2 text-sm ${
-          type === 3 ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"
-        }`}
+        className="ml-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
       >
         Tìm kiếm
       </button>

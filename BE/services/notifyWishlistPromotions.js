@@ -65,8 +65,8 @@ async function notifyWishlistPromotions() {
                     <div>
                       <h3 style="margin: 0;">${product?.name || '[Không xác định]'}</h3>
                       <p style="margin: 4px 0;">Thời gian áp dụng: <strong>${new Date(promo.start_date).toLocaleDateString()}</strong> - <strong>${new Date(promo.end_date).toLocaleDateString()}</strong></p>
-                      <a href="${process.env.CLIENT_DOMAIN}/product/${product?.id}" style="display: inline-block; margin-top: 8px; padding: 8px 12px; background-color: #1868D5; color: white; text-decoration: none; border-radius: 6px;">
-                        Xem sản phẩm ngay
+                      <a href="${process.env.CLIENT_URL}/all-products" style="display: inline-block; margin-top: 8px; padding: 8px 12px; background-color: #1868D5; color: white; text-decoration: none; border-radius: 6px;">
+                        Xem trang sản phẩm
                       </a>
                     </div>
                   </div>

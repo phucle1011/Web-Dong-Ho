@@ -57,6 +57,8 @@ router.get('/wallets/topups', checkJWT, WalletsController.getTopupHistory);
 
 // ------------------[ SEARCH ]------------------//
 router.get('/products/search', SearchController.searchProducts);
+router.get('/attribute-values', SearchController.getAttributeValues);
+
 
 //------------------[ CHATBOX ]------------------//
 router.post("/chatbox",chatWithBot.chatWithBot);

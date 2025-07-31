@@ -15,8 +15,10 @@ const OrderModel = require('./models/ordersModel');
 const cleanupRememberTokens = require('./controllers/Client/rememberTokenCleanup');
 const authenticate = require('./services/Middleware');
 const updateLastActive = require('./config/middleware/updateLastActive');
-const { authAdmin} = require('./services/authCheck');
+const { authAdmin } = require('./services/authCheck');
 const notifyWishlistPromotions = require('./services/notifyWishlistPromotions');
+const attachUser = require('./services/attachUser');
+
 
 const webhookRoutes = require('./routes/webhookRoutes');
 app.use('/stripe/webhook', express.raw({type: 'application/json'}), webhookRoutes);
@@ -52,7 +54,7 @@ cron.schedule('* * * * *', () => {
 
 
 cron.schedule('0 9 * * *', () => {
-    notifyWishlistPromotions();
+  notifyWishlistPromotions();
 });
 
 app.use(cors());
@@ -81,7 +83,7 @@ app.use(cors({
 app.use(apiRoutes);
 app.use(clientRoutes);
 app.use('/admin', adminRoutes);
-app.use('/', authenticate, updateLastActive, clientRoutes);
+app.use('/', attachUser, updateLastActive, clientRoutes);
 
 
 const port = 5000;

@@ -20,16 +20,15 @@ class AuthController {
             const { name, email, password, phone, avatar } = req.body;
             const defaultAvatar =
                 process.env.DEFAULT_AVATAR_URL ||
-                "https://res.cloudinary.com/disgf4yl7/image/upload/v1753861568/user_zeaool.jpg"; // fallback nếu quên set .env
+                "https://res.cloudinary.com/disgf4yl7/image/upload/v1753861568/user_zeaool.jpg";
 
-            // Kiểm tra tên
             if (!name || typeof name !== 'string') {
                 return errorResponse(res, "Họ tên không được để trống!", 400);
             }
 
             const trimmedName = name.trim();
-            if (trimmedName.length < 2 || trimmedName.length > 50) {
-                return errorResponse(res, "Họ tên phải từ 2 đến 50 ký tự!", 400);
+            if (trimmedName.length < 2 || trimmedName.length > 40) {
+                return errorResponse(res, "Họ tên chỉ từ 2 đến 40 ký tự!", 400);
             }
 
             const nameRegex = /^[a-zA-ZÀ-ỹ\s]+$/;
@@ -136,6 +135,14 @@ class AuthController {
             const user = await UserModel.findOne({ where: { email } });
             if (!user) {
                 return errorResponse(res, "Email không tồn tại!", 400);
+            }
+
+            if (!user.email_verified_at) {
+                return errorResponse(
+                    res,
+                    "Vui lòng xác thực email trước khi đăng nhập!",
+                    403
+                );
             }
 
             if (user.status === 'locked') {
