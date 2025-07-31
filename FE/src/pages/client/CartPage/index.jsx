@@ -9,6 +9,7 @@ import ProductsTable from "./ProductsTable";
 import Constants from "../../../Constants";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
+import { notifyCartChanged } from "../Helpers/cart/cartEvents";
 
 export default function CardPage({ cart = true }) {
   const [totalPrice, setTotalPrice] = useState(0);

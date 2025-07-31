@@ -23,46 +23,46 @@ const EditVariantForm = () => {
 
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const attrRes = await axios.get(
-          `${Constants.DOMAIN_API}/admin/product-attributes`
-        );
-        setAttributesList(attrRes.data.data);
+  const fetchData = async () => {
+    try {
+      const attrRes = await axios.get(`${Constants.DOMAIN_API}/admin/product-attributes`);
+      setAttributesList(attrRes.data.data);
 
-        const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/variants/${id}`
-        );
-        const data = res.data.data;
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/variants/${id}`);
+      const data = res.data.data;
 
-        setVariant(data);
-        setFormData({
-          sku: data.sku || "",
-          price: data.price || "",
-          stock: data.stock || "",
-          product_id: data.product_id || "",
-          attributes:
-            data.attributeValues?.map((attr) => ({
-              id: attr.id,
-              attribute_id: attr.product_attribute_id,
-              value: attr.value,
-            })) || [],
-          images:
-            data.images?.map((img) => ({
-              id: img.id,
-              url: img.image_url,
-            })) || [],
-          is_auction_only: Number(data.is_auction_only) || 0,
+      // Nếu biến thể đang có mã giảm giá
+      const hasPromotion = data.promotionProducts && data.promotionProducts.length > 0;
 
-        });
-      } catch (err) {
-        console.error("Lỗi khi tải dữ liệu:", err);
-        toast.error("Lỗi khi tải dữ liệu!");
-      }
-    };
+      setVariant(data);
+      setFormData({
+        sku: data.sku || "",
+        price: data.price || "",
+        stock: data.stock || "",
+        product_id: data.product_id || "",
+        attributes:
+          data.attributeValues?.map((attr) => ({
+            id: attr.id,
+            attribute_id: attr.product_attribute_id,
+            value: attr.value,
+          })) || [],
+        images:
+          data.images?.map((img) => ({
+            id: img.id,
+            url: img.image_url,
+          })) || [],
+        is_auction_only: Number(data.is_auction_only) || 0,
+        has_promotion: hasPromotion, // <-- thêm cờ
+      });
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu:", err);
+      toast.error("Lỗi khi tải dữ liệu!");
+    }
+  };
 
-    fetchData();
-  }, [id]);
+  fetchData();
+}, [id]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -423,29 +423,31 @@ const EditVariantForm = () => {
 
  {/* Toggle is_auction_only */}
  <div className="form-check form-switch d-flex align-items-center gap-2">
-   <input
-     className="form-check-input"
-     type="checkbox"
-     id="auctionSwitch"
-     checked={Number(formData.is_auction_only) === 1}
-     onChange={(e) => {
-       const checked = e.target.checked;
-       setFormData((prev) => ({
-        ...prev,
-         is_auction_only: checked ? 1 : 0,
-         // Nếu bật đấu giá thì ép stock = 1 (tuỳ yêu cầu)
-         stock: checked ? 1 : prev.stock,
-       }));
-     }}
-     // ✅ Nếu đang là đấu giá (1) thì không cho đổi
-     disabled={Number(formData.is_auction_only) === 1}
-   />
-   <label className="form-check-label ms-2" htmlFor="auctionSwitch">
+  <input
+      className="form-check-input"
+  type="checkbox"
+  checked={Number(formData.is_auction_only) === 1}
+  onChange={(e) => {
+    if (formData.has_promotion) {
+      toast.error("Biến thể đang được áp mã giảm giá, không thể bật đấu giá!");
+      return;
+    }
+    const checked = e.target.checked;
+    setFormData((prev) => ({
+      ...prev,
+      is_auction_only: checked ? 1 : 0,
+      stock: checked ? 1 : prev.stock,
+    }));
+  }}
+/>
+
+  <label className="form-check-label ms-2" htmlFor="auctionSwitch">
     {Number(formData.is_auction_only) === 1
-       ? "Biến thể đấu giá (không thể thay đổi)"
-       : "Đặt là biến thể đấu giá"}
-   </label>
- </div>
+      ? "Biến thể đấu giá (không thể thay đổi)"
+      : "Đặt là biến thể đấu giá"}
+  </label>
+</div>
+
 
   
 </div>

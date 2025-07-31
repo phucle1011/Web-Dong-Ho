@@ -52,30 +52,40 @@ class ProfileController {
 
   // Tổng đơn hàng mới (mới đặt)
   static async getTotalNewOrders(req, res) {
-    try {
-      const { id: userId } = req.params;
+  try {
+    const { id: userId } = req.params();
 
-      const total = await OrderModel.count({
-        where: {
-          user_id: userId,
-          status: {
-            [Op.in]: ["pending"], // chỉ đơn hàng chưa xác nhận
-          },
+    // Get current date
+    const currentDate = new Date();
+
+    // Calculate the first day of the current month (set the date to 1)
+    const fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
+    // Calculate the last day of the current month
+    const toDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+    // Tìm kiếm số đơn hàng trong tháng hiện tại (có thể thay đổi trạng thái từ ngày này đến ngày kia)
+    const total = await OrderModel.count({
+      where: {
+        user_id: userId,
+        createdAt: {
+          [Op.between]: [fromDate, toDate], // Lọc theo tháng hiện tại
         },
-      });
+      },
+    });
 
-      return res.json({
-        success: true,
-        message: "Lấy tổng đơn hàng mới thành công!",
-        data: { totalNewOrders: total || 0 },
-      });
-    } catch (error) {
-      console.error("Lỗi khi lấy tổng đơn hàng mới:", error);
-      return res
-        .status(500)
-        .json({ success: false, message: "Lỗi máy chủ!" });
-    }
+    return res.json({
+      success: true,
+      message: "Lấy tổng đơn hàng trong tháng thành công!",
+      data: { totalNewOrders: total || 0 },
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy tổng đơn hàng trong tháng:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Lỗi máy chủ!" });
   }
+}
 
   // Tổng số sản phẩm trong giỏ
   static async getTotalCartItems(req, res) {

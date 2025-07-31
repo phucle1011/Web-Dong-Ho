@@ -123,23 +123,36 @@ class auctionController {
       }
    }
 
-   static async getAuctionProduct(req, res) {
-      try {
-         const auctionProducts = await ProductVariantModel.findAll({
-            include: [
-               {
-                  model: ProductModel,
-                  as: "product",
-               }
-            ]
-         });
+   // Ví dụ: controller
+static async getAuctionProduct(req, res) {
+  try {
+    const auctionProducts = await ProductVariantModel.findAll({
+      where: {
+        is_auction_only: 1, 
+      },
+      include: [
+        {
+          model: ProductModel,
+          as: "product",
+          where: {
+            publication_status: "published", 
+            status: 1,                       
+          },
+          required: true, 
+        },
+      ],
+      
+      order: [["created_at", "DESC"]],
+    });
 
-         return res.status(200).json({ data: auctionProducts });
-      } catch (error) {
-         console.error("Lỗi server:", error);
-         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
-      }
-   }
+    
+    return res.status(200).json({ data: auctionProducts });
+  } catch (error) {
+    console.error("Lỗi server:", error);
+    return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+  }
+}
+
 
    //--------------------------[ GET ID ]---------------------------
    static async getId(req, res) {

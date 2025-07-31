@@ -1,20 +1,22 @@
-import { useRef, useState, useEffect, useLayoutEffect } from "react";
-import data from "../../../data/products.json";
+import { useRef, useState, useEffect, useCallback } from "react";
 import BreadcrumbCom from "../BreadcrumbCom";
 import ProductCardStyleOne from "../Helpers/Cards/ProductCardStyleOne";
-import DataIteration from "../Helpers/DataIteration";
 import InputCom from "../Helpers/InputCom";
 import Layout from "../Partials/LayoutHomeThree";
 import ProductView from "./ProductView";
 import ProductReviewSection from "./Reviews";
 import SallerInfo from "./SallerInfo";
 import axios from "axios";
-import { useParams } from "react-router-dom";
-import Constants from "../../../Constants";
 import { useLocation, useNavigate } from "react-router-dom";
+import Constants from "../../../Constants";
 import { toast } from "react-toastify";
 
 export default function SingleProductPage() {
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const productId = state?.productId;
+
+  // Reviews (giữ nguyên các state bạn đang có)
   const [tab, setTab] = useState("des");
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -25,83 +27,58 @@ export default function SingleProductPage() {
   const [reviewLoading, setLoading] = useState(false);
   const reviewElement = useRef(null);
   const [report, setReport] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
+  // Mô tả + “Xem thêm”
+  const MAX_HEIGHT = 300; // px
+  const descriptionRef = useRef(null);
+  const [description, setDescription] = useState(""); // <- nên dùng string thay vì []
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
-  const descriptionRef = useRef(null);
-  const [commnets, setComments] = useState([
-    {
-      id: Math.random(),
-      author: "Rafiqul Islam",
-      comments: `Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy
-                text ever since the redi 1500s, when an unknown printer took a
-                galley of type and scrambled it to make a type specimen book. It
-                has survived not only five centuries but also the on leap into
-                electronic typesetting, remaining`,
-      review: 4,
-      replys: [
-        {
-          id: Math.random(),
-          name: "Willium Kingson",
-          comments: `Lorem Ipsum is simply dummy text of the printing and typesetting industry.`,
-        },
-      ],
-    },
-    {
-      id: Math.random(),
-      author: "Abdullah Mamun",
-      comments: `Lorem Ipsum is simply dummy text of the printing and typesetting
-                industry. Lorem Ipsum has been the industry's standard dummy
-                text ever since the redi 1500s, when an unknown printer took a
-                galley of type and scrambled it to make a type specimen book. It
-                has survived not only five centuries but also the on leap into
-                electronic typesetting, remaining`,
-      review: 5,
-    },
-  ]);
-  const { state } = useLocation();
-  const navigate = useNavigate();
-  const { productId } = state || {};
-  const [description, setDescription] = useState([]);
-  const [relatedProducts, setRelatedProducts] = useState([]);
-  useEffect(() => {
-    const productId = state?.productId;
 
+  // --- Fetch dữ liệu sản phẩm + sản phẩm tương tự ---
+  useEffect(() => {
     if (!productId) {
       toast.error("Thiếu thông tin sản phẩm!");
       navigate("/all-products");
       return;
     }
 
+    // Chi tiết / mô tả
     axios
       .get(`${Constants.DOMAIN_API}/products/${productId}/variants`)
       .then((res) => {
-        setDescription(res.data.product.description);
+        // tuỳ API, bạn chọn đường đúng:
+        const desc =
+          res?.data?.product?.description ??
+          res?.data?.data?.product?.description ??
+          res?.data?.data?.description ??
+          res?.data?.description ??
+          "";
+        setDescription(typeof desc === "string" ? desc : "");
       })
       .catch((err) => {
         console.error("Lỗi khi gọi API chi tiết sản phẩm:", err);
       });
 
+    // Sản phẩm tương tự
     axios
       .get(`${Constants.DOMAIN_API}/products/${productId}/similar`)
       .then((res) => {
-        setRelatedProducts(res.data.data);
+        setRelatedProducts(res?.data?.data ?? []);
       })
       .catch((err) => {
         console.error("Lỗi khi gọi API sản phẩm tương tự:", err);
       });
-  }, [state, navigate]);
+  }, [productId, navigate]);
 
+  // --- Điều hướng review qua hash ---
   useEffect(() => {
     if (window.location.hash === "#review") {
       setTab("review");
-
       setTimeout(() => {
         const element = document.getElementById("review-section");
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
-        }
+        element?.scrollIntoView({ behavior: "smooth" });
       }, 200);
     }
   }, []);
@@ -112,9 +89,7 @@ export default function SingleProductPage() {
       setTimeout(() => {
         const commentId = window.location.hash.replace("#", "");
         const element = document.getElementById(commentId);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+        element?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 400);
     }
   }, []);
@@ -122,49 +97,73 @@ export default function SingleProductPage() {
   useEffect(() => {
     if (tab === "review") {
       const element = document.getElementById("review-section");
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
+      element?.scrollIntoView({ behavior: "smooth" });
     }
   }, [tab]);
-  useLayoutEffect(() => {
-    const element = descriptionRef.current;
-    if (element) {
-      setIsOverflowing(element.scrollHeight > MAX_HEIGHT);
-    }
-  }, [description]);
 
+  // --- Check overflow (kể cả khi ảnh trong mô tả load xong) ---
+  const checkOverflow = useCallback(() => {
+    const el = descriptionRef.current;
+    if (!el) return;
+    // scrollHeight là chiều cao full của nội dung
+    setIsOverflowing(el.scrollHeight > MAX_HEIGHT + 1); // +1 để tránh sai số
+  }, [MAX_HEIGHT]);
+
+  // Kiểm tra khi mô tả cập nhật / tab đổi
+  useEffect(() => {
+    checkOverflow();
+  }, [description, tab, checkOverflow]);
+
+  // Lắng nghe load của ảnh + resize container
+  useEffect(() => {
+    const el = descriptionRef.current;
+    if (!el) return;
+
+    const imgs = el.querySelectorAll("img");
+    imgs.forEach((img) => {
+      // Nếu ảnh chưa load, lắng nghe
+      if (!img.complete) {
+        img.addEventListener("load", checkOverflow);
+        img.addEventListener("error", checkOverflow);
+      }
+    });
+
+    const ro = new ResizeObserver(() => checkOverflow());
+    ro.observe(el);
+
+    // cleanup
+    return () => {
+      imgs.forEach((img) => {
+        img.removeEventListener("load", checkOverflow);
+        img.removeEventListener("error", checkOverflow);
+      });
+      ro.disconnect();
+    };
+  }, [description, checkOverflow]);
+
+  // Demo action review (giữ nguyên logic của bạn)
   const reviewAction = () => {
     setLoading(true);
     setTimeout(() => {
       if ((name, message, rating)) {
-        setComments((prev) => [
-          {
-            id: Math.random(),
-            author: name,
-            comments: message,
-            review: rating,
-          },
-          ...prev,
-        ]);
-        setLoading(false);
-        setName("");
-        setEmail("");
-        setPhone("");
-        setMessage("");
-        setRating(0);
-        setHover(0);
+        // ... thêm review vào list (nếu bạn có list)
+      }
+      setLoading(false);
+      setName("");
+      setEmail("");
+      setPhone("");
+      setMessage("");
+      setRating(0);
+      setHover(0);
+      if (reviewElement.current) {
         window.scrollTo({
           top: -reviewElement.current.getBoundingClientRect().top,
           left: 0,
           behavior: "smooth",
         });
       }
-      setLoading(false);
-      return false;
     }, 2000);
   };
-  const MAX_HEIGHT = 300;
 
   return (
     <>

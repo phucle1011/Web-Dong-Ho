@@ -8,6 +8,8 @@ const CategoryModel = require("../../models/categoriesModel");
 const cloudinary = require("../../config/cloudinaryConfig");
 const OrderDetail = require("../../models/orderDetailsModel");
 const CartItem = require("../../models/cartDetailsModel");
+const PromotionProduct = require("../../models/promotionProductsModel");
+const Promotion = require("../../models/promotionsModel");
 
 const { Op,Sequelize } = require("sequelize");
 
@@ -827,30 +829,39 @@ static async deleteVariant(req, res) {
 static async getVariantById(req, res) {
   try {
     const { variant_id } = req.params;
+    const now = new Date();
 
     const variant = await ProductVariant.findByPk(variant_id, {
-      attributes: {
-        include: ["product_id"], // 👈 Thêm product_id vào kết quả
-      },
       include: [
         {
           model: ProductVariantAttributeValue,
           as: "attributeValues",
-          include: [
-            {
-              model: ProductAttribute,
-              as: "attribute",
-            },
-          ],
+          include: [{ model: ProductAttribute, as: "attribute" }],
         },
-        {
-          model: VariantImage,
-          as: "images",
-        },
+        { model: VariantImage, as: "images" },
         {
           model: Product,
           as: "product",
           attributes: ["id", "name", "slug", "thumbnail"],
+        },
+        // 👉 Join sang bảng PromotionProduct
+        {
+          model: PromotionProduct,
+          as: "promotionProducts",
+          required: false,
+          include: [
+            {
+              model: Promotion, // JOIN sang bảng promotion
+              as: "promotion",
+              attributes: ["id", "code", "status", "start_date", "end_date"],
+              required: false,
+              where: {
+                status: ["active","upcoming"],
+                start_date: { [Op.lte]: now },
+                end_date: { [Op.gte]: now },
+              },
+            },
+          ],
         },
       ],
     });
@@ -859,16 +870,23 @@ static async getVariantById(req, res) {
       return res.status(404).json({ message: "Biến thể không tồn tại" });
     }
 
-    res.status(200).json({
+    const data = variant.toJSON();
+    // Kiểm tra nếu có promotion đang hiệu lực
+    data.has_promotion = (data.promotionProducts || []).some(
+      (pp) => pp.promotion != null
+    );
+
+    return res.status(200).json({
       status: 200,
       message: "Lấy chi tiết biến thể thành công",
-      data: variant,
+      data,
     });
   } catch (error) {
     console.error("Lỗi khi lấy chi tiết biến thể:", error);
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 }
+
 
 
 static async deleteAttributeValueById (req, res){

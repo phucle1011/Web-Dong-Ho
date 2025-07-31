@@ -3,6 +3,7 @@ import axios from "axios";
 import Constants from "../../../Constants";
 import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
+import { notifyCartChanged } from "../Helpers/cart/cartEvents";
 import { FaTrashAlt, FaTrophy } from "react-icons/fa";
 import { decodeToken } from "../Helpers/jwtDecode";
 
@@ -126,6 +127,8 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
         },
       });
       setCartItems(res.data.data);
+             notifyCartChanged(); 
+
     } catch (error) {
       console.error("Lỗi khi lấy giỏ hàng:", error);
       // toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
@@ -190,7 +193,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.product_variant_id !== id)
       );
-
+       notifyCartChanged(); 
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
       await fetchCart();
     } catch (error) {
@@ -241,6 +244,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
           }
         }
       );
+       notifyCartChanged(); 
       await fetchCart();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");

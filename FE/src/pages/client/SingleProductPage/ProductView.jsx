@@ -7,6 +7,8 @@ import { decodeToken } from "../Helpers/jwtDecode";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Constants from "../../../Constants";
+import { notifyCartChanged } from "../Helpers/cart/cartEvents";
+
 import { useLocation, useNavigate } from "react-router-dom";
 export default function ProductView({ className, reportHandler }) {
   const [productData, setProductData] = useState(null);
@@ -263,7 +265,7 @@ useEffect(() => {
           },
         }
       );
-
+       notifyCartChanged(); 
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
       if (error.response?.status === 400) {

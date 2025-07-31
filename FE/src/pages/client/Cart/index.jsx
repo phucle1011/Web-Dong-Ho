@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Constants from "../../../Constants";
 import { toast } from "react-toastify";
+import { notifyCartChanged } from "../Helpers/cart/cartEvents";
+
 
 export default function Cart({ className, type }) {
   const token = localStorage.getItem("token");
@@ -53,12 +55,14 @@ export default function Cart({ className, type }) {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+               
+        
       });
 
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.product_variant_id !== id)
       );
-
+              notifyCartChanged(); 
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
       await fetchCart();
     } catch (error) {

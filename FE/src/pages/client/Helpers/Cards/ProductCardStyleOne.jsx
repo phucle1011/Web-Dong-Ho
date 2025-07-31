@@ -10,6 +10,7 @@ import ThinLove from "../icons/ThinLove";
 import ReactDOM from "react-dom";
 import { FiShoppingCart } from "react-icons/fi";
 import StarRating from "../StarRating";
+import { notifyCartChanged } from "../cart/cartEvents";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -317,6 +318,7 @@ async function fetchProduct() {
           },
         }
       );
+      notifyCartChanged(); 
 
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {

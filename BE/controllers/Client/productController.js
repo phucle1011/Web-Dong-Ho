@@ -490,9 +490,13 @@ static async getSimilarProducts(req, res) {
   try {
     const productId = req.params.id;
 
+    // Lấy sản phẩm gốc, bắt buộc phải published
     const product = await Product.findOne({
-      where: { id: productId,status: 1,
-          publication_status: 'published' },
+      where: {
+        id: productId,
+        status: 1,
+        publication_status: 'published',
+      },
       attributes: ["id", "category_id", "brand_id"],
     });
 
@@ -500,19 +504,23 @@ static async getSimilarProducts(req, res) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
+    // Chỉ lấy sản phẩm active + published và khác productId hiện tại
     const whereCommon = {
       id: { [Op.ne]: productId },
       status: 1,
+      publication_status: 'published',     // ✅ chỉ lấy sp đã xuất bản
     };
 
+    // Hàm build truy vấn, chỉ lấy biến thể thường (không đấu giá)
     const buildQuery = (extraWhere) => ({
       where: { ...whereCommon, ...extraWhere },
       include: [
         {
           model: ProductVariant,
           as: 'variants',
-          required: true,
-          attributes: ['id', 'price', 'stock'],
+          required: true,                   // ✅ đảm bảo phải có ít nhất một biến thể đủ điều kiện
+          attributes: ['id', 'price', 'stock', 'is_auction_only'],
+          where: { is_auction_only: 0 },    // ✅ chỉ biến thể không đấu giá
           include: [
             {
               model: ProductVariantAttributeValuesModel,
@@ -527,7 +535,6 @@ static async getSimilarProducts(req, res) {
             },
           ],
         },
-      
       ],
       attributes: ['id', 'name', 'thumbnail'],
       limit: 6,
@@ -535,43 +542,53 @@ static async getSimilarProducts(req, res) {
 
     let similarProducts;
 
+    // 1) Cùng danh mục + cùng thương hiệu
     similarProducts = await Product.findAll(buildQuery({
       category_id: product.category_id,
       brand_id: product.brand_id,
     }));
 
+    // 2) Chỉ theo danh mục
     if (similarProducts.length === 0) {
       similarProducts = await Product.findAll(buildQuery({
         category_id: product.category_id,
       }));
     }
 
+    // 3) Chỉ theo thương hiệu
     if (similarProducts.length === 0) {
       similarProducts = await Product.findAll(buildQuery({
         brand_id: product.brand_id,
       }));
     }
 
+    // 4) Fallback: ngẫu nhiên (vẫn phải published + có variant is_auction_only=0)
     if (similarProducts.length === 0) {
       similarProducts = await Product.findAll({
         where: whereCommon,
-        include: buildQuery({}).include,
+        include: buildQuery({}).include, // ✅ giữ nguyên include (lọc is_auction_only=0)
         attributes: ['id', 'name', 'thumbnail'],
         order: Sequelize.literal('RAND()'),
         limit: 6,
       });
     }
 
-    // Process promotions, variant count, total stock
+    // Tính thêm thông tin khuyến mãi + tồn kho
     const currentDate = new Date();
     const productsWithDetails = await Promise.all(
       similarProducts.map(async (product) => {
         const productJson = product.toJSON();
+
+        // Số biến thể & tổng tồn kho (đã là biến thể thường vì đã lọc ở query)
         productJson.variantCount = product.variants?.length || 0;
-        productJson.total_stock = product.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+        productJson.total_stock = (product.variants || []).reduce(
+          (sum, v) => sum + (parseInt(v.stock) || 0),
+          0
+        );
 
         if (productJson.variants && productJson.variants.length > 0) {
           for (let variant of productJson.variants) {
+            // (Tuỳ chọn) Tính khuyến mãi tốt nhất đang hiệu lực
             const promotions = await PromotionProductModel.findAll({
               where: { product_variant_id: variant.id },
               include: [
@@ -603,7 +620,8 @@ static async getSimilarProducts(req, res) {
                   currentDiscountPercent = parseFloat(promo.discount_value);
                 } else if (promo.discount_type === "fixed") {
                   finalPrice -= parseFloat(promo.discount_value);
-                  currentDiscountPercent = ((parseFloat(variant.price) - finalPrice) / parseFloat(variant.price)) * 100;
+                  currentDiscountPercent =
+                    ((parseFloat(variant.price) - finalPrice) / parseFloat(variant.price)) * 100;
                 }
 
                 finalPrice = Math.max(0, finalPrice);
@@ -624,7 +642,6 @@ static async getSimilarProducts(req, res) {
                 ) {
                   return promoInfo;
                 }
-
                 return best;
               }, null);
 
@@ -646,7 +663,10 @@ static async getSimilarProducts(req, res) {
       })
     );
 
-    const totalVariants = productsWithDetails.reduce((sum, p) => sum + (p.variants?.length || 0), 0);
+    const totalVariants = productsWithDetails.reduce(
+      (sum, p) => sum + (p.variants?.length || 0),
+      0
+    );
 
     return res.status(200).json({
       status: 200,
@@ -666,6 +686,7 @@ static async getSimilarProducts(req, res) {
     res.status(500).json({ message: "Đã xảy ra lỗi khi lấy sản phẩm tương tự" });
   }
 }
+
 
 
 
