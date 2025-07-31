@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Layout from "../Partials/LayoutHomeThree";
-import { FaGavel, FaBookOpen } from "react-icons/fa";
+import { FaGavel, FaBookOpen, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import axios from "axios";
 import Constants from "../../../Constants";
 import { toast } from "react-toastify";
@@ -22,6 +22,63 @@ function AuctionProductDetail() {
   const [upcomingAuctions, setUpcomingAuctions] = useState([]);
   const [loadingAuctions, setLoadingAuctions] = useState(true);
   const [showFullName, setShowFullName] = useState(false);
+
+  const [endedAuctions, setEndedAuctions] = useState([]);
+  const [loadingEnded, setLoadingEnded] = useState(true);
+
+  const [expandedTitle, setExpandedTitle] = useState({ upcoming: {}, ended: {} });
+
+  const [overflowTitle, setOverflowTitle] = useState({ upcoming: {}, ended: {} });
+
+  const upcomingRef = useRef(null);
+  const endedRef = useRef(null);
+
+  const titleRefs = useRef({ upcoming: {}, ended: {} });
+
+  const [upScroll, setUpScroll] = useState({ left: false, right: false });
+  const [endScroll, setEndScroll] = useState({ left: false, right: false });
+
+  const setTitleRef = (type, id) => (el) => {
+    if (!titleRefs.current[type]) titleRefs.current[type] = {};
+    if (el) titleRefs.current[type][id] = el;
+  };
+
+  const measureOverflow = useCallback((type) => {
+    const nodes = titleRefs.current[type] || {};
+    const map = {};
+    Object.entries(nodes).forEach(([id, el]) => {
+
+      map[id] = el.scrollHeight > el.clientHeight + 1;
+    });
+    setOverflowTitle((prev) => ({ ...prev, [type]: map }));
+  }, []);
+
+  useEffect(() => {
+    if (!loadingAuctions) {
+      setTimeout(() => measureOverflow("upcoming"), 0);
+    }
+  }, [loadingAuctions, upcomingAuctions, measureOverflow]);
+
+  useEffect(() => {
+    if (!loadingEnded) {
+      setTimeout(() => measureOverflow("ended"), 0);
+    }
+  }, [loadingEnded, endedAuctions, measureOverflow]);
+
+  useEffect(() => {
+    const onResize = () => {
+      measureOverflow("upcoming");
+      measureOverflow("ended");
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [measureOverflow]);
+
+  const toggleTitle = (type, id) =>
+    setExpandedTitle((prev) => ({
+      ...prev,
+      [type]: { ...prev[type], [id]: !prev[type]?.[id] },
+    }));
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -142,6 +199,72 @@ function AuctionProductDetail() {
     toast.info("Đã hủy xác thực OTP.");
   };
 
+  const fetchEndedAuctions = async () => {
+    try {
+      setLoadingEnded(true);
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/auctions`, {
+        params: { status: "ended", limit: 6 },
+      });
+      setEndedAuctions(res.data.data || []);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách phiên đấu giá đã kết thúc:", error);
+      toast.error("Không thể tải danh sách phiên đấu giá đã kết thúc.");
+    } finally {
+      setLoadingEnded(false);
+    }
+  };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    fetchUpcomingAuctions();
+    fetchEndedAuctions();
+  }, []);
+
+  const sortUpcoming = (list) =>
+    [...list].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+  const sortEnded = (list) =>
+    [...list].sort((a, b) => new Date(b.end_time || 0) - new Date(a.end_time || 0));
+
+  const updateScrollButtons = (ref, setter) => {
+    const el = ref.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth - 1;
+    setter({
+      left: el.scrollLeft > 0,
+      right: el.scrollLeft < max,
+    });
+  };
+
+  const scrollByAmount = (ref, dir = 1) => {
+    const el = ref.current;
+    if (!el) return;
+    const amount = Math.round(el.clientWidth * 0.98);
+    el.scrollBy({ left: dir * amount, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const el = upcomingRef.current;
+    if (!el) return;
+    const handler = () => updateScrollButtons(upcomingRef, setUpScroll);
+    handler();
+    el.addEventListener("scroll", handler);
+    return () => el.removeEventListener("scroll", handler);
+  }, [upcomingRef]);
+
+  useEffect(() => {
+    const el = endedRef.current;
+    if (!el) return;
+    const handler = () => updateScrollButtons(endedRef, setEndScroll);
+    handler();
+    el.addEventListener("scroll", handler);
+    return () => el.removeEventListener("scroll", handler);
+  }, [endedRef]);
+
+  useEffect(() => {
+    updateScrollButtons(endedRef, setEndScroll);
+  }, [endedAuctions]);
+
   return (
     <Layout>
       <div className="flashsale-wrapper w-full">
@@ -167,8 +290,8 @@ function AuctionProductDetail() {
 
               <div
                 className={`bg-white rounded-2xl p-6 text-center shadow-xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10 ${loading
-                    ? "opacity-70 pointer-events-none"
-                    : "hover:shadow-2xl"
+                  ? "opacity-70 pointer-events-none"
+                  : "hover:shadow-2xl"
                   }`}
                 onClick={handleEnterAuctionRoom}
                 title="Vào phòng đấu giá"
@@ -187,97 +310,253 @@ function AuctionProductDetail() {
           </div>
         </div>
 
-        {/* Danh sách phiên sắp diễn ra */}
         <div className="container-x mx-auto">
           <h2 className="text-2xl font-bold my-6">Phiên đấu giá sắp diễn ra</h2>
 
           {loadingAuctions ? (
             <p className="text-center text-gray-500">Đang tải dữ liệu...</p>
           ) : upcomingAuctions.length === 0 ? (
-            <p className="text-center text-gray-500">
-              Hiện không có phiên đấu giá nào sắp diễn ra.
-            </p>
+            <div className="flex items-center justify-center min-h-[200px]">
+              <p className="text-center inline-block px-6 py-4 bg-gradient-to-r from-blue-400 to-blue-600 text-white text-lg font-bold rounded-xl shadow-lg animate-bounce">
+                Hiện không có phiên đấu giá nào sắp diễn ra.
+              </p>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 my-6">
-              {upcomingAuctions.map((auction) => (
-                <div
-                  key={auction.id}
-                  className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition hover:shadow-2xl"
-                >
-                  <div className="relative">
-                    <img
-                      src={
-                        auction.variant?.product?.thumbnail ||
-                        "https://via.placeholder.com/300x200"
-                      }
-                      alt={auction.variant?.product?.name}
-                      className="w-full h-48 object-contain bg-gray-100 p-3"
-                    />
-                    <button className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow text-pink-500">
-                      <FaGavel className="w-5 h-5" />
-                    </button>
-                  </div>
+            <div className="my-6 relative">
 
-                  <div className="p-4">
-                    <h3
-                      className={`text-lg font-semibold text-gray-800 mb-2 ${showFullName ? "" : "line-clamp-2"
-                        }`}
+              <button
+                aria-label="Cuộn trái"
+                onClick={() => scrollByAmount(upcomingRef, -1)}
+                className={`hidden lg:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 
+                w-10 h-10 rounded-full bg-white shadow border z-10
+                transition ${upScroll.left ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+              >
+                <FaChevronLeft />
+              </button>
+
+              <div
+                ref={upcomingRef}
+                className="
+      flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2
+      [scrollbar-width:none] [-ms-overflow-style:none]
+    "
+                style={{ scrollbarWidth: "none" }}
+                onLoad={() => updateScrollButtons(upcomingRef, setUpScroll)}
+              >
+                {sortUpcoming(upcomingAuctions).map((auction) => {
+                  const expanded = !!expandedTitle.upcoming[auction.id];
+                  return (
+                    <div
+                      key={auction.id}
+                      className="
+            snap-start flex-none
+            w-[85%] sm:w-[55%] lg:w-[33.333%] xl:w-[33.333%]
+          "
                     >
-                      {auction.variant?.product?.name ||
-                        "Không có tên sản phẩm"}
-                    </h3>
+                      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition hover:shadow-2xl">
+                        <div className="relative">
+                          <img
+                            src={auction.variant?.product?.thumbnail || "https://via.placeholder.com/300x200"}
+                            alt={auction.variant?.product?.name}
+                            className="w-full h-48 object-contain bg-gray-100 p-3"
+                          />
+                          <span className="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-600">
+                            Sắp diễn ra
+                          </span>
+                          <button className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow text-pink-500">
+                            <FaGavel className="w-5 h-5" />
+                          </button>
+                        </div>
 
-                    {auction.variant?.product?.name?.length > 40 && (
-                      <button
-                        className="text-blue-500 text-sm"
-                        onClick={() => setShowFullName(!showFullName)}
-                      >
-                        {showFullName ? "Ẩn bớt" : "Xem thêm"}
-                      </button>
-                    )}
+                        <div className="p-4">
 
-                    <div className="flex justify-between text-sm font-medium mb-2">
-                      <div className="text-green-600">
-                        Giá khởi điểm:{" "}
-                        <strong>
-                          {Number(auction.variant.price || 0).toLocaleString(
-                            "vi-VN"
-                          )}{" "}
-                          ₫
-                        </strong>
-                      </div>
-                      <div className="text-pink-600">
-                        Bước giá:{" "}
-                        <strong>
-                          {Number(auction.priceStep || 0).toLocaleString(
-                            "vi-VN"
-                          )}{" "}
-                          ₫
-                        </strong>
+                          <h3
+                            ref={setTitleRef("upcoming", auction.id)}
+                            className={`text-lg font-semibold text-gray-800 mb-2
+                  ${expanded ? "" : "line-clamp-2"}
+                  min-h-[3.25rem]  /* giữ chỗ ~2 dòng cho text-lg */
+                `}
+                          >
+                            {auction.variant?.product?.name || "Không có tên sản phẩm"}
+                          </h3>
+
+                          {overflowTitle.upcoming?.[auction.id] && (
+                            <button
+                              className="text-blue-500 text-sm mb-1"
+                              onClick={() => toggleTitle("upcoming", auction.id)}
+                            >
+                              {expanded ? "Ẩn bớt" : "Xem thêm"}
+                            </button>
+                          )}
+
+                          <div className="flex justify-between text-sm font-medium mb-2">
+                            <div className="text-green-600">
+                              Giá khởi điểm:{" "}
+                              <strong>{Number(auction.variant.price || 0).toLocaleString("vi-VN")} ₫</strong>
+                            </div>
+                            <div className="text-pink-600">
+                              Bước giá:{" "}
+                              <strong>{Number(auction.priceStep || 0).toLocaleString("vi-VN")} ₫</strong>
+                            </div>
+                          </div>
+
+                          <div className="text-gray-500 text-sm mb-4">
+                            Thời gian bắt đầu:{" "}
+                            <strong>{auction.start_time.replace("T", " ").substring(0, 19)}</strong>
+                          </div>
+
+                          <Link
+                            to={{ pathname: "/AcutionsDetail" }}
+                            state={{ productId: auction.variant?.product?.id }}
+                            className="w-full block text-center py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
+                          >
+                            Xem chi tiết
+                          </Link>
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
 
-                    <div className="text-gray-500 text-sm mb-4">
-                      Thời gian bắt đầu:{" "}
-                      <strong>
-                        {auction.start_time.replace("T", " ").substring(0, 19)}
-                      </strong>
-                    </div>
-
-                    <Link
-                      to={{
-                        pathname: "/AcutionsDetail",
-                      }}
-                      state={{ productId: auction.variant?.product?.id }}
-                      className="w-full block text-center py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
-                    >
-                      Xem chi tiết
-                    </Link>
-                  </div>
-                </div>
-              ))}
+              <button
+                aria-label="Cuộn phải"
+                onClick={() => scrollByAmount(upcomingRef, 1)}
+                className={`hidden lg:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 
+                w-10 h-10 rounded-full bg-white shadow border z-10
+                transition ${upScroll.right ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+              >
+                <FaChevronRight />
+              </button>
             </div>
           )}
+
+        </div>
+
+        <div className="container-x mx-auto mt-10">
+          <h2 className="text-2xl font-bold my-6">Phiên đấu giá đã kết thúc</h2>
+
+          {loadingEnded ? (
+            <p className="text-center text-gray-500">Đang tải dữ liệu...</p>
+          ) : endedAuctions.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[200px]">
+              <p className="text-center inline-block px-6 py-4 bg-gradient-to-r from-red-400 to-red-600 text-white text-lg font-bold rounded-xl shadow-lg animate-bounce">
+                Hiện không có phiên đấu giá nào đã kết thúc.
+              </p>
+            </div>
+          ) : (
+            <div className="my-6 relative">
+
+              <button
+                aria-label="Cuộn trái"
+                onClick={() => scrollByAmount(endedRef, -1)}
+                className={`hidden lg:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 
+                w-10 h-10 rounded-full bg-white shadow border z-10
+                transition ${endScroll.left ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+              >
+                <FaChevronLeft />
+              </button>
+
+              <div
+                ref={endedRef}
+                onScroll={() => updateScrollButtons(endedRef, setEndScroll)}
+                className="
+      flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2
+      [scrollbar-width:none] [-ms-overflow-style:none]
+    "
+                style={{ scrollbarWidth: "none" }}
+                onLoad={() => updateScrollButtons(endedRef, setEndScroll)}
+              >
+                {sortEnded(endedAuctions).map((auction) => {
+                  const expanded = !!expandedTitle.ended[auction.id];
+                  return (
+                    <div
+                      key={auction.id}
+                      className="
+            snap-start flex-none
+            w-[85%] sm:w-[55%] lg:w-[33.333%] xl:w-[33.333%]
+          "
+                    >
+                      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition hover:shadow-2xl">
+                        <div className="relative">
+                          <img
+                            src={auction.variant?.product?.thumbnail || "https://via.placeholder.com/300x200"}
+                            alt={auction.variant?.product?.name}
+                            className="w-full h-48 object-contain bg-gray-100 p-3"
+                          />
+                          <span className="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-600">
+                            ĐÃ KẾT THÚC
+                          </span>
+                        </div>
+
+                        <div className="p-4">
+                          <h3
+                            ref={setTitleRef("ended", auction.id)}
+                            className={`text-lg font-semibold text-gray-800 mb-2
+                  ${expanded ? "" : "line-clamp-2"}
+                  min-h-[3.55rem]
+                `}
+                          >
+                            {auction.variant?.product?.name || "Không có tên sản phẩm"}
+                          </h3>
+
+                          {overflowTitle.ended?.[auction.id] && (
+                            <button
+                              className="text-blue-500 text-sm mb-1"
+                              onClick={() => toggleTitle("ended", auction.id)}
+                            >
+                              {expanded ? "Ẩn bớt" : "Xem thêm"}
+                            </button>
+                          )}
+
+                          <div className="flex justify-between text-sm font-medium mb-2">
+                            <div className="text-green-600">
+                              Giá khởi điểm:{" "}
+                              <strong>{Number(auction.variant?.price || 0).toLocaleString("vi-VN")} ₫</strong>
+                            </div>
+                            <div className="text-pink-600">
+                              Bước giá:{" "}
+                              <strong>{Number(auction.priceStep || 0).toLocaleString("vi-VN")} ₫</strong>
+                            </div>
+                          </div>
+
+                          <div className="text-gray-500 text-sm mb-4">
+                            Thời gian kết thúc:{" "}
+                            <strong>
+                              {auction.end_time
+                                ? auction.end_time.replace("T", " ").substring(0, 19)
+                                : "—"}
+                            </strong>
+                          </div>
+
+                          <Link
+                            to={{ pathname: "/AcutionsDetail" }}
+                            state={{ productId: auction.variant?.product?.id }}
+                            className="w-full block text-center py-2 bg-gradient-to-r from-blue-500 to-indigo-600 
+text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
+                          >
+                            Xem chi tiết
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                aria-label="Cuộn phải"
+                onClick={() => scrollByAmount(endedRef, 1)}
+                className={`hidden lg:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 
+                w-10 h-10 rounded-full bg-white shadow border z-10
+                transition ${endScroll.right ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+              >
+                <FaChevronRight />
+              </button>
+            </div>
+
+          )}
+
         </div>
 
         <div className="bg-[#f5f7ff] py-12 px-4 sm:px-10 rounded-2xl shadow-md my-10">
@@ -327,7 +606,6 @@ function AuctionProductDetail() {
           </div>
         </div>
 
-        {/* Modal nhập OTP */}
         {otpRequested && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">

@@ -79,7 +79,7 @@ app.use(cors({
 }));
 
 app.use(apiRoutes);
-// app.use(clientRoutes);
+app.use(clientRoutes);
 app.use('/admin', adminRoutes);
 app.use('/', authenticate, updateLastActive, clientRoutes);
 

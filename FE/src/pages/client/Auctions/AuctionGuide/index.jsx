@@ -80,7 +80,7 @@ export default function AuctionGuide() {
                                     Xem danh sách đấu giá
                                 </Link>
                                 <Link
-                                    to="/payment"
+                                    to="/profile#payment"
                                     className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/90 text-gray-900 font-semibold shadow hover:bg-white transition"
                                 >
                                     <FaWallet />

@@ -340,16 +340,17 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
               </tr>
             ) : (
               cartItems.map((item) => {
-                const variant = item.variant;
-                const image = variant?.images?.[0]?.image_url || "";
-                const originalPrice = parseFloat(variant.price || 0);
+                const variant = item.variant ??{};
+                const image = variant?.images?.[0]?.image_url ?? "";
+                const originalPrice = parseFloat(variant.price ?? 0);
                 // const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
-                const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
-                const quantity = item.quantity;
-                const stock = variant.stock;
+                const discountPercent = parseFloat(variant.promotion?.discount_percent ?? 0);
+                const quantity = item.quantity ?? 0;
+                const stock = variant.stock ?? 0;
 
-                const name = variant.product.name;
-                const attributes = item.variant.attributeValues || [];
+                // const name = variant.product.name ?? "Không có tên";
+                const productName = variant?.product?.name ?? "Không có tên";
+                const attributes = variant.attributeValues ?? [];
                 const showAll = !!showAllMap[item.id];
                 const displayedAttrs = showAll ? attributes : attributes.slice(0, 2);
                 const showFullName = !!showNameMap[item.id];
@@ -358,7 +359,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                 const isAuction = auctionInfo.isAuction;
                 const price = isAuction
                   ? auctionInfo.bidAmount
-                  : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                  : parseFloat(variant.promotion?.discounted_price ?? variant.price ?? 0);
                 const total = price * quantity;
 
                 return (
@@ -401,10 +402,10 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                                 : {}
                             }
                           >
-                            {name} ({variant.sku})
+                            {productName} ({variant.sku})
                           </p>
 
-                          {name.length > 40 && (
+                          {productName.length > 40 && (
                             <button
                               onClick={() => toggleShowName(item.id)}
                               className="mt-1 text-blue-600 hover:text-blue-800 text-sm"
@@ -418,7 +419,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                     <td className="py-4 px-2 w-[180px] align-top">
                       <div className="flex flex-col gap-1">
                         {displayedAttrs.map((attr) => {
-                          const name = attr.attribute?.name;
+                          const name = attr.attribute?.name || "Không có tên";
                           const val = attr.value;
                           const isColor = name?.toLowerCase() === "color";
                           return (

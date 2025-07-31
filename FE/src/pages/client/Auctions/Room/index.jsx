@@ -66,6 +66,8 @@ export default function AuctionRoom() {
     const [cooldownUntil, setCooldownUntil] = useState(null);
     const [cooldownLeft, setCooldownLeft] = useState(0);
 
+    const [showFullDescription, setShowFullDescription] = useState(false);
+
     const [countdown, setCountdown] = useState({
         label: "",
         text: "",
@@ -862,12 +864,26 @@ export default function AuctionRoom() {
                                     </div>
                                 </div>
                             </div>
-                            <div
-                                className="prose prose-img:rounded-md transition-all duration-300 overflow-hidden mt-5"
-                                dangerouslySetInnerHTML={{
-                                    __html: activeAuction?.variant?.product?.description || ""
-                                }}
-                            />
+                            {/* Mô tả sản phẩm */}
+                            <div className="mt-5">
+                                <h4 className="font-semibold mb-2">Mô tả chi tiết:</h4>
+                                <div
+                                    className={`prose prose-img:rounded-md transition-all duration-300 overflow-hidden 
+      ${showFullDescription ? "max-h-full" : "max-h-[300px]"}`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: activeAuction?.variant?.product?.description || ""
+                                    }}
+                                />
+
+                                {activeAuction?.variant?.product?.description?.length > 0 && (
+                                    <button
+                                        onClick={() => setShowFullDescription((prev) => !prev)}
+                                        className="mt-2 text-blue-600 text-sm font-medium"
+                                    >
+                                        {showFullDescription ? "Thu gọn" : "Xem thêm"}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* CỘT PHẢI: TRẢ GIÁ + LỊCH SỬ */}
@@ -933,10 +949,10 @@ export default function AuctionRoom() {
                                     onClick={handleBid}
                                     disabled={!activeAuction || isMyHighest || isCooldown}
                                     className={`mt-4 w-full h-12 rounded-full font-semibold shadow
-    ${isCooldown || isMyHighest
+                                    ${isCooldown || isMyHighest
                                             ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                                             : 'bg-blue-200 hover:bg-blue-300 text-blue-900'}
-  `}
+                                                `}
                                 >
                                     {isCooldown
                                         ? `Đang tạm khóa (${Math.ceil(cooldownLeft / 1000)}s)`
