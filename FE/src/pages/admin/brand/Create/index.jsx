@@ -145,7 +145,7 @@ function BrandCreate({ onSuccess, isModal = false }) {
   };
 
   return (
-    <div className="container mx-auto p-2">
+    <div className="container mx-auto p-0 m-0 ">
       <div className="bg-white p-4 shadow rounded-md">
         <h3 className="text-2xl font-semibold text-gray-800 text-center mb-6 border-b border-gray-200 pb-4">
           Thêm thương hiệu mới

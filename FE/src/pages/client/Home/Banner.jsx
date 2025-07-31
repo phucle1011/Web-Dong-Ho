@@ -30,12 +30,7 @@ export default function Banner({ className }) {
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  {/* <circle
-                    cx="33.5402"
-                    cy="33.5402"
-                    r="33.5402"
-                    fill="current-bolor"
-                  /> */}
+                
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-qblack" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                   </svg>
@@ -54,13 +49,7 @@ export default function Banner({ className }) {
                   xmlns="http://www.w3.org/2000/svg"
                   className={`fill-current`}
                 >
-                  {/* <circle
-                    cx="50.3094"
-                    cy="33.5402"
-                    r="33.5402"
-                    transform="rotate(180 50.3094 33.5402)"
-                    fill=""
-                  /> */}
+               
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-qblack" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg>

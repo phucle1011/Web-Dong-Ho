@@ -69,8 +69,8 @@ const AddProduct = () => {
   const fetchData = async () => {
     try {
       const [categoryRes, brandRes] = await Promise.all([
-        axios.get(`${Constants.DOMAIN_API}/admin/category/list`),
-        axios.get(`${Constants.DOMAIN_API}/admin/brand/list`),
+        axios.get(`${Constants.DOMAIN_API}/admin/product/get-category`),
+        axios.get(`${Constants.DOMAIN_API}/admin//product/get-brand`),
       ]);
 
       const brandList = brandRes.data.data || [];

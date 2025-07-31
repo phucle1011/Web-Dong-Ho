@@ -89,20 +89,26 @@ const CreateNotification = () => {
   };
 
   // Helpers to return Date objects for time boundaries
-  const getDateBounds = (date) => {
-    const min = date ? new Date(date) : new Date();
-    min.setHours(0, 0, 0, 0);
-    const max = new Date(min);
-    max.setHours(23, 59, 59, 999);
-    return { min, max };
+  // Helpers để tính min/max time
+    const now = new Date();
+  const computeMinTime = (selected) => {
+    if (!selected) return now;
+    const d = new Date(selected);
+    return d.toDateString() === now.toDateString() ? now : new Date(d.setHours(0, 0, 0, 0));
+  };
+  const computeMaxTime = (selected, limit) => {
+   if (selected && limit && new Date(selected).toDateString() === new Date(limit).toDateString()) {
+      return new Date(limit);
+    }
+    const d = selected ? new Date(selected) : new Date();
+    return new Date(d.setHours(23, 59, 59, 999));
   };
 
-  // Compute bounds
-  const { min: startMin, max: startMax } = getDateBounds(
-    startDate || new Date()
-  );
-  const { min: endMin, max: endMax } = getDateBounds(endDate || new Date());
-
+  // Compute bounds cho DatePicker
+  const startMin = computeMinTime(startDate);
+  const startMax = computeMaxTime(startDate, endDate);
+  const endMin   = computeMinTime(startDate);
+  const endMax   = computeMaxTime(endDate);
   return (
     <div className="p-6 max-w-7xl mx-auto bg-white rounded shadow">
       <h2 className="text-2xl font-semibold mb-6">Tạo Thông Báo</h2>

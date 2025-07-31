@@ -200,19 +200,36 @@ static async getPublishedAuctionProducts(req, res) {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
+    // Truy vấn 1: Tìm ID các sản phẩm hợp lệ
     const { count: totalProducts, rows: products } = await Product.findAndCountAll({
       where: { publication_status: 'published' },
-      order: [['created_at', 'DESC']],
-      limit,
-      offset,
-      distinct: true,      // ✅ quan trọng để COUNT DISTINCT theo Product
-      subQuery: false,     // ✅ tránh subquery làm sai phân trang trong 1 số DB
       include: [
         {
           model: ProductVariant,
           as: 'variants',
-          where: { is_auction_only: 1 }, // chỉ biến thể đấu giá
-          required: true, // phải có ít nhất 1 biến thể đấu giá
+          where: { is_auction_only: 1 },
+          required: true,
+          attributes: [], // không lấy dữ liệu variant ở đây
+        },
+      ],
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+      distinct: true,
+    });
+
+    const productIds = products.map(p => p.id);
+
+    // Truy vấn 2: Lấy đầy đủ thông tin sản phẩm
+    const productsFull = await Product.findAll({
+      where: { id: productIds },
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: ProductVariant,
+          as: 'variants',
+          where: { is_auction_only: 1 },
+          required: true,
           include: [
             {
               model: ProductVariantAttributeValue,
@@ -227,15 +244,13 @@ static async getPublishedAuctionProducts(req, res) {
       ],
     });
 
-    // Lưu ý: do đang filter variants is_auction_only=1,
-    // product.variants ở dưới CHỈ là các biến thể đấu giá.
-    const data = products.map((product) => {
+    const data = productsFull.map((product) => {
       const j = product.toJSON();
       j.variantCount = product.variants?.length || 0;
       return j;
     });
 
-    const totalVariants = products.reduce(
+    const totalVariants = productsFull.reduce(
       (sum, p) => sum + (p.variants?.length || 0),
       0
     );
@@ -256,6 +271,8 @@ static async getPublishedAuctionProducts(req, res) {
     return res.status(500).json({ error: error.message });
   }
 }
+
+
 
 
   // Lấy chi tiết theo ID
@@ -953,7 +970,40 @@ static async deleteImagesClauding(req, res) {
   }
 }
 
+static async getAllActiveBrands(req, res) {
+    try {
+        const activeBrands = await BrandModel.findAll({
+            where: { status: 'active' },
+            order: [['created_at', 'DESC']],
+        });
 
+        res.status(200).json({
+            status: 200,
+            message: "Lấy danh sách thương hiệu hoạt động thành công",
+            data: activeBrands,
+        });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách thương hiệu hoạt động:", error);
+        res.status(500).json({ error: error.message });
+    }
+}
+static async getAllActiveCategories(req, res) {
+    try {
+        const activeCategories = await CategoryModel.findAll({
+            where: { status: 'active' },
+            order: [['created_at', 'DESC']],
+        });
+
+        res.status(200).json({
+            status: 200,
+            message: "Lấy danh sách danh mục hoạt động thành công",
+            data: activeCategories,
+        });
+    } catch (error) {
+        console.error("Lỗi khi lấy danh sách danh mục hoạt động:", error);
+        res.status(500).json({ error: error.message });
+    }
+}
 
 
 

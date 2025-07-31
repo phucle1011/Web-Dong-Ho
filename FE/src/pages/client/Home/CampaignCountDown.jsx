@@ -138,13 +138,36 @@ function Circle({ value, label, color }) {
 }
 
 function Nav({ pos, onClick }) {
-  const side = pos === "left" ? "left-2 sm:left-5" : "right-2 sm:right-5";
+  const sideClasses = pos === 'left' ? 'left-2 sm:left-5' : 'right-2 sm:right-5';
+
   return (
     <button
       onClick={onClick}
-      className={`absolute ${side} top-1/2 -translate-y-1/2 z-30 bg-white/70 hover:bg-white rounded-full p-2 shadow`}
+      className={`absolute ${sideClasses} top-1/2 -translate-y-1/2 z-30 rounded-full p-2`}
     >
-      {pos === "left" ? "❮" : "❯"}
+      {pos === 'left' ? (
+        // Left arrow
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-6 h-6 text-qblack"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      ) : (
+        // Right arrow
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-6 h-6 text-qblack"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      )}
     </button>
   );
 }

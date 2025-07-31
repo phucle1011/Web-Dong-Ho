@@ -54,7 +54,7 @@ const AdminProductList = () => {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/admin/brand/list`);
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/product/get-brand`);
         setBrands(res.data.data || []);
       } catch (error) {
         console.error("Lỗi khi lấy danh sách thương hiệu:", error);
@@ -68,7 +68,7 @@ const AdminProductList = () => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get(
-          `${Constants.DOMAIN_API}/admin/category/list`
+          `${Constants.DOMAIN_API}/admin/product/get-category`
         );
         setCategories(res.data.data || []);
       } catch (error) {
