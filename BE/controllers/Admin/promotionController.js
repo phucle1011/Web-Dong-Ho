@@ -484,6 +484,60 @@ class PromotionController {
     }
   }
 
+  static async getOrdersByPromotion(req, res) {
+    try {
+      const promotionId = req.params.id;
+
+      const promotion = await PromotionModel.findByPk(promotionId, {
+        include: [
+          {
+            model: OrderModel,
+            as: 'orders',
+            required: true,
+            attributes: ['id', 'order_code', 'total_price', 'status', 'created_at', 'payment_method', 'shipping_address', 'note'],
+            include: [
+              {
+                model: UserModel,
+                as: 'user',
+                attributes: ['id', 'name', 'email']
+              },
+              {
+                model: require('../../models/orderDetailsModel'),
+                as: 'orderDetails',
+                include: [
+                  {
+                    model: require('../../models/productVariantsModel'),
+                    as: 'variant',
+                    include: [
+                      {
+                        model: require('../../models/productsModel'),
+                        as: 'product',
+                        attributes: ['id', 'name']
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      });
+
+      if (!promotion) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy khuyến mãi.' });
+      }
+
+      res.status(200).json({
+        success: true,
+        orders: promotion.orders
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy đơn hàng theo khuyến mãi:', error);
+      res.status(500).json({ success: false, message: 'Lỗi máy chủ.' });
+    }
+  }
+
+
 }
 
 module.exports = PromotionController;

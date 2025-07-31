@@ -87,6 +87,7 @@ router.get('/promotions/list', promotionController.getAll);
 router.post("/promotions/create", promotionController.create);
 router.get('/promotions/getusers', promotionController.getHighValueBuyers);
 router.get('/promotions/applied', promotionController.getAppliedPromotions);
+router.get('/promotions/applied/:id', promotionController.getOrdersByPromotion);
 router.get("/promotions/:id", promotionController.getById);
 router.put('/promotions/:id', promotionController.update);
 router.delete("/promotion/:id", promotionController.delete);

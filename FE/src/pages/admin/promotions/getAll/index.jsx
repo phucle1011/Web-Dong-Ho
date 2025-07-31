@@ -17,6 +17,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import PromotionOrderListModal from "../Promotiondetail/index.jsx";
 
 function PromotionGetAll() {
     const [showOrderModal, setShowOrderModal] = useState(false);
