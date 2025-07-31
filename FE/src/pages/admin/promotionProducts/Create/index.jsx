@@ -38,7 +38,7 @@ const PromotionProductForm = ({ onSuccess }) => {
       return { status: "Sắp bắt đầu", className: "text-blue-500" };
     }
     if (currentDate <= end) {
-      return { status: "Đang hoạt động", className: "text-green-500" };
+      return { status: "Đang diễn ra", className: "text-green-500" };
     }
     return { status: "Đã kết thúc", className: "text-gray-500" };
   };

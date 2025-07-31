@@ -25,6 +25,8 @@ export default function ProductView({ className, reportHandler }) {
   const [ratingCount, setRatingCount] = useState(0);
   const { state } = useLocation();
   const navigate = useNavigate();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   // useEffect(() => {
   //   if (!state?.productId) {
   //     navigate("/all-products");
@@ -33,6 +35,17 @@ export default function ProductView({ className, reportHandler }) {
   const { productId } = state || {};
 const [showFullShortDesc, setShowFullShortDesc] = useState(false);
 const SHORT_DESC_LIMIT = 30;
+
+useEffect(() => {
+  if (variantImages.length > 0) {
+    const safeIndex = Math.max(
+      0,
+      Math.min(currentImageIndex, variantImages.length - 1)
+    );
+    setSelectedImage(variantImages[safeIndex]?.image_url || "");
+  }
+}, [currentImageIndex, variantImages]);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -278,9 +291,11 @@ const SHORT_DESC_LIMIT = 30;
   if (error) return <div>Lỗi: {error}</div>;
   if (!productData) return null;
 
-  const changeImgHandler = (url) => {
-    setSelectedImage(url);
-  };
+ const changeImgHandler = (url) => {
+  const index = variantImages.findIndex((img) => img.image_url === url);
+  setCurrentImageIndex(index >= 0 ? index : 0);
+};
+
 
   const handleVariantSelect = (variant) => {
     if (!variant || selectedVariant?.id === variant.id) {
@@ -325,9 +340,42 @@ const SHORT_DESC_LIMIT = 30;
     >
       <div data-aos="fade-right" className="lg:w-1/2 xl:mr-[70px] lg:mr-[50px]">
         <div className="w-full">
-          <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
-            <img src={selectedImage} alt="" className="object-contain" />
-          </div>
+         <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
+  <img
+    src={selectedImage}
+    alt=""
+     className="max-h-full max-w-full object-contain"
+  />
+
+  {/* Nút trái */}
+  {variantImages.length > 1 && (
+    <button
+      onClick={() =>
+        setCurrentImageIndex((prev) =>
+          prev === 0 ? variantImages.length - 1 : prev - 1
+        )
+      }
+      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-2 shadow z-10"
+    >
+      ◀
+    </button>
+  )}
+
+  {/* Nút phải */}
+  {variantImages.length > 1 && (
+    <button
+      onClick={() =>
+        setCurrentImageIndex((prev) =>
+          prev === variantImages.length - 1 ? 0 : prev + 1
+        )
+      }
+      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-2 shadow z-10"
+    >
+      ▶
+    </button>
+  )}
+</div>
+
           <div className="overflow-x-auto">
             <div className="flex gap-2 flex-nowrap">
               {(selectedVariant ? variantImages : images).map((img) => (

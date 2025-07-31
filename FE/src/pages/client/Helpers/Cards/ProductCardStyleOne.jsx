@@ -12,6 +12,8 @@ import { FiShoppingCart } from "react-icons/fi";
 import StarRating from "../StarRating";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const dialogRef = useRef();
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -39,6 +41,14 @@ const variants = useMemo(() => {
   if (product?.variants?.length) return product.variants;
   return [];
 }, [productData?.variants, product?.variants]);
+
+useEffect(() => {
+  if (variantImages.length > 0) {
+    const safeIndex = Math.max(0, Math.min(currentImageIndex, variantImages.length - 1));
+    setSelectedImage(variantImages[safeIndex]?.image_url || "/images/no-image.jpg");
+  }
+}, [currentImageIndex, variantImages]);
+
 
   useEffect(() => {
     if (!product.id) return;
@@ -384,6 +394,8 @@ async function fetchProduct() {
     setAvgRating(parseFloat(variant.averageRating || 0));
     setRatingCount(parseInt(variant.ratingCount || 0));
     checkWishlistStatus(variant.id);
+    setCurrentImageIndex(0);
+
   };
 
   const checkWishlistStatus = async (variantId) => {
@@ -532,13 +544,43 @@ async function fetchProduct() {
             </svg>
           </button>
           <div className="overflow-hidden mt-5 relative">
-            <div className="w-full h-64">
-              <img
-                src={thumbnail}
-                alt={productName}
-                className="w-full h-full object-contain rounded-lg shadow-sm hover:scale-105 transition-transform duration-300"
-              />
-            </div>
+       <div className="w-full h-64 relative">
+  <img
+    src={thumbnail}
+    alt={productName}
+    className="w-full h-full object-contain rounded-lg shadow-sm transition-transform duration-300"
+  />
+
+  {/* Nút chuyển ảnh trái */}
+  {variantImages.length > 1 && (
+    <button
+      onClick={() =>
+        setCurrentImageIndex((prev) =>
+          prev === 0 ? variantImages.length - 1 : prev - 1
+        )
+      }
+      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
+    >
+      ◀
+    </button>
+  )}
+
+  {/* Nút chuyển ảnh phải */}
+  {variantImages.length > 1 && (
+    <button
+      onClick={() =>
+        setCurrentImageIndex((prev) =>
+          prev === variantImages.length - 1 ? 0 : prev + 1
+        )
+      }
+      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
+    >
+      ▶
+    </button>
+  )}
+</div>
+
+
             {discountPercent > 0 && displayOriginalPrice > displayPrice && (
               <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
                 {discountType === "percentage"

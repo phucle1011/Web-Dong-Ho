@@ -178,11 +178,27 @@ static async create(req, res) {
       return res.status(400).json({ error: "Tất cả variant_quantity phải là số > 0" });
     }
 
-    const variants = await ProductVariantsModel.findAll({ where: { id: variantIds } });
-    if (variants.length !== variantIds.length) {
-      const missingIds = variantIds.filter(id => !variants.some(v => v.id === id));
-      return res.status(400).json({ error: `Các biến thể không tồn tại: ${missingIds.join(', ')}` });
+  const variants = await ProductVariantsModel.findAll({
+  where: { id: variantIds },
+  include: [
+    {
+      model: ProductModel,
+      as: 'product',
+      attributes: ['id', 'publication_status'],
+      where: { publication_status: 'published' }
     }
+  ]
+});
+
+if (variants.length !== variantIds.length) {
+  const foundVariantIds = variants.map((v) => v.id);
+  const missingIds = variantIds.filter(
+    (id) => !foundVariantIds.includes(id)
+  );
+  return res.status(400).json({
+    error: `Các biến thể không hợp lệ hoặc thuộc sản phẩm chưa xuất bản: ${missingIds.join(", ")}`,
+  });
+}
 
     const promotions = await PromotionModel.findAll({ where: { id: promotionIds } });
     if (promotions.length !== promotionIds.length) {

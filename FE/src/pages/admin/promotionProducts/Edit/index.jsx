@@ -43,7 +43,7 @@ const PromotionProductEdit = () => {
         return "Không xác định";
       }
       if (currentDate < start) return "Sắp bắt đầu";
-      if (currentDate <= end) return "Đang hoạt động";
+      if (currentDate <= end) return "Đang diễn ra";
       return "Đã kết thúc";
     } catch (err) {
       console.error("Lỗi khi tính trạng thái khuyến mãi:", err);
@@ -53,7 +53,7 @@ const PromotionProductEdit = () => {
 
   const getStatusDisplayName = (status) =>
     ({
-      "Đang hoạt động": "Đang diễn ra",
+      "Đang diễn ra": "Đang diễn ra",
       "Sắp bắt đầu": "Sắp diễn ra",
       "Đã kết thúc": "Đã hết hạn",
       "Không xác định": "Vô hiệu hóa",
@@ -513,14 +513,8 @@ const PromotionProductEdit = () => {
                   )
                 )}
                 )
-                <br />
-                Tổng lượt áp dụng:{" "}
-                <strong>
-                  {Object.values(variantQuantities).reduce(
-                    (acc, val) => acc + Number(val || 0),
-                    0
-                  )}
-                </strong>
+              
+                
                 <br />
                 Số lượng biến thể:{" "}
                 <strong>{selectedPromotion.variant_count || 0}</strong>
@@ -528,7 +522,7 @@ const PromotionProductEdit = () => {
             )}
           </div>
 
-          <div className="mb-4">
+          <div className="mb-1">
             <label className="form-label mb-2">
               Chọn các biến thể sản phẩm *
             </label>
@@ -683,131 +677,7 @@ const PromotionProductEdit = () => {
               </div>
             </div>
           )}
-          {/* <div className="mb-4">
-            <h5 className="text-lg font-semibold mb-2">
-              Các biến thể đang được áp dụng cho khuyến mãi này
-            </h5>
-            {customFormState.product_variant_id?.length > 0 ? (
-              <table className="w-full table-auto border border-collapse border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border p-2">SKU biến thể</th>
-                    <th className="border p-2">Tên sản phẩm</th>
-                    <th className="border p-2">Khuyến mãi liên quan</th>
-                    <th className="border p-2">Phần trăm</th>
-                    <th className="border p-2">Trạng thái</th>
-                    <th className="border p-2">Ngày bắt đầu</th>
-                    <th className="border p-2">Ngày kết thúc</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customFormState.product_variant_id.map((variantId) => {
-                    const variant = productVariants.find(
-                      (v) => v.id === parseInt(variantId)
-                    );
-                    const promo = variantPromotions[variantId];
-                    const isCurrentPromotion =
-                      !promo || promo.promotion_id === parseInt(id);
-                    const status = isCurrentPromotion
-                      ? getPromotionStatus(
-                          selectedPromotion?.start_date,
-                          selectedPromotion?.end_date
-                        )
-                      : promo?.status || "Không xác định";
-                    const productName =
-                      variant?.product?.name || "Không xác định";
-                    const isTruncated = productName.length > 30;
-                    return (
-                      <tr key={variantId}>
-                        <td className="border p-2">
-                          {variant?.sku || "Không xác định"}
-                        </td>
-                        <td
-                          className="border p-2 truncate-text"
-                          onMouseEnter={() =>
-                            isTruncated && setShowTooltip(variantId)
-                          }
-                          onMouseLeave={() => setShowTooltip(null)}
-                        >
-                          {truncateProductName(productName)}
-                          {isTruncated && (
-                            <span
-                              className="tooltip"
-                              style={{
-                                visibility:
-                                  showTooltip === variantId
-                                    ? "visible"
-                                    : "hidden",
-                                opacity: showTooltip === variantId ? 1 : 0,
-                              }}
-                            >
-                              {productName}
-                            </span>
-                          )}
-                        </td>
-                        <td className="border p-2">
-                          {isCurrentPromotion
-                            ? selectedPromotion?.name || "Khuyến mãi hiện tại"
-                            : promo?.name || "Không xác định"}
-                        </td>
-                        <td className="border p-2">
-                          {formatDiscountValue(
-                            isCurrentPromotion
-                              ? selectedPromotion?.discount_value
-                              : promo?.discount_value,
-                            isCurrentPromotion
-                              ? selectedPromotion?.discount_type
-                              : promo?.discount_type
-                          )}
-                        </td>
-                        <td className="border p-2 text-center">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                              status
-                            )}`}
-                          >
-                            {getStatusDisplayName(status)}
-                          </span>
-                        </td>
-                        <td className="border p-2">
-                          {isCurrentPromotion
-                            ? selectedPromotion?.start_date
-                              ? new Date(
-                                  selectedPromotion.start_date
-                                ).toLocaleDateString("vi-VN")
-                              : "-"
-                            : promo?.start_date
-                            ? new Date(promo.start_date).toLocaleDateString(
-                                "vi-VN"
-                              )
-                            : "-"}
-                        </td>
-                        <td className="border p-2">
-                          {isCurrentPromotion
-                            ? selectedPromotion?.end_date
-                              ? new Date(
-                                  selectedPromotion.end_date
-                                ).toLocaleDateString("vi-VN")
-                              : "-"
-                            : promo?.end_date
-                            ? new Date(promo.end_date).toLocaleDateString(
-                                "vi-VN"
-                              )
-                            : "-"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-sm text-gray-600">
-                Không có biến thể nào được áp dụng cho khuyến mãi này. Vui lòng
-                chọn biến thể mới trong mục trên hoặc kiểm tra dữ liệu backend
-                nếu cần.
-              </p>
-            )}
-          </div> */}
+     
 
           <div className="mt-8 flex items-center gap-1">
             <button

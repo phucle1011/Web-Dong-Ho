@@ -894,11 +894,17 @@ static async deleteAttributeValueById (req, res){
 static async getAllVariants(req, res) {
   try {
     const variants = await ProductVariant.findAll({
+      where: {
+        is_auction_only: 0, // Chỉ lấy các biến thể không phải đấu giá
+      },
       include: [
         {
           model: Product,
           as: 'product',
-          attributes: ['id', 'name']
+          attributes: ['id', 'name', 'publication_status'],
+          where: { publication_status: 'published',
+            status: '1'  // Chỉ lấy sản phẩm đang hoạt động
+           }, // ✅ chỉ lấy sản phẩm đã xuất bản
         }
       ],
       order: [['created_at', 'DESC']],
@@ -909,11 +915,12 @@ static async getAllVariants(req, res) {
       message: "Lấy danh sách biến thể sản phẩm thành công",
       data: variants,
     });
-    
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 }
+
 
 
 static async deleteImagesClauding(req, res) {
