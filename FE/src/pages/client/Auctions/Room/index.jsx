@@ -137,74 +137,71 @@ export default function AuctionRoom() {
         // };
 
         const onStatus = (payload) => {
+            const isCurrent = String(payload.auctionId) === String(currentAuctionIdRef.current);
 
-            const isCurrent = !!currentAuctionIdRef.current &&
-                String(payload.auctionId) === String(currentAuctionIdRef.current);
+            if (payload.status === "active") {
+                if (isCurrent) {
+                    if (payload.currentPrice != null) {
+                        setCurrentPrice(Number(payload.currentPrice));
+                    }
+                    setActiveAuction(prev => prev ? { ...prev, status: "active" } : prev);
 
-            if (
-                payload.status === "ended" &&
-                payload.winner &&
-                Number(payload.winner.user_id) === Number(meId) &&
-                !handledWinRef.current
-            ) {
-                handledWinRef.current = true;
-                const name = activeAuction?.variant?.product?.name || "Sản phẩm đấu giá";
-                const sku = activeAuction?.variant?.sku ? ` (${activeAuction.variant.sku})` : "";
-                const productName = name + sku;
-
-                setWinInfo({
-                    productName,
-                    amount: Number(payload.winner.bidAmount || 0),
-                    auctionId: payload.auctionId,
-                });
-                setShowWinModal(true);
-            }
-
-            if (payload.status === "ended" && payload.winner) {
-                const { user_id, bidAmount } = payload.winner;
-                const productName = activeAuction?.variant?.product?.name || "Sản phẩm";
-
-                if (Number(user_id) === meId) {
-                    toast.success(
-                        `Chúc mừng bạn đã thắng phiên đấu giá ${productName} với giá ${formatVnd(bidAmount)}!`,
-                        { position: "top-center", autoClose: 10000 }
-                    );
+                    //   toast.success("Phiên đấu giá đã bắt đầu!", { position: "top-center", autoClose: 5000 });
                 } else {
-                    toast.info(
-                        `Người dùng #${user_id} đã thắng phiên đấu giá ${productName} với giá ${formatVnd(bidAmount)}.`,
-                        { position: "top-center", autoClose: 8000 }
-                    );
+
+                    fetchActiveAuction();
+                    toast.success("Có phiên mới vừa bắt đầu!", { position: "top-right", autoClose: 5000 });
                 }
+                handledWinRef.current = false;
+                return;
             }
 
-            if (isCurrent) {
-                if (payload.status === "active") {
-                    if (payload.currentPrice != null) setCurrentPrice(Number(payload.currentPrice));
-                    setActiveAuction((prev) => (prev ? { ...prev, status: "active" } : prev));
-                    toast.success("Phiên đấu giá đã bắt đầu!");
-                } else if (payload.status === "ended") {
-                    toast.error("Phiên đấu giá đã kết thúc!");
+            if (payload.status === "ended") {
+                if (isCurrent) {
+
+                    if (payload.winner && Number(payload.winner.user_id) === meId) {
+                        toast.success(
+                            `Chúc mừng bạn đã thắng với giá ${formatVnd(payload.winner.bidAmount)}!`,
+                            { position: "top-right", autoClose: 10000 }
+                        );
+
+                        setWinInfo({
+                            amount: Number(payload.winner.bidAmount),
+                            auctionId: payload.auctionId,
+                        });
+                        setShowWinModal(true);
+
+                    } else if (payload.winner) {
+
+                        toast.info(
+                            `Người dùng ${payload.winner.user_name} đã chiến thắng với giá ${formatVnd(payload.winner.bidAmount)}.`,
+                            { position: "top-right", autoClose: 10000 }
+                        );
+                    } else {
+                        toast.error("Phiên đấu giá đã kết thúc!", { position: "top-right" });
+                    }
+
                     setExitLocked(false);
                     setBids([]);
                     setHighestBidUserId(null);
                     setCurrentPrice(0);
-                    setImages([]);
-                    setSelectedImage("");
-                    setShowAllAttributes(false);
+                    handledWinRef.current = false;
                     currentAuctionIdRef.current = null;
                     setActiveAuction(null);
-                    setLoadingAuction(false);
-                    fetchActiveAuction();
                 } else {
-                    setActiveAuction((prev) => (prev ? { ...prev, status: payload.status } : prev));
-                    if (payload.currentPrice != null) setCurrentPrice(Number(payload.currentPrice));
+
                 }
-            } else {
-                if (payload.status === "active") {
-                    fetchActiveAuction();
-                    socketRef.current?.emit("auction:join", { auctionId: payload.auctionId });
-                    toast.success("Có phiên mới vừa bắt đầu!");
+
+                fetchActiveAuction();
+                return;
+            }
+
+            if (isCurrent) {
+
+                if (payload.currentPrice != null) {
+                    setCurrentPrice(Number(payload.currentPrice));
                 }
+                setActiveAuction(prev => prev ? { ...prev, status: payload.status } : prev);
             }
         };
 
@@ -232,7 +229,7 @@ export default function AuctionRoom() {
             s.off("bid:new", onBidNew);
             s.disconnect();
         };
-    }, [activeAuction]);
+    }, []);
 
     useEffect(() => {
         currentAuctionIdRef.current = activeAuction?.id ?? null;
@@ -1116,7 +1113,7 @@ export default function AuctionRoom() {
                                 Chúc mừng! Bạn đã thắng phiên đấu giá
                             </h3>
                             <p className="mt-3 text-center text-gray-700 text-lg">
-                                <span className="font-bold text-purple-600">{winInfo.productName}</span> đã được thêm vào giỏ hàng!
+                                <span className="font-bold text-purple-600">Sản phẩm đã được thêm vào giỏ hàng! </span>
                             </p>
                             <p className="mt-2 text-center text-gray-800 font-medium">
                                 Giá chiến thắng:

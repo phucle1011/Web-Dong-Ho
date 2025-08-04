@@ -33,7 +33,7 @@ const AuctionCreate = () => {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`);
             const options = res.data.data.map((p) => ({
                 value: p.id,
-                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku})`,
+                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })} `,
             }));
             setProducts(options);
         } catch (err) {

@@ -2,6 +2,19 @@ const { Op } = require('sequelize');
 const AuctionModel = require('../../models/auctionsModel');
 const AuctionBidModel = require('../../models/auctionBidsModel');
 const CartDetail = require('../../models/cartDetailsModel');
+const UserModel = require('../../models/usersModel');
+const ProductVariantModel = require('../../models/productVariantsModel');
+const ProductModel = require('../../models/productsModel');
+
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 module.exports = (io) => {
 
@@ -68,11 +81,15 @@ module.exports = (io) => {
 
       await t.commit();
 
+      const user = await UserModel.findByPk(topBid.user_id);
+      const userName = user?.name || 'Quý khách';
+
       const payload = {
         auctionId: auction.id,
         status: 'ended',
         winner: topBid ? {
           user_id: topBid.user_id,
+          user_name: userName,
           bidAmount: Number(topBid.bidAmount),
           product_variant_id: auction.product_variant_id,
         } : null,
@@ -81,6 +98,13 @@ module.exports = (io) => {
       io.to(`auction:${auction.id}`).emit('auction:status', payload);
 
       if (topBid) io.to(`user:${topBid.user_id}`).emit('auction:win', payload);
+
+      sendWinnerEmail(
+        topBid.user_id,
+        auction.id,
+        Number(topBid.bidAmount)
+      );
+
       io.emit('auction:status', payload);
 
       return { ok: true, winner: payload.winner };
@@ -90,6 +114,41 @@ module.exports = (io) => {
       return { ok: false, reason: e.message };
     }
   };
+
+
+  async function sendWinnerEmail(winnerId, auctionId, bidAmount) {
+    try {
+      const user = await UserModel.findByPk(winnerId);
+      if (!user?.email) return;
+
+      const auction = await AuctionModel.findByPk(auctionId, {
+        include: [{
+          model: ProductVariantModel,
+          as: 'variant',
+          include: [{ model: ProductModel, as: 'product' }]
+        }]
+      });
+      const userName = user.name || 'Quý khách';
+      const productName = auction.variant?.product?.name || 'sản phẩm';
+      const sku = auction.variant?.psku || '';
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Chúc mừng bạn đã chiến thắng phiên đấu giá",
+        html: `
+        <p>Xin chào <strong>${userName}</strong>,</p>
+        <p>Bạn đã chiến thắng phiên đấu giá <strong>${productName} (${sku})</strong> với giá <strong>${bidAmount.toLocaleString()} VND</strong>.</p>
+        <p>Vui lòng thanh toán trước hạn
+                                nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
+                                bạn sẽ bị cấm đấu giá trong 12 tháng!</p>
+        <p>-- Hệ thống Đồng Hồ TimesMaster --</p>
+      `
+      });
+    } catch (err) {
+      console.error('Send winner email error:', err);
+    }
+  }
 
   setInterval(async () => {
     try {

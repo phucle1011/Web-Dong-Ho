@@ -416,6 +416,7 @@ class AuctionController {
     try {
       const user = await UserModel.findByPk(winnerId);
       if (!user || !user.email) return;
+      const userName = user.name || 'Quý khách';
 
       const auction = await AuctionModel.findByPk(auctionId, {
         include: [
@@ -442,7 +443,7 @@ class AuctionController {
         to: user.email,
         subject: "Chúc mừng bạn đã chiến thắng phiên đấu giá",
         html: `
-        <p>Xin chào ${user.name || 'Quý khách'},</p>
+        <p>Xin chào <strong>${userName} || bạn</strong>,</p>
         <p>Chúc mừng bạn đã chiến thắng phiên đấu giá cho sản phẩm <strong>${productName} ${variantName}</strong> với giá <strong>${bidAmount.toLocaleString()} VND</strong>.</p>
         <p>Vui lòng kiểm tra thông tin đơn hàng và tiến hành thanh toán trong vòng 24 giờ nếu không bạn sẽ bị trừ 10% ví tiền và quá 3 lần không thanh toán bạn sẽ bị cấm đấu giá vĩnh viễn.</p>
         <p>Cảm ơn bạn đã tham gia đấu giá!</p>
