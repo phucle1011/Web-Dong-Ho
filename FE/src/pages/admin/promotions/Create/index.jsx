@@ -8,8 +8,11 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from "react-select";
 import { FaArrowUp } from "react-icons/fa";
+import { Editor } from "@tinymce/tinymce-react";
+import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary";
 
 function PromotionCreate() {
+  const [description, setDescription] = useState("");
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [showUserList, setShowUserList] = useState(false);
@@ -488,16 +491,7 @@ function PromotionCreate() {
             </div>
           </div>
         </div>
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <div>
-            <label className="block mb-1 font-medium">Mô tả</label>
-            <textarea
-              {...register("description")}
-              className="w-full border rounded px-3 py-2"
-              rows={5}
-            />
-          </div>
+        <div className="w-full col-span-full relative z-10">
 
           {applicableTo === "order" && (
             <div>
@@ -549,20 +543,68 @@ function PromotionCreate() {
           )}
         </div>
 
-        <div className="md:col-span-2 mt-6 flex gap-6">
-          <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded">
-            Tạo khuyến mãi
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate("/admin/promotions/getAll")}
-            className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
-          >
-            Quay lại
-          </button>
+        <div className="md:col-span-2 grid grid-cols-1 gap-6">
+          <label className="block mb-1 font-medium">Mô tả</label>
+          <Controller
+            name="description"
+            control={control}
+            defaultValue=""
+            render={({ field: { onChange, value } }) => (
+              <Editor
+                apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
+                value={description}
+                init={{
+                  height: 400,
+                  menubar: true,
+                  plugins: [
+                    "advlist", "autolink", "lists", "link", "image", "charmap", "preview", "anchor",
+                    "searchreplace", "visualblocks", "code", "fullscreen",
+                    "insertdatetime", "media", "table", "help", "wordcount"
+                  ],
+                  toolbar:
+                    "undo redo | formatselect | bold italic backcolor | \
+                                                    alignleft aligncenter alignright alignjustify | \
+                                                    bullist numlist outdent indent | image | help",
+                  image_title: true,
+                  automatic_uploads: true,
+                  file_picker_types: "image",
+                  file_picker_callback: function (cb, value, meta) {
+                    const input = document.createElement("input");
+                    input.setAttribute("type", "file");
+                    input.setAttribute("accept", "image/*");
+                    input.onchange = async function () {
+                      const file = input.files[0];
+                      if (!file) return;
+                      try {
+                        const result = await uploadToCloudinary(file);
+                        cb(result.url, { title: file.name });
+                      } catch (err) {
+                        console.error("Upload lỗi:", err);
+                      }
+                    };
+                    input.click();
+                  },
+                }}
+                onEditorChange={(content) => setDescription(content)}
+              />
+            )}
+          />
         </div>
+
       </form>
+      <div className="md:col-span-2 mt-6 flex gap-6">
+        <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded">
+          Tạo khuyến mãi
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate("/admin/promotions/getAll")}
+          className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
+        >
+          Quay lại
+        </button>
+      </div>
     </div>
   );
 }

@@ -230,7 +230,7 @@ const AppRoutes = () => {
             <Route path="getAll" element={<PromotionGetAll />} />
             <Route path="create" element={<PromotionCreate />} />
             <Route path="edit/:id" element={<PromotionEdit />} />
-            <Route path="Promotiondetail" element={<PromotionOrderListModal />} />
+            <Route path="applied/:id" element={<PromotionOrderListModal />} />
           </Route>
           <Route path="promotion-products">
             <Route path="getAll" element={<PromotionProductList />} />

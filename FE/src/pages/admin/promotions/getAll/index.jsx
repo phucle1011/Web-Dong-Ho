@@ -18,8 +18,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import PromotionOrderListModal from "../Promotiondetail/index.jsx";
+import { useNavigate } from "react-router-dom";
 
 function PromotionGetAll() {
+    const navigate = useNavigate();
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [appliedOrders, setAppliedOrders] = useState([]);
     const [startDate, setStartDate] = useState("");
@@ -366,21 +368,12 @@ function PromotionGetAll() {
                                 </td> */}
                                 <td className="border p-2 text-center space-x-2">
                                     {filterStatus === "used" ? (
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/applied/${promo.id}`);
-                                                    setAppliedOrders(res.data.orders || []);
-                                                    setShowOrderModal(true);
-                                                } catch (err) {
-                                                    toast.error("Không thể tải đơn hàng đã áp dụng.");
-                                                }
-                                            }}
-                                            className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                                        >
-                                            <FaEye size={20} />
-                                        </button>
-
+                                      <button
+  onClick={() => navigate(`/admin/promotions/applied/${promo.id}`)}
+  className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+>
+  <FaEye size={20} />
+</button>
                                     ) : (
                                         <>
                                             <Link
@@ -452,12 +445,12 @@ function PromotionGetAll() {
                 </div>
             </div>
 
-             {showOrderModal && (
+            {/* {showOrderModal && (
                 <PromotionOrderListModal
                     orders={appliedOrders}
                     onClose={() => setShowOrderModal(false)}
                 />
-            )}
+            )} */}
         </div>
     );
 }
