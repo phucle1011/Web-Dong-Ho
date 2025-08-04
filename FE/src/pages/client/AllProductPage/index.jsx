@@ -210,7 +210,9 @@ export default function AllProductPage() {
     brandId,
     brandList,location.state
   ]);
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [pagination.currentPage]);
 
   const handlePageChange = (newPage) => {
     const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);

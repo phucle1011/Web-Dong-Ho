@@ -707,7 +707,7 @@ async function fetchProduct() {
                             <td className="w-1/2 border border-gray-300 p-1 text-gray-600 font-medium whitespace-nowrap">
                               <b>{attrName}</b>
                             </td>
-                            <td className="w-1/2 border border-gray-300 p-1 text-gray-800 whitespace-nowrap">
+                            <td className="w-1/2 border border-gray-300 p-1 text-gray-800 whitespace-normal break-words">
                               {attrName.toLowerCase() === "color" ? (
                                 <div className="flex items-center gap-1">
                                   <div
