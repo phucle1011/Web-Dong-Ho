@@ -36,12 +36,13 @@ const AdminProductDetail = () => {
   const limit = 5;
 
   const [description, setDescription] = useState("");
- const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
   const [brandOptions, setBrandOptions] = useState([]);
-  const [attrExpanded, setAttrExpanded] = useState({}); 
+  const [attrExpanded, setAttrExpanded] = useState({});
+  const [deletedImages, setDeletedImages] = useState([]);
 
-const toggleAttr = (variantId) =>
-  setAttrExpanded(prev => ({ ...prev, [variantId]: !prev[variantId] }));
+  const toggleAttr = (variantId) =>
+    setAttrExpanded((prev) => ({ ...prev, [variantId]: !prev[variantId] }));
   const handleImageClick = (images, index) => {
     setSelectedImages(images);
     setStartIndex(index);
@@ -61,64 +62,61 @@ const toggleAttr = (variantId) =>
     }
   };
 
- 
-
   const fetchProduct = async () => {
-  try {
-    const res = await axios.get(
-      `${Constants.DOMAIN_API}/admin/products/${id}`
-    );
+    try {
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/products/${id}`
+      );
 
-    const productData = res.data?.data || {};
-console.log(res.data?.data);
+      const productData = res.data?.data || {};
+      console.log(res.data?.data);
 
-    // Lấy thông tin mô tả riêng
-    setDescription(productData.description || "");
+      // Lấy thông tin mô tả riêng
+      setDescription(productData.description || "");
 
-    // Thiết lập state formData với dữ liệu đã xử lý
-    setFormData({
-      ...productData,
-      category: productData.category
-        ? {
-            value: productData.category.id,
-            label: productData.category.name,
-          }
-        : null,
-      brand: productData.brand
-        ? {
-            value: productData.brand.id,
-            label: productData.brand.name,
-          }
-        : null,
-    });
+      // Thiết lập state formData với dữ liệu đã xử lý
+      setFormData({
+        ...productData,
+        category: productData.category
+          ? {
+              value: productData.category.id,
+              label: productData.category.name,
+            }
+          : null,
+        brand: productData.brand
+          ? {
+              value: productData.brand.id,
+              label: productData.brand.name,
+            }
+          : null,
+      });
 
-    // Lưu lại thông tin sản phẩm gốc (nếu cần)
-    setProduct(productData);
+      // Lưu lại thông tin sản phẩm gốc (nếu cần)
+      setProduct(productData);
 
-    // Gọi song song danh sách danh mục và thương hiệu
-    const [categoriesRes, brandsRes] = await Promise.all([
-      axios.get("http://localhost:5000/admin/category/list"),
-      axios.get("http://localhost:5000/admin/brand/list"),
-    ]);
+      // Gọi song song danh sách danh mục và thương hiệu
+      const [categoriesRes, brandsRes] = await Promise.all([
+        axios.get("http://localhost:5000/admin/category/list"),
+        axios.get("http://localhost:5000/admin/brand/list"),
+      ]);
 
-    // Gán options cho Select
-    setCategoryOptions(
-      (categoriesRes.data?.data || []).map((cat) => ({
-        value: cat.id,
-        label: cat.name,
-      }))
-    );
-    setBrandOptions(
-      (brandsRes.data?.data || []).map((brand) => ({
-        value: brand.id,
-        label: brand.name,
-      }))
-    );
-  } catch (error) {
-    console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
-  }
-};
-
+      // Gán options cho Select
+      setCategoryOptions(
+        (categoriesRes.data?.data || []).map((cat) => ({
+          value: cat.id,
+          label: cat.name,
+        }))
+      );
+      setBrandOptions(
+        (brandsRes.data?.data || []).map((brand) => ({
+          value: brand.id,
+          label: brand.name,
+        }))
+      );
+    } catch (error) {
+      console.error("Lỗi khi lấy chi tiết sản phẩm:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,11 +127,10 @@ console.log(res.data?.data);
       fetchData();
     }
   }, [id, currentPage]);
- // Gọi API lấy danh sách danh mục và thương hiệu
+  // Gọi API lấy danh sách danh mục và thương hiệu
   useEffect(() => {
     const fetchData = async () => {
       try {
-        
       } catch (error) {
         console.error("Lỗi khi gọi API:", error);
       }
@@ -142,40 +139,40 @@ console.log(res.data?.data);
     fetchData();
   }, []);
   const handleChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  if (name === "name") {
-    const slug = value
-      .toLowerCase()
-      .normalize("NFD")                  // Loại bỏ dấu tiếng Việt
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^\w\s-]/g, "")         // Xoá ký tự đặc biệt
-      .trim()
-      .replace(/\s+/g, "-")             // Thay khoảng trắng thành dấu gạch ngang
-      .replace(/--+/g, "-");            // Xoá dấu gạch ngang dư
+    if (name === "name") {
+      const slug = value
+        .toLowerCase()
+        .normalize("NFD") // Loại bỏ dấu tiếng Việt
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s-]/g, "") // Xoá ký tự đặc biệt
+        .trim()
+        .replace(/\s+/g, "-") // Thay khoảng trắng thành dấu gạch ngang
+        .replace(/--+/g, "-"); // Xoá dấu gạch ngang dư
 
-    setFormData((prev) => ({
-      ...prev,
-      name: value,
-      slug: slug,
-    }));
-  } else {
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "price" || name === "discount_price"
-          ? parseFloat(value)
-          : value,
-    }));
-  }
-};
+      setFormData((prev) => ({
+        ...prev,
+        name: value,
+        slug: slug,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]:
+          name === "price" || name === "discount_price"
+            ? parseFloat(value)
+            : value,
+      }));
+    }
+  };
 
   const productData = {
-  ...formData,
-  category_id: formData?.category?.value || null,
-  brand_id: formData?.brand?.value || null,
-  description: description || "",
-};
+    ...formData,
+    category_id: formData?.category?.value || null,
+    brand_id: formData?.brand?.value || null,
+    description: description || "",
+  };
 
   const handleSave = async () => {
     try {
@@ -224,10 +221,14 @@ console.log(res.data?.data);
     if (!file) return;
 
     try {
-      // Gọi hàm upload từ file riêng của bạn
-      const imageUrl = await uploadToCloudinary(file); // Đảm bảo đã import hoặc dùng đúng hàm
+      const imageUrl = await uploadToCloudinary(file);
+      
 
-      // Cập nhật lại thumbnail cho form
+      // Nếu có public_id thì lưu vào deletedImages
+      if (imageUrl.public_id) {
+        setDeletedImages((prev) => [...prev, imageUrl.public_id]);
+      }
+
       setFormData((prev) => ({
         ...prev,
         thumbnail: imageUrl.url,
@@ -239,6 +240,18 @@ console.log(res.data?.data);
       toast.error("Tải ảnh thất bại!");
     }
   };
+const deleteImagesOnCloudinary = async () => {
+  for (const public_id of deletedImages) {
+    try {
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id,
+      });
+      console.log(`Đã xoá ảnh: ${public_id}`);
+    } catch (err) {
+      console.error("Xoá ảnh thất bại:", err);
+    }
+  }
+};
 
   return (
     <div className="container mx-auto p-4">
@@ -283,7 +296,7 @@ console.log(res.data?.data);
             <div>
               <label className="font-semibold mb-1 block">Slug:</label>
               <input
-              readOnly
+                readOnly
                 type="text"
                 name="slug"
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
@@ -294,46 +307,44 @@ console.log(res.data?.data);
           </div>
           {/* Card 3: Danh mục + Thương hiệu */}
           <div className="p-4 border rounded shadow bg-white">
-  {/* Danh mục */}
-  <div style={{ position: "relative", zIndex: 1 }}>
-    <label className="font-semibold mb-1 block">Danh mục:</label>
-    <Select
-      options={categoryOptions}
-      value={formData?.category || null}
-      onChange={(selected) =>
-        setFormData((prev) => ({ ...prev, category: selected }))
-      }
-      placeholder="Chọn danh mục"
-      isClearable
-          menuPortalTarget={document.body}
-    styles={{
-      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-    }}
-    />
-  </div>
+            {/* Danh mục */}
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <label className="font-semibold mb-1 block">Danh mục:</label>
+              <Select
+                options={categoryOptions}
+                value={formData?.category || null}
+                onChange={(selected) =>
+                  setFormData((prev) => ({ ...prev, category: selected }))
+                }
+                placeholder="Chọn danh mục"
+                isClearable
+                menuPortalTarget={document.body}
+                styles={{
+                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                }}
+              />
+            </div>
 
-  <hr className="my-3" />
+            <hr className="my-3" />
 
-  {/* Thương hiệu */}
-  <div style={{ position: "relative", zIndex: 1 }}>
-  <label className="font-semibold mb-1 block">Thương hiệu:</label>
-  <Select
-    options={brandOptions}
-    value={formData?.brand || null}
-    onChange={(selected) =>
-      setFormData((prev) => ({ ...prev, brand: selected }))
-    }
-    placeholder="Chọn thương hiệu"
-    isClearable
-    menuPortalTarget={document.body}
-    styles={{
-      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-    }}
-  />
-</div>
-
-</div>
-
+            {/* Thương hiệu */}
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <label className="font-semibold mb-1 block">Thương hiệu:</label>
+              <Select
+                options={brandOptions}
+                value={formData?.brand || null}
+                onChange={(selected) =>
+                  setFormData((prev) => ({ ...prev, brand: selected }))
+                }
+                placeholder="Chọn thương hiệu"
+                isClearable
+                menuPortalTarget={document.body}
+                styles={{
+                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                }}
+              />
+            </div>
+          </div>
 
           {/* Card 4: Trạng thái */}
           <div className="p-4 border rounded shadow bg-white">
@@ -394,18 +405,20 @@ console.log(res.data?.data);
           </div>
         </div>
         <div className="mb-4">
-  <label className="font-semibold block mb-2">Mô tả ngắn:</label>
-  <textarea
-    rows={3}
-    name="short_description"
-    className="w-full border p-2 rounded"
-    value={formData.short_description || ""}
-    onChange={(e) =>
-      setFormData((prev) => ({ ...prev, short_description: e.target.value }))
-    }
-  />
-</div>
-
+          <label className="font-semibold block mb-2">Mô tả ngắn:</label>
+          <textarea
+            rows={3}
+            name="short_description"
+            className="w-full border p-2 rounded"
+            value={formData.short_description || ""}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                short_description: e.target.value,
+              }))
+            }
+          />
+        </div>
 
         <div className="mb-4">
           <label className="font-semibold block mb-2">Mô tả:</label>
@@ -474,6 +487,11 @@ console.log(res.data?.data);
           <Link
             to="/admin/products/getAll"
             className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+            onClick={async (e) => {
+              e.preventDefault(); 
+              await deleteImagesOnCloudinary(); 
+              navigate("/admin/products/getAll"); 
+            }}
           >
             Quay lại
           </Link>
@@ -485,143 +503,153 @@ console.log(res.data?.data);
             <h3 className="text-lg font-semibold mb-2">Biến thể sản phẩm:</h3>
             <table className="w-full border-collapse border border-gray-300">
               <thead>
-  <tr className="bg-gray-200">
-    <th className="p-2 border">#</th>
-    <th className="p-2 border">SKU</th>
-    <th className="p-2 border">Loại</th>
-    <th className="p-2 border">Giá</th>
-    <th className="p-2 border">Kho</th>
-    <th className="p-2 border">Thuộc tính</th>
-    <th className="p-2 border">Ảnh</th>
-    <th className="p-2 border">Hành động</th>
-  </tr>
-</thead>
+                <tr className="bg-gray-200">
+                  <th className="p-2 border">#</th>
+                  <th className="p-2 border">SKU</th>
+                  <th className="p-2 border">Loại</th>
+                  <th className="p-2 border">Giá</th>
+                  <th className="p-2 border">Kho</th>
+                  <th className="p-2 border">Thuộc tính</th>
+                  <th className="p-2 border">Ảnh</th>
+                  <th className="p-2 border">Hành động</th>
+                </tr>
+              </thead>
 
               <tbody>
-  {variants.map((variant, index) => {
-    const isAuction =
-      variant.is_auction_only === 1 ||
-      variant.is_auction_only === "1" ||
-      variant.is_auction_only === true;
+                {variants.map((variant, index) => {
+                  const isAuction =
+                    variant.is_auction_only === 1 ||
+                    variant.is_auction_only === "1" ||
+                    variant.is_auction_only === true;
 
-    return (
-      <tr key={variant.id} className="border-b">
-        <td className="p-2 border text-center">{index + 1}</td>
-        <td className="p-2 border">{variant.sku}</td>
+                  return (
+                    <tr key={variant.id} className="border-b">
+                      <td className="p-2 border text-center">{index + 1}</td>
+                      <td className="p-2 border">{variant.sku}</td>
 
-        {/* 🔹 HIỂN THỊ LOẠI */}
-        <td className="p-2 border">
-          {isAuction ? (
-            <span className="inline-block px-2 py-0.5 rounded text-xs border border-purple-300 bg-purple-100 text-purple-700">
-              Đang đấu giá
-            </span>
-          ) : (
-            <span className="inline-block px-2 py-0.5 rounded text-xs border border-gray-300 bg-gray-100 text-gray-700">
-              Bán thường
-            </span>
-          )}
-        </td>
+                      {/* 🔹 HIỂN THỊ LOẠI */}
+                      <td className="p-2 border">
+                        {isAuction ? (
+                          <span className="inline-block px-2 py-0.5 rounded text-xs border border-purple-300 bg-purple-100 text-purple-700">
+                            Đang đấu giá
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 rounded text-xs border border-gray-300 bg-gray-100 text-gray-700">
+                            Bán thường
+                          </span>
+                        )}
+                      </td>
 
-        <td className="p-2 border">
-          {Number(variant.price).toLocaleString()} đ
-        </td>
+                      <td className="p-2 border">
+                        {Number(variant.price).toLocaleString()} đ
+                      </td>
 
-        {/* 🔹 (Tuỳ chọn) Thể hiện stock rõ hơn khi là đấu giá */}
-        <td className="p-2 border">
-          {isAuction ? (
-            <span title="Biến thể đấu giá luôn có stock = 1">1</span>
-          ) : (
-            variant.stock ?? "Chưa có"
-          )}
-        </td>
+                      {/* 🔹 (Tuỳ chọn) Thể hiện stock rõ hơn khi là đấu giá */}
+                      <td className="p-2 border">
+                        {isAuction ? (
+                          <span title="Biến thể đấu giá luôn có stock = 1">
+                            1
+                          </span>
+                        ) : (
+                          variant.stock ?? "Chưa có"
+                        )}
+                      </td>
 
-        {/* ... giữ nguyên các cột còn lại */}
-        <td className="p-2 border">
-  {(() => {
-    const MAX = 4;
-    const attrs = variant.attributeValues || [];
-    const isExpanded = !!attrExpanded[variant.id];
-    const visible = isExpanded ? attrs : attrs.slice(0, MAX);
+                      {/* ... giữ nguyên các cột còn lại */}
+                      <td className="p-2 border">
+                        {(() => {
+                          const MAX = 4;
+                          const attrs = variant.attributeValues || [];
+                          const isExpanded = !!attrExpanded[variant.id];
+                          const visible = isExpanded
+                            ? attrs
+                            : attrs.slice(0, MAX);
 
-    // Hàm nhận diện thuộc tính màu (hỗ trợ cả "Màu sắc" và "Color")
-    const isColorAttr = (name) => {
-      if (!name) return false;
-      const n = String(name).trim().toLowerCase();
-      return n === "màu sắc" || n === "color";
-    };
+                          // Hàm nhận diện thuộc tính màu (hỗ trợ cả "Màu sắc" và "Color")
+                          const isColorAttr = (name) => {
+                            if (!name) return false;
+                            const n = String(name).trim().toLowerCase();
+                            return n === "màu sắc" || n === "color";
+                          };
 
-    return (
-      <>
-        {visible.map((av) => (
-          <div key={av.id} className="flex items-center gap-2 mb-1">
-            <strong>{av.attribute?.name}:</strong>
-            {isColorAttr(av.attribute?.name) ? (
-              <div
-                className="w-6 h-6 rounded border"
-                style={{ backgroundColor: av.value }}
-                title={av.value}
-              />
-            ) : (
-              <span>{av.value}</span>
-            )}
-          </div>
-        ))}
+                          return (
+                            <>
+                              {visible.map((av) => (
+                                <div
+                                  key={av.id}
+                                  className="flex items-center gap-2 mb-1"
+                                >
+                                  <strong>{av.attribute?.name}:</strong>
+                                  {isColorAttr(av.attribute?.name) ? (
+                                    <div
+                                      className="w-6 h-6 rounded border"
+                                      style={{ backgroundColor: av.value }}
+                                      title={av.value}
+                                    />
+                                  ) : (
+                                    <span>{av.value}</span>
+                                  )}
+                                </div>
+                              ))}
 
-        {/* Nút Xem thêm / Thu gọn khi có hơn MAX dòng */}
-        {attrs.length > MAX && (
-          <button
-            type="button"
-            onClick={() => toggleAttr(variant.id)}
-            className="mt-1 text-xs text-blue-600 "
-          >
-            {isExpanded ? "Thu gọn" : `Xem thêm (${attrs.length - MAX})`}
-          </button>
-        )}
-      </>
-    );
-  })()}
-</td>
+                              {/* Nút Xem thêm / Thu gọn khi có hơn MAX dòng */}
+                              {attrs.length > MAX && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAttr(variant.id)}
+                                  className="mt-1 text-xs text-blue-600 "
+                                >
+                                  {isExpanded
+                                    ? "Thu gọn"
+                                    : `Xem thêm (${attrs.length - MAX})`}
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </td>
 
-        <td className="p-2 border text-center">
-          <div className="flex justify-center items-center h-full">
-            {variant.images && variant.images.length > 0 ? (
-              <img
-                key={variant.images[0].id}
-                src={variant.images[0].image_url}
-                alt="Variant"
-                width="60"
-                className="cursor-pointer rounded border"
-                onClick={() => handleImageClick(variant.images, 0)}
-              />
-            ) : (
-              <span>Không có ảnh</span>
-            )}
-          </div>
-        </td>
-        <td className="p-2 border text-center">
-          <div className="flex gap-2 justify-center">
-            <Link
-              to={`/admin/products/editVariant/${variant.id}`}
-              className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-            >
-              <FaEdit size={20} className="font-bold" />
-            </Link>
-            {variant.canDelete && (
-              <button
-                onClick={() => setSelectedProduct(variant)}
-                className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
-                title="Xoá biến thể"
-              >
-                <FaTrashAlt size={16} />
-              </button>
-            )}
-          </div>
-        </td>
-      </tr>
-    );
-  })}
-</tbody>
-
+                      <td className="p-2 border text-center">
+                        <div className="flex justify-center items-center h-full">
+                          {variant.images && variant.images.length > 0 ? (
+                            <img
+                              key={variant.images[0].id}
+                              src={variant.images[0].image_url}
+                              alt="Variant"
+                              width="60"
+                              className="cursor-pointer rounded border"
+                              onClick={() =>
+                                handleImageClick(variant.images, 0)
+                              }
+                            />
+                          ) : (
+                            <span>Không có ảnh</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 border text-center">
+                        <div className="flex gap-2 justify-center">
+                          <Link
+                            to={`/admin/products/editVariant/${variant.id}`}
+                            className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                          >
+                            <FaEdit size={20} className="font-bold" />
+                          </Link>
+                          {variant.canDelete && (
+                            <button
+                              onClick={() => setSelectedProduct(variant)}
+                              className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+                              title="Xoá biến thể"
+                            >
+                              <FaTrashAlt size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
             <div className="w-full flex justify-center mt-4">
               <div className="inline-flex items-center space-x-1">

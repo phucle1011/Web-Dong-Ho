@@ -16,7 +16,9 @@ function AddVariantForm() {
   const [stock, setStock] = useState("");
   const [isAuctionOnly, setIsAuctionOnly] = useState(0); // 🔹 Toggle đấu giá
 
-  const [attributes, setAttributes] = useState([{ attribute_id: "", value: "" }]);
+  const [attributes, setAttributes] = useState([
+    { attribute_id: "", value: "" },
+  ]);
   const [images, setImages] = useState([]); // [{ url, public_id }]
   const [allAttributes, setAllAttributes] = useState([]);
   const [errors, setErrors] = useState({});
@@ -51,18 +53,24 @@ function AddVariantForm() {
   const validateForm = () => {
     const newErrors = {};
     if (!sku.trim()) newErrors.sku = "Vui lòng nhập mã SKU.";
-    if (!price || parseFloat(price) <= 0) newErrors.price = "Giá phải lớn hơn 0.";
+    if (!price || parseFloat(price) <= 0)
+      newErrors.price = "Giá phải lớn hơn 0.";
 
     // Nếu KHÔNG phải đấu giá mới validate stock người dùng nhập
     if (Number(isAuctionOnly) !== 1) {
-      if (stock === "" || Number.isNaN(parseInt(stock)) || parseInt(stock) < 0) {
+      if (
+        stock === "" ||
+        Number.isNaN(parseInt(stock)) ||
+        parseInt(stock) < 0
+      ) {
         newErrors.stock = "Tồn kho không hợp lệ.";
       }
     }
 
     attributes.forEach((attr, i) => {
       if (!attr.attribute_id) newErrors[`attr_${i}_id`] = "Chọn thuộc tính.";
-      if (!String(attr.value).trim()) newErrors[`attr_${i}_value`] = "Nhập giá trị.";
+      if (!String(attr.value).trim())
+        newErrors[`attr_${i}_value`] = "Nhập giá trị.";
     });
 
     setErrors(newErrors);
@@ -71,9 +79,12 @@ function AddVariantForm() {
 
   const deleteCloudImage = async (public_id) => {
     try {
-      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
-        public_id,
-      });
+      await axios.post(
+        `${Constants.DOMAIN_API}/admin/products/imagesClauding`,
+        {
+          public_id,
+        }
+      );
     } catch (err) {
       console.error("Lỗi xóa ảnh Cloudinary:", err);
     }
@@ -140,7 +151,9 @@ function AddVariantForm() {
               onChange={(e) => setSku(e.target.value)}
               className="w-full border px-3 py-2 rounded"
             />
-            {errors.sku && <p className="text-red-600 text-sm mt-1">{errors.sku}</p>}
+            {errors.sku && (
+              <p className="text-red-600 text-sm mt-1">{errors.sku}</p>
+            )}
           </div>
 
           {/* Giá */}
@@ -154,13 +167,16 @@ function AddVariantForm() {
               onChange={(e) => setPrice(e.target.value)}
               className="w-full border px-3 py-2 rounded"
             />
-            {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
+            {errors.price && (
+              <p className="text-red-600 text-sm mt-1">{errors.price}</p>
+            )}
           </div>
 
           {/* Tồn kho + Toggle Đấu giá */}
           <div className="w-full md:w-1/3">
             <label className="block font-medium mb-2">
-              Số lượng tồn kho <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+              Số lượng tồn kho{" "}
+              <span style={{ color: "red", fontWeight: "bold" }}>*</span>
             </label>
             <input
               type="number"
@@ -169,7 +185,9 @@ function AddVariantForm() {
               className="w-full border px-3 py-2 rounded"
               disabled={Number(isAuctionOnly) === 1} // 🔹 Khóa khi là đấu giá
             />
-            {errors.stock && <p className="text-red-600 text-sm mt-1">{errors.stock}</p>}
+            {errors.stock && (
+              <p className="text-red-600 text-sm mt-1">{errors.stock}</p>
+            )}
 
             {/* Toggle is_auction_only (Bootstrap 5 switch) */}
             <div className="form-check form-switch mt-2">
@@ -227,7 +245,11 @@ function AddVariantForm() {
                       <select
                         value={attr.attribute_id}
                         onChange={(e) =>
-                          handleAttributeChange(index, "attribute_id", e.target.value)
+                          handleAttributeChange(
+                            index,
+                            "attribute_id",
+                            e.target.value
+                          )
                         }
                         className="w-full border px-3 py-2 rounded"
                       >
@@ -236,7 +258,8 @@ function AddVariantForm() {
                           .filter((opt) => {
                             return !attributes.some(
                               (a, i) =>
-                                String(a.attribute_id) === String(opt.id) && i !== index
+                                String(a.attribute_id) === String(opt.id) &&
+                                i !== index
                             );
                           })
                           .map((opt) => (
@@ -262,7 +285,9 @@ function AddVariantForm() {
                       onChange={(e) =>
                         handleAttributeChange(index, "value", e.target.value)
                       }
-                      className={`w-full border rounded ${isColor ? "h-10 p-1" : "px-2 py-2"}`}
+                      className={`w-full border rounded ${
+                        isColor ? "h-10 p-1" : "px-2 py-2"
+                      }`}
                     />
                     {errors[`attr_${index}_value`] && (
                       <p className="text-red-600 text-sm mt-1">
@@ -349,7 +374,12 @@ function AddVariantForm() {
                   />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
+                      const deleted = images[index];
+                      if (deleted?.public_id) {
+                        await deleteCloudImage(deleted.public_id);
+                      }
+
                       const updated = [...images];
                       updated.splice(index, 1);
                       setImages(updated);

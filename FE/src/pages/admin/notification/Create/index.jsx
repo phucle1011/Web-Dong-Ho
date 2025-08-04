@@ -87,17 +87,37 @@ const CreateNotification = () => {
       toast.error("Thất bại.");
     }
   };
+const handleCancel = async () => {
+  if (thumbnail?.public_id) {
+    try {
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id: thumbnail.public_id,
+      });
+      console.log("Đã xoá ảnh:", thumbnail.public_id);
+    } catch (error) {
+      console.error("Lỗi xoá ảnh:", error);
+    }
+  }
+
+  navigate(-1); // Quay lại trang trước
+};
 
   // Helpers to return Date objects for time boundaries
   // Helpers để tính min/max time
-    const now = new Date();
+  const now = new Date();
   const computeMinTime = (selected) => {
     if (!selected) return now;
     const d = new Date(selected);
-    return d.toDateString() === now.toDateString() ? now : new Date(d.setHours(0, 0, 0, 0));
+    return d.toDateString() === now.toDateString()
+      ? now
+      : new Date(d.setHours(0, 0, 0, 0));
   };
   const computeMaxTime = (selected, limit) => {
-   if (selected && limit && new Date(selected).toDateString() === new Date(limit).toDateString()) {
+    if (
+      selected &&
+      limit &&
+      new Date(selected).toDateString() === new Date(limit).toDateString()
+    ) {
       return new Date(limit);
     }
     const d = selected ? new Date(selected) : new Date();
@@ -107,8 +127,8 @@ const CreateNotification = () => {
   // Compute bounds cho DatePicker
   const startMin = computeMinTime(startDate);
   const startMax = computeMaxTime(startDate, endDate);
-  const endMin   = computeMinTime(startDate);
-  const endMax   = computeMaxTime(endDate);
+  const endMin = computeMinTime(startDate);
+  const endMax = computeMaxTime(endDate);
   return (
     <div className="p-6 max-w-7xl mx-auto bg-white rounded shadow">
       <h2 className="text-2xl font-semibold mb-6">Tạo Thông Báo</h2>
@@ -136,8 +156,8 @@ const CreateNotification = () => {
 
             <div>
               <label className="block mb-1 font-medium">
-                Chương trình khuyến mãi<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-
+                Chương trình khuyến mãi
+                <span style={{ color: "red", fontWeight: "bold" }}>*</span>
               </label>
               <Select
                 options={promotions}
@@ -198,13 +218,14 @@ const CreateNotification = () => {
 
           {/* Card 2: Thời gian */}
           <div className="border border-gray-300 rounded p-4 shadow-lg bg-white min-h-[300px]">
-            <h3 className="text-lg font-medium mb-4">Thời gian diễn ra
-</h3>
+            <h3 className="text-lg font-medium mb-4">Thời gian diễn ra</h3>
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block mb-1 font-medium">Ngày bắt đầu<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</label>
+                <label className="block mb-1 font-medium">
+                  Ngày bắt đầu
+                  <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+                </label>
                 <DatePicker
                   selected={startDate}
                   onChange={setStartDate}
@@ -221,8 +242,10 @@ const CreateNotification = () => {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium">Ngày kết thúc<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</label>
+                <label className="block mb-1 font-medium">
+                  Ngày kết thúc
+                  <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+                </label>
                 <DatePicker
                   selected={endDate}
                   onChange={setEndDate}
@@ -245,30 +268,35 @@ const CreateNotification = () => {
 
           {/* Card 3: Ảnh thông báo */}
           <div className="border border-gray-300 rounded p-4 shadow-lg bg-white min-h-[300px]">
-            <h3 className="text-lg font-medium mb-4">Ảnh thông báo<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</h3>
+            <h3 className="text-lg font-medium mb-4">
+              Ảnh thông báo
+              <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+            </h3>
 
             <div>
               <label className="block mb-1 font-medium">Tải ảnh</label>
               <input
                 type="file"
                 className="block mb-2"
-                onChange={(e) =>
-                  e.target.files[0] &&
-                  uploadToCloudinary(e.target.files[0]).then((u) =>
-                    setThumbnail(u.url)
-                  )
-                }
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    uploadToCloudinary(file).then((res) => {
+                      setThumbnail({ url: res.url, public_id: res.public_id });
+                    });
+                  }
+                }}
               />
-              {thumbnail && (
+              {thumbnail?.url && (
                 <div className="border rounded overflow-hidden">
                   <img
-                    src={thumbnail}
+                    src={thumbnail.url}
                     alt="Thumbnail Preview"
                     className="w-full h-48 object-cover"
                   />
                 </div>
               )}
+
               {errors.thumbnail && (
                 <p className="text-sm text-red-500 mt-1">{errors.thumbnail}</p>
               )}
@@ -281,7 +309,7 @@ const CreateNotification = () => {
           <button
             type="button"
             className="px-6 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-            onClick={() => navigate(-1)}
+            onClick={handleCancel}
           >
             Quay lại
           </button>

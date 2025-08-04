@@ -24,15 +24,13 @@ const AddProduct = () => {
     watch,
     formState: { errors },
     reset,
-    setValue,       // ✅ thêm dòng này
-    trigger         // ✅ và dòng này
-  } = useForm(
-    {
-      defaultValues: {
-        is_featured: StatusEnum.DRAFT,
-      },
-    }
-  );
+    setValue, // ✅ thêm dòng này
+    trigger, // ✅ và dòng này
+  } = useForm({
+    defaultValues: {
+      is_featured: StatusEnum.DRAFT,
+    },
+  });
 
   const navigate = useNavigate();
 
@@ -52,7 +50,6 @@ const AddProduct = () => {
   const [variants, setVariants] = useState([]);
   const [attributes, setAttributes] = useState([]);
 
-
   const handleBrandAdded = () => {
     setShowBrandModal(false);
     fetchData(); // hoặc reload brandOptions nếu cần
@@ -62,8 +59,6 @@ const AddProduct = () => {
     setShowCategoryModal(false);
     fetchData(); // load lại danh sách category
   };
-
-
 
   // 👇 Di chuyển ra ngoài useEffect để dùng được ở nhiều chỗ
   const fetchData = async () => {
@@ -107,7 +102,9 @@ const AddProduct = () => {
   }, []);
   useEffect(() => {
     const fetchAttributes = async () => {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/product-attributes`);
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/admin/product-attributes`
+      );
       setAttributes(res.data.data);
       // tuỳ theo API trả gì
     };
@@ -121,8 +118,6 @@ const AddProduct = () => {
       trigger("slug");
     }
   }, [watch("name")]);
-
-
 
   function CustomUploadAdapterPlugin(editor) {
     editor.plugins.get("FileRepository").createUploadAdapter = (loader) => {
@@ -141,7 +136,6 @@ const AddProduct = () => {
           !variant.sku?.trim() ||
           !variant.stock?.toString().trim() ||
           !variant.price?.toString().trim() ||
-
           !variant.attributes?.length
         ) {
           toast.error(` Biến thể ${i + 1} đang thiếu thông tin bắt buộc.`);
@@ -157,7 +151,10 @@ const AddProduct = () => {
         description: description,
       };
 
-      const productRes = await axios.post(`${Constants.DOMAIN_API}/admin/products`, productData);
+      const productRes = await axios.post(
+        `${Constants.DOMAIN_API}/admin/products`,
+        productData
+      );
       const newProductId = productRes.data.product.id;
 
       // Bước 3: Gửi từng biến thể
@@ -167,7 +164,10 @@ const AddProduct = () => {
           images: variant.images.map((img) => img.url),
         };
 
-        await axios.post(`${Constants.DOMAIN_API}/admin/products/${newProductId}/variants`, variantData);
+        await axios.post(
+          `${Constants.DOMAIN_API}/admin/products/${newProductId}/variants`,
+          variantData
+        );
       }
 
       toast.success(" Thêm sản phẩm và biến thể thành công!");
@@ -185,8 +185,6 @@ const AddProduct = () => {
     }
   };
 
-
-
   const handleThumbnailChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -196,7 +194,6 @@ const AddProduct = () => {
       try {
         const url = await uploadToCloudinary(file);
         setThumbnailUrl(url);
-
       } catch (err) {
         console.error("Upload failed:", err);
         toast.error(" Upload ảnh thất bại");
@@ -206,15 +203,43 @@ const AddProduct = () => {
   const generateSlug = (text) => {
     return text
       .toLowerCase()
-      .normalize("NFD") // chuẩn hóa
-      .replace(/[\u0300-\u036f]/g, "") // xóa dấu
-      .replace(/[^a-z0-9 -]/g, "") // xóa ký tự đặc biệt
+      .normalize("NFD") 
+      .replace(/[\u0300-\u036f]/g, "") 
+      .replace(/[^a-z0-9 -]/g, "") 
       .trim()
-      .replace(/\s+/g, "-") // thay khoảng trắng bằng dấu -
-      .replace(/-+/g, "-"); // bỏ dấu - lặp
+      .replace(/\s+/g, "-") 
+      .replace(/-+/g, "-"); 
   };
 
+const handleCancel = async () => {
+  try {
+    // Xoá ảnh thumbnail nếu có
+    if (thumbnailUrl?.public_id) {
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id: thumbnailUrl.public_id,
+      });
+      console.log("Đã xoá ảnh thumbnail:", thumbnailUrl.public_id);
+    }
 
+    // Xoá ảnh trong từng biến thể
+    for (const variant of variants) {
+      if (Array.isArray(variant.images)) {
+        for (const img of variant.images) {
+          if (img.public_id) {
+            await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+              public_id: img.public_id,
+            });
+            console.log("Đã xoá ảnh biến thể:", img.public_id);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Lỗi khi xoá ảnh Cloudinary:", error);
+  }
+
+  navigate("/admin/products/getAll");
+};
 
 
   return (
@@ -225,22 +250,23 @@ const AddProduct = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-  {/* Tên sản phẩm */}
-  {/* Tên sản phẩm */}
-<div className="col-span-1 border p-3 rounded">
-  <div className="flex items-center justify-between mb-1">
-    <label className="form-label">Tên sản phẩm<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</label>
-  </div>
-  <input
-    type="text"
-    className="form-control"
-    {...register("name", { required: "Vui lòng nhập tên sản phẩm" })}
-  />
-  {errors.name && (
-    <small className="text-danger">{errors.name.message}</small>
-  )}
+          {/* Tên sản phẩm */}
+          {/* Tên sản phẩm */}
+          <div className="col-span-1 border p-3 rounded">
+            <div className="flex items-center justify-between mb-1">
+              <label className="form-label">
+                Tên sản phẩm
+                <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+              </label>
+            </div>
+            <input
+              type="text"
+              className="form-control"
+              {...register("name", { required: "Vui lòng nhập tên sản phẩm" })}
+            />
+            {errors.name && (
+              <small className="text-danger">{errors.name.message}</small>
+            )}
 
             <div className="flex items-center justify-between mb-1 pt-4">
               <label className="form-label">Slug</label>
@@ -253,7 +279,7 @@ const AddProduct = () => {
               {...register("slug")}
               onFocus={() => setSlugEdit(true)}
               onBlur={() => setSlugEdit(false)}
-              onChange={e => {
+              onChange={(e) => {
                 setValue("slug", e.target.value);
                 trigger("slug");
               }}
@@ -265,23 +291,22 @@ const AddProduct = () => {
             )}
           </div>
 
-
-
-
-  {/* Thương hiệu */}
-<div className="col-span-1 border p-3 rounded">
-  {/* ========== THƯƠNG HIỆU ========== */}
-  <div className="flex items-center justify-between mb-1">
-    <label className="form-label">Thương hiệu<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</label>
-    <button
-      type="button"
-      onClick={() => setShowBrandModal(true)}
-      className="text-blue-600  text-sm"
-    >
-      + Thêm thương hiệu
-    </button>
-  </div>
+          {/* Thương hiệu */}
+          <div className="col-span-1 border p-3 rounded">
+            {/* ========== THƯƠNG HIỆU ========== */}
+            <div className="flex items-center justify-between mb-1">
+              <label className="form-label">
+                Thương hiệu
+                <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowBrandModal(true)}
+                className="text-blue-600  text-sm"
+              >
+                + Thêm thương hiệu
+              </button>
+            </div>
 
             <Select
               options={brandOptions}
@@ -314,19 +339,21 @@ const AddProduct = () => {
               />
             )}
 
-  {/* ========== DANH MỤC ========== */}
- 
-<div className="flex items-center justify-between mt-4 mb-1">
-  <label className="form-label">Danh mục<span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</label>
-  <button
-    type="button"
-    onClick={() => setShowCategoryModal(true)}
-    className="text-blue-600  text-sm"
-  >
-    + Thêm danh mục
-  </button>
-</div>
+            {/* ========== DANH MỤC ========== */}
+
+            <div className="flex items-center justify-between mt-4 mb-1">
+              <label className="form-label">
+                Danh mục
+                <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(true)}
+                className="text-blue-600  text-sm"
+              >
+                + Thêm danh mục
+              </button>
+            </div>
 
             <Select
               isMulti
@@ -334,7 +361,9 @@ const AddProduct = () => {
               className="basic-multi-select"
               classNamePrefix="select"
               onChange={(selectedOptions) => {
-                const values = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
+                const values = selectedOptions
+                  ? selectedOptions.map((opt) => opt.value)
+                  : [];
                 setValue("category_id", values);
                 trigger("category_id");
               }}
@@ -351,7 +380,9 @@ const AddProduct = () => {
               })}
             />
             {errors.category_id && (
-              <small className="text-danger">{errors.category_id.message}</small>
+              <small className="text-danger">
+                {errors.category_id.message}
+              </small>
             )}
 
             {showCategoryModal && (
@@ -360,39 +391,35 @@ const AddProduct = () => {
                 onSuccess={handleCategoryAdded}
               />
             )}
-
-
-
-
           </div>
 
-
-
-
-
-  {/* Cột trái: upload ảnh */}
-  <div className="col-span-1 border p-3 rounded">
-    <label className="block font-medium mb-1 text-sm">Ảnh sản phẩm <span style={{ color: "red", fontWeight: "bold" }}>*</span>
-</label>
-    <input
-      type="file"
-      className="w-full border px-3 py-2 rounded text-sm"
-      accept="image/*"
-      onChange={handleThumbnailChange}
-    />
-    {thumbnailUrl && (
-      <img
-        src={thumbnailUrl.url}
-        alt="Preview"
-        className="mt-2 w-full h-auto max-h-48 object-contain border rounded"
-      />
-    )}
-  </div>
+          {/* Cột trái: upload ảnh */}
+          <div className="col-span-1 border p-3 rounded">
+            <label className="block font-medium mb-1 text-sm">
+              Ảnh sản phẩm{" "}
+              <span style={{ color: "red", fontWeight: "bold" }}>*</span>
+            </label>
+            <input
+              type="file"
+              className="w-full border px-3 py-2 rounded text-sm"
+              accept="image/*"
+              onChange={handleThumbnailChange}
+            />
+            {thumbnailUrl && (
+              <img
+                src={thumbnailUrl.url}
+                alt="Preview"
+                className="mt-2 w-full h-auto max-h-48 object-contain border rounded"
+              />
+            )}
+          </div>
 
           {/* Cột phải: trạng thái + nút */}
           <div className="border p-3 rounded flex flex-col justify-between">
             <fieldset className="mb-4">
-              <legend className="fs-5 fw-semibold text-dark mb-3">Tùy chọn sản phẩm</legend>
+              <legend className="fs-5 fw-semibold text-dark mb-3">
+                Tùy chọn sản phẩm
+              </legend>
 
               <div className="d-flex justify-content-end gap-5">
                 {/* Toggle Xuất bản */}
@@ -420,7 +447,12 @@ const AddProduct = () => {
                     className="form-check-input"
                     id="featuredSwitch"
                     onChange={(e) => {
-                      setValue("is_featured", e.target.checked ? StatusEnum.PUBLISHED : StatusEnum.DRAFT);
+                      setValue(
+                        "is_featured",
+                        e.target.checked
+                          ? StatusEnum.PUBLISHED
+                          : StatusEnum.DRAFT
+                      );
                     }}
                     checked={watch("is_featured") === StatusEnum.PUBLISHED}
                   />
@@ -429,23 +461,24 @@ const AddProduct = () => {
                     htmlFor="featuredSwitch"
                     style={{ minWidth: "70px", textAlign: "left" }}
                   >
-                    {watch("is_featured") === StatusEnum.PUBLISHED ? "Xuất bản" : "Nháp"}
+                    {watch("is_featured") === StatusEnum.PUBLISHED
+                      ? "Xuất bản"
+                      : "Nháp"}
                   </label>
                 </div>
-
               </div>
             </fieldset>
 
-
-
             {/* Nút submit */}
             <div className="flex justify-end items-center gap-2 pt-2 border-t mt-auto">
-              <Link
-                to="/admin/products/getAll"
+              <button
+                type="button"
+                onClick={handleCancel}
                 className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
               >
                 Quay lại
-              </Link>
+              </button>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -456,34 +489,33 @@ const AddProduct = () => {
             </div>
           </div>
 
-
-
           {/* Mô tả ngắn */}
           <div className="col-span-2">
-            <label className="block font-medium mb-1 text-sm mb-2">Mô tả ngắn</label>
+            <label className="block font-medium mb-1 text-sm mb-2">
+              Mô tả ngắn
+            </label>
             <textarea
               className="w-full border px-3 py-2 rounded text-sm"
               rows="3"
               {...register("short_description", {
                 maxLength: {
                   value: 100,
-                  message: "Tối đa 100 ký tự"
-                }
+                  message: "Tối đa 100 ký tự",
+                },
               })}
               placeholder="Nhập mô tả ngắn..."
             ></textarea>
             {errors.short_description && (
-              <small className="text-danger">{errors.short_description.message}</small>
+              <small className="text-danger">
+                {errors.short_description.message}
+              </small>
             )}
           </div>
-
-
 
           {/* Mô tả (chiếm toàn bộ 3 cột) */}
           <div className="col-span-2">
             <label className="block font-medium mb-1 text-sm mb-2">Mô tả</label>
             <div className="bg-white border rounded">
-
               <Editor
                 apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
                 value={description}
@@ -491,9 +523,23 @@ const AddProduct = () => {
                   height: 400,
                   menubar: true,
                   plugins: [
-                    "advlist", "autolink", "lists", "link", "image", "charmap", "preview", "anchor",
-                    "searchreplace", "visualblocks", "code", "fullscreen",
-                    "insertdatetime", "media", "table", "help", "wordcount"
+                    "advlist",
+                    "autolink",
+                    "lists",
+                    "link",
+                    "image",
+                    "charmap",
+                    "preview",
+                    "anchor",
+                    "searchreplace",
+                    "visualblocks",
+                    "code",
+                    "fullscreen",
+                    "insertdatetime",
+                    "media",
+                    "table",
+                    "help",
+                    "wordcount",
                   ],
                   toolbar:
                     "undo redo | formatselect | bold italic backcolor | \
@@ -523,21 +569,15 @@ const AddProduct = () => {
               />
             </div>
           </div>
-
-
-
-
         </div>
-        <div className="col-span-1 border p-3 rounded" >
-          <ParentComponent allAttributes={attributes}
-            onVariantsChange={setVariants} />
+        <div className="col-span-1 border p-3 rounded">
+          <ParentComponent
+            allAttributes={attributes}
+            onVariantsChange={setVariants}
+          />
         </div>
       </form>
     </div>
-
-
-
-
   );
 };
 

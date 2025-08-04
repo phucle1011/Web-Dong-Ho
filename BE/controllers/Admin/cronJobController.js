@@ -9,6 +9,7 @@ const transporter = require('../../config/mailer');
 const { getEmailTemplate, getWishlistPromoTemplate } = require('../../utils/emailTemplate');
 const PromotionProductModel = require('../../models/promotionProductsModel');
 const notifyWishlistPromotions = require('../../services/notifyWishlistPromotions');
+const NotificationModel = require('../../models/notificationsModel');
 
 
 
@@ -104,6 +105,29 @@ async function deactivateStaleUsers() {
 }
 
 
+async function updateNotificationStatuses() {
+  try {
+    const now = new Date();
+
+    const expiredNotifications = await NotificationModel.findAll({
+      where: {
+        status: 1,
+        end_date: { [Op.lt]: now },
+      },
+    });
+
+    for (const notification of expiredNotifications) {
+      notification.status = 0;
+      await notification.save();
+    }
+
+    console.log(`Đã cập nhật ${expiredNotifications.length} notification hết hạn.`);
+  } catch (error) {
+    console.error('Lỗi khi cập nhật trạng thái notification:', error);
+  }
+}
+
+
 cron.schedule('0 0 * * *', () => {
     updatePromotionStatuses();
 });
@@ -113,6 +137,8 @@ cron.schedule('59 23 * * *', () => {
 });
 
 cron.schedule('0 0 * * *', deactivateStaleUsers);
+cron.schedule('1 0 * * *', updateNotificationStatuses); 
 
 
-module.exports = { updatePromotionStatuses, notifyWishlistPromotions, deactivateStaleUsers };
+module.exports = { updatePromotionStatuses, notifyWishlistPromotions, deactivateStaleUsers,  updateNotificationStatuses
+ };

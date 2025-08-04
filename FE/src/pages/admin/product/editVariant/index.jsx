@@ -82,23 +82,32 @@ const EditVariantForm = () => {
     }));
   };
 
-  const handleImageChange = async (e, index) => {
-    const file = e.target.files[0];
-    if (!file) return;
+ const handleImageUpload = async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
 
-    try {
-      const url = await uploadToCloudinary(file);
-      const newImages = [...formData.images];
-      newImages[index] = { id: null, url };
+  try {
+    const uploadedImages = [];
 
-      setFormData((prev) => ({ ...prev, images: newImages }));
-
-      toast.success("Tải ảnh lên thành công!");
-    } catch (error) {
-      console.error("Upload thất bại:", error);
-      toast.error("Lỗi khi upload ảnh lên Cloudinary!");
+    for (const file of files) {
+      const { url, public_id } = await uploadToCloudinary(file);
+      uploadedImages.push({ id: null, url: { url, public_id } });
     }
-  };
+
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...uploadedImages],
+    }));
+
+    toast.success("Tải ảnh lên thành công!");
+  } catch (error) {
+    console.error("Upload thất bại:", error);
+    toast.error("Lỗi khi upload ảnh lên Cloudinary!");
+  }
+
+  e.target.value = ""; // reset input để có thể chọn lại
+};
+
 
   const handleDeleteAttribute = async (id) => {
     const newAttributes = [...formData.attributes];
@@ -182,6 +191,29 @@ const EditVariantForm = () => {
       toast.error("Cập nhật thất bại!");
     }
   };
+  const deleteCloudImage = async (public_id) => {
+  try {
+    await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+      public_id,
+    });
+  } catch (err) {
+    console.error("Lỗi xóa ảnh Cloudinary:", err);
+  }
+};
+ const handleBack = async () => {
+  // Duyệt tất cả ảnh chưa có id (chưa lưu vào DB)
+  const cloudOnlyImages = formData.images.filter(
+    (img) => !img.id && img.url?.public_id
+  );
+
+  // Xóa từng ảnh trên Cloudinary
+  for (const img of cloudOnlyImages) {
+    await deleteCloudImage(img.url.public_id);
+  }
+
+  // Quay lại trang chi tiết sản phẩm
+  navigate(`/admin/products/detail/${formData.product_id}`);
+};
 
   if (!variant) return <p>Đang tải dữ liệu...</p>;
 
@@ -353,56 +385,40 @@ const EditVariantForm = () => {
 
         {/* Ảnh biến thể */}
         <fieldset className="flex-1 border rounded p-4">
-          <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
-          <div className="space-y-4 mt-2">
-            {formData.images.map((img, index) => (
-              <div key={index} className="flex items-center gap-4">
-                {img.url && (
-                  <img
-                    src={img?.url?.url || img?.url}
-                    alt={`image-${index}`}
-                    className="h-16 w-16 object-cover rounded"
-                  />
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageChange(e, index)}
-                  className="flex-1 border p-2 rounded"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleDeleteImage(index)}
-                  className="text-red-600 hover:text-red-800 p-1 rounded"
-                  aria-label="Xóa ảnh"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ))}
+  <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
 
-            <button
-              type="button"
-              onClick={addImageField}
-              className="text-blue-600 "
-            >
-              + Thêm ảnh
-            </button>
-          </div>
-        </fieldset>
+  {/* Input chọn nhiều ảnh */}
+  <input
+    type="file"
+    multiple
+    accept="image/*"
+    onChange={handleImageUpload}
+    className="w-full border p-2 rounded mb-4"
+  />
+
+  {/* Hiển thị ảnh theo dạng thanh cuộn ngang */}
+  <div className="flex overflow-x-auto gap-4">
+    {formData.images.map((img, index) => (
+      <div key={index} className="relative flex-shrink-0">
+        <img
+          src={img.url?.url || img.url}
+          alt={`image-${index}`}
+          className="w-24 h-24 object-cover rounded border"
+        />
+        <button
+  type="button"
+  onClick={() => handleDeleteImage(index)}
+  className="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-xs rounded-full shadow hover:scale-110 transition"
+  aria-label="Xóa ảnh"
+>
+  ×
+</button>
+
+      </div>
+    ))}
+  </div>
+</fieldset>
+
       </div>
 
       {/* Nút submit */}
@@ -414,12 +430,14 @@ const EditVariantForm = () => {
   >
     Cập nhật
   </button>
-  <Link
-    to={`/admin/products/detail/${formData.product_id}`}
-    className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
-  >
-    Quay lại
-  </Link>
+  <button
+  type="button"
+  onClick={handleBack}
+  className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+>
+  Quay lại
+</button>
+
 
  {/* Toggle is_auction_only */}
  <div className="form-check form-switch d-flex align-items-center gap-2">
