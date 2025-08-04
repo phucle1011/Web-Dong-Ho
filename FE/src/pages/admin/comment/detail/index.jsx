@@ -98,7 +98,7 @@ function CommentDetailPage() {
                 <table className="table table-striped align-middle">
                   <thead>
                     <tr>
-                      <th>STT</th>
+                      <th>#</th>
                       <th>Người dùng</th>
                       <th>Đánh giá</th>
                       <th>Nội dung</th>

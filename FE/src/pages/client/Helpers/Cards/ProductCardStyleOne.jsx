@@ -1005,66 +1005,69 @@ async function fetchProduct() {
             />
           </span>
         </a>
-        <a
-          href="#"
-          onClick={async (e) => {
-            e.preventDefault();
-            try {
-              const res = await axios.get(
-                `${Constants.DOMAIN_API}/products/${product.id}/variants`
-              );
-              const fetchedProduct = res.data.product;
-              const allVariants = [];
-              fetchedProduct.variants.forEach((variant) => {
-                allVariants.push({
-                  productId: fetchedProduct.id,
-                  productName: fetchedProduct.name,
-                  productDescription: fetchedProduct.description,
-                  productThumbnail: fetchedProduct.thumbnail,
-                  brand: fetchedProduct.brand?.name || "-",
-                  averageRating: fetchedProduct.averageRating,
-                  ratingCount: fetchedProduct.ratingCount,
-                  variantId: variant.id,
-                  price: variant.price,
-                  stock: variant.stock,
-                  sku: variant.sku,
-                  images: variant.images,
-                  attributeValues: variant.attributeValues,
-                });
-              });
-              const clickedVariant = allVariants.find(
-                (v) =>
-                  v.productId === product.id &&
-                  v.variantId ===
-                    (selectedVariant?.id || fetchedProduct.variants?.[0]?.id)
-              );
-              if (!clickedVariant) {
-                toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
-                return;
-              }
-              const current =
-                JSON.parse(localStorage.getItem("compareList")) || [];
-              const exists = current.find(
-                (item) => item.variantId === clickedVariant.variantId
-              );
-              if (!exists) {
-                const updated = [...current, clickedVariant].slice(0, 4);
-                localStorage.setItem("compareList", JSON.stringify(updated));
-                toast.success("Đã thêm sản phẩm vào so sánh!");
-              } else {
-                toast.info("Sản phẩm đã có trong danh sách so sánh!");
-              }
-              navigate("/products-compaire");
-            } catch (error) {
-              console.error(error);
-              toast.error("Đã xảy ra lỗi khi lấy dữ liệu so sánh.");
-            }
-          }}
-        >
-          <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-            <Compair className="w-5 h-5" />
-          </span>
-        </a>
+<a
+  href="#"
+  onClick={async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/products/compare`);
+      const allVariants = [];
+
+      res.data.data.forEach((product) => {
+        product.variants.forEach((variant) => {
+          allVariants.push({
+            productId: product.id,
+            productName: product.name,
+            productDescription: product.description,
+            productThumbnail: product.thumbnail,
+            brand: product.brand?.name || "-",
+            averageRating: product.average_rating,
+            ratingCount: product.rating_count,
+            variantId: variant.id,
+            price: variant.price,
+            stock: variant.stock,
+            sku: variant.sku,
+            images: variant.images || [],
+            attributeValues: variant.attributeValues || [],
+          });
+        });
+      });
+
+      // Tìm biến thể tương ứng
+      const clickedVariant = allVariants.find(
+        (v) =>
+          v.productId === product.id &&
+          v.variantId === (selectedVariant?.id || v.variantId) // fallback
+      );
+
+      if (!clickedVariant) {
+        toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
+        return;
+      }
+
+      const current = JSON.parse(localStorage.getItem("compareList")) || [];
+      const exists = current.find((item) => item.variantId === clickedVariant.variantId);
+
+      if (!exists) {
+        const updated = [...current, clickedVariant].slice(0, 4);
+        localStorage.setItem("compareList", JSON.stringify(updated));
+        toast.success("Đã thêm sản phẩm vào so sánh!");
+      } else {
+        toast.info("Sản phẩm đã có trong danh sách so sánh!");
+      }
+
+      navigate("/products-compaire");
+    } catch (error) {
+      console.error(error);
+      toast.error("Đã xảy ra lỗi khi lấy dữ liệu so sánh.");
+    }
+  }}
+>
+  <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
+    <Compair className="w-5 h-5" />
+  </span>
+</a>
+
       </div>
       <QuickViewDialog />
     </div>

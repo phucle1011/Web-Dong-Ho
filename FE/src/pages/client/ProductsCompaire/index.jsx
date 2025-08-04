@@ -4,6 +4,7 @@ import Star from "../Helpers/icons/Star";
 import InputForm from "../Helpers/InputForm";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 const MAX_COMPARE = 4;
 function capitalizeFirstLetter(string) {
@@ -56,7 +57,7 @@ export default function ProductsCompare() {
               productDescription: product.description,
               productThumbnail: product.thumbnail,
               brand: product.brand?.name || "-",
-              average_rating: product.average_rating,
+              averageRating: product.average_rating, 
               variantId: variant.id,
               price: variant.price,
               stock: variant.stock,
@@ -143,15 +144,26 @@ export default function ProductsCompare() {
     localStorage.setItem("compareList", JSON.stringify(updated));
   };
 
-  const renderStars = (rating) => {
-    if (!rating) return null;
-    const stars = [];
-    const r = Math.floor(rating);
-    for (let i = 0; i < 5; i++) {
-      stars.push(<Star key={i} fill={i < r} />);
+const renderStars = (rating) => {
+  if (!rating || isNaN(parseFloat(rating))) return <span>-</span>;
+
+  const stars = [];
+  const numericRating = parseFloat(rating);
+
+  for (let i = 1; i <= 5; i++) {
+    if (i <= numericRating) {
+      stars.push(<i key={i} className="fas fa-star text-yellow-400" />);
+    } else if (i - 0.5 <= numericRating) {
+      stars.push(<i key={i} className="fas fa-star-half-alt text-yellow-400" />);
+    } else {
+      stars.push(<i key={i} className="far fa-star text-yellow-400" />);
     }
-    return stars;
-  };
+  }
+
+  return stars;
+};
+
+
 
   const getAttributeValue = (variant, attributeName) => {
     const av = variant.attributeValues?.find((a) => a.attribute.name === attributeName);
@@ -261,17 +273,27 @@ export default function ProductsCompare() {
                         currency: "VND",
                       }),
                   },
-                  { label: "SKU", value: (v) => v?.sku || "-" },
+                  { label: "Mã Sản Phẩm", value: (v) => v?.sku || "-" },
                   { label: "Tồn kho", value: (v) => v?.stock ?? "-" },
-                  {
-                    label: "Đánh giá",
-                    value: (v) => (
-                      <div className="flex flex-col items-center">
-                        <div className="flex">{renderStars(v.average_rating)}</div>
-                        <span className="text-xs">{v.average_rating || "-"}</span>
-                      </div>
-                    ),
-                  },
+{
+  label: "Đánh giá",
+  value: (v) => {
+    if (!v || !v.averageRating) return <span className="text-xs">-</span>;
+
+    const rating = parseFloat(v.averageRating);
+
+    return (
+      <div className="flex items-center justify-center gap-1">
+        <div className="flex">{renderStars(rating)}</div>
+        <span className="text-xs text-gray-600">– {rating.toFixed(1)}</span>
+      </div>
+    );
+  }
+}
+
+
+
+
                 ].map(({ label, value }) => (
                   <tr key={label}>
                     <td className="text-[16px] leading-[26px] bg-[#FAFAFA] font-semibold px-[26px] py-[36px]">{label}</td>
@@ -296,19 +318,22 @@ export default function ProductsCompare() {
                       {selectedVariants.map((v, i) => {
                         const value = v ? getAttributeValue(v, attr) : "-";
                         return (
-                          <td key={i} className="text-center text-sm px-[26px] py-[20px]">
-                            {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
-                              value !== "-" ? (
-                                <div
-                                  className="w-6 h-6 rounded-full mx-auto border"
-                                  style={{ backgroundColor: value }}
-                                  title={value}
-                                />
-                              ) : "-"
-                            ) : (
-                              value
-                            )}
-                          </td>
+<td key={i} className="text-center text-sm px-[26px] py-[20px]">
+  {attr.toLowerCase() === "color" || attr.toLowerCase() === "màu sắc" ? (
+    value !== "-" ? (
+      <div
+        className="w-6 h-6 mx-auto border" 
+        style={{ backgroundColor: value }}
+        title={value}
+      />
+    ) : (
+      "-"
+    )
+  ) : (
+    value
+  )}
+</td>
+
                         );
                       })}
                     </tr>

@@ -118,97 +118,115 @@ class ClientCommentController {
   }
 
   // ===== 2. Cập nhật bình luận =====
-  static async updateComment(req, res) {
-    const t = await CommentModel.sequelize.transaction();
-    try {
-      const { id } = req.params;
-      const { rating, comment_text, images = [] } = req.body;
+ static async updateComment(req, res) {
+  const t = await CommentModel.sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { rating, comment_text, images = [] } = req.body;
 
-      const comment = await CommentModel.findOne({
-        where: { id },
-        attributes: ['id', 'user_id', 'order_detail_id', 'parent_id', 'rating', 'comment_text', 'edited', 'created_at', 'updated_at'],
-        include: [
-          {
-            model: OrderDetailModel,
-            as: 'orderDetail',
-            attributes: ['id', 'product_variant_id'],
-            include: [
-              {
-                model: ProductVariantModel,
-                as: 'variant',
-                attributes: ['id', 'product_id'],
-                include: [
-                  {
-                    model: ProductModel,
-                    as: 'product',
-                    attributes: ['id', 'name']
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        transaction: t
-      });
-
-      if (!comment) {
-        await t.rollback();
-        return res.status(404).json({ success: false, message: "Không tìm thấy bình luận để cập nhật" });
-      }
-
-      if (comment.edited) {
-        await t.rollback();
-        return res.status(400).json({ success: false, message: "Bạn chỉ được chỉnh sửa đánh giá một lần." });
-      }
-
-      await comment.update({
-        rating,
-        comment_text,
-        edited: true
-      }, { transaction: t });
-
-      await CommentImageModel.destroy({
-        where: { comment_id: id },
-        transaction: t
-      });
-
-      if (images.length > 0) {
-        for (const url of images) {
-          const result = await checkImageModeration(url);
-          if (!result.valid) {
-            await t.rollback();
-            return res.status(400).json({
-              success: false,
-              message: "Ảnh vi phạm tiêu chuẩn cộng đồng!",
-              detail: result.reason,
-            });
-          }
-        }
-
-        const newImages = images.map((url) => ({
-          comment_id: id,
-          image_url: url
-        }));
-        await CommentImageModel.bulkCreate(newImages, { transaction: t });
-      }
-
-      await t.commit();
-
-      return res.status(200).json({
-        success: true,
-        message: "Cập nhật bình luận thành công",
-        data: comment
-      });
-
-    } catch (error) {
+    // Kiểm tra hợp lệ
+    if (!comment_text?.trim()) {
       await t.rollback();
-      console.error("Error in updateComment:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Lỗi server khi cập nhật bình luận"
-      });
+      return res.status(400).json({ success: false, message: "Vui lòng nhập nội dung bình luận!" });
     }
+    if (!rating || rating < 1 || rating > 5) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: "Vui lòng chọn số sao hợp lệ!" });
+    }
+
+    const comment = await CommentModel.findOne({
+      where: { id },
+      attributes: ['id', 'user_id', 'order_detail_id', 'parent_id', 'rating', 'comment_text', 'edited', 'created_at', 'updated_at'],
+      include: [
+        {
+          model: OrderDetailModel,
+          as: 'orderDetail',
+          attributes: ['id', 'product_variant_id'],
+          required: false, // ✅ fix: tránh lỗi nếu không có
+          include: [
+            {
+              model: ProductVariantModel,
+              as: 'variant',
+              attributes: ['id', 'product_id'],
+              required: false,
+              include: [
+                {
+                  model: ProductModel,
+                  as: 'product',
+                  attributes: ['id', 'name'],
+                  required: false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      transaction: t
+    });
+
+    if (!comment) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: "Không tìm thấy bình luận để cập nhật" });
+    }
+
+    if (comment.edited) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: "Bạn chỉ được chỉnh sửa đánh giá một lần." });
+    }
+
+    // Cập nhật nội dung
+    await comment.update({
+      rating,
+      comment_text,
+      edited: true
+    }, { transaction: t });
+
+    // Xoá ảnh cũ
+    await CommentImageModel.destroy({
+      where: { comment_id: id },
+      transaction: t
+    });
+
+    // Kiểm duyệt ảnh mới
+    if (images.length > 0) {
+      for (const url of images) {
+        const result = await checkImageModeration(url);
+        if (!result.valid) {
+          await t.rollback();
+          return res.status(400).json({
+            success: false,
+            message: "Ảnh vi phạm tiêu chuẩn cộng đồng!",
+            detail: result.reason,
+          });
+        }
+      }
+
+      // Lưu ảnh mới
+      const newImages = images.map((url) => ({
+        comment_id: id,
+        image_url: url
+      }));
+      await CommentImageModel.bulkCreate(newImages, { transaction: t });
+    }
+
+    await t.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật bình luận thành công",
+      data: comment
+    });
+
+  } catch (error) {
+    await t.rollback();
+    console.error("Error in updateComment:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server khi cập nhật bình luận"
+    });
   }
+}
+
 
   // ===== 3. Lấy bình luận theo product_id =====
   static async getCommentsByProductId(req, res) {

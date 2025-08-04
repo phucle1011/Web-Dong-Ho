@@ -3,7 +3,9 @@ import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
 import { useState } from "react";
 import axios from "axios";
-import Swal from "sweetalert2";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 export default function Contact() {
   const [formData, setFormData] = useState({
     first_name: "",
@@ -19,14 +21,34 @@ export default function Contact() {
       [name]: value,
     }));
   };
+  const validateForm = () => {
+    const { first_name, email, subject, message } = formData;
+
+    if (!first_name || !email || !subject || !message) {
+      toast.error("Vui lòng điền đầy đủ thông tin!");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Địa chỉ email không hợp lệ!");
+      return false;
+    }
+
+    return true;
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) return;
+
     try {
       await axios.post("http://localhost:5000/contact", formData);
-      Swal.fire("Gửi Thành Công!", "Chúng tôi sẽ phản hồi trong 24h tới ", "success");
+      toast.success(" Gửi thành công! Chúng tôi sẽ phản hồi trong 24h tới");
 
-      // Clear form
+      // Reset form
       setFormData({
         first_name: "",
         email: "",
@@ -34,9 +56,10 @@ export default function Contact() {
         message: "",
       });
     } catch (error) {
-      Swal.fire("Error", "Phản Hồi Của Bạn Không Gửi Được!", "error");
+      toast.error(" Phản hồi của bạn không gửi được!");
     }
   };
+
   return (
     <Layout childrenClasses="pt-0 pb-0">
       <div className="page-title mb-10">
@@ -92,10 +115,10 @@ export default function Contact() {
                     Số Điện Thoại
                   </p>
                   <p className="text-[15px] text-black leading-[30px] text-center">
-                    +(323) 9847 3847 383
+                    +(84) 0795 9827 60
                   </p>
                   <p className="text-[15px] text-black leading-[30px] text-center">
-                    +(434) 5466 5467 443
+                    +(84) 0795 9827 67
                   </p>
                 </div>
                 <div className="xl:w-1/2 w-full h-[196px] flex flex-col item justify-center bg-[#D3EFFF] p-5">
@@ -205,59 +228,59 @@ export default function Contact() {
                     </svg>
                   </span>
                 </div>
-                <div className="inputs mt-5">
-                  <div className="mb-4">
-                    <InputForm
-                      label="Tên Khách Hàng"
-                      placeholder="Vui Lòng Nhập Tên Của Bạn"
-                      name="first_name"
-                      inputClasses="h-[50px]"
-                      value={formData.first_name}
-                      inputHandler={handleChange}
-                      type="text"
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <InputForm
-                      label="Địa Chỉ Email"
-                      placeholder="Vui Lòng Nhập Địa Chỉ Email Của Bạn"
-                      name="email"
-                      inputClasses="h-[50px]"
-                      value={formData.email}
-                      inputHandler={handleChange}
-                      type="email"
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <InputForm
-                      label="Phản Hồi"
-                      placeholder="Vui Lòng Nhập Phản Hồi Của Bạn"
-                      name="subject"
-                      inputClasses="h-[50px]"
-                      value={formData.subject}
-                      inputHandler={handleChange}
-                      type="text"
-                    />
-                  </div>
-                  <div className="mb-5">
-                    <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 ">
-                      Nội Dung Phản Hồi
-                    </h6>
-                    <textarea
-                      placeholder="Vui Lòng Nhập Nội Dung Phản Hồi Của Bạn"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      className="w-full h-[105px] focus:ring-0 focus:outline-none p-3 border border-qgray-border placeholder:text-sm"
-                    ></textarea>
-                  </div>
-                  <div>
-                    <button
-                      type="submit"
-                      className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center"
-                    >
-                      <span>Gửi Phản Hồi</span>
-                    </button>
+<div className="inputs mt-5">
+  <div className="mb-4">
+    <InputForm
+      label="Tên Khách Hàng"
+      placeholder=""
+      name="first_name"
+      inputClasses="h-[55px] text-lg px-5 rounded-[8px]" // 👈 bo góc
+      value={formData.first_name}
+      inputHandler={handleChange}
+      type="text"
+    />
+  </div>
+  <div className="mb-4">
+    <InputForm
+      label="Địa Chỉ Email"
+      placeholder=""
+      name="email"
+      inputClasses="h-[55px] text-lg px-5 rounded-[10px]"
+      value={formData.email}
+      inputHandler={handleChange}
+      type="email"
+    />
+  </div>
+  <div className="mb-4">
+    <InputForm
+      label="Phản Hồi"
+      placeholder=""
+      name="subject"
+      inputClasses="h-[55px] text-lg px-5 rounded-[10px]"
+      value={formData.subject}
+      inputHandler={handleChange}
+      type="text"
+    />
+  </div>
+  <div className="mb-5">
+    <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 rounded-[8px]">
+      Nội Dung Phản Hồi
+    </h6>
+    <textarea
+      placeholder=""
+      name="message"
+      value={formData.message}
+      onChange={handleChange}
+      className="w-full h-[140px] text-lg p-4 border border-qgray-border focus:ring-0 focus:outline-none placeholder:text-sm rounded-[8px]" // 👈 textarea bo góc
+    ></textarea>
+  </div>
+  <div>
+    <button
+      type="submit"
+      className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center rounded-[8px]" // 👈 nút bo góc
+    >
+      <span>Gửi Phản Hồi</span>
+    </button>
                   </div>
                 </div>
               </form>

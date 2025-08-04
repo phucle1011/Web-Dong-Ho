@@ -173,9 +173,8 @@ export default function Blogs() {
                     <li key={cat.id} className="mb-1">
                       <button
                         onClick={() => handleCategoryClick(cat.slug)}
-                        className={`w-full text-left text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${
-                          categorySlug === cat.slug ? "bg-gray-200 font-semibold" : ""
-                        }`}
+                        className={`w-full text-left text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${categorySlug === cat.slug ? "bg-gray-200 font-semibold" : ""
+                          }`}
                         title={cat.name}
                       >
                         {cat.name.length > 20 ? cat.name.slice(0, 20) + "..." : cat.name}
@@ -265,24 +264,24 @@ export default function Blogs() {
                           {blog.title}
                         </h3>
 
-<p className="mt-1 text-sm text-gray-600 leading-relaxed line-clamp-3">
-  {
-    (() => {
-      const raw = blog.meta_description || blog.content || "";
+                        <p className="mt-1 text-sm text-gray-600 leading-relaxed line-clamp-3">
+                          {
+                            (() => {
+                              const raw = blog.meta_description || blog.content || "";
 
-      // 1. Xóa tất cả thẻ HTML
-      const plainText = raw.replace(/<\/?[^>]+(>|$)/g, "");
+                              // 1. Xóa tất cả thẻ HTML
+                              const plainText = raw.replace(/<\/?[^>]+(>|$)/g, "");
 
-      // 2. Giải mã các HTML entities (&aacute; -> á, &ocirc; -> ô)
-      const textArea = document.createElement("textarea");
-      textArea.innerHTML = plainText;
-      const decoded = textArea.value;
+                              // 2. Giải mã các HTML entities (&aacute; -> á, &ocirc; -> ô)
+                              const textArea = document.createElement("textarea");
+                              textArea.innerHTML = plainText;
+                              const decoded = textArea.value;
 
-      // 3. Cắt tối đa 130 ký tự
-      return decoded.length > 130 ? decoded.slice(0, 130) + "..." : decoded;
-    })()
-  }
-</p>
+                              // 3. Cắt tối đa 130 ký tự
+                              return decoded.length > 130 ? decoded.slice(0, 130) + "..." : decoded;
+                            })()
+                          }
+                        </p>
 
 
                       </div>

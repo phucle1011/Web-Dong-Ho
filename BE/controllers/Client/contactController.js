@@ -18,10 +18,11 @@ class ContactController {
             });
 
             const mailOptions = {
-                from: `"${first_name}" <${email}>`,
-                to: process.env.EMAIL_USER,
-                subject: `Liên hệ: ${subject}`,
-                html: `
+  from: `<${process.env.EMAIL_USER}>`,  
+  to: process.env.EMAIL_USER, 
+  replyTo: email,  
+  subject: ` ${subject}`,
+  html: `
     <table style="width:100%; max-width:600px; font-family: Arial, sans-serif; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; padding:20px; margin:auto;">
       <tr>
         <td style="border-bottom:2px solid #3498db; padding-bottom:10px;">
@@ -29,19 +30,13 @@ class ContactController {
         </td>
       </tr>
       <tr>
-        <td style="padding:10px 0;">
-          <strong>Tên:</strong> ${first_name}
-        </td>
+        <td style="padding:10px 0;"><strong>Tên:</strong> ${first_name}</td>
       </tr>
       <tr>
-        <td style="padding:10px 0;">
-          <strong>Email:</strong> <a href="mailto:${email}" style="color:#3498db; text-decoration:none;">${email}</a>
-        </td>
+        <td style="padding:10px 0;"><strong>Email:</strong> <a href="mailto:${email}" style="color:#3498db;">${email}</a></td>
       </tr>
       <tr>
-        <td style="padding:10px 0;">
-          <strong>Chủ đề:</strong> ${subject}
-        </td>
+        <td style="padding:10px 0;"><strong>Chủ đề:</strong> ${subject}</td>
       </tr>
       <tr>
         <td style="padding:10px 0;">
@@ -50,8 +45,9 @@ class ContactController {
         </td>
       </tr>
     </table>
-  `,
-            };
+  `
+};
+
             await transporter.sendMail(mailOptions);
 
             return res.status(200).json({ message: "Gửi liên hệ thành công!" });
@@ -77,36 +73,43 @@ class ContactController {
       },
     });
 
-    const mailOptions = {
-      from: `"${first_name}" <${email}>`,
-      to: process.env.EMAIL_USER,
-      subject: `FAQ - Khách hàng gửi câu hỏi`,
-      html: `
-        <table style="width:100%; max-width:600px; font-family: Arial, sans-serif; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; padding:20px; margin:auto;">
-          <tr>
-            <td style="border-bottom:2px solid #3498db; padding-bottom:10px;">
-              <h2 style="color:#2c3e50; margin:0;">Liên hệ từ trang FAQ</h2>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;">
-              <strong>Tên:</strong> ${first_name}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;">
-              <strong>Email:</strong> <a href="mailto:${email}" style="color:#3498db; text-decoration:none;">${email}</a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;">
-              <strong>Nội dung:</strong>
-              <div style="background:#fff; border:1px solid #ddd; padding:15px; border-radius:6px; white-space:pre-wrap;">${message}</div>
-            </td>
-          </tr>
-        </table>
-      `,
-    };
+   const mailOptions = {
+  from: `"TimeMasters Support" <${process.env.EMAIL_USER}>`,
+  to: process.env.EMAIL_USER,
+  replyTo: email, 
+  subject: `Câu hỏi từ khách hàng: ${first_name} - ${subject || "Không có tiêu đề"}`,
+  html: `
+    <table style="width:100%; max-width:600px; font-family: Arial, sans-serif; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; padding:20px; margin:auto;">
+      <tr>
+        <td style="border-bottom:2px solid #3498db; padding-bottom:10px;">
+          <h2 style="color:#2c3e50; margin:0;">Khách hàng gửi phản hồi đến TimeMasters</h2>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;">
+          <strong>Tiêu đề:</strong> ${subject || "Không có tiêu đề"}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;">
+          <strong>Họ tên:</strong> ${first_name}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;">
+          <strong>Email:</strong> <a href="mailto:${email}" style="color:#3498db; text-decoration:none;">${email}</a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;">
+          <strong>Nội dung phản hồi:</strong>
+          <div style="background:#fff; border:1px solid #ddd; padding:15px; border-radius:6px; white-space:pre-wrap;">${message}</div>
+        </td>
+      </tr>
+    </table>
+  `
+};
+
 
     await transporter.sendMail(mailOptions);
     return res.status(200).json({ message: "Gửi thành công từ trang FAQ!" });

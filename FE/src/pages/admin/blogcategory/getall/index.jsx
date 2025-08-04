@@ -47,45 +47,48 @@ function Blogcategory() {
     }
   };
 
-  const handleSearch = async () => {
-    try {
-      if (!searchTerm.trim()) {
-        toast.info("Vui lòng nhập từ khóa tìm kiếm.");
-        return;
-      }
+const handleSearch = async () => {
+  const trimmedSearch = searchTerm.trim();
 
-      // Gọi API đã có lọc searchTerm để lấy toàn bộ danh mục khớp
-      const filteredRes = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
-        params: { page: 1, limit: 1000, searchTerm: searchTerm.trim() }
-      });
+  if (!trimmedSearch) {
+    // Nếu rỗng thì load lại toàn bộ danh sách
+    setCurrentPage(1);
+    fetchCategories(1, "");
+    return;
+  }
 
-      const filteredData = filteredRes.data.data || [];
+  try {
+    // Gọi API để tìm kiếm
+    const filteredRes = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
+      params: { page: 1, limit: 1000, searchTerm: trimmedSearch }
+    });
 
-      if (filteredData.length === 0) {
-        toast.info("Không tìm thấy danh mục nào.");
-        setCategories([]);
-        setTotalPages(1);
-        setCurrentPage(1);
-        return;
-      }
+    const filteredData = filteredRes.data.data || [];
 
-      // Tìm vị trí dòng đầu tiên chứa kết quả
-      const index = 0;
-      const pageOfResult = Math.floor(index / perPage) + 1;
-
-      // Gọi lại API chính xác trang đang chứa kết quả đầu tiên
-      const resultRes = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
-        params: { page: pageOfResult, limit: perPage, searchTerm: searchTerm.trim() }
-      });
-
-      setCategories(resultRes.data.data || []);
-      setTotalPages(resultRes.data.pagination?.totalPages || 1);
-      setCurrentPage(pageOfResult);
-    } catch (err) {
-      toast.error("Lỗi tìm kiếm.");
-      console.error(err);
+    if (filteredData.length === 0) {
+      toast.info("Không tìm thấy danh mục nào.");
+      setCategories([]);
+      setTotalPages(1);
+      setCurrentPage(1);
+      return;
     }
-  };
+
+    const index = 0;
+    const pageOfResult = Math.floor(index / perPage) + 1;
+
+    const resultRes = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
+      params: { page: pageOfResult, limit: perPage, searchTerm: trimmedSearch }
+    });
+
+    setCategories(resultRes.data.data || []);
+    setTotalPages(resultRes.data.pagination?.totalPages || 1);
+    setCurrentPage(pageOfResult);
+  } catch (err) {
+    toast.error("Lỗi tìm kiếm.");
+    console.error(err);
+  }
+};
+
 
 
 

@@ -236,13 +236,13 @@ function CommentPage() {
               {statusFilter !== "reply" ? (
                 <div className="table-responsive">
                   <table className="table text-nowrap mb-0 align-middle">
-                    <thead className="text-dark fs-4">
+                    <thead className="bg-gray-100">
                       <tr>
-                        <th>#</th>
-                        <th>Sản phẩm</th>
-                        <th>Tổng bình luận</th>
-                        <th>Trung bình đánh giá</th>
-                        <th>Hành động</th>
+                        <th className="border p-2">#</th>
+                        <th className="border p-2">Sản phẩm</th>
+                        <th className="border p-2">Tổng bình luận</th>
+                        <th className="border p-2">Trung bình đánh giá</th>
+                        <th className="border p-2"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -264,14 +264,14 @@ function CommentPage() {
               ) : (
                 <div className="table-responsive">
                   <table className="table text-nowrap mb-0 align-middle">
-                    <thead className="text-dark fs-4">
+                    <thead className="bg-gray-100">
                       <tr>
-                        <th>#</th>
-                        <th>Người dùng</th>
-                        <th>Nội dung</th>
-                        <th>Số sao</th>
-                        <th>Ngày</th>
-                        <th>Hành động</th>
+                        <th className="border p-2" >#</th>
+                        <th className="border p-2">Người dùng</th>
+                        <th className="border p-2">Nội dung</th>
+                        <th className="border p-2">Số sao</th>
+                        <th className="border p-2">Ngày</th>
+                        <th className="border p-2"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -279,7 +279,7 @@ function CommentPage() {
                         <>
                           <tr key={comment.id}>
                             <td>{index + 1}</td>
-                            <td>{comment.user?.full_name || 'Ẩn danh'}</td>
+                            <td>{comment.user?.name || 'Ẩn danh'}</td>
                             <td>{comment.comment_text}</td>
                             <td>{comment.rating}</td>
                             <td>{new Date(comment.created_at).toLocaleDateString()}</td>

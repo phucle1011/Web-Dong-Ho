@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import Swal from "sweetalert2";
+import { toast } from "react-toastify";
 import { Filter } from "bad-words";
 import StarRating from "../Helpers/StarRating";
 import LoaderStyleOne from "../Helpers/Loaders/LoaderStyleOne";
@@ -72,7 +72,7 @@ useEffect(() => {
     if (productId) {
       fetchComments();
     } else {
-      Swal.fire("Thiếu thông tin", "Không tìm thấy sản phẩm.", "warning");
+      toast.warning("Không tìm thấy sản phẩm.");
     }
   }, [productId]);
 
@@ -116,11 +116,8 @@ useEffect(() => {
   const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 3) {
-      Swal.fire({
-        icon: "error",
-        title: "Chỉ được tải tối đa 3 ảnh",
-        text: "Vui lòng chọn lại ảnh.",
-      });
+toast.error("Chỉ được tải tối đa 3 ảnh. Vui lòng chọn lại.");
+
       e.target.value = null;
       return;
     }
@@ -129,11 +126,8 @@ useEffect(() => {
     for (const file of files) {
       const isWatch = await isWatchImage(file);
       if (!isWatch) {
-        Swal.fire({
-          icon: "error",
-          title: "Ảnh không hợp lệ",
-          text: "Một hoặc nhiều ảnh bạn tải lên không phải là đồng hồ. Vui lòng chọn lại.",
-        });
+toast.error("Một hoặc nhiều ảnh bạn tải lên không phải là đồng hồ. Vui lòng chọn lại.");
+
         e.target.value = null;
         return;
       }
@@ -166,11 +160,8 @@ useEffect(() => {
         }
       } catch (err) {
         console.error("Lỗi upload ảnh:", err);
-        Swal.fire({
-          icon: "error",
-          title: "Lỗi tải ảnh",
-          text: "Không thể tải ảnh lên Cloudinary. Vui lòng thử lại.",
-        });
+toast.error("Không thể tải ảnh lên Cloudinary. Vui lòng thử lại.");
+
         return null; // dừng luôn nếu 1 ảnh lỗi
       }
     }
@@ -183,11 +174,8 @@ useEffect(() => {
 
  const reviewAction = async () => {
   if (!message || rating === 0) {
-    Swal.fire({
-      icon: "warning",
-      title: "Thiếu thông tin",
-      text: "Vui lòng nhập nội dung và chọn số sao trước khi gửi.",
-    });
+toast.warning("Vui lòng nhập nội dung và chọn số sao trước khi gửi.");
+
     return;
   }
 
@@ -205,31 +193,26 @@ const normalizeBadWord = (str) => {
   return str
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]/g, "")    
-    .replace(/\s+/g, "");            
+    .replace(/[\u0300-\u036f]/g, "") // bỏ dấu tiếng Việt
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "") // bỏ dấu câu cụ thể
+    .trim(); // bỏ khoảng trắng đầu/cuối nếu có
 };
+
 
 const normalizedMessage = normalizeBadWord(message);
 const normalizedBadWords = badWordsVi.map(word => normalizeBadWord(word));
 
 const foundBad = normalizedBadWords.find(bad => normalizedMessage.includes(bad));
 if (foundBad) {
-  Swal.fire({
-    icon: "error",
-    title: "Ngôn ngữ không phù hợp",
-    text: "Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.",
-  });
+toast.error("Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.");
+
   return;
 }
 
 
     if (!orderDetailId) {
-      Swal.fire({
-        icon: "error",
-        title: "Thiếu mã đơn hàng",
-        text: "Không thể gửi đánh giá do thiếu mã chi tiết đơn hàng.",
-      });
+toast.error("Không thể gửi đánh giá do thiếu mã chi tiết đơn hàng.");
+
       return;
     }
 
@@ -251,7 +234,8 @@ if (foundBad) {
 
     if (existingComment) {
       if (existingComment.edited) {
-        Swal.fire("Không thể gửi", "Bạn chỉ được chỉnh sửa đánh giá một lần.", "warning");
+        toast.warning("Bạn chỉ được chỉnh sửa đánh giá một lần.");
+
         return;
       }
 
@@ -262,7 +246,8 @@ if (foundBad) {
         edited: true,
       });
 
-      Swal.fire("Đã cập nhật đánh giá", "", "success");
+      toast.success("Đã cập nhật đánh giá");
+
     } else {
       const payload = {
         user_id: userId,
@@ -272,7 +257,8 @@ if (foundBad) {
         images: imageUrls,
       };
       await axios.post("http://localhost:5000/comments", payload);
-      Swal.fire("Đánh giá thành công!", "Cảm ơn bạn đã đánh giá.", "success");
+      toast.success("Đánh giá thành công! Cảm ơn bạn đã đánh giá.");
+
     }
 
     // Reset form
@@ -284,11 +270,8 @@ if (foundBad) {
     fetchComments();
   } catch (error) {
     console.error("Lỗi khi gửi/chỉnh sửa bình luận:", error);
-    Swal.fire({
-      icon: "error",
-      title: "Lỗi",
-      text: "Đã xảy ra lỗi. Vui lòng thử lại.",
-    });
+toast.error("Ảnh không phù hợp với tiêu chuẩn cộng đồng. Vui lòng thử lại.");
+
   } finally {
     setReviewLoading(false);
   }
@@ -486,11 +469,8 @@ if (foundBad) {
               onChange={(e) => {
                 const files = Array.from(e.target.files);
                 if (files.length > 3) {
-                  Swal.fire({
-                    icon: "error",
-                    title: "Chỉ được tải tối đa 3 ảnh",
-                    text: "Vui lòng chọn lại ảnh.",
-                  });
+toast.error("Chỉ được tải tối đa 3 ảnh. Vui lòng chọn lại ảnh.");
+
                   e.target.value = null;
                   return;
                 }

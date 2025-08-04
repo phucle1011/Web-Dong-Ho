@@ -16,18 +16,18 @@ export default function Blog() {
   const [categories, setCategories] = useState([]);
   const [hotBlogs, setHotBlogs] = useState([]);
 
-  
+
   const [categoryPage, setCategoryPage] = useState(1);
   const categoriesPerPage = 5;
 
-  
+
   const [tempDate, setTempDate] = useState("");
 
- 
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideIntervalRef = useRef(null);
 
-  
+
   const formatDateVN = (date) =>
     new Date(date).toLocaleDateString("vi-VN", {
       day: "2-digit",
@@ -35,7 +35,7 @@ export default function Blog() {
       year: "numeric",
     });
 
-  
+
   const fetchHotBlogs = async () => {
     try {
       const res = await axios.get(`${Constants.DOMAIN_API}/blogs/hot?limit=5`);
@@ -51,10 +51,10 @@ export default function Blog() {
         const res = await axios.get(`${Constants.DOMAIN_API}/blogs/${id}`);
         setBlog(res.data);
 
-       
+
         try {
           await axios.post(`${Constants.DOMAIN_API}/blogs/${id}/view`, {});
-          
+
           fetchHotBlogs();
         } catch (err) {
           console.error("Lỗi khi tăng view:", err);
@@ -64,10 +64,10 @@ export default function Blog() {
       }
     };
     if (id) fetchBlog();
-    
+
   }, [id]);
 
- 
+
   useEffect(() => {
     const fetchAllBlogs = async () => {
       try {
@@ -80,7 +80,7 @@ export default function Blog() {
     fetchAllBlogs();
   }, [id]);
 
-  
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -100,18 +100,18 @@ export default function Blog() {
     fetchHotBlogs();
   }, []);
 
-  
+
   const totalCategoryPages = Math.ceil(categories.length / categoriesPerPage);
   const pagedCategories = categories.slice(
     (categoryPage - 1) * categoriesPerPage,
     categoryPage * categoriesPerPage
   );
 
-  
+
   const suggestions = (() => {
     const others = (allBlogs || []).filter((b) => String(b.id) !== String(id));
     const shuffled = [...others].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 5); 
+    return shuffled.slice(0, 5);
   })();
 
   useEffect(() => {
@@ -124,12 +124,12 @@ export default function Blog() {
     };
   }, [suggestions.length]);
 
- 
+
   useEffect(() => {
     setCurrentSlide(0);
   }, [id, allBlogs.length]);
 
-  
+
   const handleCategoryClick = (slug) => {
     navigate(`/blogs?category=${slug}`);
   };
@@ -160,7 +160,7 @@ export default function Blog() {
             breadcrumb={[
               { name: "trang chủ", path: "/" },
               { name: "tin tức", path: "/blogs" },
-              
+
             ]}
           />
         </div>
@@ -236,6 +236,17 @@ export default function Blog() {
                 <div className="w-full py-16 text-center text-gray-500">Đang tải...</div>
               ) : (
                 <>
+
+                  {/* Tiêu đề */}
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 leading-snug mb-4 text-center max-w-3xl mx-auto">
+                    {blog.title}
+                  </h1>
+                  <h3 className="text-center text-base text-gray-600 mt-4 mb-8">
+                    {new DOMParser().parseFromString(blog.meta_description.replace(/<[^>]*>?/gm, ""), "text/html").body.textContent}
+                  </h3>
+
+
+
                   <article className="mb-10">
                     {/* Ảnh đại diện */}
                     <img
@@ -263,10 +274,7 @@ export default function Blog() {
                       )}
                     </div>
 
-                    {/* Tiêu đề */}
-                    <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 leading-snug mb-4">
-                      {blog.title}
-                    </h1>
+
 
                     {/* Nội dung - căn đều */}
                     <div
@@ -275,49 +283,60 @@ export default function Blog() {
                     />
                   </article>
 
-                  
-<section className="mt-10 w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] bg-white">
-  <div className="max-w-[1280px] mx-auto">
-    <h2 className="px-8 text-2xl md:text-3xl font-bold mb-6">
-      Có thể bạn quan tâm
-    </h2>
 
-    {/* Grid full width 4 bài */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-8">
-      {suggestions.slice(0, 4).map((b) => (
-        <Link
-          key={b.id}
-          to={`/blogs/${b.id}`}
-          className="block rounded-2xl overflow-hidden shadow hover:shadow-2xl transition bg-white"
-        >
-          {/* Ảnh giảm tiếp 20% chiều cao */}
-          <div className="h-[179px] md:h-[205px] overflow-hidden">
-            <img
-              src={b.image_url}
-              alt={b.title}
-              className="w-full h-full object-cover hover:scale-105 transition duration-300"
-            />
-          </div>
+                  <section className="mt-10 w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] bg-white">
+                    <div className="max-w-[1280px] mx-auto">
+                      <h2 className="px-8 text-2xl md:text-3xl font-bold mb-6">
+                        Có thể bạn quan tâm
+                      </h2>
 
-          {/* Nội dung */}
-          <div className="p-5">
-            <div className="text-sm text-gray-500 mb-2">
-              {formatDateVN(b.created_at)} <span className="text-gray-300">|</span>{" "}
-              {b.user_name || "Tác giả"}
-            </div>
-            <h3 className="text-lg md:text-xl font-semibold text-gray-800 line-clamp-2 mb-3">
-              {b.title}
-            </h3>
-            <p className="text-base text-gray-600 line-clamp-3">
-              {b.meta_description ||
-                (b.content || "").replace(/<[^>]+>/g, "").slice(0, 150) + "..."}
-            </p>
-          </div>
-        </Link>
-      ))}
-    </div>
-  </div>
-</section>
+                      {/* Grid full width 4 bài */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-8">
+                        {suggestions.slice(0, 4).map((b) => (
+                          <Link
+                            key={b.id}
+                            to={`/blogs/${b.id}`}
+                            className="block rounded-2xl overflow-hidden shadow hover:shadow-2xl transition bg-white"
+                          >
+                            {/* Ảnh giảm tiếp 20% chiều cao */}
+                            <div className="h-[179px] md:h-[205px] overflow-hidden">
+                              <img
+                                src={b.image_url}
+                                alt={b.title}
+                                className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                              />
+                            </div>
+
+                            {/* Nội dung */}
+                            <div className="p-5">
+                              <div className="text-sm text-gray-500 mb-2">
+                                {formatDateVN(b.created_at)} <span className="text-gray-300">|</span>{" "}
+                                {b.user_name || "Tác giả"}
+                              </div>
+                              <h3 className="text-lg md:text-xl font-semibold text-gray-800 line-clamp-2 mb-3">
+                                {b.title}
+                              </h3>
+                              <p className="text-base text-gray-600 line-clamp-3">
+                                {(() => {
+                                  const decodeHtml = (html) => {
+                                    const txt = document.createElement("textarea");
+                                    txt.innerHTML = html;
+                                    return txt.value;
+                                  };
+
+                                  const raw = b.meta_description || b.content || "";
+                                  const decodedOnce = decodeHtml(raw); 
+                                  const noHtml = decodedOnce.replace(/<[^>]+>/g, ""); 
+                                  return decodeHtml(noHtml).slice(0, 150) + "..."; 
+                                })()}
+                              </p>
+                            </div>
+
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
 
 
 

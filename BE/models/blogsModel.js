@@ -32,7 +32,7 @@ const Blog = connection.define('Blog', {
     defaultValue: DataTypes.NOW,
   },
   meta_description: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.STRING(1000),
     allowNull: true,
   },
   blogCategory_id: { 

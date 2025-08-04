@@ -12,9 +12,8 @@ import {
   FaTrashAlt,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 import FormDelete from "../../../../components/formDelete";
-
+import { toast } from "react-toastify";
 function BlogList() {
   const [blogs, setBlogs] = useState([]);
   const [limit] = useState(5);
@@ -64,18 +63,19 @@ function BlogList() {
     setSelectedIdToDelete(id);
     setShowDeleteModal(true);
   };
+const handleConfirmDelete = async ({ id }) => {
+  try {
+    await axios.delete(`${Constants.DOMAIN_API}/admin/blog/${id}`);
+    setShowDeleteModal(false);
+    toast.success("Bài viết đã được xóa.");
+    fetchBlogs(currentPage, searchTerm);
+  } catch (error) {
+    setShowDeleteModal(false);
+    toast.error("Không thể xóa bài viết.");
+    console.error(error);
+  }
+};
 
-  const handleConfirmDelete = async ({ id }) => {
-    try {
-      await axios.delete(`${Constants.DOMAIN_API}/admin/blog/${id}`);
-      setShowDeleteModal(false);
-      Swal.fire("Đã xóa!", "Bài viết đã được xóa.", "success");
-      fetchBlogs(currentPage, searchTerm);
-    } catch (error) {
-      setShowDeleteModal(false);
-      Swal.fire("Lỗi", "Không thể xóa bài viết", "error");
-    }
-  };
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages && page !== currentPage) {
