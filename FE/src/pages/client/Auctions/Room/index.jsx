@@ -426,62 +426,57 @@ export default function AuctionRoom() {
         }));
     }, [showWinModal]);
 
-   useEffect(() => {
-  if (!showWinModal) return;
+    useEffect(() => {
+        if (!showWinModal) return;
 
-  // Ngăn ESC, phím chuyển hướng
-  const onKeyDown = (e) => {
-    const allowed = ['Enter', ' ']; // Chỉ cho nhấn Enter và Space
-    if (!allowed.includes(e.key)) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+        const onKeyDown = (e) => {
+            const allowed = ['Enter', ' '];
+            if (!allowed.includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
 
-  // Ngăn context menu (chuột phải)
-  const onContextMenu = (e) => e.preventDefault();
+        const onContextMenu = (e) => e.preventDefault();
 
-  // Ngăn đóng tab hoặc reload
-  const onBeforeUnload = (e) => {
-    e.preventDefault();
-    e.returnValue = 'Bạn đang thanh toán, vui lòng hoàn tất.';
-  };
+        const onBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = 'Bạn đang thanh toán, vui lòng hoàn tất.';
+        };
 
-  // Ngăn nút quay lại
-  const push = () => window.history.pushState(null, '', window.location.href);
-  push();
-  const onPopState = () => {
-    push();
-    toast.info('Vui lòng thanh toán trước khi rời trang.');
-  };
+        const push = () => window.history.pushState(null, '', window.location.href);
+        push();
+        const onPopState = () => {
+            push();
+            toast.info('Vui lòng thanh toán trước khi rời trang.');
+        };
 
-  // Ngăn click ra ngoài modal
-  const swallow = (e) => {
-    if (!modalRef.current) return;
-    if (!modalRef.current.contains(e.target)) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
+        const swallow = (e) => {
+            if (!modalRef.current) return;
+            if (!modalRef.current.contains(e.target)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
 
-  document.addEventListener('click', swallow, true);
-  document.addEventListener('mousedown', swallow, true);
-  document.addEventListener('touchstart', swallow, true);
-  document.addEventListener('contextmenu', onContextMenu, true);
-  document.addEventListener('keydown', onKeyDown, true);
-  window.addEventListener('beforeunload', onBeforeUnload);
-  window.addEventListener('popstate', onPopState);
+        document.addEventListener('click', swallow, true);
+        document.addEventListener('mousedown', swallow, true);
+        document.addEventListener('touchstart', swallow, true);
+        document.addEventListener('contextmenu', onContextMenu, true);
+        document.addEventListener('keydown', onKeyDown, true);
+        window.addEventListener('beforeunload', onBeforeUnload);
+        window.addEventListener('popstate', onPopState);
 
-  return () => {
-    document.removeEventListener('click', swallow, true);
-    document.removeEventListener('mousedown', swallow, true);
-    document.removeEventListener('touchstart', swallow, true);
-    document.removeEventListener('contextmenu', onContextMenu, true);
-    document.removeEventListener('keydown', onKeyDown, true);
-    window.removeEventListener('beforeunload', onBeforeUnload);
-    window.removeEventListener('popstate', onPopState);
-  };
-}, [showWinModal]);
+        return () => {
+            document.removeEventListener('click', swallow, true);
+            document.removeEventListener('mousedown', swallow, true);
+            document.removeEventListener('touchstart', swallow, true);
+            document.removeEventListener('contextmenu', onContextMenu, true);
+            document.removeEventListener('keydown', onKeyDown, true);
+            window.removeEventListener('beforeunload', onBeforeUnload);
+            window.removeEventListener('popstate', onPopState);
+        };
+    }, [showWinModal]);
 
     useEffect(() => {
         if (countdown.ms <= 0) {
@@ -580,7 +575,6 @@ export default function AuctionRoom() {
         setCurrentPrice(Number(payload.currentPrice) || 0);
         setHighestBidUserId(Number(payload.highestBidUserId) || null);
 
-        // Cập nhật lịch sử
         setBids((prev) => [
             {
                 user: payload.bid.user_name,
@@ -616,75 +610,75 @@ export default function AuctionRoom() {
         <Layout>
             <style>
                 {`
-    @keyframes fadeInZoom {
-      0% { opacity: 0; transform: scale(0.8); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-    @keyframes glow {
-      0% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
-      50% { box-shadow: 0 0 20px rgba(255,255,255,0.8); }
-      100% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
-    }
-    .animate-glow {
-      animation: glow 1.8s ease-in-out infinite;
-    }
+                    @keyframes fadeInZoom {
+                    0% { opacity: 0; transform: scale(0.8); }
+                    100% { opacity: 1; transform: scale(1); }
+                    }
+                    @keyframes glow {
+                    0% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+                    50% { box-shadow: 0 0 20px rgba(255,255,255,0.8); }
+                    100% { box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+                    }
+                    .animate-glow {
+                    animation: glow 1.8s ease-in-out infinite;
+                    }
 
-    /* Hiệu ứng pop in modal */
-    @keyframes popIn {
-      0% { transform: scale(0.3); opacity: 0; }
-      70% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); }
-    }
-    .animate-pop-in {
-      animation: popIn 0.6s ease-out forwards;
-    }
+                    /* Hiệu ứng pop in modal */
+                    @keyframes popIn {
+                    0% { transform: scale(0.3); opacity: 0; }
+                    70% { transform: scale(1.05); opacity: 1; }
+                    100% { transform: scale(1); }
+                    }
+                    .animate-pop-in {
+                    animation: popIn 0.6s ease-out forwards;
+                    }
 
-    /* Pháo hoa */
-    .firework {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: #fff;
-      border-radius: 50%;
-      opacity: 0;
-      animation: explode 1.2s ease-out forwards;
-    }
-    @keyframes explode {
-      0% { transform: scale(0); opacity: 1; }
-      80% { transform: scale(1.5); opacity: 1; }
-      100% { transform: scale(0); opacity: 0; }
-    }
-      /* Pop-in: nhỏ -> lớn có nhẹ bounce */
-@keyframes popIn {
-  0% { transform: scale(0.3); opacity: 0; }
-  70% { transform: scale(1.05); opacity: 1; }
-  100% { transform: scale(1); }
-}
-.animate-pop-in { animation: popIn 0.6s ease-out forwards; }
+                    /* Pháo hoa */
+                    .firework {
+                    position: absolute;
+                    width: 8px;
+                    height: 8px;
+                    background: #fff;
+                    border-radius: 50%;
+                    opacity: 0;
+                    animation: explode 1.2s ease-out forwards;
+                    }
+                    @keyframes explode {
+                    0% { transform: scale(0); opacity: 1; }
+                    80% { transform: scale(1.5); opacity: 1; }
+                    100% { transform: scale(0); opacity: 0; }
+                    }
+                    /* Pop-in: nhỏ -> lớn có nhẹ bounce */
+                    @keyframes popIn {
+                    0% { transform: scale(0.3); opacity: 0; }
+                    70% { transform: scale(1.05); opacity: 1; }
+                    100% { transform: scale(1); }
+                    }
+                    .animate-pop-in { animation: popIn 0.6s ease-out forwards; }
 
-/* Overlay mờ dần */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.overlay-fade { animation: fadeIn .25s ease-out; }
+                    /* Overlay mờ dần */
+                    @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
+                    }
+                    .overlay-fade { animation: fadeIn .25s ease-out; }
 
-/* Pháo hoa */
-.firework {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0;
-  animation: explode 1.2s ease-out forwards;
-}
-@keyframes explode {
-  0%   { transform: scale(0);   opacity: 1; }
-  80%  { transform: scale(1.5); opacity: 1; }
-  100% { transform: scale(0);   opacity: 0; }
-}
-  `}
+                    /* Pháo hoa */
+                    .firework {
+                    position: absolute;
+                    width: 8px;
+                    height: 8px;
+                    background: #fff;
+                    border-radius: 50%;
+                    opacity: 0;
+                    animation: explode 1.2s ease-out forwards;
+                    }
+                    @keyframes explode {
+                    0%   { transform: scale(0);   opacity: 1; }
+                    80%  { transform: scale(1.5); opacity: 1; }
+                    100% { transform: scale(0);   opacity: 0; }
+                    }
+                    `}
             </style>
 
             <div
@@ -699,9 +693,9 @@ export default function AuctionRoom() {
                 {/* Tiêu đề */}
                 <div
                     className="relative z-10 px-8 py-4 rounded-xl 
-     from-[#ff416c]/80 to-[#ff4b2b]/80
-    text-3xl md:text-5xl font-extrabold text-white shadow-2xl
-    animate-[fadeInZoom_1s_ease-out]"
+                        from-[#ff416c]/80 to-[#ff4b2b]/80
+                        text-3xl md:text-5xl font-extrabold text-white shadow-2xl
+                        animate-[fadeInZoom_1s_ease-out]"
                 >
                     <span className="tracking-wide drop-shadow-lg">
                         Phòng Đấu Giá Trực Tuyến
@@ -1038,10 +1032,10 @@ export default function AuctionRoom() {
                 )}
             </div>
             {showWinModal && winInfo && (
-<div
-  className="fixed inset-0 z-[9999] flex items-center justify-center"
-  onClick={(e) => e.preventDefault()} 
->
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center"
+                    onClick={(e) => e.preventDefault()}
+                >
 
                     <div className="absolute inset-0 bg-black/50 overlay-fade" />
 
@@ -1058,7 +1052,7 @@ export default function AuctionRoom() {
                         />
                     ))}
 
-                    <div ref={modalRef} 
+                    <div ref={modalRef}
                         className="relative mx-4 w-full max-w-md rounded-2xl bg-blue-to-r from-pink-500 via-red-400 to-yellow-400 p-1 shadow-2xl animate-pop-in"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -1081,8 +1075,10 @@ export default function AuctionRoom() {
                                     {" "}{Number(winInfo.amount || 0).toLocaleString("vi-VN")} ₫
                                 </span>
                             </p>
-                            <p className="mt-2 text-center text-sm text-gray-600">
-                                Vui lòng thanh toán ngay, sản phẩm sẽ bị xóa nếu không thanh toán trong vòng 24h.
+                            <p className="mt-2 text-center text-sm text-red-600">
+                                Vui lòng thanh toán trước hạn
+                                nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
+                                bạn sẽ bị cấm đấu giá trong 12 tháng!
                             </p>
 
                             <div className="mt-6 grid gap-3 text-center">

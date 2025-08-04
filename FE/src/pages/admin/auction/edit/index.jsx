@@ -31,9 +31,11 @@ const AuctionEdit = () => {
     const fetchProducts = async () => {
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`);
-            const options = res.data.data.map((p) => ({
+            const available = res.data.data.filter(p => p.stock > 0);
+            const options = available.map(p => ({
                 value: p.id,
-                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}`,
+                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+                    }${p.stock != null ? ` (Còn ${p.stock})` : ""}`,
             }));
             setProducts(options);
         } catch (err) {

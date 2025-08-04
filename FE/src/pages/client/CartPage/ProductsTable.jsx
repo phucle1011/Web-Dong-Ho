@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import Constants from "../../../Constants";
 import FormDelete from "../../../components/formDelete";
@@ -6,14 +6,55 @@ import { toast } from "react-toastify";
 import { FaTrashAlt, FaTrophy } from "react-icons/fa";
 import { decodeToken } from "../Helpers/jwtDecode";
 
-const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCartItemsChange }) => {
+const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCartItemsChange, onHasActiveAuction }) => {
   const [cartItems, setCartItems] = useState([]);
+  const [hasActiveAuction, setHasActiveAuction] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState("");
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [showAllMap, setShowAllMap] = useState({});
+
+  const formatHHMMSS = (secs) => {
+    const h = String(Math.floor(secs / 3600)).padStart(2, "0");
+    const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
+    const s = String(secs % 60).padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  };
+
+  function CountdownTimer({ endTime }) {
+    const [remaining, setRemaining] = useState(() => {
+      const diff = Math.floor((new Date(endTime) - Date.now()) / 1000);
+      return diff > 0 ? diff : 0;
+    });
+    const intervalRef = useRef(null);
+
+    useEffect(() => {
+      intervalRef.current = setInterval(() => {
+        setRemaining((r) => {
+          if (r <= 1) {
+            clearInterval(intervalRef.current);
+            return 0;
+          }
+          return r - 1;
+        });
+      }, 1000);
+      return () => clearInterval(intervalRef.current);
+    }, [endTime]);
+
+    return remaining > 0
+      ? <span className="font-mono">{formatHHMMSS(remaining)}</span>
+      : <span className="text-red-600">Hết hạn</span>;
+  }
+
+  const add24Hours = (isoEndTime) => {
+    const t = Date.parse(isoEndTime) + 24 * 60 * 60 * 1000;
+    return new Date(t)
+      .toISOString()
+      .replace("T", " ")
+      .substring(0, 19);
+  };
 
   const meId = (() => {
     try {
@@ -37,36 +78,37 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     return sorted[0];
   };
 
-// 1. Cập nhật getAuctionInfo để nhận thêm thời điểm createdAt của item
-const getAuctionInfo = (variant, userId, itemCreatedAt) => {
-  const auctions = variant?.auctions || [];
+  const getAuctionInfo = (variant, userId, itemCreatedAt) => {
+    const auctions = variant?.auctions || [];
 
-  // Chỉ lấy các phiên user này thắng, và đã kết thúc trước hoặc đúng thời điểm itemCreatedAt
-  const won = auctions.filter(a =>
-    a.status === "ended" &&
-    new Date(a.end_time || a.ended_at) <= new Date(itemCreatedAt) &&
-    a.bids?.some(b => Number(b.user_id) === Number(userId))
-  );
+    const won = auctions.filter(a =>
+      a.status === "ended" &&
+      (a.end_time || a.ended_at).replace("T", " ").substring(0, 19)
+      <= itemCreatedAt.replace("T", " ").substring(0, 19) &&
+      a.bids?.some(b => Number(b.user_id) === Number(userId))
+    );
 
-  if (won.length === 0) {
-    return { isAuction: false, bidAmount: 0 };
-  }
+    if (won.length === 0) {
+      return { isAuction: false, bidAmount: 0 };
+    }
 
-  // Chọn phiên có end_time gần nhất nhưng <= itemCreatedAt
-  const target = won.reduce((best, cur) => {
-    const t1 = new Date(best.end_time || best.ended_at);
-    const t2 = new Date(cur.end_time || cur.ended_at);
-    return t2 > t1 ? cur : best;
-  });
+    const target = won.reduce((best, cur) => {
+      const t1 = (best.end_time || best.ended_at).replace("T", " ").substring(0, 19);
+      const t2 = (cur.end_time || cur.ended_at).replace("T", " ").substring(0, 19);
+      return t2 > t1 ? cur : best;
+    });
 
-  const topBid = getTopBid(target.bids);
-  return {
-    isAuction: true,
-    bidAmount: Number(topBid.bidAmount) || 0,
-    auctionId: target.id,
+    const formatted = (target.end_time || target.ended_at)
+      .replace("T", " ")
+      .substring(0, 19);
+
+    const topBid = getTopBid(target.bids);
+    return {
+      isAuction: true,
+      bidAmount: Number(topBid.bidAmount) || 0,
+      auctionId: target.id,
+    };
   };
-};
-
 
   const toggleShowAll = (id) => {
     setShowAllMap(prev => ({ ...prev, [id]: !prev[id] }));
@@ -77,11 +119,10 @@ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
     setShowNameMap(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const addDays = (d, days) => {
-    if (!d) return null;
-    const x = new Date(d);
-    x.setDate(x.getDate() + days);
-    return x;
+  const addDays = (dateString, days) => {
+    const d = new Date(dateString);
+    d.setHours(d.getHours() + days * 24);
+    return d.toISOString();
   };
 
   const formatDateLocal = (dateString) => {
@@ -97,7 +138,6 @@ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   };
-
 
   useEffect(() => {
     const selectedTotal = calculateSelectedTotal();
@@ -139,7 +179,7 @@ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
-      const auctionInfo = getAuctionInfo(item.variant, meId);
+      const auctionInfo = getAuctionInfo(item.variant, meId, item.created_at);
       const price = auctionInfo.isAuction
         ? auctionInfo.bidAmount
         : parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
@@ -151,7 +191,7 @@ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
   const calculateSelectedTotal = () => {
     return cartItems.reduce((total, item) => {
       if (selectedItems.includes(item.product_variant_id)) {
-        const auctionInfo = getAuctionInfo(item.variant, meId);
+        const auctionInfo = getAuctionInfo(item.variant, meId, item.created_at);
         const price = auctionInfo.isAuction
           ? auctionInfo.bidAmount
           : parseFloat(item.variant?.promotion?.discounted_price || item.variant?.price || 0);
@@ -306,6 +346,77 @@ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
     );
   };
 
+  function CountdownTimer({ endTime, onExpire }) {
+  const initialEndRef = React.useRef(endTime);
+  const [remaining, setRemaining] = React.useState(() => {
+    const diff = Math.floor((new Date(initialEndRef.current) - Date.now()) / 1000);
+    return diff > 0 ? diff : 0;
+  });
+  const intervalRef = React.useRef(null);
+
+  React.useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setRemaining(r => {
+        if (r <= 1) {
+          clearInterval(intervalRef.current);
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  React.useEffect(() => {
+    if (remaining === 0 && typeof onExpire === "function") onExpire();
+  }, [remaining, onExpire]);
+
+  return remaining > 0
+    ? <span className="font-mono">{formatHHMMSS(remaining)}</span>
+    : <span className="text-red-600">Hết hạn</span>;
+}
+
+  const handleExpire = async (cartDetailId, total) => {
+    const token = localStorage.getItem("token");
+    try {
+      await axios.post(
+        `${Constants.DOMAIN_API}/wallets/deduct-fee`,
+        { orderId: cartDetailId, amount: total },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      await axios.delete(
+        `${Constants.DOMAIN_API}/delete-to-carts/${cartDetailId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setCartItems(prev =>
+        prev.filter(item => item.product_variant_id !== cartDetailId)
+      );
+      toast.info("Hết hạn thanh toán: đã trừ 10% và xóa khỏi giỏ hàng");
+
+    } catch (err) {
+      console.error("Xử lý hết hạn thất bại:", err);
+      toast.error("Không thể tự động xử lý phí hết hạn");
+    }
+  };
+
+  useEffect(() => {
+    const now = Date.now();
+    const found = cartItems.some(item => {
+      const info = getAuctionInfo(item.variant, meId, item.created_at);
+      if (!info.isAuction) return false;
+
+      const a = item.variant.auctions.find(a => a.id === info.auctionId);
+      if (!a) return false;
+
+      const expiry = Date.parse(a.end_time) + 24 * 3600 * 1000;
+      return expiry > now;
+    });
+    setHasActiveAuction(found);
+    onHasActiveAuction?.(found);
+  }, [cartItems, onHasActiveAuction]);
+
   return (
     <div className={`w-full ${className || ""}`}>
       <div className="flex justify-end items-center mb-4 pr-2">
@@ -371,188 +482,213 @@ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
                   ? auctionInfo.bidAmount
                   : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
                 const total = price * quantity;
+
+                const targetAuction = item.variant.auctions.find(a => a.id === auctionInfo.auctionId);
+
                 return (
-                  <tr
-                    key={item.id}
-                    className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""
-                      } ${isAuction ? "bg-white border-b hover:bg-gray-50" : ""}`}
-                  >
-                    <td className="text-center">
-                      {stock === 0 ? (
-                        <span title="Sản phẩm hết hàng, không thể chọn" className="cursor-help text-red-500">
-                          Hết hàng
-                        </span>
-                      ) : (
-                        <input
-                          type="checkbox"
-                          disabled={stock === 0}
-                          checked={selectedItems.includes(item.product_variant_id)}
-                          onChange={() => stock !== 0 && handleSelect(item.product_variant_id)}
-                        />
-                      )}
-                    </td>
-                    <td className="pl-10 py-4">
-                      <div className="flex space-x-6 items-center">
-                        <div className="w-[80px] h-[80px] ...">
-                          <img src={image} alt="product" className="w-full h-full object-contain" />
-                        </div>
+                  <>
+                  <React.Fragment key={item.id}>
+                    <tr
+                      key={item.id}
+                      className={`bg-white border-b hover:bg-gray-50 ${stock === 0 ? "opacity-50" : ""
+                        } ${isAuction ? "bg-white border-b hover:bg-gray-50" : ""}`}
+                    >
+                      <td className="text-center">
+                        {stock === 0 ? (
+                          <span title="Sản phẩm hết hàng, không thể chọn" className="cursor-help text-red-500">
+                            Hết hàng
+                          </span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            disabled={stock === 0}
+                            checked={selectedItems.includes(item.product_variant_id)}
+                            onChange={() => stock !== 0 && handleSelect(item.product_variant_id)}
+                          />
+                        )}
+                      </td>
+                      <td className="pl-10 py-4">
+                        <div className="flex space-x-6 items-center">
+                          <div className="w-[80px] h-[80px] ...">
+                            <img src={image} alt="product" className="w-full h-full object-contain" />
+                          </div>
 
-                        <div className="flex-1">
-                          <p
-                            className="font-medium text-[15px] text-qblack"
-                            style={
-                              !showFullName
-                                ? {
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: "vertical",
-                                  overflow: "hidden",
-                                }
-                                : {}
-                            }
-                          >
-                            {name} ({variant.sku})
-                          </p>
-
-                          {name.length > 40 && (
-                            <button
-                              onClick={() => toggleShowName(item.id)}
-                              className="mt-1 text-blue-600 hover:text-blue-800 text-sm"
+                          <div className="flex-1">
+                            <p
+                              className="font-medium text-[15px] text-qblack"
+                              style={
+                                !showFullName
+                                  ? {
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                  }
+                                  : {}
+                              }
                             >
-                              {showFullName ? "Ẩn bớt" : "Xem thêm"}
+                              {name} ({variant.sku})
+                            </p>
+
+                            {name.length > 40 && (
+                              <button
+                                onClick={() => toggleShowName(item.id)}
+                                className="mt-1 text-blue-600 hover:text-blue-800 text-sm"
+                              >
+                                {showFullName ? "Ẩn bớt" : "Xem thêm"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-2 w-[180px] align-top">
+                        <div className="flex flex-col gap-1">
+                          {displayedAttrs.map((attr) => {
+                            const name = attr.attribute?.name;
+                            const val = attr.value;
+                            const isColor = name?.toLowerCase() === "color";
+                            return (
+                              <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
+                                <span className="font-semibold">{name}</span>
+                                {isColor
+                                  ? <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: val }} title={val} />
+                                  : <span>{val}</span>}
+                              </div>
+                            );
+                          })}
+
+                          {attributes.length > 2 && (
+                            <button
+                              onClick={() => toggleShowAll(item.id)}
+                              className="mt-1 text-blue-600 hover:text-blue-800 text-sm self-start no-underline"
+                            >
+                              {showAll
+                                ? "Ẩn bớt"
+                                : `Xem thêm (${attributes.length - 2}) thuộc tính`}
                             </button>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-2 w-[180px] align-top">
-                      <div className="flex flex-col gap-1">
-                        {displayedAttrs.map((attr) => {
-                          const name = attr.attribute?.name;
-                          const val = attr.value;
-                          const isColor = name?.toLowerCase() === "color";
-                          return (
-                            <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
-                              <span className="font-semibold">{name}</span>
-                              {isColor
-                                ? <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: val }} title={val} />
-                                : <span>{val}</span>}
+                      </td>
+                      <td className="text-center py-4">
+                        <div className="flex flex-col items-center gap-1">
+                          {isAuction ? (
+                            <div className="text-red-700 space-y-2">
+                              <div className="text-sm">
+                                Hạn thanh toán:{" "}
+                                <CountdownTimer
+                                  endTime={add24Hours(targetAuction.end_time)}
+                                  onExpire={() => {
+                                    const total = auctionInfo.bidAmount * item.quantity;
+                                    handleExpire(item.product_variant_id, total);
+                                  }}
+                                />
+                              </div>
                             </div>
-                          );
-                        })}
-
-                        {attributes.length > 2 && (
-                          <button
-                            onClick={() => toggleShowAll(item.id)}
-                            className="mt-1 text-blue-600 hover:text-blue-800 text-sm self-start no-underline"
-                          >
-                            {showAll
-                              ? "Ẩn bớt"
-                              : `Xem thêm (${attributes.length - 2}) thuộc tính`}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-center py-4">
-                      <div className="flex flex-col items-center gap-1">
-                        {isAuction ? (
-                          <div className="text-red-700">
-                            <div className="text-sm">Hạn thanh toán: {formatDateLocal(auctionInfo.deadline)}</div>
-                          </div>
-                        ) : (
-                          <>
-                            <span className={`font-semibold ${discountPercent > 0 ? "text-red-500" : "text-black"}`}>
-                              {Number(price).toLocaleString("vi-VN", {
-                                style: "currency",
-                                currency: "VND",
-                              })}
-                            </span>
-                            {discountPercent > 0 && price < originalPrice && (
-                              <span className="text-black-400 line-through text-xs">
-                                {Number(originalPrice).toLocaleString("vi-VN", {
+                          ) : (
+                            <>
+                              <span className={`font-semibold ${discountPercent > 0 ? "text-red-500" : "text-black"}`}>
+                                {Number(price).toLocaleString("vi-VN", {
                                   style: "currency",
                                   currency: "VND",
                                 })}
                               </span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="py-4 text-center align-middle">
-                      {stock === 0 ? (
-                        <span className="text-sm text-red-500">Hết hàng</span>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center gap-2">
-
-                          {isAuction ? (
-                            <span className="text-sm text-gray-700"><span className="ml-2 text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">
-                              <FaTrophy className="inline mr-1" />
-                              Đấu giá
-                            </span></span>
-                          ) : (
-                            <>
-                              <QuantityInput
-                                quantity={quantity}
-                                stock={stock}
-                                onChange={(newQuantity) => handleQuantityChange(item.product_variant_id, newQuantity)}
-                              />
-                              <span className="text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                                Còn lại: {stock}
-                              </span>
+                              {discountPercent > 0 && price < originalPrice && (
+                                <span className="text-black-400 line-through text-xs">
+                                  {Number(originalPrice).toLocaleString("vi-VN", {
+                                    style: "currency",
+                                    currency: "VND",
+                                  })}
+                                </span>
+                              )}
                             </>
                           )}
+                        </div>
+                      </td>
 
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-center py-4">
-                      {isAuction ? (
-                        /* Chỉ hiển thị Giá đấu thành công */
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="text-sm text-gray-600">Giá đấu thành công:</div>
-                          <div className="font-semibold text-red-700">
-                            {price.toLocaleString("vi-VN", {
-                              style: "currency",
-                              currency: "VND",
-                            })}
+                      <td className="py-4 text-center align-middle">
+                        {stock === 0 ? (
+                          <span className="text-sm text-red-500">Hết hàng</span>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-2">
+
+                            {isAuction ? (
+                              <span className="text-sm text-gray-700"><span className="ml-2 text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">
+                                <FaTrophy className="inline mr-1" />
+                                Đấu giá
+                              </span></span>
+                            ) : (
+                              <>
+                                <QuantityInput
+                                  quantity={quantity}
+                                  stock={stock}
+                                  onChange={(newQuantity) => handleQuantityChange(item.product_variant_id, newQuantity)}
+                                />
+                                <span className="text-sm text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                                  Còn lại: {stock}
+                                </span>
+                              </>
+                            )}
+
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-1">
-                          {discountPercent > 0 && price < originalPrice && (
-                            <div className="line-through text-xs text-gray-400">
-                              {originalPrice.toLocaleString("vi-VN", {
+                        )}
+                      </td>
+                      <td className="text-center py-4">
+                        {isAuction ? (
+                          /* Chỉ hiển thị Giá đấu thành công */
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="text-sm text-gray-600">Giá đấu thành công:</div>
+                            <div className="font-semibold text-red-700">
+                              {price.toLocaleString("vi-VN", {
                                 style: "currency",
                                 currency: "VND",
                               })}
                             </div>
-                          )}
-                          <div className="font-semibold">
-                            {total.toLocaleString("vi-VN", {
-                              style: "currency",
-                              currency: "VND",
-                            })}
                           </div>
-                        </div>
-                      )}
-                    </td>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1">
+                            {discountPercent > 0 && price < originalPrice && (
+                              <div className="line-through text-xs text-gray-400">
+                                {originalPrice.toLocaleString("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                })}
+                              </div>
+                            )}
+                            <div className="font-semibold">
+                              {total.toLocaleString("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </td>
 
-                    <td className="text-right py-4">
-                      <button
-                        onClick={() => !isAuction && handleConfirmDelete(item.product_variant_id)}
-                        disabled={isAuction}
-                        className={`p-2 rounded-full ${isAuction
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-red-50 text-red-500 hover:bg-red-100"
-                          }`}
-                        title={isAuction ? "Không thể xóa sản phẩm đấu giá" : "Xóa sản phẩm"}
-                      >
-                        <FaTrashAlt size={20} className="font-bold" />
-                      </button>
-                    </td>
-                  </tr>
+                      <td className="text-right py-4">
+                        <button
+                          onClick={() => !isAuction && handleConfirmDelete(item.product_variant_id)}
+                          disabled={isAuction}
+                          className={`p-2 rounded-full ${isAuction
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-red-50 text-red-500 hover:bg-red-100"
+                            }`}
+                          title={isAuction ? "Không thể xóa sản phẩm đấu giá" : "Xóa sản phẩm"}
+                        >
+                          <FaTrashAlt size={20} className="font-bold" />
+                        </button>
+                      </td>
+                    </tr>
+                    {isAuction && (
+                      <tr className="bg-red-50 text-center">
+                        <td colSpan={7} className="text-red-700 text-sm p-3">
+                          Vui lòng thanh toán trước hạn
+                          nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
+                          bạn sẽ bị cấm đấu giá trong 12 tháng!
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                  </>
                 );
               })
             )}

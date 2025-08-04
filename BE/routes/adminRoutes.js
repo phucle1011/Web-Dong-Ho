@@ -37,6 +37,7 @@ router.post('/auctionBid', AuctionBidController.placeBid);
 router.get('/auction-products', AuctionController.getAuctionProduct);
 router.get('/auctions', AuctionController.get);
 router.get('/auctions/:id', AuctionController.getId);
+router.get('/auctions/winners/:id', AuctionController.getWinner);
 router.post('/auctions', AuctionController.create);
 router.put('/auctions/edit/:id', AuctionController.update);
 router.delete('/auctions/delete/:id', AuctionController.delete);

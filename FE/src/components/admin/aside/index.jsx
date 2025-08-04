@@ -100,14 +100,14 @@ function Aside() {
               <span className="hide-menu">Quản lý đấu giá</span>
             </li>
 
-            <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>
+            {/* <li className={`sidebar-item ${location.pathname === "/admin/wishlist/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link d-flex align-items-center" to="/admin/wishlist/getAll" title="Quản lý sản phẩm đấu giá">
                 <FaGavel  />
                 <span className="hide-menu text-truncate" style={{ maxWidth: "160px", display: "inline-block", whiteSpace: "nowrap", overflow: "hidden" }}>
                   Quản lý sản phẩm đấu giá
                 </span>
               </Link>
-            </li>
+            </li> */}
             <li className={`sidebar-item ${location.pathname === "/admin/auctions/getAll" ? "active" : ""}`}>
               <Link className="sidebar-link" to="/admin/auctions/getAll">
                 <FaListAlt  />

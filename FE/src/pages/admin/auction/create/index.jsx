@@ -31,10 +31,13 @@ const AuctionCreate = () => {
     const fetchProducts = async () => {
         try {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`);
-            const options = res.data.data.map((p) => ({
+            const available = res.data.data.filter(p => p.stock > 0);
+            const options = available.map(p => ({
                 value: p.id,
-                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}`,
+                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+                    } (Còn ${p.stock})`,
             }));
+
             setProducts(options);
         } catch (err) {
             toast.error("Lỗi khi tải danh sách sản phẩm");
@@ -166,30 +169,28 @@ const AuctionCreate = () => {
                             <p className="text-red-500 text-sm mt-1">{errors.product_variant_id}</p>
                         )}
                     </div>
-
-                    
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div className="md:col-span-6">
                         <div className="md:col-span-6">
-                        <label className="block mb-1 font-medium">
-                            Bước giá <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.priceStep ? "border-red-500" : ""}`}
-                                placeholder="Nhập bước giá"
-                                value={form.priceStep}
-                                onChange={(e) => handleChange("priceStep", e.target.value)}
-                                onBlur={(e) => validateField("priceStep", e.target.value)}
-                            />
+                            <label className="block mb-1 font-medium">
+                                Bước giá <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.priceStep ? "border-red-500" : ""}`}
+                                    placeholder="Nhập bước giá"
+                                    value={form.priceStep}
+                                    onChange={(e) => handleChange("priceStep", e.target.value)}
+                                    onBlur={(e) => validateField("priceStep", e.target.value)}
+                                />
+                            </div>
+                            {errors.priceStep && (
+                                <p className="text-red-500 text-sm mt-1">{errors.priceStep}</p>
+                            )}
                         </div>
-                        {errors.priceStep && (
-                            <p className="text-red-500 text-sm mt-1">{errors.priceStep}</p>
-                        )}
-                    </div>
                     </div>
                     <div className="md:col-span-3 ml-auto">
                         <label className="block mb-1 font-medium">
@@ -202,7 +203,7 @@ const AuctionCreate = () => {
                             timeFormat="HH:mm"
                             timeIntervals={15}
                             dateFormat="yyyy-MM-dd HH:mm:ss"
-                            className={`w-full px-3 py-2 border rounded ${errors.start_time ? "border-red-500" : ""} style: "with: 1500px"` }
+                            className={`w-full px-3 py-2 border rounded ${errors.start_time ? "border-red-500" : ""} style: "with: 1500px"`}
                             placeholderText="Chọn thời gian bắt đầu"
                             onBlur={() => validateField("start_time", form.start_time)}
                         />

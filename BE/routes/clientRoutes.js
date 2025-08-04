@@ -54,6 +54,7 @@ router.get("/top-discounted-products", HomeController.getDiscountedProducts);
 router.get('/wallets', checkJWT, WalletsController.get);
 router.post('/wallets/transactions', checkJWT, WalletsController.requestWithdraw);
 router.get('/wallets/topups', checkJWT, WalletsController.getTopupHistory);
+router.post('/wallets/deduct-fee', checkJWT, WalletsController.deductFee);
 
 // ------------------[ SEARCH ]------------------//
 router.get('/products/search', SearchController.searchProducts);

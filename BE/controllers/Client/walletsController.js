@@ -3,6 +3,7 @@ const UserModel = require('../../models/usersModel');
 const OrderModel = require('../../models/ordersModel');
 
 const { Op } = require('sequelize');
+const sequelize = require('../../config/database');
 
 require("dotenv").config();
 const nodemailer = require("nodemailer");
@@ -46,15 +47,14 @@ class WalletsController {
         message: 'Danh sách ví',
         data: users
       });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({
-        success: false,
-        message: 'Lỗi khi lấy danh sách ví',
-        error: error.message
-      });
-    }
-  }
+    }  catch (error) {
+  console.error('WalletsController.get error:', error.message, error.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Lỗi khi lấy danh sách ví',
+    error: error.message
+  });
+  }}
 
   static async requestWithdraw(req, res) {
     try {
@@ -180,6 +180,79 @@ class WalletsController {
     }
   }
 
+   static async deductFee(req, res) {
+    const userId = req.user.id;
+    const { orderId, amount } = req.body;
+    if (!orderId || !amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Thiếu dữ liệu hoặc amount không hợp lệ' });
+    }
+
+    const fee = Math.floor(amount * 0.1);
+
+    const t = await sequelize.transaction();
+    try {
+      const user = await UserModel.findByPk(userId, { transaction: t, lock: t.LOCK.UPDATE });
+      if (!user || (user.balance || 0) < fee) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Không đủ số dư' });
+      }
+
+      user.balance = Number(user.balance) - fee;
+      await user.save({ transaction: t });
+
+      await WithdrawRequestsModel.create({
+        user_id: userId,
+        amount: fee,
+        method: 'bank',
+        note: `Phí quên thanh toán đơn #${orderId}`,
+        status: 'approved',
+        type: 'withdraw',
+        bank_account: "",
+        bank_name: "",
+      }, { transaction: t });
+
+      await t.commit();
+
+      await WalletsController.sendExpiredPaymentEmail(user, fee, amount);
+
+      return res.json({ success: true, message: 'Đã trừ phí và xóa thành công' });
+    } catch (err) {
+  await t.rollback();
+  console.error('deductFee error:', err.message, err.stack);
+  return res.status(500).json({
+    success: false,
+    message: 'Lỗi server',
+    error: err.message
+  });
+    }}
+
+  static async sendExpiredPaymentEmail(user, fee, total) {
+    try {
+      const formattedFee   = new Intl.NumberFormat('vi-VN').format(fee);
+      const formattedTotal = new Intl.NumberFormat('vi-VN').format(total);
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to:   user.email,
+        subject: 'Thông báo trừ phí quên thanh toán đơn hàng đấu giá thành công',
+        html: `
+          <p>Chào ${user.name || 'bạn'},</p>
+          <p>Đơn hàng đấu giá có tổng <strong>${formattedTotal}₫</strong> đã hết hạn thanh toán.</p>
+          <p>Chúng tôi đã trừ 10% phí (<strong>${formattedFee}₫</strong>) vào ví tiền của bạn.</p>
+          <p>Cảm ơn bạn đã sử dụng dịch vụ!</p>
+          <p>-- TimesMaster --</p>
+        `
+      });
+    } catch (e) {
+      console.error('sendExpiredPaymentEmail error:', e);
+    }
+  }
 }
 
 module.exports = WalletsController;

@@ -14,11 +14,16 @@ import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
+import ProductsTable from "../../../CartPage/ProductsTable.jsx";
+
 const token = localStorage.getItem("token");
 const decoded = token ? decodeToken(token) : {};
 const userId = decoded?.id;
 
 export default function Payment() {
+  const [hasActiveAuction, setHasActiveAuction] = useState(false);
+  const [cartItems, setCartItems] = useState([]);
+
   const [showBalance, setShowBalance] = useState(false);
   const [balance, setBalance] = useState(0);
   const [pending, setPending] = useState(0);
@@ -125,6 +130,7 @@ export default function Payment() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.url) window.location.href = res.data.url;
+      toast.success("Nạp tiền thành công.");
     } catch {
       toast.error("Không thể tạo phiên thanh toán.");
     } finally {
@@ -185,6 +191,58 @@ export default function Payment() {
     } catch { }
   };
 
+  const meId = (() => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = decodeToken(token);
+      return Number(payload?.id || payload?.user_id || 0);
+    } catch {
+      return 0;
+    }
+  })();
+
+  // Copy đúng helper từ ProductsTable:
+  function getTopBid(bids = []) {
+    if (!Array.isArray(bids) || bids.length === 0) return null;
+    return bids
+      .slice()
+      .sort((a, b) => Number(b.bidAmount) - Number(a.bidAmount) ||
+        new Date(a.bidTime) - new Date(b.bidTime))[0];
+  }
+
+  function getAuctionInfo(variant, userId, itemCreatedAt) {
+    const auctions = variant?.auctions || [];
+    const won = auctions.filter(a =>
+      a.status === "ended" &&
+      (new Date(a.end_time).getTime() + 24 * 3600 * 1000) > new Date(itemCreatedAt).getTime() &&
+      a.bids?.some(b => Number(b.user_id) === userId)
+    );
+    if (won.length === 0) return { isAuction: false };
+    const target = won.reduce((best, cur) =>
+      new Date(cur.end_time) > new Date(best.end_time) ? cur : best
+    );
+    const topBid = getTopBid(target.bids);
+    return { isAuction: true, bidAmount: Number(topBid.bidAmount) };
+  }
+
+  // 1) Fetch cart giống ProductsTable
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    axios
+      .get(`${Constants.DOMAIN_API}/carts`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => setCartItems(res.data.data))
+      .catch(() => {/* lỗi load giỏ hàng */ });
+  }, []);
+
+  // 2) Khi cartItems thay đổi, chạy kiểm tra
+  useEffect(() => {
+    const found = cartItems.some(item => {
+      const info = getAuctionInfo(item.variant, meId, item.created_at);
+      return info.isAuction;
+    });
+    setHasActiveAuction(found);
+  }, [cartItems]);
+
   return (
     <div className="min-h-screen bg-gray-100 pb-10">
       <header className="bg-orange-500 text-white px-6 py-6 rounded-b-3xl">
@@ -227,17 +285,57 @@ export default function Payment() {
       {showWithdrawSection && (
         <div className="mt-4 max-w-2xl mx-auto px-4">
           <div className="bg-white p-4 rounded-lg shadow space-y-3">
-            <input type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Số tiền cần rút" className="w-full border rounded px-3 py-2" />
-            <select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)} className="w-full border rounded px-3 py-2">
+            <input
+              type="number"
+              value={withdrawAmount}
+              onChange={e => setWithdrawAmount(e.target.value)}
+              placeholder="Số tiền cần rút"
+              className="w-full border rounded px-3 py-2"
+            />
+            <select
+              value={selectedBank}
+              onChange={e => setSelectedBank(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+            >
               <option value="">Chọn ngân hàng</option>
-              {banks.map((bank) => (
-                <option key={bank.code} value={bank.code}>{bank.shortName || bank.name}</option>
+              {banks.map(bank => (
+                <option key={bank.code} value={bank.code}>
+                  {bank.shortName || bank.name}
+                </option>
               ))}
             </select>
-            <input type="text" placeholder="Số tài khoản" value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="w-full border rounded px-3 py-2" />
-            <textarea placeholder="Ghi chú (không bắt buộc)" value={note} onChange={(e) => setNote(e.target.value)} className="w-full border rounded px-3 py-2" />
-            <button className="w-full rounded px-4 py-2 text-white bg-blue-600 hover:bg-blue-700" onClick={handleWithdraw} disabled={isSubmitting || hasPendingWithdraw}>
-              {hasPendingWithdraw ? "Đang chờ duyệt..." : isSubmitting ? "Đang xử lý..." : "Rút tiền"}
+            <input
+              type="text"
+              placeholder="Số tài khoản"
+              value={bankAccount}
+              onChange={e => setBankAccount(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+            />
+            <textarea
+              placeholder="Ghi chú (không bắt buộc)"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+            />
+
+            {hasActiveAuction && (
+              <p className="text-red-600 text-sm">
+                Bạn có đơn đấu giá đang chờ thanh toán nên không thể rút tiền.
+              </p>
+            )}
+
+            <button
+              className="w-full rounded px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              onClick={handleWithdraw}
+              disabled={isSubmitting || hasPendingWithdraw || hasActiveAuction}
+            >
+              {hasActiveAuction
+                ? "Bạn có đơn đấu giá đang chờ thanh toán nên không thể rút tiền"
+                : hasPendingWithdraw
+                  ? "Bạn đã gửi yêu cầu rút tiền trước đó và đang chờ duyệt..."
+                  : isSubmitting
+                    ? "Đang xử lý..."
+                    : "Rút tiền"}
             </button>
           </div>
         </div>

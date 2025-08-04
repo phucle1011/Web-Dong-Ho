@@ -64,21 +64,21 @@ function Dashboard() {
 
   const [bestSellingProduct, setBestSellingProduct] = useState(null);
 
-useEffect(() => {
-  async function fetchCounts() {
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/dashboard/counts`);
-      if (res.data.status === 200) {
-        const { best_selling_product, ...rest } = res.data.data;
-        setCounts(rest);
-        setBestSellingProduct(best_selling_product); 
+  useEffect(() => {
+    async function fetchCounts() {
+      try {
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/dashboard/counts`);
+        if (res.data.status === 200) {
+          const { best_selling_product, ...rest } = res.data.data;
+          setCounts(rest);
+          setBestSellingProduct(best_selling_product);
+        }
+      } catch (err) {
+        console.error('Lỗi khi lấy thống kê:', err);
       }
-    } catch (err) {
-      console.error('Lỗi khi lấy thống kê:', err);
     }
-  }
-  fetchCounts();
-}, []);
+    fetchCounts();
+  }, []);
 
   useEffect(() => {
     async function fetchRevenue() {
@@ -190,20 +190,20 @@ useEffect(() => {
     }
   };
 
-const statsCards = [
-  { key: 'total_user', icon: <FaUsers size={24} />, label: 'Người dùng', bg: 'bg-info' },
-  {
-    key: 'best_selling_count',
-    icon: <FaCoffee size={24} />,
-    label: 'Sản phẩm bán chạy',
-    bg: 'bg-success',
-    value: bestSellingProduct ? parseInt(bestSellingProduct.totalSold) : 0,
-  },
-  { key: 'total_product', icon: <FaCoffee size={24} />, label: 'Sản phẩm', bg: 'bg-warning' },
-  { key: 'total_comment', icon: <FaComments size={24} />, label: 'Bình luận', bg: 'bg-danger' },
-  { key: 'total_order', icon: <FaShoppingCart size={24} />, label: 'Đơn hàng', bg: 'bg-secondary' },
-  { key: 'total_promotion', icon: <FaTag size={24} />, label: 'Khuyến mãi', bg: 'bg-dark' },
-];
+  const statsCards = [
+    { key: 'total_user', icon: <FaUsers size={24} />, label: 'Người dùng', bg: 'bg-info' },
+    {
+      key: 'best_selling_count',
+      icon: <FaCoffee size={24} />,
+      label: 'Sản phẩm bán chạy',
+      bg: 'bg-success',
+      value: bestSellingProduct ? parseInt(bestSellingProduct.totalSold) : 0,
+    },
+    { key: 'total_product', icon: <FaCoffee size={24} />, label: 'Sản phẩm', bg: 'bg-warning' },
+    { key: 'total_comment', icon: <FaComments size={24} />, label: 'Bình luận', bg: 'bg-danger' },
+    { key: 'total_order', icon: <FaShoppingCart size={24} />, label: 'Đơn hàng', bg: 'bg-secondary' },
+    { key: 'total_promotion', icon: <FaTag size={24} />, label: 'Khuyến mãi', bg: 'bg-dark' },
+  ];
 
   return (
     <div className="page-wrapper">

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Layout from "../Partials/LayoutHomeThree";
-import { FaGavel, FaBookOpen, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaGavel, FaBookOpen, FaChevronLeft, FaChevronRight, FaClock } from "react-icons/fa";
 import axios from "axios";
 import Constants from "../../../Constants";
 import { toast } from "react-toastify";
@@ -37,6 +37,8 @@ function AuctionProductDetail() {
 
   const [upScroll, setUpScroll] = useState({ left: false, right: false });
   const [endScroll, setEndScroll] = useState({ left: false, right: false });
+
+  const [activeAuction, setActiveAuction] = useState(null);
 
   const setTitleRef = (type, id) => (el) => {
     if (!titleRefs.current[type]) titleRefs.current[type] = {};
@@ -265,11 +267,24 @@ function AuctionProductDetail() {
     updateScrollButtons(endedRef, setEndScroll);
   }, [endedAuctions]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // Load một phiên đang diễn ra gần nhất
+    axios
+      .get(`${Constants.DOMAIN_API}/admin/auctions`, {
+        params: { status: "active", limit: 1 },
+      })
+      .then((res) => {
+        const a = res.data.data?.[0];
+        setActiveAuction(a || null);
+      });
+  }, []);
+
   return (
     <Layout>
       <div className="flashsale-wrapper w-full">
         <div
-          className="relative bg-cover bg-center rounded-b-[80px] pb-24 pt-12 text-white overflow-hidden"
+          className="relative bg-cover bg-center rounded-b-[80px] pb-24 pt-12 text-white overflow-hidden mb-5"
           style={{
             backgroundImage: `url("https://res.cloudinary.com/disgf4yl7/image/upload/v1753806364/ayx4l3umypbc3cwswdza.avif")`,
           }}
@@ -309,6 +324,64 @@ function AuctionProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* === PHIÊN ĐẤU GIÁ ĐANG DIỄN RA === */}
+        {activeAuction && (
+          <section className="container-x mx-auto px-4 mb-12 mt-5">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden h-full">
+              <div className="relative w-full h-64">
+                <img
+                  src={activeAuction.variant?.images?.[0]?.image_url}
+                  alt={activeAuction.variant?.product?.name}
+                  className="w-full h-full object-cover"
+                />
+                <h2 className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-white bg-black/40">
+                  <span className="blink">Phiên đấu giá đang diễn ra</span>
+                </h2>
+              </div>
+
+              <div className="p-6 flex flex-col sm:flex-row gap-6">
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold mt-1">
+                    {activeAuction.variant?.product?.name} ({activeAuction.variant?.sku})
+                  </h3>
+                </div>
+                <div className="flex items-center gap-1 text-gray-600">
+                  <FaClock />
+                  <span className="text-sm">
+                    Kết thúc sau:{' '}
+                    {(activeAuction.end_time).replace("T", " ").substring(0, 19)}
+                  </span>
+                </div>
+              </div>
+              <div className="px-6 pb-6 text-center">
+                <Link
+                  to={{ pathname: "/AcutionsDetail" }}
+                  state={{
+                    productId: activeAuction.variant.product.id,
+                    auctionId: activeAuction.id,
+                  }}
+                  className="inline-block w-max px-3 py-1 text-sm bg-gradient-to-r from-blue-500 to-indigo-600
+                             text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition">
+                  Xem chi tiết
+                </Link>
+              </div>
+
+            </div>
+
+            {/* Animation CSS */}
+            <style jsx>{`
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .blink {
+        animation: blink 1s step-start infinite;
+      }
+    `}</style>
+          </section>
+        )}
 
         <div className="container-x mx-auto">
           <h2 className="text-2xl font-bold my-6">Phiên đấu giá sắp diễn ra</h2>
@@ -356,7 +429,7 @@ function AuctionProductDetail() {
                       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition hover:shadow-2xl">
                         <div className="relative">
                           <img
-                            src={auction.variant?.product?.thumbnail || "https://via.placeholder.com/300x200"}
+                            src={auction.variant?.images?.[0]?.image_url || "https://via.placeholder.com/300x200"}
                             alt={auction.variant?.product?.name}
                             className="w-full h-48 object-contain bg-gray-100 p-3"
                           />
@@ -480,7 +553,7 @@ function AuctionProductDetail() {
                       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition hover:shadow-2xl">
                         <div className="relative">
                           <img
-                            src={auction.variant?.product?.thumbnail || "https://via.placeholder.com/300x200"}
+                            src={auction.variant?.images?.[0]?.image_url || "https://via.placeholder.com/300x200"}
                             alt={auction.variant?.product?.name}
                             className="w-full h-48 object-contain bg-gray-100 p-3"
                           />
@@ -531,7 +604,7 @@ function AuctionProductDetail() {
 
                           <Link
                             to={{ pathname: "/AcutionsDetail" }}
-                            state={{ productId: auction.variant?.product?.id }}
+                            state={{ productId: auction.variant?.product?.id, auctionId: auction.id }}
                             className="w-full block text-center py-2 bg-gradient-to-r from-blue-500 to-indigo-600 
 text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
                           >

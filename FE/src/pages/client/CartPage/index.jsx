@@ -493,7 +493,6 @@ export default function CardPage({ cart = true }) {
                           finalTotal,
                           selectedVoucher
                         }}
-
                       >
                         <div className="w-full h-[40px] black-btn flex justify-center items-center rounded-lg">
                           <span className="text-sm font-semibold">Tiến hành thanh toán</span>

@@ -92,6 +92,7 @@ import AuctionEdit from "./pages/admin/auction/edit/index.jsx";
 import AuctionsProductDetail from "./pages/client/Auctions/AcutionsDetail/index.jsx";
 import AuctionRoom from "./pages/client/Auctions/Room/index.jsx";
 import AuctionGuide from "./pages/client/Auctions/AuctionGuide/index.jsx";
+import AdminAuctionDetail from "./pages/admin/auction/detail/index.jsx";
 
 // Protected Route
 import GuestRoute from "./components/Auth/GuestRoute/index.jsx";
@@ -191,6 +192,7 @@ const AppRoutes = () => {
             <Route path="getAll" element={<AuctionGetAll />} />
             <Route path="create" element={<AuctionCreate />} />
             <Route path="edit/:id" element={<AuctionEdit />} />
+            <Route path="detail/:id" element={<AdminAuctionDetail />} />
           </Route>
           <Route path="user">
             <Route path="getAll" element={<UserList />} />

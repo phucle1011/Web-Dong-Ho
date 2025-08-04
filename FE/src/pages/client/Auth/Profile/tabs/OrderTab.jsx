@@ -82,7 +82,7 @@ export default function OrderTab() {
       setStatusCounts(res.data.statusCounts || statusCounts);
     } catch (error) {
       console.error("Lỗi khi tải statusCounts:", error);
-      toast.error("Lỗi tải số lượng trạng thái.");
+      // toast.error("Lỗi tải số lượng trạng thái.");
     }
   };
 
@@ -126,7 +126,7 @@ export default function OrderTab() {
       }
     } catch (error) {
       console.error("Lỗi khi tải đơn hàng:", error);
-      toast.error("Lỗi tải dữ liệu từ máy chủ.");
+      // toast.error("Lỗi tải dữ liệu từ máy chủ.");
     }
   };
 
@@ -302,7 +302,7 @@ export default function OrderTab() {
       }
     } catch (error) {
       console.error("Lỗi khi tải chi tiết đơn hàng:", error);
-      toast.error("Không thể tải chi tiết đơn hàng");
+      // toast.error("Không thể tải chi tiết đơn hàng");
       setOrderDetailsMap((prev) => ({
         ...prev,
         [orderId]: [],

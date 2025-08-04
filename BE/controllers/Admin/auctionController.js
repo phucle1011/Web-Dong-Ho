@@ -9,6 +9,7 @@ const BrandModel = require('../../models/brandsModel');
 const ProductVariantAttributeValuesModel = require('../../models/productVariantAttributeValuesModel');
 const ProductAttributeModel = require('../../models/productAttributesModel');
 const VariantImageModel = require('../../models/variantImagesModel');
+const AuctionBidModel = require('../../models/auctionBidsModel');
 
 class auctionController {
 
@@ -398,6 +399,74 @@ class auctionController {
 
       } catch (error) {
          console.error("Lỗi server khi xoá phiên đấu giá:", error);
+         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+      }
+   }
+
+   static async getWinner(req, res) {
+      try {
+         const { id } = req.params;
+
+         const auction = await AuctionModel.findOne({
+            where: { id },
+            include: [
+               {
+                  model: ProductVariantModel,
+                  as: 'variant',
+                  include: [
+                     {
+                        model: ProductModel,
+                        as: 'product',
+                        attributes: ['id', 'name']
+                     }
+                  ],
+                  attributes: ['id', 'sku']
+               }
+            ],
+            attributes: ['id', 'priceStep', 'start_time', 'end_time', 'status']
+         });
+
+         if (!auction) {
+            return res.status(404).json({ message: "Phiên đấu giá không tồn tại!" });
+         }
+
+         const topBid = await AuctionBidModel.findOne({
+            where: { auction_id: id },
+            include: [
+               {
+                  model: UsersModel,
+                  as: 'user',
+                  attributes: ['id', 'name', 'email']
+               }
+            ],
+            order: [['bidAmount', 'DESC']],
+         });
+
+         if (!topBid) {
+            return res.status(200).json({
+               message: "Chưa có người chiến thắng cho phiên này",
+               data: {
+                  auction: auction,
+                  winner: null,
+                  winningBid: null
+               }
+            });
+         }
+
+         return res.status(200).json({
+            message: "Lấy người chiến thắng thành công",
+            data: {
+               auction: auction,
+               winner: topBid.user,
+               winningBid: {
+                  id: topBid.id,
+                  bidAmount: topBid.bidAmount,
+                  bidTime: topBid.bidTime
+               }
+            }
+         });
+      } catch (error) {
+         console.error("Lỗi khi lấy người chiến thắng:", error);
          return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
       }
    }

@@ -202,12 +202,12 @@ export default function AuctionGuide() {
                         </ol>
 
                         <div className="mt-8 flex flex-wrap justify-center gap-3">
-                            <Link
+                            {/* <Link
                                 to="/room"
                                 className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow hover:bg-indigo-700 transition"
                             >
                                 Vào phòng đấu giá
-                            </Link>
+                            </Link> */}
                             <Link
                                 to="/auctions"
                                 className="px-5 py-3 rounded-xl bg-white text-gray-900 font-semibold shadow ring-1 ring-black/5 hover:bg-gray-50 transition"
@@ -240,7 +240,7 @@ export default function AuctionGuide() {
                                     <span>
                                         Số dư ví phải đủ trước khi đặt giá. Nếu thiếu, hãy{" "}
                                         <Link
-                                            to="/payment"
+                                            to="/profile#payment"
                                             className="underline text-indigo-600 hover:text-indigo-700"
                                         >
                                             nạp thêm
@@ -251,14 +251,15 @@ export default function AuctionGuide() {
                                 <li className="flex gap-2">
                                     <FaInfoCircle className="mt-1 text-gray-400" />
                                     <span>
-                                        Người thắng cần thanh toán trong thời hạn (ví dụ{" "}
-                                        <b>48 giờ</b>). Quá hạn có thể bị hủy lượt thắng.
+                                        Người thắng cần thanh toán trong thời hạn ({" "}
+                                        <b>24 giờ</b>). Quá hạn có sẽ bị hủy lượt thắng và bị trừ 10% ví tiền dựa vào số tiền đấu giá thắng cuộc.
+                                        Nếu như 3 lần đấu giá thành công mà không thanh toán sẽ bị cấm tham giá đấu giá trong vòng 3 tháng!
                                     </span>
                                 </li>
                                 <li className="flex gap-2">
                                     <FaInfoCircle className="mt-1 text-gray-400" />
                                     <span>
-                                        Hệ thống có thể yêu cầu xác minh bổ sung (KYC/OTP) để đảm
+                                        Hệ thống có thể yêu cầu xác minh bổ sung (OTP) để đảm
                                         bảo an toàn giao dịch.
                                     </span>
                                 </li>
@@ -340,12 +341,12 @@ export default function AuctionGuide() {
                             >
                                 Liên hệ hỗ trợ
                             </Link>
-                            <Link
+                            {/* <Link
                                 to="/auctions"
                                 className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow hover:bg-indigo-700 transition"
                             >
                                 Tôi đã sẵn sàng, bắt đầu đấu giá
-                            </Link>
+                            </Link> */}
                         </div>
                     </div>
                 </section>

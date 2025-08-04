@@ -56,7 +56,27 @@ export default function CheckoutPage() {
   const [balance, setBalance] = useState(null);
   const savedVoucher = location.state?.selectedVoucher;
 
-
+  const getAuctionInfo = (variant, userId, createdAt) => {
+    const auctions = variant?.auctions || [];
+    const won = auctions.filter(a =>
+      a.status === "ended" &&
+      ((a.end_time || a.ended_at).replace("T", " ").substr(0, 19)
+        <= createdAt.replace("T", " ").substr(0, 19)) &&
+      a.bids?.some(b => Number(b.user_id) === Number(userId))
+    );
+    if (!won.length) return { isAuction: false };
+    const target = won.reduce((best, cur) => {
+      const t1 = (best.end_time || best.ended_at).replace("T", " ").substr(0, 19);
+      const t2 = (cur.end_time || cur.ended_at).replace("T", " ").substr(0, 19);
+      return t2 > t1 ? cur : best;
+    });
+    const topBid = [...target.bids].sort((a, b) => b.bidAmount - a.bidAmount)[0];
+    return {
+      isAuction: true,
+      auctionId: target.id,
+      bidAmount: Number(topBid.bidAmount)
+    };
+  };
 
   useEffect(() => {
     console.log("location", location.state);
@@ -461,39 +481,39 @@ export default function CheckoutPage() {
     });
   };
 
-const handleAddAddress = async (addressData) => {
-  try {
-    const hasDefault = allAddresses.some(addr => addr.is_default === 1);
+  const handleAddAddress = async (addressData) => {
+    try {
+      const hasDefault = allAddresses.some(addr => addr.is_default === 1);
 
-    if (hasDefault && addressData.is_default === 1) {
-      const result = await Swal.fire({
-        title: "Đã có địa chỉ mặc định",
-        text: "Bạn muốn thay thế địa chỉ mặc định hiện tại bằng địa chỉ mới này?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Có, thay thế",
-        cancelButtonText: "Không",
-      });
+      if (hasDefault && addressData.is_default === 1) {
+        const result = await Swal.fire({
+          title: "Đã có địa chỉ mặc định",
+          text: "Bạn muốn thay thế địa chỉ mặc định hiện tại bằng địa chỉ mới này?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Có, thay thế",
+          cancelButtonText: "Không",
+        });
 
-      if (!result.isConfirmed) {
-        toast.info("Bạn đã hủy thao tác thêm địa chỉ mặc định mới.");
-        return;
+        if (!result.isConfirmed) {
+          toast.info("Bạn đã hủy thao tác thêm địa chỉ mặc định mới.");
+          return;
+        }
       }
+
+      const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
+
+      if (addressData.is_default === 1) {
+        setDefaultAddress(res.data);
+      }
+
+      fetchAllAddresses();
+      toast.success("Thêm địa chỉ thành công");
+    } catch (error) {
+      console.error("Lỗi khi thêm địa chỉ:", error);
+      toast.error("Thêm địa chỉ thất bại");
     }
-
-    const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
-
-    if (addressData.is_default === 1) {
-      setDefaultAddress(res.data);
-    }
-
-    fetchAllAddresses();
-    toast.success("Thêm địa chỉ thành công");
-  } catch (error) {
-    console.error("Lỗi khi thêm địa chỉ:", error);
-    toast.error("Thêm địa chỉ thất bại");
-  }
-};
+  };
 
   const handleUpdateAddress = async (addressId, addressData) => {
     const hasOtherDefault = allAddresses.some(
@@ -858,23 +878,51 @@ const handleAddAddress = async (addressData) => {
       const savedVoucher = location.state?.selectedVoucher;
 
       const payload = {
-        products: checkoutItems.map(item => ({
-          id: item.id,
-          user_id: item.user_id,
-          product_variant_id: item.product_variant_id,
-          quantity: item.quantity,
-          variant: {
-            id: item.product_variant_id,
-            sku: item.variant.sku || `SKU-${item.product_variant_id}`,
-            price: parseFloat(item.variant.promotion?.discounted_price || item.variant.price || 0),
+        // products: checkoutItems.map(item => ({
+        //   id: item.id,
+        //   user_id: item.user_id,
+        //   product_variant_id: item.product_variant_id,
+        //   quantity: item.quantity,
+        //   variant: {
+        //     id: item.product_variant_id,
+        //     sku: item.variant.sku || `SKU-${item.product_variant_id}`,
+        //     price: parseFloat(item.variant.promotion?.discounted_price || item.variant.price || 0),
+        //     original_price: parseFloat(item.variant.price || 0),
+        //     product: {
+        //       name: item.product?.name || "Không tên"
+        //     },
+        //     images: item.variant.images || [],
+        //     attributeValues: item.variant.attributeValues || []
+        //   }
+        // })),
+
+        products: checkoutItems.map(item => {
+          const info = getAuctionInfo(item.variant, user.id, item.created_at);
+          const unitPrice = info.isAuction
+            ? info.bidAmount
+            : parseFloat(item.variant.promotion?.discounted_price || item.variant.price || 0);
+          return {
+            id: item.id,
+            user_id: item.user_id,
+            product_variant_id: item.product_variant_id,
+
+            auction_id: info.isAuction ? info.auctionId : null,
+            quantity: item.quantity,
+            unit_price: unitPrice,
             original_price: parseFloat(item.variant.price || 0),
-            product: {
-              name: item.product?.name || "Không tên"
-            },
-            images: item.variant.images || [],
-            attributeValues: item.variant.attributeValues || []
-          }
-        })),
+
+            variant: {
+              id: item.product_variant_id,
+              sku: item.variant.sku,
+              price: unitPrice,
+              original_price: parseFloat(item.variant.price || 0),
+              product: { name: item.product?.name },
+              images: item.variant.images || [],
+              attributeValues: item.variant.attributeValues || []
+            }
+          };
+        }),
+
         user_id: user.id,
         name: user.name,
         phone: user.phone,
@@ -900,7 +948,6 @@ const handleAddAddress = async (addressData) => {
       };
 
       console.log("Đặt hàng với payload:", payload);
-
 
       if (selectedPaymentMethod === "VNPay") {
         const response = await axios.post(`${Constants.DOMAIN_API}/orders-vnpay`, payload);

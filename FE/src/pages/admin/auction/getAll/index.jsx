@@ -8,13 +8,13 @@ import {
     FaAngleDoubleLeft,
     FaAngleDoubleRight,
     FaEdit,
-    FaTrashAlt
+    FaTrashAlt,
+    FaEye
 } from "react-icons/fa";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
 import FormDelete from "../../../../components/formDelete";
-import moment from "moment-timezone";
 
 function AuctionGetAll() {
     const [auctions, setAuctions] = useState([]);
@@ -221,7 +221,7 @@ function AuctionGetAll() {
                                 <th className="text-center py-3 px-2 whitespace-nowrap">Thời gian bắt đầu</th>
                                 <th className="text-center py-3 px-2 whitespace-nowrap">Thời gian kết thúc</th>
                                 <th className="text-center py-3 px-2 whitespace-nowrap">Trạng thái</th>
-                                <th className="text-center py-3 px-2 whitespace-nowrap">Thao tác</th>
+                                <th className="text-center py-3 px-2 whitespace-nowrap"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -247,6 +247,13 @@ function AuctionGetAll() {
                                     </td>
                                     <td className="p-2 border text-center">
                                         <div className="flex justify-center items-center gap-2">
+                                            <Link
+                                                to={`/admin/auctions/detail/${item.id}`}
+                                                className="bg-blue-500 text-white p-2 rounded"
+                                                title="Xem chi tiết"
+                                            >
+                                                <FaEye size={16} className="font-bold" />
+                                            </Link>
                                             {item.status === "upcoming" ? (
                                                 <>
                                                     <Link

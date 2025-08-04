@@ -6,10 +6,12 @@ import { FaGavel, FaBookOpen } from "react-icons/fa";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 import Constants from "../../../../Constants";
 
+
 export default function AuctionsDetail() {
   const { state } = useLocation();
-  const { productId: productIdFromState } = state || {};
+  // const { productId: productIdFromState } = state || {};
   const { productId: productIdFromParams } = useParams();
+  const { productId: productIdFromState, auctionId } = state || {};
   const productId = productIdFromState || productIdFromParams;
 
   const [loading, setLoading] = useState(false);
@@ -81,27 +83,31 @@ export default function AuctionsDetail() {
 
         setProductData(product);
         setVariants(product.variants || []);
-        setAvgRating(parseFloat(product.averageRating || 0));
-        setTotalReviews(product.ratingCount || 0);
 
-        if (product.variants?.length > 0) {
+        if (auctionId) {
+          const matchVar = product.variants.find(v =>
+            Array.isArray(v.auctions) && v.auctions.some(a => a.id === auctionId)
+          );
+          if (matchVar) {
+            setSelectedVariant(matchVar);
+            const imgs = matchVar.images || [];
+            setVariantImages(imgs);
+            setSelectedImage(imgs[0]?.image_url || product.thumbnail || "");
+            return;
+          }
+        }
+
+        if (product.variants.length > 0) {
           const firstVariant = product.variants[0];
           setSelectedVariant(firstVariant);
           const imgs = firstVariant.images || [];
           setVariantImages(imgs);
-
-          if (imgs.length > 0) {
-            setSelectedImage(imgs[0].image_url);
-          } else if (product.thumbnail) {
-            setSelectedImage(product.thumbnail);
-          } else {
-            setSelectedImage("");
-          }
-        } else {
-          setSelectedVariant(null);
-          setVariantImages([]);
-          setSelectedImage(product.thumbnail || "");
+          setSelectedImage(imgs[0]?.image_url || product.thumbnail || "");
         }
+
+        setAvgRating(parseFloat(product.averageRating || 0));
+        setTotalReviews(product.ratingCount || 0);
+
       } catch (err) {
         setError(
           err?.response?.data?.message || err.message || "Lỗi tải dữ liệu"
@@ -111,7 +117,7 @@ export default function AuctionsDetail() {
       }
     }
     fetchProduct();
-  }, [productId]);
+  }, [productId, auctionId]);
 
   useLayoutEffect(() => {
     const el = descriptionRef.current;
@@ -139,6 +145,7 @@ export default function AuctionsDetail() {
       imgs.forEach((img) => img.removeEventListener("load", onImgLoad));
     };
   }, [longDescriptionHTML, isExpanded]);
+  
   const thumbList = (
     variantImages?.length > 0 ? variantImages.map((i) => i.image_url) : []
   ).concat(
@@ -146,6 +153,8 @@ export default function AuctionsDetail() {
       ? [productData.thumbnail]
       : []
   );
+
+  const selectedAuction = selectedVariant?.auctions?.find(a => a.id === auctionId);
 
   return (
     <Layout>
@@ -159,15 +168,20 @@ export default function AuctionsDetail() {
         <div className="container-x mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-4 max-w-4xl mx-auto -mt-16 z-10 relative">
             <div className="bg-white rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10">
-              <FaBookOpen className="text-blue-600 text-4xl mx-auto mb-3" />
-              <h3 className="text-lg font-bold text-gray-800 mb-1">
-                HƯỚNG DẪN ĐẤU GIÁ
-              </h3>
-              <p className="text-gray-500 text-sm">Xem cách tham gia đấu giá</p>
+              <Link to="/AuctionGuide">
+                <FaBookOpen className="text-blue-600 text-4xl mx-auto mb-3" />
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  HƯỚNG DẪN ĐẤU GIÁ
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  Xem cách tham gia đấu giá
+                </p>
+              </Link>
             </div>
-            <Link
+            <div
               to="/room"
-              className="bg-white rounded-2xl p-6 text-center shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 cursor-pointer ring-1 ring-white/10 block"
+              className="bg-white rounded-2xl p-6 text-center shadow-xl transition transform ring-1 ring-white/10 block
+              opacity-50 pointer-events-none"
             >
               <FaGavel className="text-pink-600 text-4xl mx-auto mb-3" />
               <h3 className="text-lg font-bold text-gray-800 mb-1">
@@ -176,10 +190,69 @@ export default function AuctionsDetail() {
               <p className="text-gray-500 text-sm">
                 Tham gia và bắt đầu đấu giá
               </p>
-            </Link>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Hiển thị thông tin người thắng nếu đã kết thúc */}
+      {(() => {
+        const selectedAuction = selectedVariant?.auctions?.find(
+          (a) => a.id === auctionId
+        );
+
+        if (!selectedAuction) {
+          return (
+            <p className="text-red-500"></p>
+          );
+        }
+
+        if (selectedAuction.status !== "ended") {
+          return null;
+        }
+
+        if (!selectedAuction.winner) {
+          return (
+            <div className="mt-8 mx-auto max-w-3xl p-6 bg-yellow-50 border border-yellow-300 rounded-2xl shadow-md text-center">
+              <p className="text-lg font-medium text-yellow-800">
+                Phiên đã kết thúc nhưng không có người trả giá.
+              </p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="mt-10 mx-auto max-w-3xl px-8 py-6 bg-blue-50 border border-blue-200 rounded-2xl shadow-xl">
+            <h4 className="text-center text-3xl font-bold text-blue-800 mb-8 tracking-wide">
+              Người Chiến Thắng
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Tên người chiến thắng</p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {selectedAuction.winner.user_name}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Số tiền chiến thắng</p>
+                <p className="text-xl font-semibold text-green-700">
+                  {Number(selectedAuction.winner.bidAmount).toLocaleString("vi-VN")}₫
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Thời gian kết thúc</p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {(selectedAuction.endTime).replace("T", " ").substring(0, 19)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+        );
+      })()}
 
       <div className="container-x mx-auto py-10">
         {loading ? (
@@ -214,21 +287,19 @@ export default function AuctionsDetail() {
                           <div
                             key={`${img}-${idx}`}
                             onClick={() => setSelectedImage(img)}
-                            className={`w-[110px] h-[110px] p-[15px] border border-gray-300 cursor-pointer flex-shrink-0 ${
-                              selectedImage !== img
-                                ? ""
-                                : "ring-2 ring-blue-500"
-                            }`}
+                            className={`w-[110px] h-[110px] p-[15px] border border-gray-300 cursor-pointer flex-shrink-0 ${selectedImage !== img
+                              ? ""
+                              : "ring-2 ring-blue-500"
+                              }`}
                             title="Xem ảnh"
                           >
                             <img
                               src={img}
                               alt="thumb"
-                              className={`w-full h-full object-contain ${
-                                selectedImage !== img
-                                  ? "opacity-70 hover:opacity-100"
-                                  : ""
-                              }`}
+                              className={`w-full h-full object-contain ${selectedImage !== img
+                                ? "opacity-70 hover:opacity-100"
+                                : ""
+                                }`}
                             />
                           </div>
                         ))}
@@ -249,7 +320,7 @@ export default function AuctionsDetail() {
 
                   <div className="mb-4 text-sm text-gray-600">
                     {showFullShortDesc ||
-                    shortDescription.length <= SHORT_DESC_LIMIT
+                      shortDescription.length <= SHORT_DESC_LIMIT
                       ? shortDescription
                       : shortDescription.slice(0, SHORT_DESC_LIMIT) + "..."}
                     {shortDescription.length > SHORT_DESC_LIMIT && (
@@ -287,11 +358,10 @@ export default function AuctionsDetail() {
                               else if (productData?.thumbnail)
                                 setSelectedImage(productData.thumbnail);
                             }}
-                            className={`px-3 py-1.5 rounded border text-sm ${
-                              selectedVariant?.id === v.id
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                            }`}
+                            className={`px-3 py-1.5 rounded border text-sm ${selectedVariant?.id === v.id
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                              }`}
                           >
                             {v.sku || `Variant #${v.id}`}
                           </button>
@@ -335,15 +405,15 @@ export default function AuctionsDetail() {
                         })}
                         {(!selectedVariant?.attributeValues ||
                           selectedVariant.attributeValues.length === 0) && (
-                          <tr>
-                            <td
-                              colSpan={2}
-                              className="p-2 text-gray-500 italic"
-                            >
-                              Chưa có thuộc tính cho biến thể này.
-                            </td>
-                          </tr>
-                        )}
+                            <tr>
+                              <td
+                                colSpan={2}
+                                className="p-2 text-gray-500 italic"
+                              >
+                                Chưa có thuộc tính cho biến thể này.
+                              </td>
+                            </tr>
+                          )}
                       </tbody>
                     </table>
                   </div>
@@ -361,6 +431,22 @@ export default function AuctionsDetail() {
                 </div>
               </div>
             </div>
+
+            {/* {selectedVariant?.auction && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-blue-700 mb-2">Thông tin phiên đấu giá</h4>
+                <p><strong>ID phiên:</strong> {selectedVariant.auction.id}</p>
+                <p><strong>Trạng thái:</strong> {
+                  selectedVariant.auction.status === 'ended'
+                    ? 'Đã kết thúc'
+                    : selectedVariant.auction.status === 'active'
+                      ? 'Đang diễn ra'
+                      : 'Sắp diễn ra'
+                }</p>
+                <p><strong>Bắt đầu:</strong> {new Date(selectedVariant.auction.startTime).toLocaleString('vi-VN')}</p>
+                <p><strong>Kết thúc:</strong> {new Date(selectedVariant.auction.endTime).toLocaleString('vi-VN')}</p>
+              </div>
+            )} */}
 
             {!!longDescriptionHTML && (
               <div className="mt-10 relative">
