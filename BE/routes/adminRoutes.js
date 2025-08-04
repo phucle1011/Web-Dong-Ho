@@ -64,6 +64,7 @@ router.get('/user/list', UserController.get);
 router.get('/user/search', UserController.searchUser);
 router.get('/user/:id', UserController.getById);
 router.put('/user/:id/status', authenticate, UserController.updateUserStatus);
+router.put('/user/:id/avatar', authenticate, UserController.updateAvatar);
 
 //------------------[ WISHLIST ]------------------\
 router.get('/wishlist', WishlistController.getAllWishlists);
@@ -163,7 +164,7 @@ router.delete('/blog/:id', BlogController.delete);
 //------------------[ COMMENT ]------------------\
 router.get('/comment/list', CommentController.getAllComments);
 router.get('/comment/product/:id', CommentController.getCommentsByProductId);
-router.post('/comment/reply',CommentController.replyComment);
+router.post('/comment/reply', CommentController.replyComment);
 
 //------------------[ BRAND ]------------------\
 router.get('/brand/list', BrandController.get);

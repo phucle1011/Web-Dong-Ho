@@ -325,13 +325,13 @@ export default function Login() {
                       </button>
                     </div>
                         
-                    <hr />
+                    {/* <hr />
                     <div className="google-login-area mb-4 flex justify-center mt-4">
                       <GoogleLogin
                         onSuccess={handleGoogleLogin}
                         onError={() => toast.error("Đăng nhập Google thất bại!")}
                       />
-                    </div>
+                    </div> */}
 
                     {/* Đăng ký mới */}
                     <div className="signup-area flex justify-center mt-4">

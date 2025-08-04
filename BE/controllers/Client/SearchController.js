@@ -284,6 +284,24 @@ class SearchController {
       });
     }
   }
+
+  static async getProductAttributes(req, res) {
+    try {
+      const attrs = await Attribute.findAll({
+        attributes: ['id','name'],
+        order: [['id','ASC']],
+        raw: true
+      });
+      return res.json({ status: 200, data: attrs });
+    } catch(err) {
+      console.error('Get product attributes error:', err);
+      return res.status(500).json({
+        status: 500,
+        message: 'Lỗi lấy danh sách thuộc tính',
+        error: err.message
+      });
+    }
+  }
 }
 
 module.exports = SearchController;

@@ -112,7 +112,7 @@ export default function AllProductPage() {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
- useEffect(() => {
+  useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
@@ -128,14 +128,34 @@ export default function AllProductPage() {
           selectedBrandIds.length > 0 ||
           volume[0] !== 0 ||
           volume[1] !== 1000000000;
-         
+
+        if (keyword || searchAttrVals || searchAttrIds) {
+          const res = await axios.get(`${Constants.DOMAIN_API}/products/search`, {
+            params: {
+              keyword,
+              attribute_values: searchAttrVals,
+              attribute_ids: searchAttrIds,
+              page: pagination.currentPage,
+              limit: pagination.limit,
+            },
+          });
+          setProducts(res.data.data);
+          setPagination(prev => ({
+            ...prev,
+            totalProducts: res.data.pagination.totalItems,
+          }));
+          setError(null);
+          setLoading(false);
+          return; // dừng ở đây, không gọi /products
+        }
+
         // 👉 Nếu có brandId từ location và chưa lọc gì khác, ưu tiên gọi riêng
         if (brandId && !isFiltering) {
           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
             params: { brand_id: brandId },
             headers: { "Cache-Control": "no-cache" },
           });
-          
+
 
           setProducts(res.data.data || []);
           setPagination((prev) => ({
@@ -145,12 +165,12 @@ export default function AllProductPage() {
           setError(null);
           return; // 🛑 dừng tại đây để không gọi thêm lần nữa
         }
-         if (categoryId && !isFiltering) {
+        if (categoryId && !isFiltering) {
           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
             params: { category_id: categoryId },
             headers: { "Cache-Control": "no-cache" },
           });
-          
+
 
           setProducts(res.data.data || []);
           setPagination((prev) => ({
@@ -204,11 +224,12 @@ export default function AllProductPage() {
     fetchProducts();
   }, [
     pagination.currentPage,
+    keyword, searchAttrVals, searchAttrIds,
     categoryFilters,
     brandFilters,
     volume,
     brandId,
-    brandList,location.state
+    brandList, location.state
   ]);
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -266,11 +287,10 @@ export default function AllProductPage() {
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${
-                    pageNum === currentPage
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-gray-700 hover:bg-blue-50"
-                  }`}
+                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${pageNum === currentPage
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-blue-50"
+                    }`}
                   aria-label={`Trang ${pageNum}`}
                 >
                   {pageNum}

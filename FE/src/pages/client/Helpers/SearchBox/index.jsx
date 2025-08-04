@@ -5,52 +5,122 @@ import { BlockPicker } from "react-color";
 
 export default function SearchBox({ className, onSearch }) {
   const [keyword, setKeyword] = useState("");
-  const [colors, setColors] = useState([]);
-  const [isColorOpen, setIsColorOpen] = useState(false);
-  const [colorError, setColorError] = useState(null);
 
+  // Mỗi mảng chứa các giá trị (đã lowercase) của attribute
+  const [sizes, setSizes]         = useState([]);
+  const [origins, setOrigins]     = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [waters, setWaters]       = useState([]);
+  const [colors, setColors]       = useState([]);
+
+  const [loadingAttrs, setLoadingAttrs] = useState(true);
+  const [attrError, setAttrError]       = useState(null);
+
+  const [isColorOpen, setIsColorOpen] = useState(false);
+
+  // 1. Fetch đồng thời tất cả các attribute-values cần
   useEffect(() => {
-    // Fetch colors
-    axios
-      .get(`${Constants.DOMAIN_API}/attribute-values`, {
-        params: { attribute_id: 35, page: 1, limit: 100 },
-      })
-      .then(res => {
-        if (res.data.status === 200) {
-          const valid = res.data.data.filter(v =>
-            /^#([0-9A-Fa-f]{6})$/.test(v.value)
-          );
-          setColors(valid);
-          if (!valid.length) {
-            setColorError("Không tìm thấy mã màu hợp lệ.");
-          }
-        } else {
-          setColorError(`Lỗi API: ${res.data.message}`);
-        }
-      })
-      .catch(err => {
-        setColorError(`Lỗi lấy màu: ${err.message}`);
-      });
+    const fetchAll = async () => {
+      try {
+        const [
+          sizeRes,
+          originRes,
+          materialRes,
+          waterRes,
+          colorRes
+        ] = await Promise.all([
+          axios.get(`${Constants.DOMAIN_API}/attribute-values`, {
+            params: { attribute_id: 31, page:1, limit:100 }  // Kích thước
+          }),
+          axios.get(`${Constants.DOMAIN_API}/attribute-values`, {
+            params: { attribute_id: 26, page:1, limit:100 }  // Xuất xứ
+          }),
+          axios.get(`${Constants.DOMAIN_API}/attribute-values`, {
+            params: { attribute_id: 32, page:1, limit:100 }  // Chất liệu
+          }),
+          axios.get(`${Constants.DOMAIN_API}/attribute-values`, {
+            params: { attribute_id: 33, page:1, limit:100 }  // Kháng nước
+          }),
+          axios.get(`${Constants.DOMAIN_API}/attribute-values`, {
+            params: { attribute_id: 35, page:1, limit:100 }  // Màu sắc
+          })
+        ]);
+
+        setSizes(
+          sizeRes.data.data.map(v => v.value.toLowerCase())
+        );
+        setOrigins(
+          originRes.data.data.map(v => v.value.toLowerCase())
+        );
+        setMaterials(
+          materialRes.data.data.map(v => v.value.toLowerCase())
+        );
+        setWaters(
+          waterRes.data.data.map(v => v.value.toLowerCase())
+        );
+        // lọc chỉ mã màu hợp lệ
+        setColors(
+          colorRes.data.data
+            .filter(v => /^#([0-9A-Fa-f]{6})$/.test(v.value))
+            .map(v => v.value.toLowerCase())
+        );
+      } catch(err) {
+        console.error("Error fetching attribute-values", err);
+        setAttrError("Không lấy được danh sách giá trị thuộc tính.");
+      } finally {
+        setLoadingAttrs(false);
+      }
+    };
+    fetchAll();
   }, []);
 
   const handleSubmit = e => {
     e.preventDefault();
-    const t = keyword.trim();
-    const isSize = /^\d+mm$/i.test(t);
-    const isColor = /^#([0-9A-Fa-f]{6})$/.test(t);
+    const t = keyword.trim().toLowerCase();
+    if (!t) return;
 
-    const params = { page: 1, limit: 10, keyword: "", attribute_values: [], attribute_ids: [] };
+    // mặc định fallback keyword toàn cục
+    const params = {
+      keyword:         "",
+      attributeValues: [],
+      attributeIds:    []
+    };
 
-    if (isSize) {
-      params.attribute_ids = [17];
-    } else if (isColor) {
-      params.attribute_values = [t.toLowerCase()];
-      params.attribute_ids = [35];
-    } else {
+    // 2. check size
+    if (sizes.includes(t)) {
+      params.attributeIds    = [31];
+      params.attributeValues = [t];
+    }
+    // 3. check color
+    else if (colors.includes(t)) {
+      params.attributeIds    = [35];
+      params.attributeValues = [t];
+    }
+    // 4. check origin
+    else if (origins.includes(t)) {
+      params.attributeIds    = [26];
+      params.attributeValues = [t];
+    }
+    // 5. check material
+    else if (materials.includes(t)) {
+      params.attributeIds    = [32];
+      params.attributeValues = [t];
+    }
+    // 6. check water resistance
+    else if (waters.includes(t)) {
+      params.attributeIds    = [33];
+      params.attributeValues = [t];
+    }
+    // 7. fallback: keyword toàn cục
+    else {
       params.keyword = t;
     }
 
-    onSearch(params);
+    onSearch({
+      keyword:         params.keyword,
+      attributeValues: params.attributeValues,
+      attributeIds:    params.attributeIds
+    });
   };
 
   const pickColor = c => {
@@ -61,25 +131,25 @@ export default function SearchBox({ className, onSearch }) {
   const showCircle = /^#([0-9A-Fa-f]{6})$/.test(keyword.trim());
 
   return (
-    <div className={`w-full flex items-center border bg-white ${className || ""}`}>
+    <div className={`w-full flex items-center border bg-white ${className||""}`}>
       {/* Color picker */}
       <div className="relative px-2">
         <button
           type="button"
           onClick={() => setIsColorOpen(o => !o)}
           className="w-6 h-6 rounded-full border"
-          style={{ backgroundColor: showCircle ? keyword : "transparent" }}
+          style={{ backgroundColor: showCircle?keyword:"transparent" }}
         />
         {isColorOpen && (
           <div className="absolute left-0 mt-1 p-2 bg-white border rounded shadow z-50">
             {colors.length > 0 ? (
               <BlockPicker
-                colors={colors.map(c => c.value)}
+                colors={colors}
                 triangle="hide"
                 onChangeComplete={pickColor}
               />
             ) : (
-              <p className="text-sm text-red-600">{colorError}</p>
+              <p className="text-sm text-red-600">{attrError||"Đang tải màu..."}</p>
             )}
           </div>
         )}
@@ -98,10 +168,10 @@ export default function SearchBox({ className, onSearch }) {
         <input
           type="text"
           className="w-full px-4 py-2 text-sm focus:outline-none"
-          placeholder="Tìm sản phẩm, màu, size..."
+          placeholder="Tìm size, màu, xuất xứ, chất liệu, kháng nước…"
           value={keyword}
           onChange={e => setKeyword(e.target.value)}
-          style={{ paddingLeft: showCircle ? 36 : undefined }}
+          style={{ paddingLeft: showCircle?36:undefined }}
         />
       </form>
 
@@ -111,6 +181,7 @@ export default function SearchBox({ className, onSearch }) {
       <button
         onClick={handleSubmit}
         className="ml-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+        disabled={loadingAttrs}
       >
         Tìm kiếm
       </button>

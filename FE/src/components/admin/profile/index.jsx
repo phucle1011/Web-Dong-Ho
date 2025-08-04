@@ -120,8 +120,9 @@ function AdminProfile() {
                 return;
             }
 
-            const res = await axios.put(
-                `${Constants.DOMAIN_API}/admin/user/${adminInfo.id}`,
+            // Gọi API cập nhật avatar
+            await axios.put(
+                `${Constants.DOMAIN_API}/admin/user/${adminInfo.id}/avatar`,
                 { avatar: avatarUrl },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -268,7 +269,7 @@ function AdminProfile() {
                     Đăng xuất
                 </button>
                 <button
-                    onClick={() => navigate("/admin/brand/getAll")}
+                    onClick={() => navigate(-1)}
                     className="bg-gray-600 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-700 transition duration-200 flex items-center"
                 >
                     Quay lại

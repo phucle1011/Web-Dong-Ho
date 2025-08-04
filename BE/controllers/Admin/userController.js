@@ -233,6 +233,30 @@ class UserController {
             res.status(500).json({ message: 'Lỗi server' });
         }
     }
+
+    static async updateAvatar(req, res) {
+        try {
+            const { id } = req.params;
+            const { avatar } = req.body;
+
+            const user = await UserModel.findByPk(id);
+            if (!user) {
+                return res.status(404).json({ message: "Người dùng không tồn tại." });
+            }
+
+            user.avatar = avatar;
+            await user.save();
+
+            return res.status(200).json({
+                status: 200,
+                message: "Cập nhật avatar thành công.",
+                data: { avatar: user.avatar }
+            });
+        } catch (error) {
+            console.error('Lỗi khi cập nhật avatar:', error);
+            return res.status(500).json({ message: error.message });
+        }
+    }
 }
 
 module.exports = UserController;

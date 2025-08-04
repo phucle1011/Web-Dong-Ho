@@ -59,6 +59,7 @@ router.post('/wallets/deduct-fee', checkJWT, WalletsController.deductFee);
 // ------------------[ SEARCH ]------------------//
 router.get('/products/search', SearchController.searchProducts);
 router.get('/attribute-values', SearchController.getAttributeValues);
+router.get('/product-attributes',   SearchController.getProductAttributes);
 
 
 //------------------[ CHATBOX ]------------------//
