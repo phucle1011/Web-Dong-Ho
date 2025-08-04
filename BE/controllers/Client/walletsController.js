@@ -47,14 +47,15 @@ class WalletsController {
         message: 'Danh sách ví',
         data: users
       });
-    }  catch (error) {
-  console.error('WalletsController.get error:', error.message, error.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Lỗi khi lấy danh sách ví',
-    error: error.message
-  });
-  }}
+    } catch (error) {
+      console.error('WalletsController.get error:', error.message, error.stack);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi khi lấy danh sách ví',
+        error: error.message
+      });
+    }
+  }
 
   static async requestWithdraw(req, res) {
     try {
@@ -180,9 +181,11 @@ class WalletsController {
     }
   }
 
-   static async deductFee(req, res) {
+  static async deductFee(req, res) {
     const userId = req.user.id;
     const { orderId, amount } = req.body;
+    console.log("const", orderId, amount);
+
     if (!orderId || !amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Thiếu dữ liệu hoặc amount không hợp lệ' });
     }
@@ -192,17 +195,21 @@ class WalletsController {
     const t = await sequelize.transaction();
     try {
       const user = await UserModel.findByPk(userId, { transaction: t, lock: t.LOCK.UPDATE });
-      if (!user || (user.balance || 0) < fee) {
+      if (!user) {
         await t.rollback();
-        return res.status(400).json({ success: false, message: 'Không đủ số dư' });
+        return res.status(400).json({ success: false, message: 'Người dùng không tồn tại' });
       }
 
-      user.balance = Number(user.balance) - fee;
+      const deducted = (user.balance || 0) < fee
+        ? Number(user.balance)
+        : fee;
+
+      user.balance = Number(user.balance) - deducted;
       await user.save({ transaction: t });
 
       await WithdrawRequestsModel.create({
         user_id: userId,
-        amount: fee,
+        amount: deducted,
         method: 'bank',
         note: `Phí quên thanh toán đơn #${orderId}`,
         status: 'approved',
@@ -213,22 +220,27 @@ class WalletsController {
 
       await t.commit();
 
-      await WalletsController.sendExpiredPaymentEmail(user, fee, amount);
+      await WalletsController.sendExpiredPaymentEmail(user, deducted, amount);
 
-      return res.json({ success: true, message: 'Đã trừ phí và xóa thành công' });
+      return res.json({
+        success: true,
+        message: `Đã trừ ${deducted.toLocaleString('vi-VN')}₫ phí quên thanh toán`
+      });
+
     } catch (err) {
-  await t.rollback();
-  console.error('deductFee error:', err.message, err.stack);
-  return res.status(500).json({
-    success: false,
-    message: 'Lỗi server',
-    error: err.message
-  });
-    }}
+      await t.rollback();
+      console.error('deductFee error:', err.message, err.stack);
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi server',
+        error: err.message
+      });
+    }
+  }
 
   static async sendExpiredPaymentEmail(user, fee, total) {
     try {
-      const formattedFee   = new Intl.NumberFormat('vi-VN').format(fee);
+      const formattedFee = new Intl.NumberFormat('vi-VN').format(fee);
       const formattedTotal = new Intl.NumberFormat('vi-VN').format(total);
       const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -239,12 +251,18 @@ class WalletsController {
       });
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
-        to:   user.email,
+        to: user.email,
         subject: 'Thông báo trừ phí quên thanh toán đơn hàng đấu giá thành công',
         html: `
           <p>Chào ${user.name || 'bạn'},</p>
           <p>Đơn hàng đấu giá có tổng <strong>${formattedTotal}₫</strong> đã hết hạn thanh toán.</p>
-          <p>Chúng tôi đã trừ 10% phí (<strong>${formattedFee}₫</strong>) vào ví tiền của bạn.</p>
+          <p>
+            Chúng tôi đã trừ <strong>${formattedFee}₫</strong>
+            ${deducted === fee
+                ? ' (10% của tổng đơn)'
+                : ' (toàn bộ số dư còn lại)'} 
+            vào ví tiền của bạn.
+          </p>
           <p>Cảm ơn bạn đã sử dụng dịch vụ!</p>
           <p>-- TimesMaster --</p>
         `

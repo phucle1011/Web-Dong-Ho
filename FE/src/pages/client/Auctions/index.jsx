@@ -450,7 +450,7 @@ function AuctionProductDetail() {
                   min-h-[3.25rem]  /* giữ chỗ ~2 dòng cho text-lg */
                 `}
                           >
-                            {auction.variant?.product?.name || "Không có tên sản phẩm"}
+                            {auction.variant?.product?.name || "Không có tên sản phẩm"} ({auction.variant?.sku})
                           </h3>
 
                           {overflowTitle.upcoming?.[auction.id] && (
@@ -570,7 +570,7 @@ function AuctionProductDetail() {
                   min-h-[3.55rem]
                 `}
                           >
-                            {auction.variant?.product?.name || "Không có tên sản phẩm"}
+                            {auction.variant?.product?.name || "Không có tên sản phẩm"} ({auction.variant?.sku})
                           </h3>
 
                           {overflowTitle.ended?.[auction.id] && (

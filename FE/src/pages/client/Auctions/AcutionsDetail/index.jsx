@@ -145,7 +145,7 @@ export default function AuctionsDetail() {
       imgs.forEach((img) => img.removeEventListener("load", onImgLoad));
     };
   }, [longDescriptionHTML, isExpanded]);
-  
+
   const thumbList = (
     variantImages?.length > 0 ? variantImages.map((i) => i.image_url) : []
   ).concat(
@@ -315,7 +315,7 @@ export default function AuctionsDetail() {
                   </span>
 
                   <p className="text-xl font-medium text-black mb-2">
-                    {productData?.name || "—"}
+                    {productData?.name || "—"} ({selectedVariant?.sku || "—"})
                   </p>
 
                   <div className="mb-4 text-sm text-gray-600">
@@ -335,37 +335,15 @@ export default function AuctionsDetail() {
 
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex">{renderStars(avgRating)}</div>
-                    <span className="text-sm text-gray-600">
-                      {totalReviews} đánh giá
-                    </span>
                   </div>
 
-                  {variants?.length > 1 && (
+                  {selectedVariant && (
                     <div className="mb-4">
                       <label className="block text-sm text-gray-700 mb-1">
-                        Chọn biến thể:
+                        Biến thể:
                       </label>
-                      <div className="flex flex-wrap gap-2">
-                        {variants.map((v) => (
-                          <button
-                            key={v.id}
-                            onClick={() => {
-                              setSelectedVariant(v);
-                              const imgs = v.images || [];
-                              setVariantImages(imgs);
-                              if (imgs.length > 0)
-                                setSelectedImage(imgs[0].image_url);
-                              else if (productData?.thumbnail)
-                                setSelectedImage(productData.thumbnail);
-                            }}
-                            className={`px-3 py-1.5 rounded border text-sm ${selectedVariant?.id === v.id
-                              ? "bg-blue-600 text-white border-blue-600"
-                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                              }`}
-                          >
-                            {v.sku || `Variant #${v.id}`}
-                          </button>
-                        ))}
+                      <div className="px-3 py-1.5 rounded border text-sm bg-gray-100 text-gray-800">
+                        {selectedVariant.sku || "—"}
                       </div>
                     </div>
                   )}

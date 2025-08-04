@@ -1,7 +1,7 @@
 import axios from "axios";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
     FaChevronLeft,
     FaChevronRight,
@@ -26,6 +26,16 @@ function AuctionGetAll() {
     const [endDate, setEndDate] = useState(null);
     const [statusFilter, setStatusFilter] = useState("all");
     const [activeStatus, setActiveStatus] = useState('');
+    const [expandedRows, setExpandedRows] = useState({});
+    const productNameRefs = useRef({});
+
+    const toggleRow = (id) => {
+        setExpandedRows(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
     const [statusCounts, setStatusCounts] = useState({
         all: 0,
         upcoming: 0,
@@ -225,70 +235,80 @@ function AuctionGetAll() {
                             </tr>
                         </thead>
                         <tbody>
-                            {auctions.length > 0 ? auctions.map((item, index) => (
-                                <tr key={item.id}>
-                                    <td className="p-2 border text-center">{(currentPage - 1) * recordsPerPage + index + 1}</td>
-                                    <td className="p-2 border text-center">
-                                        {item.variant?.product?.name
-                                            ? `${item.variant.product.name} (${item.variant.sku})`
-                                            : 'Không có tên sản phẩm'}
-                                    </td>
-                                    <td className="p-2 border text-center">{Number(item.variant.price).toLocaleString("vi-VN")} ₫</td>
-                                    <td className="p-2 border text-center">{Number(item.priceStep).toLocaleString("vi-VN")} ₫</td>
-                                    <td className="p-2 border text-center">{item.start_time?.replace("T", " ").substring(0, 19)}</td>
-                                    <td className="p-2 border text-center">{item.end_time?.replace("T", " ").substring(0, 19)}</td>
-                                    <td className="p-2 border text-center whitespace-nowrap">
-                                        <span
-                                            className={`px-2 py-1 rounded text-sm font-medium ${STATUS_COLORS[item.status] || "bg-gray-100 text-gray-700"
-                                                }`}
-                                        >
-                                            {STATUS_LABELS[item.status] || "Không xác định"}
-                                        </span>
-                                    </td>
-                                    <td className="p-2 border text-center">
-                                        <div className="flex justify-center items-center gap-2">
-                                            <Link
-                                                to={`/admin/auctions/detail/${item.id}`}
-                                                className="bg-blue-500 text-white p-2 rounded"
-                                                title="Xem chi tiết"
+                            {auctions.length > 0 ? auctions.map((item, index) => {
+                                const name = item.variant?.product?.name || "";
+                                const displayText = name ? `${name} (${item.variant.sku})` : 'Không có tên sản phẩm';
+                                const isExpanded = expandedRows[item.id];
+                                const shouldShowToggle = productNameRefs.current[item.id]?.scrollHeight > productNameRefs.current[item.id]?.clientHeight;
+
+                                return ( 
+                                    <tr key={item.id}>
+                                        <td className="p-2 border text-center">{(currentPage - 1) * recordsPerPage + index + 1}</td>
+                                        <td className="p-2 border text-left max-w-xs">
+                                            <div
+                                                ref={(el) => productNameRefs.current[item.id] = el}
+                                                className={`relative ${isExpanded ? '' : 'line-clamp-2'} break-words`}
                                             >
-                                                <FaEye size={16} className="font-bold" />
-                                            </Link>
-                                            {item.status === "upcoming" ? (
-                                                <>
-                                                    <Link
-                                                        to={`/admin/auctions/edit/${item.id}`}
-                                                        className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <FaEdit size={20} className="font-bold" />
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => setSelectedAuction(item)}
-                                                        className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                                                        title="Xoá"
-                                                    >
-                                                        <FaTrashAlt size={20} className="font-bold" />
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="bg-gray-300 text-gray-500 p-2 rounded w-8 h-8 inline-flex items-center justify-center cursor-not-allowed" title="Chỉ có thể chỉnh sửa phiên sắp diễn ra">
-                                                        <FaEdit size={20} className="font-bold" />
-                                                    </span>
-                                                    <span className="p-2 rounded-full bg-gray-100 text-gray-400 cursor-not-allowed" title="Chỉ có thể xoá phiên sắp diễn ra">
-                                                        <FaTrashAlt size={20} className="font-bold" />
-                                                    </span>
-                                                </>
+                                                {displayText}
+                                            </div>
+                                            {shouldShowToggle && (
+                                                <button
+                                                    onClick={() => toggleRow(item.id)}
+                                                    className="text-blue-600 hover:blue-800 text-sm mt-1"
+                                                >
+                                                    {isExpanded ? 'Ẩn bớt' : 'Xem thêm'}
+                                                </button>
                                             )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
+                                        </td>
+                                        <td className="p-2 border text-center">{Number(item.variant.price).toLocaleString("vi-VN")} ₫</td>
+                                        <td className="p-2 border text-center">{Number(item.priceStep).toLocaleString("vi-VN")} ₫</td>
+                                        <td className="p-2 border text-center">{item.start_time?.replace("T", " ").substring(0, 19)}</td>
+                                        <td className="p-2 border text-center">{item.end_time?.replace("T", " ").substring(0, 19)}</td>
+                                        <td className="p-2 border text-center whitespace-nowrap">
+                                            <span
+                                                className={`px-2 py-1 rounded text-sm font-medium ${STATUS_COLORS[item.status] || "bg-gray-100 text-gray-700"}`}
+                                            >
+                                                {STATUS_LABELS[item.status] || "Không xác định"}
+                                            </span>
+                                        </td>
+                                        <td className="p-2 border text-center">
+                                            <div className="flex justify-center items-center gap-2">
+                                                <Link to={`/admin/auctions/detail/${item.id}`} className="bg-blue-500 text-white p-2 rounded" title="Xem chi tiết">
+                                                    <FaEye size={16} className="font-bold" />
+                                                </Link>
+                                                {item.status === "upcoming" ? (
+                                                    <>
+                                                        <Link to={`/admin/auctions/edit/${item.id}`} className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center" title="Chỉnh sửa">
+                                                            <FaEdit size={20} className="font-bold" />
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => setSelectedAuction(item)}
+                                                            className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                                                            title="Xoá"
+                                                        >
+                                                            <FaTrashAlt size={20} className="font-bold" />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="bg-gray-300 text-gray-500 p-2 rounded w-8 h-8 inline-flex items-center justify-center cursor-not-allowed" title="Chỉ có thể chỉnh sửa phiên sắp diễn ra">
+                                                            <FaEdit size={20} className="font-bold" />
+                                                        </span>
+                                                        <span className="p-2 rounded-full bg-gray-100 text-gray-400 cursor-not-allowed" title="Chỉ có thể xoá phiên sắp diễn ra">
+                                                            <FaTrashAlt size={20} className="font-bold" />
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            }) : (
                                 <tr>
                                     <td colSpan={8} className="text-center p-4 text-gray-500">Không có phiên đấu giá nào.</td>
                                 </tr>
                             )}
+
                         </tbody>
                     </table>
                 </div>

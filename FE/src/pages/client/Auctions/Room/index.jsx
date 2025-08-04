@@ -104,6 +104,38 @@ export default function AuctionRoom() {
         });
         socketRef.current = s;
 
+        // const onWinner = (payload) => {
+        //     if (String(payload.auctionId) === String(currentAuctionIdRef.current)) {
+        //         toast.success(
+        //             `Chúc mừng ${payload.winner.userName} đã chiến thắng phiên đấu giá ${payload.winner.productName} với giá ${formatVnd(payload.winner.amount)}!`,
+        //             {
+        //                 position: "top-center",
+        //                 autoClose: 10000,
+        //                 hideProgressBar: false,
+        //                 closeOnClick: true,
+        //                 pauseOnHover: true,
+        //                 draggable: true,
+        //                 progress: undefined,
+        //                 theme: "light",
+        //             }
+        //         );
+        //     } else {
+        //         toast.info(
+        //             `Người dùng ${payload.winner.userName} vừa chiến thắng phiên đấu giá ${payload.winner.productName}!`,
+        //             {
+        //                 position: "top-center",
+        //                 autoClose: 8000,
+        //                 hideProgressBar: false,
+        //                 closeOnClick: true,
+        //                 pauseOnHover: true,
+        //                 draggable: true,
+        //                 progress: undefined,
+        //                 theme: "light",
+        //             }
+        //         );
+        //     }
+        // };
+
         const onStatus = (payload) => {
 
             const isCurrent = !!currentAuctionIdRef.current &&
@@ -126,6 +158,23 @@ export default function AuctionRoom() {
                     auctionId: payload.auctionId,
                 });
                 setShowWinModal(true);
+            }
+
+            if (payload.status === "ended" && payload.winner) {
+                const { user_id, bidAmount } = payload.winner;
+                const productName = activeAuction?.variant?.product?.name || "Sản phẩm";
+
+                if (Number(user_id) === meId) {
+                    toast.success(
+                        `Chúc mừng bạn đã thắng phiên đấu giá ${productName} với giá ${formatVnd(bidAmount)}!`,
+                        { position: "top-center", autoClose: 10000 }
+                    );
+                } else {
+                    toast.info(
+                        `Người dùng #${user_id} đã thắng phiên đấu giá ${productName} với giá ${formatVnd(bidAmount)}.`,
+                        { position: "top-center", autoClose: 8000 }
+                    );
+                }
             }
 
             if (isCurrent) {
@@ -183,7 +232,7 @@ export default function AuctionRoom() {
             s.off("bid:new", onBidNew);
             s.disconnect();
         };
-    }, []);
+    }, [activeAuction]);
 
     useEffect(() => {
         currentAuctionIdRef.current = activeAuction?.id ?? null;

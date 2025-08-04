@@ -106,6 +106,7 @@ io.use((socket, next) => {
 
 // Join room theo auctionId
 io.on('connection', (socket) => {
+
   socket.on('auction:join', ({ auctionId }) => {
     if (!auctionId) return;
     socket.join(`auction:${auctionId}`);

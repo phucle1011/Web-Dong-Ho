@@ -78,37 +78,39 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     return sorted[0];
   };
 
-  const getAuctionInfo = (variant, userId, itemCreatedAt) => {
-    const auctions = variant?.auctions || [];
+ const getAuctionInfo = (variant, userId, itemCreatedAt) => {
+  const auctions = variant?.auctions || [];
 
-    const won = auctions.filter(a =>
-      a.status === "ended" &&
-      (a.end_time || a.ended_at).replace("T", " ").substring(0, 19)
-      <= itemCreatedAt.replace("T", " ").substring(0, 19) &&
-      a.bids?.some(b => Number(b.user_id) === Number(userId))
-    );
+  const won = auctions.filter(a =>
+    a.status === "ended" &&
+    (a.end_time || a.ended_at).replace("T", " ").substring(0, 19)
+    <= itemCreatedAt.replace("T", " ").substring(0, 19) &&
+    a.bids?.some(b => Number(b.user_id) === Number(userId))
+  );
 
-    if (won.length === 0) {
-      return { isAuction: false, bidAmount: 0 };
-    }
+  if (won.length === 0) {
+    return { isAuction: false, bidAmount: 0 };
+  }
 
-    const target = won.reduce((best, cur) => {
-      const t1 = (best.end_time || best.ended_at).replace("T", " ").substring(0, 19);
-      const t2 = (cur.end_time || cur.ended_at).replace("T", " ").substring(0, 19);
-      return t2 > t1 ? cur : best;
-    });
+  // CHỈNH SỬA Ở ĐÂY: chọn phiên gần nhất so với item.created_at
+  const target = won.reduce((closest, cur) => {
+    const curEnd = new Date(cur.end_time || cur.ended_at);
+    const closestEnd = new Date(closest.end_time || closest.ended_at);
+    const itemTime = new Date(itemCreatedAt);
 
-    const formatted = (target.end_time || target.ended_at)
-      .replace("T", " ")
-      .substring(0, 19);
+    const curDiff = Math.abs(itemTime - curEnd);
+    const closestDiff = Math.abs(itemTime - closestEnd);
 
-    const topBid = getTopBid(target.bids);
-    return {
-      isAuction: true,
-      bidAmount: Number(topBid.bidAmount) || 0,
-      auctionId: target.id,
-    };
+    return curDiff < closestDiff ? cur : closest;
+  });
+
+  const topBid = getTopBid(target.bids);
+  return {
+    isAuction: true,
+    bidAmount: Number(topBid?.bidAmount || 0),
+    auctionId: target.id,
   };
+};
 
   const toggleShowAll = (id) => {
     setShowAllMap(prev => ({ ...prev, [id]: !prev[id] }));
@@ -245,9 +247,9 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     } catch (error) {
       const message = error.response?.data?.message || "";
       if (message === "Không tìm thấy sản phẩm trong giỏ hàng để xóa") {
-        toast.warning("Sản phẩm không tồn tại trong giỏ hàng");
+        // toast.warning("Sản phẩm không tồn tại trong giỏ hàng");
       } else {
-        toast.error("Xóa sản phẩm thất bại");
+        // toast.error("Xóa sản phẩm thất bại");
       }
     } finally {
       setShowConfirm(false);
@@ -270,7 +272,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       toast.success("Đã xóa toàn bộ giỏ hàng");
       await fetchCart();
     } catch (error) {
-      toast.error("Không thể xóa toàn bộ giỏ hàng");
+      // toast.error("Không thể xóa toàn bộ giỏ hàng");
     } finally {
       setShowConfirmClear(false);
     }
@@ -292,7 +294,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       );
       await fetchCart();
     } catch (error) {
-      toast.error("Cập nhật số lượng thất bại");
+      // toast.error("Cập nhật số lượng thất bại");
     }
   };
 
@@ -393,11 +395,11 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems(prev =>
         prev.filter(item => item.product_variant_id !== cartDetailId)
       );
-      toast.info("Hết hạn thanh toán: đã trừ 10% và xóa khỏi giỏ hàng");
+      toast.info("Hết hạn thanh toán: bạn đã bị trừ 10% số tiền trong ví và sản phẩm xóa khỏi giỏ hàng");
 
     } catch (err) {
       console.error("Xử lý hết hạn thất bại:", err);
-      toast.error("Không thể tự động xử lý phí hết hạn");
+      // toast.error("Không thể tự động xử lý phí hết hạn");
     }
   };
 
@@ -501,7 +503,41 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                         ) : (
                           <input
                             type="checkbox"
-                            disabled={stock === 0}
+                            disabled={(() => {
+  if (stock === 0) return true;
+
+  const info = getAuctionInfo(item.variant, meId, item.created_at);
+  const isAuction = info.isAuction;
+  const currentAuctionId = info.auctionId;
+
+  // Kiểm tra nếu đã có 1 auction khác (trùng auctionId) được chọn
+  const auctionIdSelected = cartItems.find(ci =>
+    selectedItems.includes(ci.product_variant_id) &&
+    getAuctionInfo(ci.variant, meId, ci.created_at).isAuction
+  )?.variant?.auctions?.[0]?.id;
+
+  // Nếu là đấu giá và đã có 1 auction khác được chọn và khác phiên → disable
+  if (isAuction && auctionIdSelected && auctionIdSelected !== currentAuctionId) {
+    return true;
+  }
+
+  // Nếu đã có 1 sản phẩm đấu giá thuộc cùng auctionId được chọn → chỉ cho phép 1
+  if (
+    isAuction &&
+    selectedItems.some(id => {
+      const it = cartItems.find(c => c.product_variant_id === id);
+      if (!it) return false;
+      const itAuction = getAuctionInfo(it.variant, meId, it.created_at);
+      return itAuction.auctionId === currentAuctionId;
+    }) &&
+    !selectedItems.includes(item.product_variant_id)
+  ) {
+    return true;
+  }
+
+  return false;
+})()}
+
                             checked={selectedItems.includes(item.product_variant_id)}
                             onChange={() => stock !== 0 && handleSelect(item.product_variant_id)}
                           />
