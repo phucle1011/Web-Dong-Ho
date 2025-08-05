@@ -21,6 +21,7 @@ const PromotionProductEdit = () => {
   });
   const [variantPromotions, setVariantPromotions] = useState({});
   const [selectedPromotion, setSelectedPromotion] = useState(null);
+  const minOrderValue = selectedPromotion?.min_order_value || 0;
   const [showTooltip, setShowTooltip] = useState(null);
   const [selectedVariantIds, setSelectedVariantIds] = useState([]);
   const [variantQuantities, setVariantQuantities] = useState({});
@@ -54,14 +55,14 @@ const PromotionProductEdit = () => {
   const getStatusDisplayName = (status) =>
     ({
       "Đang diễn ra": "Đang diễn ra",
-      "Sắp bắt đầu": "Sắp diễn ra",
+      "Sắp bắt đầu": "Sắp bắt đầu",
       "Đã kết thúc": "Đã hết hạn",
       "Không xác định": "Vô hiệu hóa",
     }[status] || "Vô hiệu hóa");
 
   const getStatusBadgeClass = (status) =>
     ({
-      "Đang hoạt động": "bg-green-100 text-green-800",
+      "Đang diễn ra": "bg-green-100 text-green-800",
       "Sắp bắt đầu": "bg-blue-100 text-blue-800",
       "Đã kết thúc": "bg-red-100 text-red-800",
       "Không xác định": "bg-gray-200 text-gray-800",
@@ -109,7 +110,7 @@ const PromotionProductEdit = () => {
           const statusA = getPromotionStatus(a.start_date, a.end_date);
           const statusB = getPromotionStatus(b.start_date, b.end_date);
           const order = {
-            "Đang hoạt động": 1,
+            "Đang diễn ra": 1,
             "Sắp bắt đầu": 2,
             "Đã kết thúc": 3,
             "Không xác định": 4,
@@ -171,11 +172,6 @@ const PromotionProductEdit = () => {
           }
         });
         setVariantPromotions(promotionsByVariant);
-
-        console.log("fetchData - promotions:", sortedPromotions);
-        console.log("fetchData - productVariants:", variants);
-        console.log("fetchData - usedVariantIds:", usedIds);
-        console.log("fetchData - variantPromotions:", promotionsByVariant);
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu ban đầu:", err);
         setError(
@@ -212,8 +208,6 @@ const PromotionProductEdit = () => {
         });
         setSelectedVariantIds(variantIds);
         setVariantQuantities(quantities);
-
-        console.log("fetchDetail - raw API response:", res.data);
 
         if (!data.length) {
           throw new Error("Không tìm thấy dữ liệu khuyến mãi!");
@@ -252,6 +246,7 @@ const PromotionProductEdit = () => {
           setSelectedPromotion({
             ...promotion,
             variant_count: expectedVariantCount,
+            min_order_value: parseFloat(promotion.min_price_threshold) || 0,
           });
           setValue("promotion_id", id.toString());
         } else {
@@ -259,17 +254,6 @@ const PromotionProductEdit = () => {
         }
 
         trigger("product_variant_id");
-
-        console.log("fetchDetail - promotion_id:", id);
-        console.log("fetchDetail - productVariantIds:", productVariantIds);
-        console.log(
-          "fetchDetail - expectedVariantCount:",
-          expectedVariantCount
-        );
-        console.log("fetchDetail - customFormState:", {
-          product_variant_id: productVariantIds,
-        });
-        console.log("fetchDetail - selectedPromotion:", promotion);
       } catch (err) {
         console.error("Lỗi khi tải chi tiết khuyến mãi:", err);
         let errorMessage = "Không thể tải thông tin khuyến mãi!";
@@ -297,10 +281,6 @@ const PromotionProductEdit = () => {
       setCustomFormState({ product_variant_id: existingVariantIds });
       setValue("product_variant_id", existingVariantIds);
       trigger("product_variant_id");
-      console.log("Sync - existingVariantIds:", existingVariantIds);
-      console.log("Sync - customFormState:", {
-        product_variant_id: existingVariantIds,
-      });
     }
   }, [existingVariantIds, setValue, trigger]);
 
@@ -323,7 +303,7 @@ const PromotionProductEdit = () => {
       );
       return;
     }
-    // Kiểm tra nếu có biến thể nào nhập số lượng > tồn kho
+
     const overStockVariants = selectedVariantIds.filter((id) => {
       const variant = productVariants.find((v) => v.id === parseInt(id));
       const quantity = parseInt(variantQuantities[id]) || 0;
@@ -368,16 +348,24 @@ const PromotionProductEdit = () => {
     setError(null);
     try {
       const allVariantIds = selectedVariants.map((id) => parseInt(id));
+      const invalid = selectedVariantIds.filter(
+        (id) => !variantQuantities[id] || variantQuantities[id] < 1
+      );
+      if (invalid.length) {
+        toast.error(
+          `Vui lòng nhập số lượng ≥ 1 cho biến thể: ${invalid.join(", ")}`
+        );
+        return;
+      }
 
       const payload = {
-        promotion_id: parseInt(id),
+        promotion_id: parseInt(id, 10),
         products: selectedVariantIds.map((variantId) => ({
-          product_variant_id: parseInt(variantId),
-          variant_quantity: parseInt(variantQuantities[variantId]) || 0,
+          product_variant_id: parseInt(variantId, 10),
+          variant_quantity: variantQuantities[variantId] || 1,
         })),
       };
 
-      console.log("Submitting payload:", payload);
       await axios.put(`${Constants.DOMAIN_API}/admin/promotion/${id}`, payload);
 
       setExistingVariantIds(selectedVariants);
@@ -390,6 +378,7 @@ const PromotionProductEdit = () => {
       }, 1000);
     } catch (err) {
       console.error("Lỗi khi gửi dữ liệu:", err);
+      console.error("Response payload:", err.response?.data);
       let errorMessage = "Lỗi khi cập nhật khuyến mãi!";
       if (err.response?.status === 400) {
         errorMessage =
@@ -410,27 +399,20 @@ const PromotionProductEdit = () => {
     }
   };
 
-  const availableVariants = productVariants.map((variant) => ({
-    value: variant.id.toString(),
-    label: `${variant.sku} (${truncateProductName(
-      variant.product?.name,
-      30
-    )}) - ${
-      variantPromotions[variant.id]
-        ? `Đang áp dụng cho ${variantPromotions[variant.id].name} (${
-            variantPromotions[variant.id].status
-          })`
-        : "Chưa được sử dụng"
-    }`,
-    isDisabled:
+  const availableVariants = productVariants.map((variant) => {
+    const price = parseFloat(variant.price) || 0;
+    const disabledByUsage =
       usedVariantIds.includes(variant.id) &&
-      !existingVariantIds.includes(variant.id.toString()),
-  }));
+      !existingVariantIds.includes(variant.id.toString());
+    const disabledByPrice = price < minOrderValue;
 
-  console.log("Render - customFormState:", customFormState);
-  console.log("Render - existingVariantIds:", existingVariantIds);
-  console.log("Render - availableVariants:", availableVariants);
-  console.log("Render - selectedPromotion:", selectedPromotion);
+    return {
+      value: variant.id.toString(),
+      label: `${variant.sku} — Giá: ${price.toLocaleString("vi-VN")}₫`,
+      isDisabled: disabledByUsage || disabledByPrice,
+      _price: price,
+    };
+  });
 
   return (
     <div className="card p-4">
@@ -513,8 +495,6 @@ const PromotionProductEdit = () => {
                   )
                 )}
                 )
-              
-                
                 <br />
                 Số lượng biến thể:{" "}
                 <strong>{selectedPromotion.variant_count || 0}</strong>
@@ -526,52 +506,56 @@ const PromotionProductEdit = () => {
             <label className="form-label mb-2">
               Chọn các biến thể sản phẩm *
             </label>
-            {/* <Select
-  isMulti
-  options={availableVariants}
-  className="basic-multi-select"
-  classNamePrefix="select"
-  onChange={(selectedOptions) => {
-    const selectedIds = selectedOptions.map(opt => opt.value);
-    setCustomFormState({ product_variant_id: selectedIds });
-    setSelectedVariantIds(selectedIds);
-    const newQuantities = {};
-    selectedIds.forEach(id => {
-      newQuantities[id] = variantQuantities[id] || 1;
-    });
-    setVariantQuantities(newQuantities);
-    setValue("product_variant_id", selectedIds);
-    trigger("product_variant_id");
-  }}
-  value={availableVariants.filter(opt =>
-    customFormState.product_variant_id?.includes(opt.value)
-  )}
-  placeholder="Chọn hoặc thêm biến thể sản phẩm..."
-/> */}
-
+            <Select
+              isMulti
+              options={availableVariants}
+              className="basic-multi-select"
+              classNamePrefix="select"
+              onChange={(selectedOptions) => {
+                const selectedIds = selectedOptions.map((opt) => opt.value);
+                setCustomFormState({ product_variant_id: selectedIds });
+                setSelectedVariantIds(selectedIds);
+                const newQuantities = {};
+                selectedIds.forEach((id) => {
+                  newQuantities[id] = variantQuantities[id] || 1;
+                });
+                setVariantQuantities(newQuantities);
+                setValue("product_variant_id", selectedIds);
+                trigger("product_variant_id");
+              }}
+              value={availableVariants.filter((opt) =>
+                selectedVariantIds.includes(opt.value)
+              )}
+              placeholder="Chọn hoặc thêm biến thể sản phẩm..."
+              formatOptionLabel={(opt) => (
+                <div
+                  style={{
+                    opacity: opt.isDisabled ? 0.5 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ flex: 1 }}>{opt.label}</span>
+                  {usedVariantIds.includes(+opt.value) &&
+                    !existingVariantIds.includes(opt.value) && (
+                      <em className="ms-1 text-sm text-red-500">(Đã dùng)</em>
+                    )}
+                  {opt._price < minOrderValue && (
+                    <em className="ms-1 text-sm text-blue-500">
+                      (Giá &lt; {minOrderValue.toLocaleString("vi-VN")}₫)
+                    </em>
+                  )}
+                </div>
+              )}
+              isOptionDisabled={(opt) => opt.isDisabled}
+            />
             {errors.product_variant_id && (
               <small className="text-danger">
                 {errors.product_variant_id.message}
               </small>
             )}
           </div>
-          <Select
-            isMulti
-            options={availableVariants}
-            value={availableVariants.filter((opt) =>
-              selectedVariantIds.includes(opt.value)
-            )}
-            onChange={(selected) => {
-              const ids = selected.map((opt) => opt.value);
-              setSelectedVariantIds(ids);
-              const newQuantities = {};
-              ids.forEach((id) => {
-                newQuantities[id] = variantQuantities[id] || 1;
-              });
-              setVariantQuantities(newQuantities);
-            }}
-          />
-          {/* --- Hiển thị table --- */}
+
           {selectedVariantIds.length > 0 && (
             <div className="mt-6">
               <label className="form-label block mb-2 text-lg font-semibold">
@@ -677,7 +661,6 @@ const PromotionProductEdit = () => {
               </div>
             </div>
           )}
-     
 
           <div className="mt-8 flex items-center gap-1">
             <button

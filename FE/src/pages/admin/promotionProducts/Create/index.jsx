@@ -16,6 +16,7 @@ const PromotionProductForm = ({ onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [selectedPromotionId, setSelectedPromotionId] = useState(null);
+  const [selectedPromotion, setSelectedPromotion] = useState(null);
   const [selectedVariantIds, setSelectedVariantIds] = useState([]);
   const [variantQuantities, setVariantQuantities] = useState({});
 
@@ -45,9 +46,7 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const fetchPromotions = async () => {
     try {
-      const res = await axios.get(
-        `${Constants.DOMAIN_API}/admin/promotions/ss/all`
-      );
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`);
       const data = Array.isArray(res.data.data) ? res.data.data : [];
       setPromotions(data);
     } catch (error) {
@@ -62,9 +61,7 @@ const PromotionProductForm = ({ onSuccess }) => {
 
   const fetchProductVariants = async () => {
     try {
-      const res = await axios.get(
-        `${Constants.DOMAIN_API}/admin/product-variants`
-      );
+      const res = await axios.get(`${Constants.DOMAIN_API}/admin/product-variants`);
       setProductVariants(res.data.data || []);
     } catch (error) {
       console.error("Lỗi khi tải danh sách biến thể sản phẩm:", {
@@ -161,9 +158,7 @@ const PromotionProductForm = ({ onSuccess }) => {
         .map((id) => {
           const variant = productVariants.find((v) => v.id === parseInt(id));
           return variant
-            ? `${variant.sku} (${
-                variant.product?.name || "Tên không xác định"
-              })`
+            ? `${variant.sku} (${variant.product?.name || "Tên không xác định"})`
             : id;
         })
         .join(", ");
@@ -238,13 +233,17 @@ const PromotionProductForm = ({ onSuccess }) => {
     .filter(
       (variant) =>
         !usedVariantIds.includes(variant.id) &&
-        !selectedVariantIds.includes(variant.id)
+        !selectedVariantIds.includes(variant.id) &&
+        // Chỉ lấy variant.price ≥ ngưỡng
+        (!selectedPromotion?.min_price_threshold ||
+          parseFloat(variant.price) >=
+            parseFloat(selectedPromotion.min_price_threshold))
     )
     .map((variant) => ({
       value: variant.id,
-      label: `${variant.sku} (${
-        variant.product?.name || "Tên SP không xác định"
-      })`,
+      label: `${variant.sku} (${variant.product?.name}) – ${parseFloat(
+        variant.price
+      ).toLocaleString()}₫`,
     }));
 
   const CustomOption = ({ innerProps, label, data }) => (
@@ -298,13 +297,14 @@ const PromotionProductForm = ({ onSuccess }) => {
                 Option: CustomOption,
                 SingleValue: CustomSingleValue,
               }}
-              onChange={(selectedOption) => {
-                const value = selectedOption ? selectedOption.value : "";
-                setSelectedPromotionId(value);
-                setValue("promotion_id", value);
+              onChange={(opt) => {
+                const promo = promotions.find((p) => p.id === opt?.value) || null;
+                setSelectedPromotionId(promo?.id || null);
+                setValue("promotion_id", promo?.id || "");
                 trigger("promotion_id");
                 setSelectedVariantIds([]);
                 setValue("product_variant_id", []);
+                setSelectedPromotion(promo);
               }}
               placeholder="Chọn khuyến mãi..."
               isClearable
@@ -368,114 +368,113 @@ const PromotionProductForm = ({ onSuccess }) => {
               isDisabled={!selectedPromotionId}
               placeholder="Chọn các biến thể sản phẩm..."
             />
-        
 
             {/* --- Hiển thị table --- */}
             {selectedVariantIds.length > 0 && (
-                       <div className="mt-6">
-                         <label className="form-label block mb-2 text-lg font-semibold">
-                           Nhập số lượng áp dụng cho từng biến thể:
-                         </label>
-                         <div className="overflow-x-auto border rounded shadow-sm">
-                           <table className="w-full table-auto text-sm text-left text-gray-800">
-                             <thead className="bg-gray-100 sticky top-0 z-0">
-                               <tr>
-                                 <th className="px-4 py-2 border text-center">#</th>
-                                 <th className="px-4 py-2 border">SKU</th>
-                                 <th className="px-4 py-2 border">Tên sản phẩm</th>
-                                 <th className="px-4 py-2 border text-center">Tồn kho</th>
-                                 <th className="px-4 py-2 border text-center">
-                                   Số lượng áp dụng
-                                 </th>
-                               </tr>
-                             </thead>
-                             <tbody>
-                               {selectedVariantIds.map((id, index) => {
-                                 const variant = productVariants.find(
-                                   (v) => v.id === parseInt(id)
-                                 );
-                                 const stock = variant?.stock || 1;
-           
-                                 return (
-                                   <tr
-                                     key={id}
-                                     className="bg-white hover:bg-gray-50 transition"
-                                   >
-                                     <td className="px-4 py-2 border text-center">
-                                       {index + 1}
-                                     </td>
-                                     <td className="px-4 py-2 border">{variant?.sku}</td>
-                                     <td className="px-4 py-2 border">
-                                       {variant?.product?.name || "Tên SP không xác định"}
-                                     </td>
-                                     <td className="px-4 py-2 border text-center">
-                                       {stock}
-                                     </td>
-                                     <td className="px-4 py-2 border text-center">
-                                       <input
-                                         type="number"
-                                         min="1"
-                                         max={stock}
-                                         value={variantQuantities[id] || 1}
-                                         onWheel={(e) => e.target.blur()}
-                                         onKeyDown={(e) => {
-                                           const currentVal = variantQuantities[id] || 1;
-                                           if (e.key === "ArrowUp") {
-                                             if (currentVal >= stock) {
-                                               e.preventDefault();
-                                               toast.warning(
-                                                 `Số lượng không được vượt quá tồn kho (${stock})!`
-                                               );
-                                             } else {
-                                               setVariantQuantities((prev) => ({
-                                                 ...prev,
-                                                 [id]: currentVal + 1,
-                                               }));
-                                               e.preventDefault();
-                                             }
-                                           }
-                                           if (e.key === "ArrowDown") {
-                                             if (currentVal <= 1) {
-                                               e.preventDefault();
-                                               toast.warning("Số lượng tối thiểu là 1!");
-                                             } else {
-                                               setVariantQuantities((prev) => ({
-                                                 ...prev,
-                                                 [id]: currentVal - 1,
-                                               }));
-                                               e.preventDefault();
-                                             }
-                                           }
-                                         }}
-                                         onChange={(e) => {
-                                           const val = parseInt(e.target.value, 10);
-                                           if (isNaN(val) || val <= 0) {
-                                             setVariantQuantities((prev) => ({
-                                               ...prev,
-                                               [id]: 1,
-                                             }));
-                                           } else if (val > stock) {
-                                             toast.warning(
-                                               `Số lượng không được vượt quá tồn kho (${stock})!`
-                                             );
-                                           } else {
-                                             setVariantQuantities((prev) => ({
-                                               ...prev,
-                                               [id]: val,
-                                             }));
-                                           }
-                                         }}
-                                         className="border px-2 py-1 w-24 rounded text-center"
-                                       />
-                                     </td>
-                                   </tr>
-                                 );
-                               })}
-                             </tbody>
-                           </table>
-                         </div>
-                       </div>
-                     )}
+              <div className="mt-6">
+                <label className="form-label block mb-2 text-lg font-semibold">
+                  Nhập số lượng áp dụng cho từng biến thể:
+                </label>
+                <div className="overflow-x-auto border rounded shadow-sm">
+                  <table className="w-full table-auto text-sm text-left text-gray-800">
+                    <thead className="bg-gray-100 sticky top-0 z-0">
+                      <tr>
+                        <th className="px-4 py-2 border text-center">#</th>
+                        <th className="px-4 py-2 border">SKU</th>
+                        <th className="px-4 py-2 border">Tên sản phẩm</th>
+                        <th className="px-4 py-2 border text-center">Tồn kho</th>
+                        <th className="px-4 py-2 border text-center">
+                          Số lượng áp dụng
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedVariantIds.map((id, index) => {
+                        const variant = productVariants.find(
+                          (v) => v.id === parseInt(id)
+                        );
+                        const stock = variant?.stock || 1;
+
+                        return (
+                          <tr
+                            key={id}
+                            className="bg-white hover:bg-gray-50 transition"
+                          >
+                            <td className="px-4 py-2 border text-center">
+                              {index + 1}
+                            </td>
+                            <td className="px-4 py-2 border">{variant?.sku}</td>
+                            <td className="px-4 py-2 border">
+                              {variant?.product?.name || "Tên SP không xác định"}
+                            </td>
+                            <td className="px-4 py-2 border text-center">
+                              {stock}
+                            </td>
+                            <td className="px-4 py-2 border text-center">
+                              <input
+                                type="number"
+                                min="1"
+                                max={stock}
+                                value={variantQuantities[id] || 1}
+                                onWheel={(e) => e.target.blur()}
+                                onKeyDown={(e) => {
+                                  const currentVal = variantQuantities[id] || 1;
+                                  if (e.key === "ArrowUp") {
+                                    if (currentVal >= stock) {
+                                      e.preventDefault();
+                                      toast.warning(
+                                        `Số lượng không được vượt quá tồn kho (${stock})!`
+                                      );
+                                    } else {
+                                      setVariantQuantities((prev) => ({
+                                        ...prev,
+                                        [id]: currentVal + 1,
+                                      }));
+                                      e.preventDefault();
+                                    }
+                                  }
+                                  if (e.key === "ArrowDown") {
+                                    if (currentVal <= 1) {
+                                      e.preventDefault();
+                                      toast.warning("Số lượng tối thiểu là 1!");
+                                    } else {
+                                      setVariantQuantities((prev) => ({
+                                        ...prev,
+                                        [id]: currentVal - 1,
+                                      }));
+                                      e.preventDefault();
+                                    }
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10);
+                                  if (isNaN(val) || val <= 0) {
+                                    setVariantQuantities((prev) => ({
+                                      ...prev,
+                                      [id]: 1,
+                                    }));
+                                  } else if (val > stock) {
+                                    toast.warning(
+                                      `Số lượng không được vượt quá tồn kho (${stock})!`
+                                    );
+                                  } else {
+                                    setVariantQuantities((prev) => ({
+                                      ...prev,
+                                      [id]: val,
+                                    }));
+                                  }
+                                }}
+                                className="border px-2 py-1 w-24 rounded text-center"
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             <input
               type="hidden"
               {...register("product_variant_id", {

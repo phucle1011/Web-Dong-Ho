@@ -14,7 +14,6 @@ import { notifyCartChanged } from "../cart/cartEvents";
 
 export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
   const dialogRef = useRef();
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -31,80 +30,89 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const navigate = useNavigate();
 
   // Memoize product and variants
- const product = useMemo(() => datas || {}, [datas]);
+  const product = useMemo(() => datas || {}, [datas]);
 
-const representativeVariant = useMemo(() => {
-  return productData?.representativeVariant || product?.representativeVariant || {};
-}, [productData?.representativeVariant, product?.representativeVariant]);
+  const representativeVariant = useMemo(() => {
+    return (
+      productData?.representativeVariant || product?.representativeVariant || {}
+    );
+  }, [productData?.representativeVariant, product?.representativeVariant]);
 
-const variants = useMemo(() => {
-  if (productData?.variants?.length) return productData.variants;
-  if (product?.variants?.length) return product.variants;
-  return [];
-}, [productData?.variants, product?.variants]);
+  const variants = useMemo(() => {
+    if (productData?.variants?.length) return productData.variants;
+    if (product?.variants?.length) return product.variants;
+    return [];
+  }, [productData?.variants, product?.variants]);
 
-useEffect(() => {
-  if (variantImages.length > 0) {
-    const safeIndex = Math.max(0, Math.min(currentImageIndex, variantImages.length - 1));
-    setSelectedImage(variantImages[safeIndex]?.image_url || "/images/no-image.jpg");
-  }
-}, [currentImageIndex, variantImages]);
-
+  useEffect(() => {
+    if (variantImages.length > 0) {
+      const safeIndex = Math.max(
+        0,
+        Math.min(currentImageIndex, variantImages.length - 1)
+      );
+      setSelectedImage(
+        variantImages[safeIndex]?.image_url || "/images/no-image.jpg"
+      );
+    }
+  }, [currentImageIndex, variantImages]);
 
   useEffect(() => {
     if (!product.id) return;
 
-async function fetchProduct() {
-  try {
-    setLoading(true);
-    const res = await axios.get(
-      `${Constants.DOMAIN_API}/products/${product.id}/variants`
-    );
-    const { product: fetchedProduct } = res.data;
+    async function fetchProduct() {
+      try {
+        setLoading(true);
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/products/${product.id}/variants`
+        );
+        const { product: fetchedProduct } = res.data;
 
-    // Sắp xếp: Biến thể có promotion lên trước
-   const sortedVariants = [...fetchedProduct.variants].sort((a, b) => {
-  const aDiscount = a.promotion?.discount_percent || 0;
-  const bDiscount = b.promotion?.discount_percent || 0;
-  return bDiscount - aDiscount; // giảm giá cao hơn lên đầu
-});
+        const sortedVariants = [...fetchedProduct.variants].sort((a, b) => {
+          const aInAuc = !!a.isInAuction;
+          const bInAuc = !!b.isInAuction;
+          if (aInAuc !== bInAuc) {
+            return aInAuc ? 1 : -1;
+          }
+          const aDisc = a.promotion?.discount_percent || 0;
+          const bDisc = b.promotion?.discount_percent || 0;
+          return bDisc - aDisc;
+        });
 
-    fetchedProduct.variants = sortedVariants;
-    setProductData(fetchedProduct);
+        fetchedProduct.variants = sortedVariants;
+        setProductData(fetchedProduct);
 
-    setVariantImages(sortedVariants[0]?.images || []);
-    setSelectedImage(
-      fetchedProduct.thumbnail ||
-        sortedVariants[0]?.images[0]?.image_url ||
-        "/images/no-image.jpg"
-    );
-    setAvgRating(parseFloat(fetchedProduct.averageRating) || 0);
-    setRatingCount(parseInt(fetchedProduct.ratingCount) || 0);
-
-    if (sortedVariants.length > 0) {
-      const validVariants = sortedVariants.filter(
-        (variant) =>
-          parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
-      );
-      const firstValidVariant = validVariants[0] || sortedVariants[0];
-      setSelectedVariant(firstValidVariant);
-      setVariantImages(firstValidVariant.images || []);
-      setSelectedImage(
-        firstValidVariant.images[0]?.image_url ||
+        setVariantImages(sortedVariants[0]?.images || []);
+        setSelectedImage(
           fetchedProduct.thumbnail ||
-          "/images/no-image.jpg"
-      );
-      setAvgRating(parseFloat(firstValidVariant.averageRating) || 0);
-      setRatingCount(parseInt(firstValidVariant.ratingCount) || 0);
-      checkWishlistStatus(firstValidVariant.id);
-    }
-  } catch (err) {
-    setError(err.message || "Không thể tải thông tin sản phẩm");
-  } finally {
-    setLoading(false);
-  }
-}
+            sortedVariants[0]?.images[0]?.image_url ||
+            "/images/no-image.jpg"
+        );
+        setAvgRating(parseFloat(fetchedProduct.averageRating) || 0);
+        setRatingCount(parseInt(fetchedProduct.ratingCount) || 0);
 
+        if (sortedVariants.length > 0) {
+          const validVariants = sortedVariants.filter(
+            (variant) =>
+              parseInt(variant.stock) > 0 && parseFloat(variant.price) > 0
+          );
+          const firstValidVariant = validVariants[0] || sortedVariants[0];
+          setSelectedVariant(firstValidVariant);
+          setVariantImages(firstValidVariant.images || []);
+          setSelectedImage(
+            firstValidVariant.images[0]?.image_url ||
+              fetchedProduct.thumbnail ||
+              "/images/no-image.jpg"
+          );
+          setAvgRating(parseFloat(firstValidVariant.averageRating) || 0);
+          setRatingCount(parseInt(firstValidVariant.ratingCount) || 0);
+          checkWishlistStatus(firstValidVariant.id);
+        }
+      } catch (err) {
+        setError(err.message || "Không thể tải thông tin sản phẩm");
+      } finally {
+        setLoading(false);
+      }
+    }
 
     fetchProduct();
   }, [product.id]);
@@ -147,132 +155,50 @@ async function fetchProduct() {
   );
 
   const priceInfo = useMemo(() => {
-    let displayPrice = 0;
-    let displayOriginalPrice = 0;
-    let hasStock = totalStock > 0;
-    let discountPercent = 0;
-    let discountAmount = 0;
-    let discountType = null;
-
-    const safeParsePrice = (value) => {
-      const parsed = parseFloat(value);
-      return isNaN(parsed) ? 0 : parsed;
+    
+    const safe = (v) => {
+      const n = parseFloat(v);
+      return isNaN(n) ? 0 : n;
     };
 
-    const safeParseDiscount = (value) => {
-      const parsed = parseFloat(value);
-      return isNaN(parsed) || parsed < 0 || parsed > 100
-        ? 0
-        : Math.round(parsed);
-    };
+    const original =
+      safe(selectedVariant?.price) ||
+      safe(representativeVariant?.price) ||
+      safe(productData?.price) ||
+      0;
+    const sale =
+      safe(selectedVariant?.final_price) ||
+      safe(selectedVariant?.promotion?.discounted_price) ||
+      safe(representativeVariant?.final_price) ||
+      safe(representativeVariant?.promotion?.discounted_price) ||
+      safe(productData?.promotion?.discounted_price) ||
+      original;
 
-    if (selectedVariant) {
-      displayOriginalPrice = safeParsePrice(selectedVariant.price);
-      displayPrice = safeParsePrice(
-        selectedVariant.final_price ||
-          selectedVariant.promotion?.discounted_price ||
-          selectedVariant.price
-      );
-      discountType = selectedVariant.promotion?.discount_type || null;
-      if (
-        selectedVariant.promotion?.meets_conditions &&
-        displayPrice < displayOriginalPrice
-      ) {
-        discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(
-          selectedVariant.promotion?.discount_percent || 0
-        );
-        if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(
-            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
-          );
-        }
-      }
-    } else if (representativeVariant && representativeVariant.price) {
-      displayOriginalPrice = safeParsePrice(representativeVariant.price);
-      displayPrice = safeParsePrice(
-        representativeVariant.final_price ||
-          representativeVariant.promotion?.discounted_price ||
-          representativeVariant.price
-      );
-      discountType = representativeVariant.promotion?.discount_type || null;
-      if (
-        representativeVariant.promotion?.meets_conditions &&
-        displayPrice < displayOriginalPrice
-      ) {
-        discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(
-          representativeVariant.promotion?.discount_percent || 0
-        );
-        if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(
-            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
-          );
-        }
-      }
-    } else if (validVariants.length > 0) {
-      const initialVariant = validVariants[0];
-      displayOriginalPrice = safeParsePrice(initialVariant.price);
-      displayPrice = safeParsePrice(
-        initialVariant.final_price ||
-          initialVariant.promotion?.discounted_price ||
-          initialVariant.price
-      );
-      discountType = initialVariant.promotion?.discount_type || null;
-      if (
-        initialVariant.promotion?.meets_conditions &&
-        displayPrice < displayOriginalPrice
-      ) {
-        discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(
-          initialVariant.promotion?.discount_percent || 0
-        );
-        if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(
-            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
-          );
-        }
-      }
-    } else {
-      hasStock = false;
-      displayOriginalPrice = safeParsePrice(productData?.price);
-      displayPrice = safeParsePrice(
-        productData?.promotion?.discounted_price || productData?.price
-      );
-      discountType = productData?.promotion?.discount_type || null;
-      if (
-        productData?.promotion?.meets_conditions &&
-        displayPrice < displayOriginalPrice
-      ) {
-        discountAmount = displayOriginalPrice - displayPrice;
-        discountPercent = safeParseDiscount(
-          productData?.promotion?.discount_percent || 0
-        );
-        if (discountPercent === 0 && discountType !== "percentage") {
-          discountPercent = Math.round(
-            ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
-          );
-        }
-      }
-    }
+    const discountAmount = Math.max(0, original - sale);
+    const discountPercent =
+      original > 0 ? Math.round((discountAmount / original) * 100) : 0;
+    const hasStock = totalStock > 0;
+    const discountType =
+      selectedVariant?.promotion?.discount_type ||
+      representativeVariant?.promotion?.discount_type ||
+      productData?.promotion?.discount_type ||
+      null;
+
+      
 
     return {
-      displayPrice,
-      displayOriginalPrice,
+      displayOriginalPrice: original,
+      displayPrice: sale,
       hasStock,
-      discountPercent,
       discountAmount,
+      discountPercent,
       discountType,
     };
-  }, [
-    productData,
-    variants,
-    selectedVariant,
-    totalStock,
-    representativeVariant,
-  ]);
+  }, [selectedVariant, representativeVariant, productData, totalStock]);
+
 
   const {
+    
     displayPrice,
     displayOriginalPrice,
     hasStock,
@@ -280,6 +206,7 @@ async function fetchProduct() {
     discountAmount,
     discountType,
   } = priceInfo;
+
   const thumbnail =
     selectedImage || productData?.thumbnail?.trim() || "/images/no-image.jpg";
   const productName =
@@ -290,6 +217,12 @@ async function fetchProduct() {
     totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
 
   const handleAddToCart = async (variantId, quantity) => {
+    if (selectedVariant?.isInAuction) {
+      toast.error(
+        "Sản phẩm đang trong phiên đấu giá, không thể thêm vào giỏ hàng."
+      );
+      return;
+    }
     if (!variantId) {
       toast.error("Bạn chưa chọn biến thể sản phẩm.");
       return;
@@ -318,7 +251,7 @@ async function fetchProduct() {
           },
         }
       );
-      notifyCartChanged(); 
+      notifyCartChanged();
 
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
@@ -342,6 +275,7 @@ async function fetchProduct() {
   };
 
   const addToCart = () => {
+    const isAuction = selectedVariant?.isInAuction;
     if (variants.length > 0 && !selectedVariant) {
       toast.error("Vui lòng chọn biến thể trước khi thêm vào giỏ hàng");
       return;
@@ -355,7 +289,8 @@ async function fetchProduct() {
     const variantToAdd =
       selectedVariant || (validVariants.length > 0 ? validVariants[0] : null);
     if (variantToAdd) {
-      handleAddToCart(variantToAdd.id, quantity);
+      if (variantToAdd && !isAuction)
+        handleAddToCart(variantToAdd.id, quantity);
     } else {
       toast.error("Không có biến thể hợp lệ để thêm vào giỏ hàng.");
     }
@@ -397,7 +332,6 @@ async function fetchProduct() {
     setRatingCount(parseInt(variant.ratingCount || 0));
     checkWishlistStatus(variant.id);
     setCurrentImageIndex(0);
-
   };
 
   const checkWishlistStatus = async (variantId) => {
@@ -546,47 +480,45 @@ async function fetchProduct() {
             </svg>
           </button>
           <div className="overflow-hidden mt-5 relative">
-       <div className="w-full h-64 relative">
-  <img
-    src={thumbnail}
-    alt={productName}
-    className="w-full h-full object-contain rounded-lg shadow-sm transition-transform duration-300"
-  />
+            <div className="w-full h-64 relative">
+              <img
+                src={thumbnail}
+                alt={productName}
+                className="w-full h-full object-contain rounded-lg shadow-sm transition-transform duration-300"
+              />
 
-  {/* Nút chuyển ảnh trái */}
-  {variantImages.length > 1 && (
-    <button
-      onClick={() =>
-        setCurrentImageIndex((prev) =>
-          prev === 0 ? variantImages.length - 1 : prev - 1
-        )
-      }
-      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
-    >
-      ◀
-    </button>
-  )}
+              {variantImages.length > 1 && (
+                <button
+                  onClick={() =>
+                    setCurrentImageIndex((prev) =>
+                      prev === 0 ? variantImages.length - 1 : prev - 1
+                    )
+                  }
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
+                >
+                  ◀
+                </button>
+              )}
 
-  {/* Nút chuyển ảnh phải */}
-  {variantImages.length > 1 && (
-    <button
-      onClick={() =>
-        setCurrentImageIndex((prev) =>
-          prev === variantImages.length - 1 ? 0 : prev + 1
-        )
-      }
-      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
-    >
-      ▶
-    </button>
-  )}
-</div>
+              {variantImages.length > 1 && (
+                <button
+                  onClick={() =>
+                    setCurrentImageIndex((prev) =>
+                      prev === variantImages.length - 1 ? 0 : prev + 1
+                    )
+                  }
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
+                >
+                  ▶
+                </button>
+              )}
+            </div>
 
-
-            {discountPercent > 0 && displayOriginalPrice > displayPrice && (
+            {/* {discountPercent > 0 && displayOriginalPrice > displayPrice && ( */}
+            {displayOriginalPrice > displayPrice && (
               <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
                 {discountType === "percentage"
-                  ? `-${discountPercent}%`
+                  ? `-${Number(discountAmount).toLocaleString("vi-VN")}₫`
                   : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
               </span>
             )}
@@ -632,54 +564,55 @@ async function fetchProduct() {
                         variant.promotion?.discounted_price ||
                         originalPrice
                     );
-                    const variantDiscountPercent = Math.round(
-                      Number(
-                        variant.promotion?.discount_percent ||
-                          (salePrice < originalPrice
-                            ? ((originalPrice - salePrice) / originalPrice) *
-                              100
-                            : 0)
-                      )
-                    );
-                    const variantDiscountAmount = originalPrice - salePrice;
-                    const variantDiscountType =
-                      variant.promotion?.discount_type || null;
                     const inStock = variant.stock > 0;
+                    const inAuction = variant.isInAuction;
                     const isSelected = selectedVariant?.id === variant.id;
                     return (
                       <button
                         key={variant.id}
                         className={`border rounded-md p-2 text-xs text-center transition relative ${
-                          inStock
-                            ? isSelected
-                              ? "border-blue-500 bg-blue-50 text-gray-800"
-                              : "border-gray-300 hover:bg-gray-100 text-gray-800"
-                            : "border-gray-300 opacity-60 cursor-not-allowed text-gray-500"
+                          !inStock || inAuction
+                            ? "border-gray-300 opacity-50 cursor-not-allowed text-gray-500"
+                            : isSelected
+                            ? "border-blue-500 bg-blue-50 text-gray-800"
+                            : "border-gray-300 hover:bg-gray-100 text-gray-800"
                         }`}
-                        onClick={() => inStock && handleVariantSelect(variant)}
-                        disabled={!inStock}
+                        onClick={() => {
+                          if (inStock && !inAuction)
+                            handleVariantSelect(variant);
+                        }}
+                        disabled={!inStock || inAuction}
+                        title={
+                          inAuction
+                            ? "Biến thể đang trong phiên đấu giá"
+                            : undefined
+                        }
                       >
                         <p className="font-medium">{name}</p>
                         <p className="text-qred font-semibold">
                           {salePrice.toLocaleString("vi-VN")}₫
                         </p>
-                        {variantDiscountPercent > 0 &&
-                          salePrice < originalPrice && (
-                            <div className="flex items-center justify-center space-x-1">
-                              <p className="text-qgray line-through text-[10px]">
-                                {originalPrice.toLocaleString("vi-VN")}₫
-                              </p>
-                              <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
-                                {variantDiscountType === "percentage"
-                                  ? `-${variantDiscountPercent}%`
-                                  : `-${variantDiscountAmount.toLocaleString(
-                                      "vi-VN"
-                                    )}₫`}
-                              </span>
-                            </div>
-                          )}
+                        {salePrice < originalPrice && (
+                          <div className="flex items-center justify-center space-x-1">
+                            <p className="text-qgray line-through text-[10px]">
+                              {originalPrice.toLocaleString("vi-VN")}₫
+                            </p>
+                            <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
+                              -
+                              {Math.round(
+                                ((originalPrice - salePrice) / originalPrice) *
+                                  100
+                              )}
+                              %
+                            </span>
+                          </div>
+                        )}
                         <p className="text-[10px] font-medium">
-                          {inStock ? `Còn: ${variant.stock}` : "Hết hàng"}
+                          {inAuction
+                            ? "Sản phẩm đang trong phiên đấu giá"
+                            : inStock
+                            ? `Còn: ${variant.stock}`
+                            : "Hết hàng"}
                         </p>
                       </button>
                     );
@@ -687,6 +620,7 @@ async function fetchProduct() {
                 </div>
               </div>
             )}
+
             {selectedVariant && selectedVariant.attributeValues?.length > 0 && (
               <div className="text-xs mt-2">
                 <span className="block font-semibold text-gray-700 mb-1">
@@ -738,41 +672,22 @@ async function fetchProduct() {
               </div>
             )}
             <div className="flex items-center space-x-2">
-              {hasStock ? (
-                <>
-                  <span className="text-qred font-semibold text-xl">
-                    {Number(displayPrice).toLocaleString("vi-VN", {
-                      style: "currency",
-                      currency: "VND",
-                    })}
-                  </span>
+         {hasStock ? (
+  <div className="price-container flex flex-col gap-1">
+    <span className="text-qred font-semibold text-[18px]">
+      {displayPrice.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+    </span>
+    {/* Chỉ cần check giá gốc lớn hơn giá giảm, bỏ luôn discountPercent > 0 */}
+    {displayOriginalPrice > displayPrice && (
+      <span className="text-qgray line-through text-[16px]">
+        {displayOriginalPrice.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+      </span>
+    )}
+  </div>
+) : (
+  <p className="text-qred font-600 text-[16px]">Sản phẩm hết hàng</p>
+)}
 
-                  {discountPercent > 0 &&
-                    displayOriginalPrice > displayPrice && (
-                      <div className="flex flex-col">
-                        <span className="text-qgray line-through text-xs">
-                          {Number(displayOriginalPrice).toLocaleString(
-                            "vi-VN",
-                            { style: "currency", currency: "VND" }
-                          )}
-                        </span>
-                        <span className="text-qgreen text-xs">
-                          Tiết kiệm:{" "}
-                          {discountType === "percentage"
-                            ? `-${discountPercent}%`
-                            : `${Number(discountAmount).toLocaleString(
-                                "vi-VN",
-                                { style: "currency", currency: "VND" }
-                              )}`}
-                        </span>
-                      </div>
-                    )}
-                </>
-              ) : (
-                <span className="text-qred font-semibold text-sm">
-                  Sản phẩm hết hàng
-                </span>
-              )}
             </div>
             {hasStock && (
               <div className="flex items-center space-x-2">
@@ -843,17 +758,27 @@ async function fetchProduct() {
                 type="button"
                 onClick={addToCart}
                 className={`flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${
-                  !hasStock || (variants.length > 0 && !selectedVariant)
+                  !hasStock ||
+                  (variants.length > 0 && !selectedVariant) ||
+                  selectedVariant?.isInAuction
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
                 disabled={
-                  !hasStock || (variants.length > 0 && !selectedVariant)
+                  !hasStock ||
+                  (variants.length > 0 && !selectedVariant) ||
+                  selectedVariant?.isInAuction
+                }
+                title={
+                  selectedVariant?.isInAuction
+                    ? "Biến thể đang trong phiên đấu giá"
+                    : undefined
                 }
               >
                 <FiShoppingCart size={18} className="inline mr-2" />
                 Thêm giỏ hàng
               </button>
+
               <button
                 onClick={
                   isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist
@@ -921,11 +846,22 @@ async function fetchProduct() {
           <button
             type="button"
             className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${
-              !hasStock || (variants.length > 0 && !selectedVariant)
+              !hasStock ||
+              (variants.length > 0 && !selectedVariant) ||
+              selectedVariant?.isInAuction
                 ? "opacity-50 cursor-not-allowed"
                 : ""
             }`}
-            disabled={!hasStock || (variants.length > 0 && !selectedVariant)}
+            disabled={
+              !hasStock ||
+              (variants.length > 0 && !selectedVariant) ||
+              selectedVariant?.isInAuction
+            }
+            title={
+              selectedVariant?.isInAuction
+                ? "Biến thể đang trong phiên đấu giá, không thể thêm vào giỏ hàng"
+                : undefined
+            }
             onClick={addToCart}
           >
             <FiShoppingCart size={18} />
@@ -942,41 +878,40 @@ async function fetchProduct() {
         >
           {productName}
         </p>
-        {hasStock ? (
-          <div className="price-container flex flex-col gap-1 group-hover:hidden">
-            <div className="price flex items-center space-x-2">
-              <span
-                className={`offer-price ${
-                  discountPercent > 0 && displayOriginalPrice > displayPrice
-                    ? "text-qred"
-                    : "text-qblack"
-                } font-600 text-[18px]`}
-              >
-                {Number(displayPrice).toLocaleString("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                })}
-              </span>
-              {discountPercent > 0 && displayOriginalPrice > displayPrice && (
-                <div className="flex flex-col">
-                  <span className="main-price text-qgray line-through font-600 text-[16px]">
-                    {Number(displayOriginalPrice).toLocaleString("vi-VN", {
-                      style: "currency",
-                      currency: "VND",
-                    })}
-                  </span>
-                  {/* <span className="text-qgreen text-xs">
-                    Tiết kiệm: {discountType === "percentage" ? `-${discountPercent}%` : `${Number(discountAmount).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}`}
-                  </span> */}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="price text-qred font-600 text-[16px] group-hover:hidden">
-            Sản phẩm hết hàng
-          </p>
-        )}
+      {hasStock ? (
+  <div className="price-container flex flex-col gap-1">
+    <div className="price flex items-center space-x-2">
+      <span
+        className={`${
+          displayOriginalPrice > displayPrice
+            ? "text-qred"
+            : "text-qblack"
+        } font-600 text-[18px]`}
+      >
+        {Number(displayPrice).toLocaleString("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        })}
+      </span>
+      {/* hiển thị giá gốc bất cứ khi nào giá gốc lớn hơn giá sau giảm */}
+      {displayOriginalPrice > displayPrice && (
+        <div className="flex flex-col">
+          <span className="text-qgray line-through font-600 text-[16px]">
+            {Number(displayOriginalPrice).toLocaleString("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            })}
+          </span>
+        </div>
+      )}
+    </div>
+  </div>
+) : (
+  <p className="text-qred font-600 text-[16px]">Sản phẩm hết hàng</p>
+)}
+
+
+        
       </div>
       <div className="quick-access-btns flex flex-col space-y-2 absolute group-hover:right-4 -right-10 top-20 transition-all duration-300 ease-in-out">
         <a
@@ -1005,69 +940,66 @@ async function fetchProduct() {
             />
           </span>
         </a>
-<a
-  href="#"
-  onClick={async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/products/compare`);
-      const allVariants = [];
-
-      res.data.data.forEach((product) => {
-        product.variants.forEach((variant) => {
-          allVariants.push({
-            productId: product.id,
-            productName: product.name,
-            productDescription: product.description,
-            productThumbnail: product.thumbnail,
-            brand: product.brand?.name || "-",
-            averageRating: product.average_rating,
-            ratingCount: product.rating_count,
-            variantId: variant.id,
-            price: variant.price,
-            stock: variant.stock,
-            sku: variant.sku,
-            images: variant.images || [],
-            attributeValues: variant.attributeValues || [],
-          });
-        });
-      });
-
-      // Tìm biến thể tương ứng
-      const clickedVariant = allVariants.find(
-        (v) =>
-          v.productId === product.id &&
-          v.variantId === (selectedVariant?.id || v.variantId) // fallback
-      );
-
-      if (!clickedVariant) {
-        toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
-        return;
-      }
-
-      const current = JSON.parse(localStorage.getItem("compareList")) || [];
-      const exists = current.find((item) => item.variantId === clickedVariant.variantId);
-
-      if (!exists) {
-        const updated = [...current, clickedVariant].slice(0, 4);
-        localStorage.setItem("compareList", JSON.stringify(updated));
-        toast.success("Đã thêm sản phẩm vào so sánh!");
-      } else {
-        toast.info("Sản phẩm đã có trong danh sách so sánh!");
-      }
-
-      navigate("/products-compaire");
-    } catch (error) {
-      console.error(error);
-      toast.error("Đã xảy ra lỗi khi lấy dữ liệu so sánh.");
-    }
-  }}
->
-  <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
-    <Compair className="w-5 h-5" />
-  </span>
-</a>
-
+        <a
+          href="#"
+          onClick={async (e) => {
+            e.preventDefault();
+            try {
+              const res = await axios.get(
+                `${Constants.DOMAIN_API}/products/${product.id}/variants`
+              );
+              const fetchedProduct = res.data.product;
+              const allVariants = [];
+              fetchedProduct.variants.forEach((variant) => {
+                allVariants.push({
+                  productId: fetchedProduct.id,
+                  productName: fetchedProduct.name,
+                  productDescription: fetchedProduct.description,
+                  productThumbnail: fetchedProduct.thumbnail,
+                  brand: fetchedProduct.brand?.name || "-",
+                  averageRating: fetchedProduct.averageRating,
+                  ratingCount: fetchedProduct.ratingCount,
+                  variantId: variant.id,
+                  price: variant.price,
+                  stock: variant.stock,
+                  sku: variant.sku,
+                  images: variant.images,
+                  attributeValues: variant.attributeValues,
+                });
+              });
+              const clickedVariant = allVariants.find(
+                (v) =>
+                  v.productId === product.id &&
+                  v.variantId ===
+                    (selectedVariant?.id || fetchedProduct.variants?.[0]?.id)
+              );
+              if (!clickedVariant) {
+                toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
+                return;
+              }
+              const current =
+                JSON.parse(localStorage.getItem("compareList")) || [];
+              const exists = current.find(
+                (item) => item.variantId === clickedVariant.variantId
+              );
+              if (!exists) {
+                const updated = [...current, clickedVariant].slice(0, 4);
+                localStorage.setItem("compareList", JSON.stringify(updated));
+                toast.success("Đã thêm sản phẩm vào so sánh!");
+              } else {
+                toast.info("Sản phẩm đã có trong danh sách so sánh!");
+              }
+              navigate("/products-compaire");
+            } catch (error) {
+              console.error(error);
+              toast.error("Đã xảy ra lỗi khi lấy dữ liệu so sánh.");
+            }
+          }}
+        >
+          <span className="w-10 h-10 flex justify-center items-center bg-primarygray rounded">
+            <Compair className="w-5 h-5" />
+          </span>
+        </a>
       </div>
       <QuickViewDialog />
     </div>
