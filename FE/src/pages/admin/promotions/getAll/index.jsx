@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 
 function PromotionGetAll() {
     const navigate = useNavigate();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showOrderModal, setShowOrderModal] = useState(false);
     const [appliedOrders, setAppliedOrders] = useState([]);
     const [startDate, setStartDate] = useState("");
@@ -368,12 +369,12 @@ function PromotionGetAll() {
                                 </td> */}
                                 <td className="border p-2 text-center space-x-2">
                                     {filterStatus === "used" ? (
-                                      <button
-  onClick={() => navigate(`/admin/promotions/applied/${promo.id}`)}
-  className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
->
-  <FaEye size={20} />
-</button>
+                                        <button
+                                            onClick={() => navigate(`/admin/promotions/applied/${promo.id}`)}
+                                            className="bg-blue-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
+                                        >
+                                            <FaEye size={20} />
+                                        </button>
                                     ) : (
                                         <>
                                             <Link
@@ -383,7 +384,10 @@ function PromotionGetAll() {
                                                 <FaEdit size={20} className="font-bold" />
                                             </Link>
                                             <button
-                                                onClick={() => setSelectedPromotion(promo)}
+                                                onClick={() => {
+                                                    setSelectedPromotion(promo);
+                                                    setShowDeleteDialog(true);
+                                                }}
                                                 className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
                                             >
                                                 <FaTrashAlt size={20} className="font-bold" />
@@ -444,7 +448,19 @@ function PromotionGetAll() {
                     </button>
                 </div>
             </div>
-
+            <FormDelete
+                isOpen={showDeleteDialog}
+                onClose={() => {
+                    setShowDeleteDialog(false);
+                    setSelectedPromotion(null);
+                }}
+                onConfirm={() => {
+                    deletePromotion();
+                    setShowDeleteDialog(false);
+                }}
+                message={`Bạn có chắc muốn xóa khuyến mãi "${selectedPromotion?.name}"?`}
+                Id={selectedPromotion?.id}
+            />
             {/* {showOrderModal && (
                 <PromotionOrderListModal
                     orders={appliedOrders}

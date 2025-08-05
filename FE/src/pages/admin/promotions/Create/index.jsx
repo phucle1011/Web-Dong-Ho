@@ -406,7 +406,7 @@ function PromotionCreate() {
 
         <div class="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
 
-          <div>
+          <div className="w-full col-span-full relative z-10">
             <label className="block mb-1 font-medium">Ngày bắt đầu</label>
             <Controller
               control={control}
@@ -428,7 +428,7 @@ function PromotionCreate() {
             )}
           </div>
 
-          <div>
+          <div className="w-full col-span-full relative z-10">
             <label className="block mb-1 font-medium">Ngày kết thúc</label>
             <Controller
               control={control}
@@ -591,8 +591,7 @@ function PromotionCreate() {
           />
         </div>
 
-      </form>
-      <div className="md:col-span-2 mt-6 flex gap-6">
+         <div className="md:col-span-2 mt-6 flex gap-6">
         <button type="submit" className="bg-[#073272] text-white px-6 py-2 rounded">
           Tạo khuyến mãi
         </button>
@@ -605,6 +604,8 @@ function PromotionCreate() {
           Quay lại
         </button>
       </div>
+
+      </form>
     </div>
   );
 }
