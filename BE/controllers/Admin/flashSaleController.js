@@ -178,27 +178,32 @@ class FlashSaleController {
   }
 
   // ✅ Xoá 1 flash sale (và notification liên quan)
-  static async delete(req, res) {
-    try {
-      const { id } = req.params;
+ static async delete(req, res) {
+  try {
+    const notificationId = req.params.id;
 
-      const flashSale = await FlashSaleModel.findByPk(id);
-      if (!flashSale) {
-        return res.status(404).json({ success: false, message: "Không tìm thấy flash sale." });
-      }
-
-      if (flashSale.notification_id) {
-        await NotificationModel.destroy({ where: { id: flashSale.notification_id } });
-      }
-
-      await flashSale.destroy();
-
-      res.status(200).json({ success: true, message: "Xoá thành công." });
-    } catch (error) {
-      console.error("Lỗi khi xoá flash sale:", error);
-      res.status(500).json({ success: false, message: "Lỗi máy chủ" });
+    // 1. Kiểm tra notification có tồn tại không
+    const notification = await NotificationModel.findByPk(notificationId);
+    if (!notification) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy thông báo (notification)." });
     }
+
+    // 2. Xoá notification trước
+    await NotificationModel.destroy({ where: { id: notificationId } });
+
+    // 3. Sau đó xoá tất cả flash sales liên quan
+    await FlashSaleModel.destroy({ where: { notification_id: notificationId } });
+
+    return res.status(200).json({
+      success: true,
+      message: `Đã xoá notification (${notificationId}) và các flash sales liên quan.`,
+    });
+  } catch (error) {
+    console.error("Lỗi khi xoá notification + flash sales:", error);
+    return res.status(500).json({ success: false, message: "Lỗi máy chủ" });
   }
+}
+
 }
 
 module.exports = FlashSaleController;

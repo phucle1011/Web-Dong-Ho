@@ -1,5 +1,6 @@
 const NotificationModel = require("../../models/notificationsModel");
-
+const OrderDetail = require("../../models/orderDetailsModel");
+const Comment = require("../../models/commentsModel");
 const FlashSaleModel = require("../../models/FlashSaleModel");
 const PromotionModel = require("../../models/promotionsModel");
 const PromotionProductModel = require("../../models/promotionProductsModel");
@@ -61,7 +62,7 @@ static async getAll(req, res) {
   }
 }
 
-  static async getDiscountedProductsByNotificationId(req, res) {
+static async getDiscountedProductsByNotificationId(req, res) {
   try {
     const now = new Date();
     const notificationId = req.params.notification_id;
@@ -70,7 +71,6 @@ static async getAll(req, res) {
       return res.status(400).json({ message: "Thiếu notification_id" });
     }
 
-    // ✅ 1. Tìm tất cả flash_sale liên quan đến notification
     const flashSales = await FlashSaleModel.findAll({
       where: { notification_id: notificationId },
     });
@@ -80,9 +80,7 @@ static async getAll(req, res) {
     }
 
     const promotionIds = flashSales.map(fs => fs.promotion_id);
-    console.log("===> [PROMOTION_IDS]", promotionIds);
 
-    // ✅ 2. Điều kiện lọc promotion
     const promotionWhere = {
       status: "active",
       start_date: { [Op.lte]: now },
@@ -90,9 +88,6 @@ static async getAll(req, res) {
       id: { [Op.in]: promotionIds },
     };
 
-    console.log("===> [WHERE promotion]", promotionWhere);
-
-    // ✅ 3. Tìm các product_variant có liên kết promotion
     const discountedVariants = await ProductVariant.findAll({
       include: [
         {
@@ -119,12 +114,7 @@ static async getAll(req, res) {
               where: promotionWhere,
               required: true,
               attributes: [
-                "id",
-                "name",
-                "discount_type",
-                "discount_value",
-                "start_date",
-                "end_date",
+                "id", "name", "discount_type", "discount_value", "start_date", "end_date"
               ],
             },
           ],
@@ -135,9 +125,38 @@ static async getAll(req, res) {
       },
     });
 
-    console.log("===> [discountedVariants.length]", discountedVariants.length);
+    const variantIds = discountedVariants.map(v => v.id);
 
-    // ✅ 4. Gom theo product
+    // ✅ Lấy dữ liệu đánh giá
+    const ratingData = await Comment.findAll({
+      where: { parent_id: null },
+      include: [
+        {
+          model: OrderDetail,
+          as: "orderDetail",
+          attributes: ["product_variant_id"],
+          where: { product_variant_id: { [Op.in]: variantIds } },
+          required: true,
+        },
+      ],
+      attributes: [
+        [col("orderDetail.product_variant_id"), "variantId"],
+        [fn("AVG", col("rating")), "avgRating"],
+        [fn("COUNT", col("rating")), "ratingCount"],
+      ],
+      group: ["orderDetail.product_variant_id"],
+      raw: true,
+    });
+
+    const ratingMap = {};
+    for (const item of ratingData) {
+      ratingMap[item.variantId] = {
+        avgRating: parseFloat(item.avgRating || 0).toFixed(1),
+        ratingCount: parseInt(item.ratingCount || 0, 10),
+      };
+    }
+
+    // ✅ Gom nhóm theo sản phẩm
     const productMap = new Map();
 
     for (const variant of discountedVariants) {
@@ -146,7 +165,6 @@ static async getAll(req, res) {
 
       const variantPrice = parseFloat(variant.price);
 
-      // ✅ Tìm khuyến mãi tốt nhất
       const bestPromotion = variant.promotionProducts.reduce((best, pp) => {
         const promo = pp.promotion;
         let finalPrice = variantPrice;
@@ -178,11 +196,18 @@ static async getAll(req, res) {
       }, null);
 
       const variantJson = variant.toJSON();
+
       variantJson.promotion = bestPromotion || {
         discounted_price: variantPrice,
         discount_percent: 0,
       };
 
+      // ✅ Gắn đánh giá vào variant
+      const rating = ratingMap[variant.id] || { avgRating: "0.0", ratingCount: 0 };
+      variantJson.averageRating = rating.avgRating;
+      variantJson.ratingCount = rating.ratingCount;
+
+      // ✅ Gom nhóm theo product
       if (!productMap.has(product.id)) {
         productMap.set(product.id, {
           id: product.id,
@@ -209,6 +234,7 @@ static async getAll(req, res) {
     return res.status(500).json({ message: "Lỗi server khi xử lý yêu cầu" });
   }
 }
+
 
 
 

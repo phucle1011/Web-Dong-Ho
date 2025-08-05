@@ -130,7 +130,7 @@ const EditNotification = () => {
     try {
       await axios.put(`${Constants.DOMAIN_API}/admin/flashSale/${id}`, {
         title,
-        thumbnail,
+        thumbnail : thumbnail.url,
         promotion_id: selectedPromotions.map((p) => p.value),
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
@@ -331,7 +331,7 @@ const EditNotification = () => {
         <div className="flex justify-start items-center gap-2 mt-6">
           <button
             type="button"
-            className="px-6 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            className="px-6 py-2 bg-gray-500 text-gray-800 rounded hover:bg-gray-400"
             onClick={handleCancel}
           >
             Quay lại
@@ -339,7 +339,7 @@ const EditNotification = () => {
 
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded"
+            className="px-6 py-2 bg-[#073272] text-white rounded"
           >
             Gửi
           </button>

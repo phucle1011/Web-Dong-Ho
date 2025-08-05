@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import Constants from "../../../Constants";
 import { notifyCartChanged } from "../Helpers/cart/cartEvents";
+import StarRating from "../../client/Helpers/StarRating";
 
 import { useLocation, useNavigate } from "react-router-dom";
 export default function ProductView({ className, reportHandler }) {
@@ -47,7 +48,6 @@ export default function ProductView({ className, reportHandler }) {
       setSelectedImage(variantImages[safeIndex]?.image_url || "");
     }
   }, [currentImageIndex, variantImages]);
-
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -275,7 +275,6 @@ export default function ProductView({ className, reportHandler }) {
     setCurrentImageIndex(index >= 0 ? index : 0);
   };
 
-
   const handleVariantSelect = (variant) => {
     if (!variant || selectedVariant?.id === variant.id) {
       return;
@@ -408,7 +407,7 @@ export default function ProductView({ className, reportHandler }) {
           )}
 
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex">{renderStars(avgRating)}</div>
+            <StarRating rating={avgRating} />
             <span className="text-sm text-gray-600">
               {ratingCount} đánh giá
             </span>
@@ -483,11 +482,8 @@ export default function ProductView({ className, reportHandler }) {
                 <tbody>
                   {selectedVariant.attributeValues.map((attr, index) => (
                     <tr key={index}>
-
                       <td className="p-2 border border-gray-300">
-                        <b>
-                          {attr.attribute?.name || "Không xác định"}
-                        </b>
+                        <b>{attr.attribute?.name || "Không xác định"}</b>
                       </td>
 
                       <td className="p-2 border border-gray-300">
