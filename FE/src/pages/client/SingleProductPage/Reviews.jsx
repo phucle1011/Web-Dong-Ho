@@ -183,26 +183,58 @@ toast.warning("Vui lòng nhập nội dung và chọn số sao trước khi gử
     const response = await fetch("/badword.txt");
     const text = await response.text();
 
-    const badWordsVi = text
-      .split("\n")
-      .map((word) => word.trim())
-      .filter((word) => word.length > 0 && !word.startsWith("#"));
+   const badWordsVi = text
+  .split("\n")
+  .map((word) => word.trim())
+  .filter((word) => word.length >= 2 && !word.startsWith("#"));
+
 
     
-const normalizeBadWord = (str) => {
-  return str
+// Hàm normalize full nội dung
+const normalizeFullMessage = (text) =>
+  (text || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // bỏ dấu tiếng Việt
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "") // bỏ dấu câu cụ thể
-    .trim(); // bỏ khoảng trắng đầu/cuối nếu có
-};
+    .replace(/[^\w]|_/g, "")         // xoá tất cả ký tự không phải chữ/số (bao gồm khoảng trắng, dấu câu)
+    .trim();
+
+// 1. Chuẩn hoá từng từ (so sánh theo từ - tránh false positive)
+const normalizeWord = (word) =>
+  (word || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")
+    .trim();
 
 
-const normalizedMessage = normalizeBadWord(message);
-const normalizedBadWords = badWordsVi.map(word => normalizeBadWord(word));
+const normalizedBadWords = badWordsVi.map(normalizeWord);
 
-const foundBad = normalizedBadWords.find(bad => normalizedMessage.includes(bad));
+const messageWords = message.split(/\s+/).map(normalizeWord).filter(Boolean);
+
+
+const fullNormalizedMessage = normalizeFullMessage(message);
+
+
+const foundBad =
+  messageWords.find((word) => normalizedBadWords.includes(word)) ||
+  normalizedBadWords
+    .filter((bad) => bad.length >= 4)
+    .find((bad) => fullNormalizedMessage.includes(bad));
+
+
+if (foundBad) {
+  toast.error("Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.");
+  return;
+}
+
+
+if (foundBad) {
+  toast.error("Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.");
+  return;
+}
+
 if (foundBad) {
 toast.error("Nội dung đánh giá chứa từ ngữ không phù hợp. Vui lòng chỉnh sửa.");
 

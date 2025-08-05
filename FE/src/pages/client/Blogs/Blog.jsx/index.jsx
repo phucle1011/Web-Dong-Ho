@@ -44,28 +44,31 @@ export default function Blog() {
       console.error("Lỗi khi tải hot blogs:", error);
     }
   };
+  
+useEffect(() => {
+  const fetchBlog = async () => {
+    try {
+      const res = await axios.get(`${Constants.DOMAIN_API}/blogs/${id}`);
+      setBlog(res.data);
 
-  useEffect(() => {
-    const fetchBlog = async () => {
       try {
-        const res = await axios.get(`${Constants.DOMAIN_API}/blogs/${id}`);
-        setBlog(res.data);
-
-
-        try {
-          await axios.post(`${Constants.DOMAIN_API}/blogs/${id}/view`, {});
-
-          fetchHotBlogs();
-        } catch (err) {
-          console.error("Lỗi khi tăng view:", err);
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải blog:", error);
+        await axios.post(`${Constants.DOMAIN_API}/blogs/${id}/view`, {});
+        fetchHotBlogs();
+      } catch (err) {
+        console.error("Lỗi khi tăng view:", err);
       }
-    };
-    if (id) fetchBlog();
+    } catch (error) {
+      console.error("Lỗi khi tải blog:", error);
+    }
+  };
 
-  }, [id]);
+  if (id) {
+    fetchBlog();
+    
+    window.scrollTo({ top: 50, behavior: "smooth" });
+  }
+}, [id]);
+
 
 
   useEffect(() => {
