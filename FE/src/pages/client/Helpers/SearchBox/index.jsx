@@ -180,7 +180,7 @@ export default function SearchBox({ className, onSearch }) {
       {/* Submit */}
       <button
         onClick={handleSubmit}
-        className="ml-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+        className="ml-2 px-4 py-2 text-sm bg-qh3-blue hover:bg-blue-700 text-white rounded-md transition-colors"
         disabled={loadingAttrs}
       >
         Tìm kiếm

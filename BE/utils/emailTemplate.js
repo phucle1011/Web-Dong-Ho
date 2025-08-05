@@ -1,129 +1,138 @@
+// BE/utils/emailTemplate.js
+
 const getEmailTemplate = (userName, newStatus, reason) => `
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Thông báo trạng thái tài khoản</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 0;
-        }
-        .email-container {
-            max-width: 700px;
-            margin: 30px auto;
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-            color: #333;
-        }
-        .header {
-            text-align: center;
-            padding: 20px;
-            background-color: #f1faff;
-            border-bottom: 2px solid #007acc;
-        }
-        .header img {
-            width: 140px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 26px;
-            color: #007acc;
-        }
-        .header p {
-            margin: 4px 0;
-            font-size: 14px;
-            color: #555;
-        }
-        .header a {
-            color: #007acc;
-            text-decoration: none;
-        }
-        .content {
-            padding: 30px 25px;
-            line-height: 1.6;
-            color: #333333;
-        }
-        .status {
-            color: #e63946;
-            font-weight: bold;
-        }
-        .reason {
-            margin-top: 10px;
-            color: #000;
-        }
-        .footer {
-            text-align: center;
-            font-size: 13px;
-            color: #999;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #ddd;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Thông báo trạng thái tài khoản</title>
 </head>
-<body>
-    <div class="email-container">
-        <div class="header">
-            <img src="https://yourdomain.com/image/logo.jpg" alt="Logo TIMEMASTERS" />
-            <h1>TIMEMASTERS</h1>
-            <p>
-                Hotline: <a href="tel:+84123456789">+84 123 456 789</a>
-            </p>
-        </div>
-        <div class="content">
-            <h2 style="color: #1d3557;">Xin chào <span style="color: #457b9d;">${userName}</span>,</h2>
-            <p style="font-size: 16px;">
-                Trạng thái tài khoản của bạn đã được cập nhật.
-            </p>
-            <ul style="list-style-type: disc; padding-left: 20px; margin-bottom: 20px;">
-                <li>
-                    <strong>Trạng thái mới:</strong> <span class="status">${newStatus}</span><br/>
-                    <span class="reason"><strong>Lý do:</strong> ${reason}</span>
-                </li>
-            </ul>
-            <p style="font-size: 15px; color: #555;">
-                Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi.
-            </p>
-            <p>Trân trọng,<br><strong>Đội ngũ TIMEMASTERS</strong></p>
-        </div>
-        <div class="footer">
-            <p style="margin: 5px 0;">© ${new Date().getFullYear()} TIMEMASTERS. Địa chỉ: Số 233, Nguyễn Văn Linh, Cần Thơ</p>
-            <p style="margin: 5px 0; font-style: italic;">Email này được gửi tự động, vui lòng không trả lời lại.</p>
-        </div>
-    </div>
+<body style="margin:0;padding:0;font-family:'Segoe UI',sans-serif;background-color:#f4f6f8;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#073272;padding:20px;text-align:center;">
+              <img src="https://res.cloudinary.com/disgf4yl7/image/upload/v1754403723/xpd7jmghcjjfelzbhyb0.png"
+                   alt="TIMEMASTERS" width="120" style="display:block;margin:0 auto 10px;" />
+              <h1 style="color:#ffffff;font-size:24px;margin:0;">Thông báo trạng thái tài khoản</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px;color:#333333;line-height:1.6;">
+              <p style="font-size:16px;margin-top:0;">Xin chào <strong>${userName}</strong>,</p>
+              <p style="font-size:15px;">Trạng thái tài khoản của bạn đã được cập nhật như sau:</p>
+              <table cellpadding="0" cellspacing="0" style="margin:20px 0;width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:12px;border:1px solid #ddd;"><strong>Trạng thái mới</strong></td>
+                  <td style="padding:12px;border:1px solid #ddd;">${newStatus}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px;border:1px solid #ddd;"><strong>Lý do</strong></td>
+                  <td style="padding:12px;border:1px solid #ddd;">${reason}</td>
+                </tr>
+              </table>
+              <p style="font-size:15px;color:#555555;">Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi.</p>
+              <p style="font-size:15px;">Trân trọng,<br><strong>Đội ngũ TIMEMASTERS</strong></p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f9fa;padding:20px;text-align:center;font-size:12px;color:#888888;">
+              <p style="margin:0;">© ${new Date().getFullYear()} TIMEMASTERS. Địa chỉ: Số 233, Nguyễn Văn Linh, Cần Thơ</p>
+              <p style="margin:5px 0 0;font-style:italic;">Email tự động, vui lòng không trả lời lại.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;
 
 const getWishlistPromoTemplate = (
-    userName,
-    productName,
-    discountValue,
-    discountType,
-    promoName,
-    code,
-    startDate,
-    endDate
+  userName,
+  productName,
+  discountValue,
+  discountType,
+  promoName,
+  code,
+  startDate,
+  endDate
 ) => `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px;border:1px solid #ddd;border-radius:8px;">
-  <h2>Xin chào ${userName},</h2>
-  <p>
-    Sản phẩm bạn yêu thích <strong>${productName}</strong> đang có chương trình khuyến mãi:
-  </p>
-  <ul>
-    <li><strong>${promoName}</strong> - Giảm ${discountValue}${discountType}</li>
-    <li>Mã giảm giá: <strong>${code}</strong></li>
-    <li>Thời gian áp dụng: ${startDate} → ${endDate}</li>
-  </ul>
-  <p>Nhanh tay vào mua nhé!</p>
-  <hr/>
-  <p style="font-size:12px;color:#555;">Đây là email tự động, vui lòng không trả lời.</p>
-</div>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thông báo khuyến mãi</title>
+</head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',sans-serif;background-color:#f4f6f8;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#073272;padding:20px;text-align:center;">
+              <img src="https://res.cloudinary.com/disgf4yl7/image/upload/v1754403723/xpd7jmghcjjfelzbhyb0.png"
+                   alt="TIMEMASTERS" width="120" style="display:block;margin:0 auto 10px;" />
+              <h1 style="color:#ffffff;font-size:24px;margin:0;">Khuyến mãi dành cho bạn</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:30px;color:#333333;line-height:1.6;">
+              <p style="font-size:16px;margin-top:0;">Xin chào <strong>${userName}</strong>,</p>
+              <p style="font-size:15px;">
+                Sản phẩm bạn yêu thích <strong>${productName}</strong> đang có chương trình khuyến mãi:
+              </p>
+              
+              <table cellpadding="0" cellspacing="0" style="margin:20px 0;width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:12px;border:1px solid #ddd;"><strong>Tên CTKM</strong></td>
+                  <td style="padding:12px;border:1px solid #ddd;">${promoName}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px;border:1px solid #ddd;"><strong>Giảm giá</strong></td>
+                  <td style="padding:12px;border:1px solid #ddd;">${discountValue}${discountType}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px;border:1px solid #ddd;"><strong>Mã giảm giá</strong></td>
+                  <td style="padding:12px;border:1px solid #ddd;">${code}</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px;border:1px solid #ddd;"><strong>Thời gian áp dụng</strong></td>
+                  <td style="padding:12px;border:1px solid #ddd;">${startDate} → ${endDate}</td>
+                </tr>
+              </table>
+
+              <p style="font-size:15px;color:#555555;">
+                Nhanh tay tận hưởng ưu đãi trước khi chương trình kết thúc!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8f9fa;padding:20px;text-align:center;font-size:12px;color:#888888;">
+              <p style="margin:0;">© ${new Date().getFullYear()} TIMEMASTERS.</p>
+              <p style="margin:5px 0 0;font-style:italic;">Email tự động, vui lòng không trả lời lại.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 `;
+
 
 module.exports = { getEmailTemplate, getWishlistPromoTemplate };

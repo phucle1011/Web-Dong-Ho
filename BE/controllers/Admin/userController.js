@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const sendEmail = async (to, subject, htmlContent) => {
     const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"TIMEMASTERS" <${process.env.EMAIL_USER}>`,
         to,
         subject,
         html: htmlContent
@@ -54,15 +54,15 @@ class UserController {
             const counts = await Promise.all(
                 allStatuses.map(s => UserModel.count({ where: { status: s } }))
             );
-
             const totalAll = await UserModel.count();
-
             const countsObject = {
                 all: totalAll,
                 active: counts[0],
                 inactive: counts[1],
-                locked: counts[3]
+                locked: counts[2]    // đúng là phần tử thứ ba của mảng
             };
+
+
 
             res.status(200).json({
                 status: 200,
@@ -156,8 +156,22 @@ class UserController {
 
             await sendEmail(user.email, "Thông báo thay đổi trạng thái tài khoản", htmlContent);
 
+            // build lại counts để FE có thể lấy luôn mà không cần fetch lại
+            const allStatuses = ['active', 'inactive', 'locked'];
+            const counts = await Promise.all(
+                allStatuses.map(s => UserModel.count({ where: { status: s } }))
+            );
+            const totalAll = await UserModel.count();
+            const countsObject = {
+                all: totalAll,
+                active: counts[0],
+                inactive: counts[1],
+                locked: counts[2]
+            };
+
             res.status(200).json({
-                message: `Cập nhật trạng thái người dùng thành công thành: ${status}`
+                message: `Cập nhật trạng thái người dùng thành công: ${status}`,
+                counts: countsObject
             });
 
         } catch (error) {

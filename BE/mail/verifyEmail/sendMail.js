@@ -10,53 +10,71 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendVerificationEmail = async (email, verificationToken) => {
-    const verificationLink = `${CLIENT_URL}/auth/verify-email?token=${verificationToken}`;
+    const verificationLink = `${process.env.CLIENT_URL}/auth/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
-        from: `"Hệ thống xác thực" <${process.env.EMAIL_USER}>`,
+        from: `"TIMEMASTERS" <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: "🎉 Xác thực địa chỉ email của bạn!",
+        subject: "Xác thực địa chỉ email của bạn",
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 700px; margin: auto; background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; color: #333;">
-                <div style="text-align: center; padding: 20px; background-color: #f1faff; border-bottom: 2px solid #007acc;">
-                    <img src="https://yourdomain.com/image/logo.jpg" alt="Logo TIMEMASTERS" style="width: 140px;" />
-                    <h1 style="margin: 0; font-size: 26px; color: #007acc;">TIMEMASTERS</h1>
-                    <p style="margin: 4px 0; font-size: 14px; color: #555;">
-                        Hotline: <a href="tel:+84123456789" style="color: #007acc;">+84 123 456 789</a>
-                    </p>
-                </div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; padding: 40px 0;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background-color: #073272; padding: 20px; text-align: center;">
+                  <img src="https://res.cloudinary.com/disgf4yl7/image/upload/v1754403723/xpd7jmghcjjfelzbhyb0.png" alt="TIMEMASTERS" width="120" style="display: block; margin: 0 auto 10px;" />
+                  <h1 style="color: #ffffff; font-size: 24px; margin: 0;">Xác thực Email</h1>
+                </td>
+              </tr>
 
-                <div style="padding: 30px 25px;">
-                    <h2 style="color: #1d3557;">Xin chào!</h2>
-                    <p style="font-size: 16px;">
-                        Cảm ơn bạn đã đăng ký tài khoản. Vui lòng nhấn vào nút bên dưới để xác thực email của bạn:
-                    </p>
-                    <ul style="list-style-type: disc; padding-left: 20px; margin-bottom: 20px;">
-                        <li>
-                            <div style="text-align: center; margin: 25px 0;">
-                                <a href="${verificationLink}" 
-                                   style="background-color: #6c5ce7; color: white; padding: 12px 24px; 
-                                          text-decoration: none; border-radius: 4px; font-weight: bold;">
-                                    Xác thực Email
-                                </a>
-                            </div>
-                            <span style="font-size: 14px; color: #555;">
-                                Liên kết này sẽ hết hạn sau <strong>1 giờ</strong>. Nếu liên kết đã hết hạn, bạn có thể đăng nhập và yêu cầu gửi lại email xác thực.
-                            </span>
-                        </li>
-                    </ul>
+              <!-- Body -->
+              <tr>
+                <td style="padding: 30px; color: #333333;">
+                  <p style="font-size: 16px; margin-top: 0;">Xin chào,</p>
+                  <p style="font-size: 15px; line-height: 1.6;">
+                    Cảm ơn bạn đã đăng ký tài khoản tại TIMEMASTERS.  
+                    Vui lòng nhấp vào nút bên dưới để xác thực địa chỉ email của bạn:
+                  </p>
+                  <p style="text-align: center; margin: 30px 0;">
+                    <a href="${verificationLink}"
+                       style="
+                         background-color: #073272;
+                         color: #ffffff;
+                         text-decoration: none;
+                         padding: 12px 28px;
+                         border-radius: 4px;
+                         font-size: 16px;
+                         display: inline-block;
+                       ">
+                      Xác thực Email
+                    </a>
+                  </p>
+                  <p style="font-size: 14px; color: #555555;">
+                    Liên kết này sẽ hết hạn sau <strong>1 giờ</strong>.  
+                    Nếu liên kết đã hết hạn, bạn có thể đăng nhập và yêu cầu gửi lại email xác thực.
+                  </p>
+                  <p style="font-size: 14px; color: #555555; margin-top: 20px;">
+                    Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
+                  </p>
+                </td>
+              </tr>
 
-                    <p style="font-size: 15px; color: #555;">
-                        Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
-                    </p>
-                </div>
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8f9fa; padding: 20px; font-size: 12px; color: #888888; text-align: center;">
+                  <p style="margin: 0;">© ${new Date().getFullYear()} TIMEMASTERS.</p>
+                  <p style="margin: 5px 0 0;">Email tự động, vui lòng không trả lời lại.</p>
+                </td>
+              </tr>
 
-                <div style="text-align: center; font-size: 13px; color: #999; padding: 20px; background-color: #f8f9fa; border-top: 1px solid #ddd;">
-                    <p style="margin: 5px 0;">© ${new Date().getFullYear()} TIMEMASTERS. Địa chỉ: Số 233, Nguyễn Văn Linh, Cần Thơ</p>
-                    <p style="margin: 5px 0; font-style: italic;">Email này được gửi tự động, vui lòng không trả lời lại.</p>
-                </div>
-            </div>
-        `
+            </table>
+          </td>
+        </tr>
+      </table>
+    `,
     };
 
     try {

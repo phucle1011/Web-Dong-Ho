@@ -137,7 +137,10 @@ export default function Login() {
     const idToken = credentialResponse.credential;
     try {
       setLoading(true);
-      const res = await axios.post(`${Constants.DOMAIN_API}/auth/google`, { idToken, rememberMe: checked });
+      const res = await axios.post(
+        `${Constants.DOMAIN_API}/auth/google`,
+        { idToken, rememberMe: checked }
+      );
       const { token } = res.data.data;
       localStorage.setItem("token", token);
       setAuthData(res.data.data);
@@ -145,7 +148,20 @@ export default function Login() {
       navigate("/");
     } catch (err) {
       console.error(err);
-      toast.error("Google login thất bại, vui lòng thử lại.");
+      if (err.response) {
+        const { status, data } = err.response;
+        const msg = data.message || "";
+
+        if (status === 403 && msg.includes("Tài khoản bị khóa")) {
+          toast.error("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ bộ phận hỗ trợ.");
+        } else if (status === 401 && msg.includes("Google")) {
+          toast.error("Token Google không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.");
+        } else {
+          toast.error(msg || "Đăng nhập Google thất bại. Vui lòng thử lại.");
+        }
+      } else {
+        toast.error("Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.");
+      }
     } finally {
       setLoading(false);
     }

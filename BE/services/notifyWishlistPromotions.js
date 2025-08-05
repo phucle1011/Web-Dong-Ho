@@ -47,33 +47,96 @@ async function notifyWishlistPromotions() {
           const user = wish.user;
           if (!user?.email) continue;
 
-          await transporter.sendMail({
+         await transporter.sendMail({
             from: `"TIMEMASTERS" <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: `Sản phẩm bạn yêu thích đang giảm giá!`,
             html: `
-                <div style="font-family: Arial, sans-serif; padding: 16px; background-color: #f9f9f9;">
-                  <h2 style="color: #1868D5;">🎁 Khuyến mãi dành riêng cho bạn!</h2>
-                  <p>Xin chào <strong>${user.name || 'bạn'}</strong>,</p>
+              <!DOCTYPE html>
+              <html lang="vi">
+              <head><meta charset="UTF-8"><title>Khuyến mãi dành riêng cho bạn</title></head>
+              <body style="margin:0;padding:0;font-family:'Segoe UI',sans-serif;background-color:#f4f6f8;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+                  <tr>
+                    <td align="center">
+                      <table width="600" cellpadding="0" cellspacing="0"
+                            style="background-color:#ffffff;border-radius:8px;overflow:hidden;
+                                    box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                        <!-- Header -->
+                        <tr>
+                          <td style="background-color:#073272;padding:20px;text-align:center;">
+                            <img src="https://res.cloudinary.com/disgf4yl7/image/upload/v1754403723/xpd7jmghcjjfelzbhyb0.png"
+                                alt="TIMEMASTERS" width="120"
+                                style="display:block;margin:0 auto 10px;" />
+                            <h1 style="color:#ffffff;font-size:24px;margin:0;">Khuyến mãi dành riêng cho bạn</h1>
+                          </td>
+                        </tr>
 
-                  <p>Sản phẩm bạn yêu thích hiện đang được <span style="color: #D7263D; font-weight: bold;">
-                    ${promo.discount_type === 'fixed' ? `${promo.discount_value}₫` : `${promo.discount_value}%`}
-                  </span> giảm giá!</p>
+                        <!-- Body -->
+                        <tr>
+                          <td style="padding:30px;color:#333333;line-height:1.6;">
+                            <p style="font-size:16px;margin-top:0;">
+                              Xin chào <strong>${user.name || 'bạn'}</strong>,
+                            </p>
+                            <p style="font-size:15px;">
+                              Sản phẩm bạn yêu thích đang được giảm 
+                              <strong style="color:#D7263D;">
+                                ${
+                                  promo.discount_type === 'fixed'
+                                    ? promo.discount_value.toLocaleString('vi-VN') + '₫'
+                                    : promo.discount_value + '%'
+                                }
+                              </strong>!
+                            </p>
 
-                  <div style="display: flex; align-items: center; gap: 16px; background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 0 6px rgba(0,0,0,0.1);">
-                    <img src="${product?.thumbnail || '#'}" alt="${product?.name}" style="width: 100px; height: auto; border-radius: 8px;">
-                    <div>
-                      <h3 style="margin: 0;">${product?.name || '[Không xác định]'}</h3>
-                      <p style="margin: 4px 0;">Thời gian áp dụng: <strong>${new Date(promo.start_date).toLocaleDateString()}</strong> - <strong>${new Date(promo.end_date).toLocaleDateString()}</strong></p>
-                      <a href="${process.env.CLIENT_URL}/all-products" style="display: inline-block; margin-top: 8px; padding: 8px 12px; background-color: #1868D5; color: white; text-decoration: none; border-radius: 6px;">
-                        Xem trang sản phẩm
-                      </a>
-                    </div>
-                  </div>
+                            <table cellpadding="0" cellspacing="0"
+                                  style="margin:20px 0;width:100%;border-collapse:collapse;">
+                              <tr>
+                                <td style="padding:12px;border:1px solid #ddd; width:120px; text-align:center;">
+                                  <img src="${product?.thumbnail || '#'}"
+                                      alt="${product?.name || ''}"
+                                      style="width:100px;border-radius:8px;" />
+                                </td>
+                                <td style="padding:12px;border:1px solid #ddd;vertical-align:top;">
+                                  <h3 style="margin:0 0 8px;">${product?.name || '[Không xác định]'}</h3>
+                                  <p style="margin:0 0 8px;">
+                                    Thời gian: <strong>
+                                      ${new Date(promo.start_date).toLocaleDateString('vi-VN')} – ${new Date(promo.end_date).toLocaleDateString('vi-VN')}
+                                    </strong>
+                                  </p>
+                                  <p style="margin:0;">
+                                    <a href="${process.env.CLIENT_URL}/product/${product?.id}"
+                                      style="background-color:#073272;color:#ffffff;
+                                              text-decoration:none;padding:8px 16px;
+                                              border-radius:4px;display:inline-block;font-size:14px;">
+                                      Xem sản phẩm
+                                    </a>
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
 
-                  <p style="margin-top: 16px;">Cảm ơn bạn đã tin tưởng và sử dụng website của chúng tôi.</p>
-                </div>
-              `
+                            <p style="font-size:14px;color:#555555;margin-top:20px;">
+                              Cảm ơn bạn đã tin tưởng TIMEMASTERS.
+                            </p>
+                          </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                          <td style="background-color:#f8f9fa;padding:20px;
+                                    text-align:center;font-size:12px;color:#888888;">
+                            <p style="margin:0;">© ${new Date().getFullYear()} TIMEMASTERS.</p>
+                            <p style="margin:5px 0 0;font-style:italic;">Email tự động, vui lòng không trả lời lại.</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </body>
+              </html>
+            `
           });
         }
       }

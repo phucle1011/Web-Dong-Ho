@@ -285,6 +285,11 @@ class AuthController {
 
             // 2. Tìm hoặc tạo user
             let user = await UserModel.findOne({ where: { email } });
+
+            if (user && user.status === 'locked') {
+                return errorResponse(res, "Tài khoản bị khóa!", 403);
+            }
+
             if (!user) {
                 // Sinh mật khẩu ngẫu nhiên và hash
                 const randomPassword = uuidv4();
@@ -352,6 +357,10 @@ class AuthController {
             const user = await UserModel.findOne({ where: { email } });
             if (!user) {
                 return errorResponse(res, "Email không tồn tại!", 404);
+            }
+
+            if (user.status === 'locked') {
+                return errorResponse(res, "Tài khoản bị khóa, không thể đặt lại mật khẩu!", 403);
             }
 
             const token = jwt.sign(

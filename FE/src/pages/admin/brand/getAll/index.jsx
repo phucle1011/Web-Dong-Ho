@@ -249,24 +249,28 @@ function BrandList() {
                 </div>
 
                 {/* Các nút lọc trạng thái */}
-                <div className="flex flex-wrap items-center gap-6 px-6 py-4">
+                <div className="flex flex-wrap gap-2 mb-4 whitespace-nowrap">
                     {[
                         { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
                         { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
                         { key: "inactive", label: "Ngừng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
                     ].map(({ key, label, color, textColor, countKey }) => (
                         <button
-                            key={key}
+                            key={key || "all"}
                             onClick={() => handleFilterChange(key)}
-                            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold ${filterStatus === key ? "bg-blue-900 text-white" : "bg-white text-gray-700"}`}
-                        >
-                            <span>{label}</span>
-                            <span className={`${color} ${textColor} rounded-md px-2 py-0.5 text-xs font-semibold leading-none`}>
-                                {brandCounts[countKey] || 0}
+                            className={`
+                                    flex items-center gap-2 border px-3 py-1.5 rounded-md text-sm transition-all
+                                    ${filterStatus === key ? "bg-[#073272] text-white" : "bg-white text-gray-700"}
+                                `}
+                            >   
+                            {label}
+                            <span className={`px-2 py-0.5 rounded ${color} ${textColor} text-xs font-semibold`}>
+                                {brandCounts[countKey] ?? 0}
                             </span>
                         </button>
                     ))}
                 </div>
+
 
                 {/* Thanh tìm kiếm */}
                 <div className="mb-4 relative flex">
