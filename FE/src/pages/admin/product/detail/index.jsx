@@ -96,9 +96,10 @@ const AdminProductDetail = () => {
 
       // Gọi song song danh sách danh mục và thương hiệu
       const [categoriesRes, brandsRes] = await Promise.all([
-        axios.get("http://localhost:5000/admin/category/list"),
-        axios.get("http://localhost:5000/admin/brand/list"),
-      ]);
+  axios.get(`${Constants.DOMAIN_API}/admin/product/get-category`),
+  axios.get(`${Constants.DOMAIN_API}/admin/product/get-brand`),
+]);
+
 
       // Gán options cho Select
       setCategoryOptions(
