@@ -8,6 +8,7 @@ const ProductVariantModel = require("../../models/productVariantsModel");
 const PromotionUserModel = require("../../models/promotionUsersModel");
 const WithdrawRequestsModel = require('../../models/withdrawRequestsModel');
 const RedisService = require("../../config/redisService");
+const PromotionProductModel = require("../../models/promotionProductsModel");
 
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -591,6 +592,7 @@ class OrderController {
 
             for (const item of products) {
                 const variant = item.variant;
+                const promotion_product_id = item.promotion_product_id;
                 if (!variant) {
                     await t.rollback();
                     return res.status(400).json({ message: "Thiếu thông tin biến thể sản phẩm." });
@@ -610,6 +612,33 @@ class OrderController {
                     await t.rollback();
                     return res.status(400).json({ message: `Sản phẩm ${variant.sku} không đủ kho.` });
                 }
+if (promotion_product_id) {
+  const promoProduct = await PromotionProductModel.findOne({
+    where: {
+      promotion_id: promotion_product_id,
+      product_variant_id: variant.id,
+    },
+    transaction: t,
+    lock: t.LOCK.UPDATE,
+  });
+
+  if (promoProduct && promoProduct.variant_quantity > 0) {
+    const deducted = Math.min(promoProduct.variant_quantity, item.quantity);
+
+    // Trừ variant_quantity
+    promoProduct.variant_quantity -= deducted;
+    await promoProduct.save({ transaction: t });
+
+    // Trừ promotion.quantity dựa trên số vừa trừ từ variant
+    await PromotionModel.decrement(
+      { quantity: deducted },
+      {
+        where: { id: promotion_product_id },
+        transaction: t,
+      }
+    );
+  }
+}
 
                 const price = parseFloat(variant.price);
                 totalPrice += price * item.quantity;

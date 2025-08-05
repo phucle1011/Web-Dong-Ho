@@ -158,28 +158,36 @@ class ProductController {
             let tmpPrice = variantPrice;
             let tmpPercent = 0;
 
-            if (promo.discount_type === "percentage") {
-              tmpPrice -= (tmpPrice * parseFloat(promo.discount_value)) / 100;
-              tmpPercent = parseFloat(promo.discount_value);
-            } else {
-              tmpPrice -= parseFloat(promo.discount_value);
-              tmpPercent =
-                variantPrice > 0
-                  ? ((variantPrice - tmpPrice) / variantPrice) * 100
-                  : 0;
-            }
+           if (promo.discount_type === "percentage") {
+  const discountPercent = parseFloat(promo.discount_value);
+  let discountAmount = (variantPrice * discountPercent) / 100;
+
+  // Áp dụng giới hạn max_price nếu có
+  if (promo.max_price != null && !isNaN(promo.max_price)) {
+    discountAmount = Math.min(discountAmount, parseFloat(promo.max_price));
+  }
+
+  tmpPrice -= discountAmount;
+  tmpPercent = (discountAmount / variantPrice) * 100;
+} else {
+  const fixedDiscount = parseFloat(promo.discount_value);
+  tmpPrice -= fixedDiscount;
+  tmpPercent = variantPrice > 0 ? (fixedDiscount / variantPrice) * 100 : 0;
+}
+
 
             tmpPrice = Math.max(0, tmpPrice);
 
-            const promoData = {
-              id: promo.id,
-              code: promo.code,
-              discount_type: promo.discount_type,
-              discount_value: parseFloat(promo.discount_value),
-              discounted_price: parseFloat(tmpPrice.toFixed(2)),
-              discount_percent: parseFloat(tmpPercent.toFixed(2)),
-              meets_conditions: promo.quantity == null || promo.quantity > 0,
-            };
+          const promoData = {
+  id: promo.id,
+  code: promo.code,
+  discount_type: promo.discount_type,
+  discount_value: parseFloat(promo.discount_value),
+  discounted_price: parseFloat(tmpPrice.toFixed(2)),
+  discount_percent: parseFloat(tmpPercent.toFixed(2)),
+  meets_conditions: promo.quantity == null || promo.quantity > 0,
+};
+
 
             if (
               !best ||

@@ -5,6 +5,7 @@ import FormDelete from "../../../components/formDelete";
 import { toast } from "react-toastify";
 import { FaTrashAlt, FaTrophy } from "react-icons/fa";
 import { decodeToken } from "../Helpers/jwtDecode";
+import { notifyCartChanged } from "../Helpers/cart/cartEvents";
 
 const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCartItemsChange, onHasActiveAuction }) => {
   const [cartItems, setCartItems] = useState([]);
@@ -256,7 +257,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.product_variant_id !== id)
       );
-
+            notifyCartChanged();
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
       await fetchCart();
     } catch (error) {
@@ -284,6 +285,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       });
 
       setCartItems([]);
+            notifyCartChanged();
       toast.success("Đã xóa toàn bộ giỏ hàng");
       await fetchCart();
     } catch (error) {
@@ -308,6 +310,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
         }
       );
       await fetchCart();
+            notifyCartChanged();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");
     }
@@ -407,7 +410,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
         `${Constants.DOMAIN_API}/delete-to-carts/${cartDetailId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      notifyCartChanged();
       setCartItems(prev =>
         prev.filter(item => item.product_variant_id !== cartDetailId)
       );
