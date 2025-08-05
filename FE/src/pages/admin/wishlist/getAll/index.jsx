@@ -142,7 +142,7 @@ function WishlistList() {
         <div className="mb-6 flex items-center gap-2">
           <input
             type="text"
-            placeholder="Tìm kiếm tên người..."
+            placeholder="Tìm kiếm tên người dùng..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"

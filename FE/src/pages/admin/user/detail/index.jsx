@@ -622,7 +622,7 @@ function UserDetail() {
                 className="text-sm bg-[#073272] hover:bg-[#052652] text-white px-2 py-1 rounded shadow flex items-center"
                 onClick={() => showAddressModal()}
               >
-                <i className="fas fa-plus mr-1 text-xs"></i>+ Thêm địa chỉ mới
+                <i className="fas fa-plus mr-1 text-xs"></i> Thêm địa chỉ mới
               </button>
             </h3>
 
@@ -633,7 +633,7 @@ function UserDetail() {
                 <table className="min-w-full border border-gray-300 rounded divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
-                      {["ID", "Địa chỉ", "Mặc định", ""].map(header => (
+                      {["#", "Địa chỉ", "Mặc định", ""].map(header => (
                         <th key={header} className="px-4 py-3 text-left text-sm font-medium text-gray-700">
                           {header}
                         </th>

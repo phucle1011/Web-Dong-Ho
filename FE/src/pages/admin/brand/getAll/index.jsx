@@ -5,6 +5,8 @@ import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
 import Swal from 'sweetalert2';
 import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaTrashAlt, FaEye } from 'react-icons/fa';
+import FormDelete from "../../../../components/formDelete";
+
 
 function BrandList() {
     const [brands, setBrands] = useState([]);
@@ -20,6 +22,8 @@ function BrandList() {
     const [filterStatus, setFilterStatus] = useState('');
     const [deletingBrandId, setDeletingBrandId] = useState(null);
     const [brandCounts, setBrandCounts] = useState({ all: 0, active: 0, inactive: 0 });
+    const [deletingBrand, setDeletingBrand] = useState(null);
+
 
     useEffect(() => {
         if (isSearching && searchTerm.trim() !== '') {
@@ -206,24 +210,8 @@ function BrandList() {
         setSearchError('');
     };
 
-    const handleDeleteBrand = (brandId) => {
-        setDeletingBrandId(brandId);
-        Swal.fire({
-            title: 'Xác nhận xóa',
-            text: 'Bạn có chắc chắn muốn xóa thương hiệu này? Thao tác này không thể hoàn tác!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Xóa',
-            cancelButtonText: 'Hủy',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                performDeleteBrand(brandId);
-            } else {
-                setDeletingBrandId(null);
-            }
-        });
+    const handleDeleteBrand = (brand) => {
+        setDeletingBrand(brand);
     };
 
     const performDeleteBrand = async (brandId) => {
@@ -388,12 +376,12 @@ function BrandList() {
                                                             <FaEye size={16} className="font-bold" />
                                                         </Link>
                                                         <button
-                                                            onClick={() => handleDeleteBrand(brand.id)}
+                                                            onClick={() => handleDeleteBrand(brand)}
                                                             className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                                                            disabled={deletingBrandId === brand.id}
                                                         >
                                                             <FaTrashAlt size={20} className="font-bold" />
                                                         </button>
+
                                                     </div>
                                                 </td>
                                             </tr>
@@ -506,6 +494,16 @@ function BrandList() {
                     </div>
                 </div>
             )}
+
+            {deletingBrand && (
+                <FormDelete
+                    isOpen={true}
+                    onClose={() => setDeletingBrand(null)}
+                    onConfirm={() => performDeleteBrand(deletingBrand.id)}
+                    message={`Bạn có chắc chắn muốn xóa thương hiệu "${deletingBrand.name}"?`}
+                />
+            )}
+
 
         </div>
     );

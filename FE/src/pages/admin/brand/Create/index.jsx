@@ -318,7 +318,7 @@ function BrandCreate({ onSuccess, isModal = false }) {
             <button
               type="submit"
               disabled={loading}
-              className="bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 transition disabled:opacity-70"
+              className="bg-[#073272] text-white px-6 py-2 rounded shadow hover:bg-blue-700 transition disabled:opacity-70"
             >
               {loading ? "Đang thêm thương hiệu..." : "Thêm thương hiệu"}
             </button>

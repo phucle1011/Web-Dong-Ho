@@ -35,18 +35,18 @@ export default function ProductView({ className, reportHandler }) {
   //   }
   // }, [state]);
   const { productId } = state || {};
-const [showFullShortDesc, setShowFullShortDesc] = useState(false);
-const SHORT_DESC_LIMIT = 30;
+  const [showFullShortDesc, setShowFullShortDesc] = useState(false);
+  const SHORT_DESC_LIMIT = 30;
 
-useEffect(() => {
-  if (variantImages.length > 0) {
-    const safeIndex = Math.max(
-      0,
-      Math.min(currentImageIndex, variantImages.length - 1)
-    );
-    setSelectedImage(variantImages[safeIndex]?.image_url || "");
-  }
-}, [currentImageIndex, variantImages]);
+  useEffect(() => {
+    if (variantImages.length > 0) {
+      const safeIndex = Math.max(
+        0,
+        Math.min(currentImageIndex, variantImages.length - 1)
+      );
+      setSelectedImage(variantImages[safeIndex]?.image_url || "");
+    }
+  }, [currentImageIndex, variantImages]);
 
 
   useEffect(() => {
@@ -58,7 +58,7 @@ useEffect(() => {
           `${Constants.DOMAIN_API}/products/${productId}/variants`
         );
         const { product } = res.data;
-         
+
         setProductData(product);
         setVariants(product.variants);
         setImages(product.variantImages);
@@ -194,44 +194,21 @@ useEffect(() => {
     const userId = decoded?.id;
 
     if (!token || !userId) {
-      toast.error(
-        "Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích."
-      );
-      return;
-    }
-
-    // Hiển thị dialog xác nhận với SweetAlert2
-    const result = await Swal.fire({
-      title: "Xác nhận xóa",
-      text: "Bạn có chắc muốn xóa sản phẩm này khỏi danh sách yêu thích?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
-    });
-
-    if (!result.isConfirmed) {
+      toast.error("Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
       return;
     }
 
     try {
       const response = await axios.delete(
         `${Constants.DOMAIN_API}/users/${userId}/wishlist/${selectedVariant.id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(
-        response.data.message || "Đã xóa khỏi danh sách yêu thích!"
-      );
-      setIsInWishlist(false); // Cập nhật ngay lập tức
-      await checkWishlistStatus(selectedVariant.id); // Xác nhận lại từ API
+      toast.success(response.data.message || "Đã xóa khỏi danh sách yêu thích!");
+      setIsInWishlist(false);
+      await checkWishlistStatus(selectedVariant.id);
     } catch (error) {
       const errorMessage =
-        error.response?.data?.message ||
-        "Lỗi khi xóa khỏi danh sách yêu thích.";
+        error.response?.data?.message || "Lỗi khi xóa khỏi danh sách yêu thích.";
       toast.error(errorMessage);
     }
   };
@@ -265,7 +242,7 @@ useEffect(() => {
           },
         }
       );
-       notifyCartChanged(); 
+      notifyCartChanged();
       toast.success("Đã thêm vào giỏ hàng thành công!");
     } catch (error) {
       if (error.response?.status === 400) {
@@ -293,10 +270,10 @@ useEffect(() => {
   if (error) return <div>Lỗi: {error}</div>;
   if (!productData) return null;
 
- const changeImgHandler = (url) => {
-  const index = variantImages.findIndex((img) => img.image_url === url);
-  setCurrentImageIndex(index >= 0 ? index : 0);
-};
+  const changeImgHandler = (url) => {
+    const index = variantImages.findIndex((img) => img.image_url === url);
+    setCurrentImageIndex(index >= 0 ? index : 0);
+  };
 
 
   const handleVariantSelect = (variant) => {
@@ -336,47 +313,46 @@ useEffect(() => {
 
   return (
     <div
-      className={`product-view w-full lg:flex justify-between ${
-        className || ""
-      }`}
+      className={`product-view w-full lg:flex justify-between ${className || ""
+        }`}
     >
       <div data-aos="fade-right" className="lg:w-1/2 xl:mr-[70px] lg:mr-[50px]">
         <div className="w-full">
-         <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
-  <img
-    src={selectedImage}
-    alt=""
-     className="max-h-full max-w-full object-contain"
-  />
+          <div className="w-full h-[600px] border border-qgray-border flex justify-center items-center overflow-hidden relative mb-3">
+            <img
+              src={selectedImage}
+              alt=""
+              className="max-h-full max-w-full object-contain"
+            />
 
-  {/* Nút trái */}
-  {variantImages.length > 1 && (
-    <button
-      onClick={() =>
-        setCurrentImageIndex((prev) =>
-          prev === 0 ? variantImages.length - 1 : prev - 1
-        )
-      }
-      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-2 shadow z-10"
-    >
-      ◀
-    </button>
-  )}
+            {/* Nút trái */}
+            {variantImages.length > 1 && (
+              <button
+                onClick={() =>
+                  setCurrentImageIndex((prev) =>
+                    prev === 0 ? variantImages.length - 1 : prev - 1
+                  )
+                }
+                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-2 shadow z-10"
+              >
+                ◀
+              </button>
+            )}
 
-  {/* Nút phải */}
-  {variantImages.length > 1 && (
-    <button
-      onClick={() =>
-        setCurrentImageIndex((prev) =>
-          prev === variantImages.length - 1 ? 0 : prev + 1
-        )
-      }
-      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-2 shadow z-10"
-    >
-      ▶
-    </button>
-  )}
-</div>
+            {/* Nút phải */}
+            {variantImages.length > 1 && (
+              <button
+                onClick={() =>
+                  setCurrentImageIndex((prev) =>
+                    prev === variantImages.length - 1 ? 0 : prev + 1
+                  )
+                }
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-2 shadow z-10"
+              >
+                ▶
+              </button>
+            )}
+          </div>
 
           <div className="overflow-x-auto">
             <div className="flex gap-2 flex-nowrap">
@@ -389,9 +365,8 @@ useEffect(() => {
                   <img
                     src={img.image_url}
                     alt=""
-                    className={`w-full h-full object-contain ${
-                      selectedImage !== img.image_url ? "opacity-50" : ""
-                    }`}
+                    className={`w-full h-full object-contain ${selectedImage !== img.image_url ? "opacity-50" : ""
+                      }`}
                   />
                 </div>
               ))}
@@ -417,10 +392,10 @@ useEffect(() => {
           {productData.short_description && (
             <div className="mb-4 text-sm text-gray-600">
               {showFullShortDesc ||
-              productData.short_description.length <= SHORT_DESC_LIMIT
+                productData.short_description.length <= SHORT_DESC_LIMIT
                 ? productData.short_description
                 : productData.short_description.slice(0, SHORT_DESC_LIMIT) +
-                  "..."}
+                "..."}
               {productData.short_description.length > SHORT_DESC_LIMIT && (
                 <button
                   onClick={() => setShowFullShortDesc(!showFullShortDesc)}
@@ -460,13 +435,11 @@ useEffect(() => {
                 <div
                   key={variant.id}
                   className={`border rounded-xl px-4 py-2 min-w-[150px] text-center transition
-                    ${
-                      inStock
-                        ? "cursor-pointer hover:shadow"
-                        : "opacity-50 cursor-not-allowed"
+                    ${inStock
+                      ? "cursor-pointer hover:shadow"
+                      : "opacity-50 cursor-not-allowed"
                     }
-                    ${
-                      isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""
+                    ${isSelected ? "border-blue-600 ring-2 ring-blue-300" : ""
                     }`}
                   onClick={() => {
                     if (inStock) {
@@ -510,13 +483,13 @@ useEffect(() => {
                 <tbody>
                   {selectedVariant.attributeValues.map((attr, index) => (
                     <tr key={index}>
-                      
+
                       <td className="p-2 border border-gray-300">
                         <b>
-                        {attr.attribute?.name || "Không xác định"}
+                          {attr.attribute?.name || "Không xác định"}
                         </b>
                       </td>
-                     
+
                       <td className="p-2 border border-gray-300">
                         {attr.attribute?.name.toLowerCase() === "màu sắc" ? (
                           <div className="flex items-center gap-2">
@@ -563,9 +536,7 @@ useEffect(() => {
             <div className="w-[60px] h-full flex justify-center items-center border border-qgray-border">
               <button
                 type="button"
-                onClick={
-                  isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist
-                }
+                onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
                 title={
                   isInWishlist
                     ? "Xóa khỏi danh sách yêu thích"

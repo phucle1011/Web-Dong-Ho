@@ -335,7 +335,7 @@ function BrandDetail() {
                     <div className="mb-6">
                         <strong className="text-gray-600 block mb-1">Mô tả:</strong>
                         <Editor
-                            apiKey="your_tinymce_api_key" // Hoặc để trống nếu dùng community
+                            apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm" // Hoặc để trống nếu dùng community
                             value={editableBrand.description || ""}
                             onEditorChange={(newValue) =>
                                 setEditableBrand((prev) => ({ ...prev, description: newValue }))

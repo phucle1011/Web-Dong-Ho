@@ -22,6 +22,8 @@ function UserList() {
     const [filterStatus, setFilterStatus] = useState('');
     const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, locked: 0 });
     const limit = 10;
+    const [processingReason, setProcessingReason] = useState(false);
+
 
     const fetchData = useCallback(async (page, currentFilterStatus, currentAppliedSearchTerm) => {
         setLoading(true);
@@ -91,37 +93,31 @@ function UserList() {
 
     const handleSubmitReason = async () => {
         const finalReason = reasonOption === 'Khác' ? customReason : reasonOption;
-        if (!finalReason || !finalReason.trim()) {
+        if (!finalReason?.trim()) {
             toast.warning("Vui lòng nhập lý do thay đổi trạng thái.");
             return;
         }
 
+        setProcessingReason(true);
         try {
             const res = await axios.put(`${Constants.DOMAIN_API}/admin/user/${selectedUserId}/status`, {
                 status: selectedNewStatus,
                 reason: finalReason,
             });
-
             toast.success(res.data.message);
-            fetchData(currentPage, filterStatus, appliedSearchTerm); // Sử dụng appliedSearchTerm thay vì searchTerm
+            await fetchData(currentPage, filterStatus, appliedSearchTerm);
         } catch (error) {
             toast.error(`Không thể cập nhật trạng thái người dùng: ${error.response?.data?.message || error.message}`);
         } finally {
+            setProcessingReason(false);
             setShowReasonModal(false);
             setSelectedUserId(null);
             setSelectedNewStatus('');
             setReasonOption('');
             setCustomReason('');
-
-            try {
-                const checkUser = await axios.get(`${Constants.DOMAIN_API}/admin/user/list`, {
-                    params: { page: currentPage, limit, status: filterStatus, searchTerm: appliedSearchTerm },
-                });
-            } catch (checkError) {
-                console.error('Lỗi khi kiểm tra danh sách người dùng:', checkError.message);
-            }
         }
     };
+
 
     const getVietnameseStatus = (englishStatus) => {
         switch (englishStatus) {
@@ -357,16 +353,19 @@ function UserList() {
                                 <button
                                     onClick={() => setShowReasonModal(false)}
                                     className="px-4 py-2 bg-gray-300 rounded"
+                                    disabled={processingReason}
                                 >
                                     Hủy
                                 </button>
                                 <button
                                     onClick={handleSubmitReason}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+                                    disabled={processingReason}
                                 >
-                                    Xác nhận
+                                    {processingReason ? "Đang xử lý..." : "Xác nhận"}
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 )}
