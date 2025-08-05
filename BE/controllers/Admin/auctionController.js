@@ -132,20 +132,45 @@ class auctionController {
 
    static async getAuctionProduct(req, res) {
       try {
+         const { Op } = require('sequelize');
+         const auctionId = req.query.auctionId;
+         let currentVariantId = null;
+
+         if (auctionId) {
+            const auction = await AuctionModel.findByPk(auctionId, {
+               attributes: ['product_variant_id'],
+               raw: true
+            });
+            if (auction) {
+               currentVariantId = auction.product_variant_id;
+            }
+         }
+
          const used = await AuctionModel.findAll({
-            where: {
-               status: { [Op.in]: ['upcoming', 'active'] }
-            },
+            where: { status: { [Op.in]: ['upcoming', 'active'] } },
             attributes: ['product_variant_id'],
-            group: ['product_variant_id']
+            group: ['product_variant_id'],
+            raw: true
          });
-         const usedIds = used.map(u => u.product_variant_id);
+         let usedIds = used.map(u => u.product_variant_id);
+
+         if (currentVariantId !== null) {
+            usedIds = usedIds.filter(id => id !== currentVariantId);
+         }
+
+         // const whereClause = {
+         //    is_auction_only: 1,
+         //    ...(usedIds.length > 0 && { id: { [Op.notIn]: usedIds } })
+         // };
+
+         const whereClause = {
+            is_auction_only: 1,
+            stock: { [Op.gt]: 0 },
+            ...(usedIds.length > 0 && { id: { [Op.notIn]: usedIds } })
+         };
 
          const auctionProducts = await ProductVariantModel.findAll({
-            where: {
-               is_auction_only: 1,
-               id: { [Op.notIn]: usedIds }
-            },
+            where: whereClause,
             include: [
                {
                   model: ProductModel,
@@ -161,12 +186,13 @@ class auctionController {
          });
 
          return res.status(200).json({ data: auctionProducts });
-      } catch (error) {
+      }
+      catch (error) {
          console.error("Lỗi server:", error);
          return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
       }
    }
-   
+
    //--------------------------[ GET ID ]---------------------------
    static async getId(req, res) {
       try {

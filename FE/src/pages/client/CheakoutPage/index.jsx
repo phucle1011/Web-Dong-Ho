@@ -9,6 +9,7 @@ import Constants from "../../../Constants";
 import Swal from "sweetalert2";
 import axios from 'axios';
 import { toast } from "react-toastify";
+import { FaTrophy } from "react-icons/fa";
 
 export default function CheckoutPage() {
   const location = useLocation();
@@ -897,7 +898,9 @@ export default function CheckoutPage() {
         // })),
 
         products: checkoutItems.map(item => {
+          console.log('Auctions for variant', item.product_variant_id, item.variant.auctions);
           const info = getAuctionInfo(item.variant, user.id, item.created_at);
+          console.log('Auction info:', info);
           const unitPrice = info.isAuction
             ? info.bidAmount
             : parseFloat(item.variant.promotion?.discounted_price || item.variant.price || 0);
@@ -906,7 +909,8 @@ export default function CheckoutPage() {
             user_id: item.user_id,
             product_variant_id: item.product_variant_id,
 
-            auction_id: info.isAuction ? info.auctionId : null,
+            // auction_id: info.isAuction ? info.auctionId : null,
+              auction_id: item.auction_id,
             quantity: item.quantity,
             unit_price: unitPrice,
             original_price: parseFloat(item.variant.price || 0),
@@ -1249,6 +1253,12 @@ export default function CheckoutPage() {
                           const image = variant?.images?.[0]?.image_url || "";
                           const displayedAttributes = showAll ? attributes : attributes.slice(0, 3);
 
+                          const info = getAuctionInfo(item.variant, user.id, item.created_at);
+                          const isAuction = info.isAuction;
+                          const bidAmount = info.bidAmount || 0;
+                          const unitPrice = isAuction ? bidAmount : parseFloat(item.variant.promotion?.discounted_price || item.variant.price || 0);
+                          const lineTotal = isAuction ? bidAmount * item.quantity : unitPrice * item.quantity;
+
                           return (
                             <li key={item.id} className="pb-4">
                               <div className="flex justify-between items-start gap-4">
@@ -1299,7 +1309,7 @@ export default function CheckoutPage() {
                                       </button>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-700">
+                                  {/* <p className="text-sm text-gray-700">
                                     Số lượng: <strong>{quantity}</strong>
                                   </p>
                                   <div className="flex flex-col gap-1">
@@ -1311,14 +1321,49 @@ export default function CheckoutPage() {
                                         {Number(originalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                                       </span>
                                     )}
-                                  </div>
+                                  </div> */}
+
+                                  {isAuction ? (
+                                    <div className="flex flex-col items-start gap-1">
+                                      <span className="text-sm text-gray-700"><span className="ml-2 text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">
+                                        <FaTrophy className="inline mr-1" />
+                                        Đấu giá
+                                      </span></span>
+                                      {/* <div className="text-sm text-gray-700">
+                                        Tổng tiền: <strong>
+                                          {lineTotal.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                        </strong>
+                                      </div> */}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <p className="text-sm text-gray-700">
+                                        Số lượng: <strong>{quantity}</strong>
+                                      </p>
+                                      <div className="flex flex-col gap-1">
+                                        <span className={`font-semibold ${discountPercent > 0 ? "text-qred" : "text-qblack"}`}>
+                                          {Number(unitPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                        </span>
+                                        {discountPercent > 0 && unitPrice < originalPrice && (
+                                          <span className="text-gray-400 line-through text-xs">
+                                            {Number(originalPrice).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                    </>
+                                  )}
+
                                 </div>
 
-                                <div className="text-right min-w-[100px]">
-                                  <span className="text-lg font-bold text-qred block">
-                                    {Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                                  </span>
-                                </div>
+                                {!isAuction && (
+                                  <div className="text-right min-w-[100px]">
+                                    <span className="text-lg font-bold text-qred block">
+                                      {Number(total).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                    </span>
+                                  </div>
+                                )}
+
                               </div>
                             </li>
                           );

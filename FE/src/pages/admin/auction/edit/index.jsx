@@ -30,12 +30,13 @@ const AuctionEdit = () => {
 
     const fetchProducts = async () => {
         try {
-            const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`);
-            const available = res.data.data.filter(p => p.stock > 0);
-            const options = available.map(p => ({
+            const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`,
+                { params: { auctionId: id } })
+            // const available = res.data.data.filter(p => p.stock > 0);
+            const options = res.data.data.map(p => ({
                 value: p.id,
                 label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-                    }${p.stock != null ? ` (Còn ${p.stock})` : ""}`,
+                    }`,
             }));
             setProducts(options);
         } catch (err) {
@@ -75,7 +76,7 @@ const AuctionEdit = () => {
 
             });
 
-            setInitialLoad(false);
+            // setInitialLoad(false);
         } catch (err) {
             toast.error("Không tìm thấy phiên đấu giá");
 
@@ -83,15 +84,42 @@ const AuctionEdit = () => {
         }
     };
 
+    // useEffect(() => {
+    //     fetchProducts();
+    //     fetchAuction();
+    // }, []);
+
     useEffect(() => {
-        fetchProducts();
-        fetchAuction();
+        Promise.all([fetchProducts(), fetchAuction()])
+            .then(() => setInitialLoad(false));
     }, []);
 
     const formatCurrency = (value) => {
         if (!value) return "";
-        const num = value.toString().replace(/\D/g, "");
+        const [intPart] = value.toString().split(".");
+        const num = intPart.replace(/\D/g, "");
         return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    };
+
+    const handlePriceChange = e => {
+        const el = e.target;
+        const rawBeforeCursor = el.value.slice(0, el.selectionStart).replace(/\D/g, "");
+        const raw = el.value.replace(/\D/g, "");
+
+        // Format thêm dấu chấm
+        const formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+        setForm(prev => ({ ...prev, priceStep: formatted }));
+        validateField("priceStep", formatted);
+
+        // Tính vị trí mới: số ký tự trong phần beforeCursor sau khi format
+        const formattedBeforeCursor = rawBeforeCursor.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const newPos = formattedBeforeCursor.length;
+
+        // Đặt lại con trỏ sau khi React update (dùng setTimeout 0)
+        setTimeout(() => {
+            el.setSelectionRange(newPos, newPos);
+        }, 0);
     };
 
     const parseCurrency = (value) => {
@@ -224,11 +252,10 @@ const AuctionEdit = () => {
                         <div className="relative">
                             <input
                                 type="text"
-                                className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.priceStep ? "border-red-500" : ""}`}
+                                className="form-control w-full px-3 py-2 border rounded pl-8"
                                 placeholder="Nhập bước giá"
                                 value={form.priceStep}
-                                onChange={(e) => handleChange("priceStep", e.target.value)}
-                                onBlur={(e) => validateField("priceStep", e.target.value)}
+                                onChange={handlePriceChange}
                                 disabled={loading}
                             />
                         </div>

@@ -175,6 +175,7 @@ router.get("/brands/top", BrandController.getTopBrands);
 
 //------------------[ USERS ]------------------
 router.put('/users/:id', UserController.updateUserInfo);
+router.get('/fail-me', authenticate, UserController.getMe);
 
 //------------------[ Reviews ]------------------
 router.get('/:userId/reviews', reviewController.getAllReviews);

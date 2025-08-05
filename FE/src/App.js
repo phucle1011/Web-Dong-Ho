@@ -153,14 +153,23 @@ const AppRoutes = () => {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/auth/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/Auctions" element={<AuctionProductDetail />} />
+          {/* <Route path="/Auctions" element={<AuctionProductDetail />} /> */}
           <Route path="/AcutionsDetail" element={<AuctionsProductDetail />} />
           <Route path="/AuctionGuide" element={<AuctionGuide />} />
 
-
-
         </Route>
-        <Route path="/Room" element={<AuctionRoom />} />
+
+        <Route path="/Room" element={
+          <ProtectedRoute restrictedRoles={["admin"]}>
+          <AuctionRoom />
+          </ProtectedRoute>
+          } />
+
+          <Route path="/Auctions" element={
+          <ProtectedRoute restrictedRoles={["admin"]}>
+          <AuctionProductDetail />
+          </ProtectedRoute>
+          } />
 
         {/*--------------------ADMIN-------------------- */}
         <Route

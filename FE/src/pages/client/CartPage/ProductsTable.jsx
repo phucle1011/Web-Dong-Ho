@@ -15,6 +15,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [showAllMap, setShowAllMap] = useState({});
+  const [failedCount, setFailedCount] = useState(0);
 
   const formatHHMMSS = (secs) => {
     const h = String(Math.floor(secs / 3600)).padStart(2, "0");
@@ -165,12 +166,28 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const fetchCart = async () => {
     const token = localStorage.getItem("token");
     try {
+      // const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // });
+      // setCartItems(res.data.data);
+
       const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      setCartItems(res.data.data);
+      // map thêm auction_id vào mỗi item
+      const itemsWithAuction = res.data.data.map(item => {
+        const info = getAuctionInfo(item.variant, meId, item.created_at);
+        return {
+          ...item,
+          // nếu là đấu giá thì đính kèm auctionId, ngược lại null
+          auction_id: info.isAuction ? info.auctionId : null
+        };
+      });
+      setCartItems(itemsWithAuction);
+      // gọi luôn callback lên cha
+      onCartItemsChange?.(itemsWithAuction);
     } catch (error) {
       console.error("Lỗi khi lấy giỏ hàng:", error);
       // toast.error("Không thể tải giỏ hàng. Vui lòng thử lại.");
@@ -402,21 +419,46 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
     }
   };
 
+  // useEffect(() => {
+  //   const now = Date.now();
+  //   const found = cartItems.some(item => {
+  //     const info = getAuctionInfo(item.variant, meId, item.created_at);
+  //     if (!info.isAuction) return false;
+
+  //     const a = item.variant.auctions.find(a => a.id === info.auctionId);
+  //     if (!a) return false;
+
+  //     const expiry = Date.parse(a.end_time) + 24 * 3600 * 1000;
+  //     return expiry > now;
+  //   });
+  //   setHasActiveAuction(found);
+  //   onHasActiveAuction?.(found);
+  // }, [cartItems, onHasActiveAuction]);
+
   useEffect(() => {
-    const now = Date.now();
-    const found = cartItems.some(item => {
+    const selectedHasAuction = selectedItems.some(variantId => {
+      const item = cartItems.find(i => i.product_variant_id === variantId);
+      if (!item) return false;
       const info = getAuctionInfo(item.variant, meId, item.created_at);
-      if (!info.isAuction) return false;
-
-      const a = item.variant.auctions.find(a => a.id === info.auctionId);
-      if (!a) return false;
-
-      const expiry = Date.parse(a.end_time) + 24 * 3600 * 1000;
-      return expiry > now;
+      return info.isAuction;
     });
-    setHasActiveAuction(found);
-    onHasActiveAuction?.(found);
-  }, [cartItems, onHasActiveAuction]);
+    onHasActiveAuction?.(selectedHasAuction);
+  }, [selectedItems, cartItems, onHasActiveAuction]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    axios.get(`${Constants.DOMAIN_API}/fail-me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => {
+        setFailedCount(res.data.data.failed_payment_count || 0);
+      })
+      .catch(() => {
+        console.warn("Không lấy được failed_payment_count");
+      });
+  }, []);
+
+  const remainingCount = Math.max(3 - failedCount, 0);
 
   return (
     <div className={`w-full ${className || ""}`}>
@@ -682,7 +724,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                       <tr className="bg-red-50 text-center">
                         <td colSpan={7} className="text-red-700 text-sm p-3">
                           Vui lòng thanh toán trước hạn
-                          nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
+                          nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần <strong>( còn {remainingCount})</strong> không thanh toán
                           bạn sẽ bị cấm đấu giá vĩnh viễn!
                         </td>
                       </tr>

@@ -620,6 +620,7 @@ class OrderController {
                     price,
                     quantity: item.quantity,
                     total: price * item.quantity,
+                    auction_id: item.auction_id || null,
                 });
 
                 productVariant.stock -= item.quantity;
@@ -759,19 +760,20 @@ class OrderController {
                 product_variant_id: item.variant,
                 quantity: item.quantity,
                 price: item.price,
+                auction_id: item.auction_id
             }));
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
             const successfullyOrderedProductIds = products.map(p => p.variant.id);
 
-await CartModel.destroy({
-    where: {
-        user_id,
-        product_variant_id: successfullyOrderedProductIds
-    },
-    transaction: t
-});
+            await CartModel.destroy({
+                where: {
+                    user_id,
+                    product_variant_id: successfullyOrderedProductIds
+                },
+                transaction: t
+            });
 
             await t.commit();
 
@@ -846,6 +848,7 @@ await CartModel.destroy({
                     price: price,
                     quantity: item.quantity,
                     total: price * item.quantity,
+                    auction_id: item.auction_id || null,
                 });
             }
 
@@ -926,6 +929,7 @@ await CartModel.destroy({
                     price: parseFloat(item.variant.price),
                 },
                 quantity: item.quantity,
+                auction_id: item.auction_id || null,
             }));
 
             const order_code = req.body.orderId;
@@ -1114,6 +1118,7 @@ await CartModel.destroy({
                     price: price,
                     quantity: item.quantity,
                     total: price * item.quantity,
+                    auction_id: item.auction_id || null,
                 });
             }
 
@@ -1224,6 +1229,7 @@ await CartModel.destroy({
                 product_variant_id: item.product_id,
                 quantity: item.quantity,
                 price: item.price,
+                auction_id: item.auction_id
             }));
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
@@ -1326,6 +1332,7 @@ await CartModel.destroy({
                     quantity: p.quantity,
                     variant_id: p.product_variant_id || p.variant?.id,
                     price: p.variant?.price || p.price,
+                    auction_id: p.auction_id || null, 
                 })),
                 promotion: req.body.promotion,
                 promotion_user_id: req.body.promotion_user_id || null,
@@ -1537,6 +1544,7 @@ await CartModel.destroy({
                     price: price,
                     quantity: item.quantity,
                     total: price * item.quantity,
+                    auction_id: item.auction_id || null,
                 });
 
                 emailProducts.push({
@@ -1667,6 +1675,7 @@ await CartModel.destroy({
                 product_variant_id: item.product_id,
                 quantity: item.quantity,
                 price: item.price,
+                auction_id: item.auction_id
             }));
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 
@@ -1741,7 +1750,7 @@ await CartModel.destroy({
                 .map((item) => {
                     const variant = item.variant;
                     const productName =
-                        variant?.product?.name || "Sản phẩm không xác định";
+                        variant?.product?.name || "";
                     const price = new Intl.NumberFormat("vi-VN").format(
                         variant?.price || 0
                     );

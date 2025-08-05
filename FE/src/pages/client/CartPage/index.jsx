@@ -24,6 +24,8 @@ export default function CardPage({ cart = true }) {
   const [cartItems, setCartItems] = useState([]);
   const location = useLocation();
 
+  const [hasActiveAuction, setHasActiveAuction] = useState(false);
+
   useEffect(() => {
     localStorage.removeItem("selectedPromoCode");
     localStorage.removeItem("selectedVoucher");
@@ -296,119 +298,128 @@ export default function CardPage({ cart = true }) {
                 onTotalChange={handleTotalChange}
                 onSelectedItemsChange={setSelectedProductVariants}
                 onCartItemsChange={setCartItems}
+                onHasActiveAuction={setHasActiveAuction}
               />
 
               <div className="flex flex-col lg:flex-row gap-6">
                 <div className="lg:w-1/2 w-full">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                    <div className="relative w-[150px] h-[40px]">
-                      <InputCom
-                        inputWrapperClasses="rounded-lg"
-                        inputClasses="px-4"
-                        type="text"
-                        placeholder="Mã giảm giá"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                      />
-                      {promoCode && (
+                  {hasActiveAuction ? (
+                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
+                      Do là sản phẩm đấu giá không thể áp dụng mã giảm giá hoặc voucher.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                        <div className="relative w-[150px] h-[40px]">
+                          <InputCom
+                            inputWrapperClasses="rounded-lg"
+                            inputClasses="px-4"
+                            type="text"
+                            placeholder="Mã giảm giá"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                          />
+                          {promoCode && (
+                            <button
+                              type="button"
+                              onClick={handleClearPromoCode}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              aria-label="Xóa mã giảm giá"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                         <button
                           type="button"
-                          onClick={handleClearPromoCode}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                          aria-label="Xóa mã giảm giá"
+                          onClick={handleApplyDiscount}
+                          className="w-[120px] h-[40px] black-btn rounded-lg"
+                          disabled={isLoading}
                         >
-                          ✕
+                          <span className="text-sm font-semibold">{isLoading ? "Đang xử lý..." : "Áp dụng"}</span>
                         </button>
+                      </div>
+
+                      {error && (
+                        <p className="text-red-500 text-sm mb-4">{error}</p>
                       )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleApplyDiscount}
-                      className="w-[120px] h-[40px] black-btn rounded-lg"
-                      disabled={isLoading}
-                    >
-                      <span className="text-sm font-semibold">{isLoading ? "Đang xử lý..." : "Áp dụng"}</span>
-                    </button>
-                  </div>
 
-                  {error && (
-                    <p className="text-red-500 text-sm mb-4">{error}</p>
-                  )}
-
-                  <div className="voucher-section mb-6 max-w-md max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <h3 className="text-[16px] font-semibold text-gray-800 mb-3">Chọn Voucher</h3>
-                    {isLoading ? (
-                      <p className="text-gray-500">Đang tải danh sách voucher...</p>
-                    ) : activePromotions.length === 0 ? (
-                      <p className="text-gray-500">Không có voucher khả dụng.</p>
-                    ) : (
-                      activePromotions.map((voucher) => {
-                        const disabled = totalPrice < voucher.min_price_threshold;
-                        const isSelected = selectedVoucher && selectedVoucher.id === voucher.id;
-                        return (
-                          <div
-                            key={voucher.id}
-                            className={`flex items-center justify-between p-3 border rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200
+                      <div className="voucher-section mb-6 max-w-md max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <h3 className="text-[16px] font-semibold text-gray-800 mb-3">Chọn Voucher</h3>
+                        {isLoading ? (
+                          <p className="text-gray-500">Đang tải danh sách voucher...</p>
+                        ) : activePromotions.length === 0 ? (
+                          <p className="text-gray-500">Không có voucher khả dụng.</p>
+                        ) : (
+                          activePromotions.map((voucher) => {
+                            const disabled = totalPrice < voucher.min_price_threshold;
+                            const isSelected = selectedVoucher && selectedVoucher.id === voucher.id;
+                            return (
+                              <div
+                                key={voucher.id}
+                                className={`flex items-center justify-between p-3 border rounded-lg mb-2 cursor-pointer bg-white shadow-sm transition-all duration-200
                               ${isSelected ? "border-green-500 bg-green-50" : "border-gray-200 hover:bg-gray-50"} 
                               ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-                            onClick={() => !disabled && handleVoucherSelect(voucher)}
-                            style={{ maxWidth: '400px' }}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Chọn voucher ${voucher.name}${disabled ? ", không khả dụng" : ""}`}
-                            aria-selected={isSelected}
-                            onKeyDown={(e) => {
-                              if ((e.key === "Enter" || e.key === " ") && !disabled) {
-                                handleVoucherSelect(voucher);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center flex-1 min-w-0">
-                              {voucher.discount_type === "shipping" && (
-                                <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
-                              )}
-                              {voucher.discount_type !== "shipping" && (
-                                <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
-                              )}
-                              <span className="text-sm flex-1 text-gray-700 flex-wrap">
-                                <strong>{voucher.name}</strong>{" "}
-                                {voucher.discount_type === 'percentage' && (
-                                  <span className="text-gray-500"><br />
-                                    Giảm {voucher.discount_value}% {voucher.max_price ? `, 
+                                onClick={() => !disabled && handleVoucherSelect(voucher)}
+                                style={{ maxWidth: '400px' }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Chọn voucher ${voucher.name}${disabled ? ", không khả dụng" : ""}`}
+                                aria-selected={isSelected}
+                                onKeyDown={(e) => {
+                                  if ((e.key === "Enter" || e.key === " ") && !disabled) {
+                                    handleVoucherSelect(voucher);
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center flex-1 min-w-0">
+                                  {voucher.discount_type === "shipping" && (
+                                    <span className="bg-teal-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">FREE SHIP</span>
+                                  )}
+                                  {voucher.discount_type !== "shipping" && (
+                                    <span className="bg-green-500 text-white text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mr-3">VOUCHER</span>
+                                  )}
+                                  <span className="text-sm flex-1 text-gray-700 flex-wrap">
+                                    <strong>{voucher.name}</strong>{" "}
+                                    {voucher.discount_type === 'percentage' && (
+                                      <span className="text-gray-500"><br />
+                                        Giảm {voucher.discount_value}% {voucher.max_price ? `, 
                                     Tối đa ${Number(voucher.max_price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}` : ''}
+                                      </span>
+                                    )}
+                                    {voucher.discount_type === 'fixed' && (
+                                      <span className="text-gray-500"><br />
+                                        Giảm {Number(voucher.discount_value).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                      </span>
+                                    )}
+                                    <span className="text-gray-500"><br />
+                                      Đơn tối thiểu {Number(voucher.min_price_threshold).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                                    </span>
+                                    {voucher.end_date && (
+                                      <span className="text-gray-500"><br />
+                                        Hết hạn: {new Date(voucher.end_date).toLocaleDateString("vi-VN", {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                        })}
+                                      </span>
+                                    )}
+                                    <span className={"text-red-500"}>
+                                      <br />
+                                      Còn lại: {voucher.quantity} lượt sử dụng
+                                    </span>
                                   </span>
+                                </div>
+                                {isSelected && (
+                                  <span className="text-green-500 font-bold text-xl ml-3 flex-shrink-0">✓</span>
                                 )}
-                                {voucher.discount_type === 'fixed' && (
-                                  <span className="text-gray-500"><br />
-                                    Giảm {Number(voucher.discount_value).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                                  </span>
-                                )}
-                                <span className="text-gray-500"><br />
-                                  Đơn tối thiểu {Number(voucher.min_price_threshold).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
-                                </span>
-                                {voucher.end_date && (
-                                  <span className="text-gray-500"><br />
-                                    Hết hạn: {new Date(voucher.end_date).toLocaleDateString("vi-VN", {
-                                      day: "2-digit",
-                                      month: "2-digit",
-                                      year: "numeric",
-                                    })}
-                                  </span>
-                                )}
-                                <span className={"text-red-500"}>
-                                  <br />
-                                  Còn lại: {voucher.quantity} lượt sử dụng
-                                </span>
-                              </span>
-                            </div>
-                            {isSelected && (
-                              <span className="text-green-500 font-bold text-xl ml-3 flex-shrink-0">✓</span>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="lg:w-1/2 w-full">

@@ -161,7 +161,7 @@ export default function AuctionRoom() {
 
                     if (payload.winner && Number(payload.winner.user_id) === meId) {
                         toast.success(
-                            `Chúc mừng bạn đã thắng với giá ${formatVnd(payload.winner.bidAmount)}!`,
+                            `Chúc mừng bạn đã chiến thắng với giá ${formatVnd(payload.winner.bidAmount)}!`,
                             { position: "top-right", autoClose: 10000 }
                         );
 

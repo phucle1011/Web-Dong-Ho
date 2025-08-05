@@ -15,6 +15,10 @@ const OrderDetailModel = connection.define('order_details', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    auction_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     quantity: {
         type: DataTypes.INTEGER,
         allowNull: true

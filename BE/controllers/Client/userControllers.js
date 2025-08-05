@@ -53,6 +53,22 @@ class UserController {
       });
     }
   }
+
+  static async getMe(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await UserModel.findByPk(userId, {
+        attributes: ['id', 'name', 'email', 'failed_payment_count']
+      });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+      }
+      return res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin user:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+  }
 }
 
 module.exports = UserController;
