@@ -421,9 +421,14 @@ function AddBlog() {
                 )}
 
                 <div className="d-flex justify-content-start gap-2 mt-3">
-                  <button type="submit" className="btn btn-primary" disabled={uploading}>
-                    Thêm bài viết
-                  </button>
+<button
+  type="submit"
+  disabled={uploading}
+  className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+>
+  {uploading ? "Đang thêm..." : "Thêm bài viết"}
+</button>
+
                   <button
                     type="button"
                     className="btn"

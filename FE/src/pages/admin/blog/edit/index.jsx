@@ -366,9 +366,14 @@ function EditBlog() {
 
 
                 <div className="d-flex justify-content-start gap-2 mt-3">
-                  <button type="submit" className="btn btn-primary" disabled={uploading}>
-                    Cập nhật bài viết
-                  </button>
+<button
+  type="submit"
+  disabled={uploading}
+  className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+>
+  {uploading ? "Đang cập nhật..." : "Cập nhật bài viết"}
+</button>
+
                   <button
                     type="button"
                     className="btn"
