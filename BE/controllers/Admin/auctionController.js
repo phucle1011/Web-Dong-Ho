@@ -11,6 +11,8 @@ const ProductAttributeModel = require('../../models/productAttributesModel');
 const VariantImageModel = require('../../models/variantImagesModel');
 const AuctionBidModel = require('../../models/auctionBidsModel');
 
+const sequelize = require('../../config/database');
+
 class auctionController {
 
    //--------------------------[ GET ALL ]---------------------------
@@ -130,9 +132,19 @@ class auctionController {
 
    static async getAuctionProduct(req, res) {
       try {
+         const used = await AuctionModel.findAll({
+            where: {
+               status: { [Op.in]: ['upcoming', 'active'] }
+            },
+            attributes: ['product_variant_id'],
+            group: ['product_variant_id']
+         });
+         const usedIds = used.map(u => u.product_variant_id);
+
          const auctionProducts = await ProductVariantModel.findAll({
             where: {
                is_auction_only: 1,
+               id: { [Op.notIn]: usedIds }
             },
             include: [
                {
@@ -145,10 +157,8 @@ class auctionController {
                   required: true,
                },
             ],
-
             order: [["created_at", "DESC"]],
          });
-
 
          return res.status(200).json({ data: auctionProducts });
       } catch (error) {
@@ -156,7 +166,7 @@ class auctionController {
          return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
       }
    }
-
+   
    //--------------------------[ GET ID ]---------------------------
    static async getId(req, res) {
       try {
