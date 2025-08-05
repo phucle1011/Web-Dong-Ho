@@ -222,7 +222,6 @@ const AdminProductDetail = () => {
 
     try {
       const imageUrl = await uploadToCloudinary(file);
-      
 
       // Nếu có public_id thì lưu vào deletedImages
       if (imageUrl.public_id) {
@@ -240,18 +239,21 @@ const AdminProductDetail = () => {
       toast.error("Tải ảnh thất bại!");
     }
   };
-const deleteImagesOnCloudinary = async () => {
-  for (const public_id of deletedImages) {
-    try {
-      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
-        public_id,
-      });
-      console.log(`Đã xoá ảnh: ${public_id}`);
-    } catch (err) {
-      console.error("Xoá ảnh thất bại:", err);
+  const deleteImagesOnCloudinary = async () => {
+    for (const public_id of deletedImages) {
+      try {
+        await axios.post(
+          `${Constants.DOMAIN_API}/admin/products/imagesClauding`,
+          {
+            public_id,
+          }
+        );
+        console.log(`Đã xoá ảnh: ${public_id}`);
+      } catch (err) {
+        console.error("Xoá ảnh thất bại:", err);
+      }
     }
-  }
-};
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -423,7 +425,7 @@ const deleteImagesOnCloudinary = async () => {
         <div className="mb-4">
           <label className="font-semibold block mb-2">Mô tả:</label>
           <Editor
-            apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
+            apiKey="242t4tlz75qp0zzr2tgk6oz501hd80om15fr7rykscdflilg"
             value={description}
             init={{
               height: 400,
@@ -488,9 +490,9 @@ const deleteImagesOnCloudinary = async () => {
             to="/admin/products/getAll"
             className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
             onClick={async (e) => {
-              e.preventDefault(); 
-              await deleteImagesOnCloudinary(); 
-              navigate("/admin/products/getAll"); 
+              e.preventDefault();
+              await deleteImagesOnCloudinary();
+              navigate("/admin/products/getAll");
             }}
           >
             Quay lại
@@ -547,8 +549,8 @@ const deleteImagesOnCloudinary = async () => {
                       {/* 🔹 (Tuỳ chọn) Thể hiện stock rõ hơn khi là đấu giá */}
                       <td className="p-2 border">
                         {isAuction ? (
-                          <span title="Biến thể đấu giá luôn có stock = 1">
-                            1
+                          <span>
+                            {variant.stock}
                           </span>
                         ) : (
                           variant.stock ?? "Chưa có"

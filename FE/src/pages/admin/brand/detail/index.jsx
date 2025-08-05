@@ -335,7 +335,7 @@ function BrandDetail() {
                     <div className="mb-6">
                         <strong className="text-gray-600 block mb-1">Mô tả:</strong>
                         <Editor
-                            apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm" // Hoặc để trống nếu dùng community
+                            apiKey="242t4tlz75qp0zzr2tgk6oz501hd80om15fr7rykscdflilg" // Hoặc để trống nếu dùng community
                             value={editableBrand.description || ""}
                             onEditorChange={(newValue) =>
                                 setEditableBrand((prev) => ({ ...prev, description: newValue }))

@@ -274,7 +274,7 @@ function BrandCreate({ onSuccess, isModal = false }) {
             <label className="font-semibold block mb-2 text-sm">Mô tả:</label>
             <div className="bg-white border rounded">
               <Editor
-                apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
+                apiKey="242t4tlz75qp0zzr2tgk6oz501hd80om15fr7rykscdflilg"
                 value={description}
                 init={{
                   height: 400,

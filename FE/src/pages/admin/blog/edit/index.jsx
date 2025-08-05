@@ -307,7 +307,7 @@ function EditBlog() {
 
                 <label className="form-label fw-bold">Mô tả ngắn</label>
                 <Editor
-                  apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
+                  apiKey="242t4tlz75qp0zzr2tgk6oz501hd80om15fr7rykscdflilg"
                   value={metaDescription}
                   onEditorChange={(newValue) => setMetaDescription(newValue)}
                   init={{
@@ -325,7 +325,7 @@ function EditBlog() {
 
                 <label className="form-label fw-bold mt-3">Nội dung bài viết</label>
                 <Editor
-                  apiKey="hn83ucgq5arqkhxqdclbke1h3fu5a2zqpprjn87b3fol67jm"
+                  apiKey="242t4tlz75qp0zzr2tgk6oz501hd80om15fr7rykscdflilg"
                   value={content}
                   onInit={(evt, editor) => (editorRef.current = editor)}
                   init={{

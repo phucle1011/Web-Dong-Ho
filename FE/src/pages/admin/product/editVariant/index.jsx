@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useParams, Link,useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -12,57 +12,60 @@ const EditVariantForm = () => {
   const [attributesList, setAttributesList] = useState([]);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-  id: "",
-  sku: "",
-  price: "",
-  stock: "",
-  attributes: [],
-  images: [],
-  is_auction_only: 0,
-});
-
+    id: "",
+    sku: "",
+    price: "",
+    stock: "",
+    attributes: [],
+    images: [],
+    is_auction_only: 0,
+  });
 
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const attrRes = await axios.get(`${Constants.DOMAIN_API}/admin/product-attributes`);
-      setAttributesList(attrRes.data.data);
+    const fetchData = async () => {
+      try {
+        const attrRes = await axios.get(
+          `${Constants.DOMAIN_API}/admin/product-attributes`
+        );
+        setAttributesList(attrRes.data.data);
 
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/variants/${id}`);
-      const data = res.data.data;
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/admin/variants/${id}`
+        );
+        const data = res.data.data;
 
-      // Nếu biến thể đang có mã giảm giá
-      const hasPromotion = data.promotionProducts && data.promotionProducts.length > 0;
+        // Nếu biến thể đang có mã giảm giá
+        const hasPromotion =
+          data.promotionProducts && data.promotionProducts.length > 0;
 
-      setVariant(data);
-      setFormData({
-        sku: data.sku || "",
-        price: data.price || "",
-        stock: data.stock || "",
-        product_id: data.product_id || "",
-        attributes:
-          data.attributeValues?.map((attr) => ({
-            id: attr.id,
-            attribute_id: attr.product_attribute_id,
-            value: attr.value,
-          })) || [],
-        images:
-          data.images?.map((img) => ({
-            id: img.id,
-            url: img.image_url,
-          })) || [],
-        is_auction_only: Number(data.is_auction_only) || 0,
-        has_promotion: hasPromotion, // <-- thêm cờ
-      });
-    } catch (err) {
-      console.error("Lỗi khi tải dữ liệu:", err);
-      toast.error("Lỗi khi tải dữ liệu!");
-    }
-  };
+        setVariant(data);
+        setFormData({
+          sku: data.sku || "",
+          price: data.price || "",
+          stock: data.stock || "",
+          product_id: data.product_id || "",
+          attributes:
+            data.attributeValues?.map((attr) => ({
+              id: attr.id,
+              attribute_id: attr.product_attribute_id,
+              value: attr.value,
+            })) || [],
+          images:
+            data.images?.map((img) => ({
+              id: img.id,
+              url: img.image_url,
+            })) || [],
+          is_auction_only: Number(data.is_auction_only) || 0,
+          has_promotion: hasPromotion, // <-- thêm cờ
+        });
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu:", err);
+        toast.error("Lỗi khi tải dữ liệu!");
+      }
+    };
 
-  fetchData();
-}, [id]);
-
+    fetchData();
+  }, [id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -82,32 +85,31 @@ const EditVariantForm = () => {
     }));
   };
 
- const handleImageUpload = async (e) => {
-  const files = Array.from(e.target.files || []);
-  if (files.length === 0) return;
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-  try {
-    const uploadedImages = [];
+    try {
+      const uploadedImages = [];
 
-    for (const file of files) {
-      const { url, public_id } = await uploadToCloudinary(file);
-      uploadedImages.push({ id: null, url: { url, public_id } });
+      for (const file of files) {
+        const { url, public_id } = await uploadToCloudinary(file);
+        uploadedImages.push({ id: null, url: { url, public_id } });
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...uploadedImages],
+      }));
+
+      toast.success("Tải ảnh lên thành công!");
+    } catch (error) {
+      console.error("Upload thất bại:", error);
+      toast.error("Lỗi khi upload ảnh lên Cloudinary!");
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      images: [...prev.images, ...uploadedImages],
-    }));
-
-    toast.success("Tải ảnh lên thành công!");
-  } catch (error) {
-    console.error("Upload thất bại:", error);
-    toast.error("Lỗi khi upload ảnh lên Cloudinary!");
-  }
-
-  e.target.value = ""; // reset input để có thể chọn lại
-};
-
+    e.target.value = ""; // reset input để có thể chọn lại
+  };
 
   const handleDeleteAttribute = async (id) => {
     const newAttributes = [...formData.attributes];
@@ -173,11 +175,10 @@ const EditVariantForm = () => {
     e.preventDefault();
 
     const preparedData = {
-  ...formData,
-  images: formData.images.map((img) => img.url),
-  is_auction_only: Number(formData.is_auction_only) || 0,
-};
-
+      ...formData,
+      images: formData.images.map((img) => img.url),
+      is_auction_only: Number(formData.is_auction_only) || 0,
+    };
 
     try {
       await axios.put(
@@ -192,28 +193,31 @@ const EditVariantForm = () => {
     }
   };
   const deleteCloudImage = async (public_id) => {
-  try {
-    await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
-      public_id,
-    });
-  } catch (err) {
-    console.error("Lỗi xóa ảnh Cloudinary:", err);
-  }
-};
- const handleBack = async () => {
-  // Duyệt tất cả ảnh chưa có id (chưa lưu vào DB)
-  const cloudOnlyImages = formData.images.filter(
-    (img) => !img.id && img.url?.public_id
-  );
+    try {
+      await axios.post(
+        `${Constants.DOMAIN_API}/admin/products/imagesClauding`,
+        {
+          public_id,
+        }
+      );
+    } catch (err) {
+      console.error("Lỗi xóa ảnh Cloudinary:", err);
+    }
+  };
+  const handleBack = async () => {
+    // Duyệt tất cả ảnh chưa có id (chưa lưu vào DB)
+    const cloudOnlyImages = formData.images.filter(
+      (img) => !img.id && img.url?.public_id
+    );
 
-  // Xóa từng ảnh trên Cloudinary
-  for (const img of cloudOnlyImages) {
-    await deleteCloudImage(img.url.public_id);
-  }
+    // Xóa từng ảnh trên Cloudinary
+    for (const img of cloudOnlyImages) {
+      await deleteCloudImage(img.url.public_id);
+    }
 
-  // Quay lại trang chi tiết sản phẩm
-  navigate(`/admin/products/detail/${formData.product_id}`);
-};
+    // Quay lại trang chi tiết sản phẩm
+    navigate(`/admin/products/detail/${formData.product_id}`);
+  };
 
   if (!variant) return <p>Đang tải dữ liệu...</p>;
 
@@ -222,16 +226,14 @@ const EditVariantForm = () => {
       onSubmit={handleSubmit}
       className="max-w-5xl mx-auto p-10 bg-white shadow-lg rounded-lg space-y-8"
     >
-     <h2 className="text-3xl font-bold text-center mb-6">
-  Chỉnh sửa biến thể
-  {/* {Number(formData.is_auction_only) === 1 && (
+      <h2 className="text-3xl font-bold text-center mb-6">
+        Chỉnh sửa biến thể
+        {/* {Number(formData.is_auction_only) === 1 && (
     <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-700 border border-purple-200">
       Đấu giá
     </span>
   )} */}
-</h2>
-
-      
+      </h2>
 
       {/* Thông tin cơ bản */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -271,12 +273,11 @@ const EditVariantForm = () => {
             type="number"
             id="stock"
             name="stock"
-            value={formData.stock}
+            value={formData.stock ?? 0} // đảm bảo hiển thị 0 nếu stock là null/undefined
             onChange={handleChange}
             className="w-full border p-2 rounded"
             placeholder="Tồn kho"
             disabled={Number(formData.is_auction_only) === 1}
-
           />
         </div>
       </div>
@@ -385,91 +386,85 @@ const EditVariantForm = () => {
 
         {/* Ảnh biến thể */}
         <fieldset className="flex-1 border rounded p-4">
-  <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
+          <legend className="font-semibold text-lg px-2">Ảnh biến thể</legend>
 
-  {/* Input chọn nhiều ảnh */}
-  <input
-    type="file"
-    multiple
-    accept="image/*"
-    onChange={handleImageUpload}
-    className="w-full border p-2 rounded mb-4"
-  />
+          {/* Input chọn nhiều ảnh */}
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full border p-2 rounded mb-4"
+          />
 
-  {/* Hiển thị ảnh theo dạng thanh cuộn ngang */}
-  <div className="flex overflow-x-auto gap-4">
-    {formData.images.map((img, index) => (
-      <div key={index} className="relative flex-shrink-0">
-        <img
-          src={img.url?.url || img.url}
-          alt={`image-${index}`}
-          className="w-24 h-24 object-cover rounded border"
-        />
-        <button
-  type="button"
-  onClick={() => handleDeleteImage(index)}
-  className="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-xs rounded-full shadow hover:scale-110 transition"
-  aria-label="Xóa ảnh"
->
-  ×
-</button>
-
-      </div>
-    ))}
-  </div>
-</fieldset>
-
+          {/* Hiển thị ảnh theo dạng thanh cuộn ngang */}
+          <div className="flex overflow-x-auto gap-4">
+            {formData.images.map((img, index) => (
+              <div key={index} className="relative flex-shrink-0">
+                <img
+                  src={img.url?.url || img.url}
+                  alt={`image-${index}`}
+                  className="w-24 h-24 object-cover rounded border"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteImage(index)}
+                  className="absolute top-1 right-1 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-xs rounded-full shadow hover:scale-110 transition"
+                  aria-label="Xóa ảnh"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </fieldset>
       </div>
 
       {/* Nút submit */}
- <div className="flex flex-col md:flex-row items-start md:items-center gap-2 justify-start">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-2 justify-start">
+        <button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
+        >
+          Cập nhật
+        </button>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
+        >
+          Quay lại
+        </button>
 
-  <button
-    type="submit"
-    className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
-  >
-    Cập nhật
-  </button>
-  <button
-  type="button"
-  onClick={handleBack}
-  className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
->
-  Quay lại
-</button>
+        {/* Toggle is_auction_only */}
+        <div className="form-check form-switch d-flex align-items-center gap-2">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            checked={Number(formData.is_auction_only) === 1}
+            onChange={(e) => {
+              if (formData.has_promotion) {
+                toast.error(
+                  "Biến thể đang được áp mã giảm giá, không thể bật đấu giá!"
+                );
+                return;
+              }
+              const checked = e.target.checked;
+              setFormData((prev) => ({
+                ...prev,
+                is_auction_only: checked ? 1 : 0,
+                stock: checked ? 1 : prev.stock,
+              }));
+            }}
+          />
 
-
- {/* Toggle is_auction_only */}
- <div className="form-check form-switch d-flex align-items-center gap-2">
-  <input
-      className="form-check-input"
-  type="checkbox"
-  checked={Number(formData.is_auction_only) === 1}
-  onChange={(e) => {
-    if (formData.has_promotion) {
-      toast.error("Biến thể đang được áp mã giảm giá, không thể bật đấu giá!");
-      return;
-    }
-    const checked = e.target.checked;
-    setFormData((prev) => ({
-      ...prev,
-      is_auction_only: checked ? 1 : 0,
-      stock: checked ? 1 : prev.stock,
-    }));
-  }}
-/>
-
-  <label className="form-check-label ms-2" htmlFor="auctionSwitch">
-    {Number(formData.is_auction_only) === 1
-      ? "Biến thể đấu giá (không thể thay đổi)"
-      : "Đặt là biến thể đấu giá"}
-  </label>
-</div>
-
-
-  
-</div>
-
+          <label className="form-check-label ms-2" htmlFor="auctionSwitch">
+            {Number(formData.is_auction_only) === 1
+              ? "Biến thể đấu giá (không thể thay đổi)"
+              : "Đặt là biến thể đấu giá"}
+          </label>
+        </div>
+      </div>
     </form>
   );
 };

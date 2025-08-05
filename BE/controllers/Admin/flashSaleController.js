@@ -188,11 +188,12 @@ class FlashSaleController {
       return res.status(404).json({ success: false, message: "Không tìm thấy thông báo (notification)." });
     }
 
+    
+    // 3. Sau đó xoá tất cả flash sales liên quan
+    await FlashSaleModel.destroy({ where: { notification_id: notificationId } });
     // 2. Xoá notification trước
     await NotificationModel.destroy({ where: { id: notificationId } });
 
-    // 3. Sau đó xoá tất cả flash sales liên quan
-    await FlashSaleModel.destroy({ where: { notification_id: notificationId } });
 
     return res.status(200).json({
       success: true,
