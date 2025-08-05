@@ -55,7 +55,7 @@ class OrderController {
 
                 if (endDate) {
                     const endOfDay = new Date(endDate);
-                    endOfDay.setHours(23, 59, 59, 999); 
+                    endOfDay.setHours(23, 59, 59, 999);
                     whereClause.created_at[Op.lte] = endOfDay;
                 }
             }
@@ -66,7 +66,9 @@ class OrderController {
 
             const updatedOrders = await OrderModel.findAll({
                 where: whereClause,
-                include: [{ model: UserModel, as: 'user' }],
+                include: [{ model: UserModel, as: 'user' },
+                    { model: OrderDetailsModel, as: 'orderDetails', attributes: ['auction_id'] }
+                ],
                 order: [['created_at', 'DESC']]
             });
 
@@ -127,7 +129,6 @@ class OrderController {
                     {
                         model: OrderDetailsModel,
                         as: 'orderDetails',
-                        attributes: ['id', 'quantity', 'price'],
                         include: [
                             {
                                 model: ProductVariantsModel,
@@ -188,143 +189,143 @@ class OrderController {
     }
 
     static async update(req, res) {
-    const t = await sequelize.transaction();
-    try {
-        const { id } = req.params;
-        const {
-            name,
-            status,
-            address,
-            phone,
-            email,
-            total_price,
-            payment_method_id,
-            cancellation_reason
-        } = req.body;
+        const t = await sequelize.transaction();
+        try {
+            const { id } = req.params;
+            const {
+                name,
+                status,
+                address,
+                phone,
+                email,
+                total_price,
+                payment_method_id,
+                cancellation_reason
+            } = req.body;
 
-        const order = await OrderModel.findByPk(id, { transaction: t });
-        if (!order) {
-            await t.rollback();
-            return res.status(404).json({ message: "Id không tồn tại" });
-        }
-
-        const oldStatus = order.status;
-
-        if (status === "cancelled" && oldStatus !== "cancelled") {
-            order.status = "cancelled";
-
-            const user = await UserModel.findByPk(order.user_id, {
-                transaction: t,
-                lock: t.LOCK.UPDATE,
-            });
-
-            if (!user) {
+            const order = await OrderModel.findByPk(id, { transaction: t });
+            if (!order) {
                 await t.rollback();
-                return res.status(404).json({ message: "Không tìm thấy người dùng." });
+                return res.status(404).json({ message: "Id không tồn tại" });
             }
 
-            const paymentMethod = order.payment_method?.toLowerCase();
-            const walletBalance = Number(order.wallet_balance) || 0;
+            const oldStatus = order.status;
 
-            let refundAmount = 0;
+            if (status === "cancelled" && oldStatus !== "cancelled") {
+                order.status = "cancelled";
 
-            if (paymentMethod === 'cod') {
-                if (walletBalance <= 0) {
+                const user = await UserModel.findByPk(order.user_id, {
+                    transaction: t,
+                    lock: t.LOCK.UPDATE,
+                });
+
+                if (!user) {
                     await t.rollback();
-                    return res.status(400).json({ message: "Đơn hàng COD không có phần thanh toán ví để hoàn tiền" });
+                    return res.status(404).json({ message: "Không tìm thấy người dùng." });
                 }
-                refundAmount = walletBalance;
-            } else {
-                refundAmount = Number(order.total_price || 0) + walletBalance;
-            }
 
-            const newBalance = Number(user.balance || 0) + refundAmount;
-            console.log(`Hoàn tiền ${refundAmount} vào ví của người dùng ${user.id}. Số dư cũ: ${user.balance}, Số dư mới: ${newBalance}`);
+                const paymentMethod = order.payment_method?.toLowerCase();
+                const walletBalance = Number(order.wallet_balance) || 0;
 
-            if (isNaN(newBalance)) {
-                await t.rollback();
-                return res.status(500).json({ message: "Lỗi tính toán số dư ví." });
-            }
+                let refundAmount = 0;
 
-            user.balance = newBalance;
-            await user.save({ transaction: t });
+                if (paymentMethod === 'cod') {
+                    if (walletBalance <= 0) {
+                        await t.rollback();
+                        return res.status(400).json({ message: "Đơn hàng COD không có phần thanh toán ví để hoàn tiền" });
+                    }
+                    refundAmount = walletBalance;
+                } else {
+                    refundAmount = Number(order.total_price || 0) + walletBalance;
+                }
 
-            await WithdrawRequestsModel.create({
-                user_id: user.id,
-                amount: refundAmount,
-                method: 'bank',
-                bank_account: '',
-                bank_name: '',
-                note: 'Hoàn tiền đơn hàng thanh toán',
-                status: 'approved',
-                type: 'refund',
-                order_id: order.id
-            }, { transaction: t });
+                const newBalance = Number(user.balance || 0) + refundAmount;
+                console.log(`Hoàn tiền ${refundAmount} vào ví của người dùng ${user.id}. Số dư cũ: ${user.balance}, Số dư mới: ${newBalance}`);
 
-            if (order.promotion_id) {
-                const promotion = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
-                if (promotion) {
-                    if (promotion.special_promotion) {
-                        await PromotionUserModel.update(
-                            { used: false },
-                            {
-                                where: {
-                                    promotion_id: promotion.id,
-                                    user_id: order.user_id,
-                                },
-                                transaction: t,
-                            }
-                        );
-                    } else {
-                        await promotion.increment('quantity', { by: 1, transaction: t });
+                if (isNaN(newBalance)) {
+                    await t.rollback();
+                    return res.status(500).json({ message: "Lỗi tính toán số dư ví." });
+                }
+
+                user.balance = newBalance;
+                await user.save({ transaction: t });
+
+                await WithdrawRequestsModel.create({
+                    user_id: user.id,
+                    amount: refundAmount,
+                    method: 'bank',
+                    bank_account: '',
+                    bank_name: '',
+                    note: 'Hoàn tiền đơn hàng thanh toán',
+                    status: 'approved',
+                    type: 'refund',
+                    order_id: order.id
+                }, { transaction: t });
+
+                if (order.promotion_id) {
+                    const promotion = await PromotionModel.findByPk(order.promotion_id, { transaction: t });
+                    if (promotion) {
+                        if (promotion.special_promotion) {
+                            await PromotionUserModel.update(
+                                { used: false },
+                                {
+                                    where: {
+                                        promotion_id: promotion.id,
+                                        user_id: order.user_id,
+                                    },
+                                    transaction: t,
+                                }
+                            );
+                        } else {
+                            await promotion.increment('quantity', { by: 1, transaction: t });
+                        }
                     }
                 }
+
+                await order.save({ transaction: t });
+                await t.commit();
+
+                try {
+                    const user = await UserModel.findByPk(order.user_id);
+                    if (user?.email) {
+                        await OrderController.sendOrderCancellationEmail(order, user, user.email, cancellation_reason || "Hoàn tiền tự động vào ví");
+                    }
+                } catch (emailError) {
+                    console.error("Lỗi gửi email hủy đơn hàng:", emailError);
+                }
+
+                return res.status(200).json({
+                    status: 200,
+                    message: `Đã hoàn tiền ${refundAmount.toLocaleString()} VNĐ vào ví và hủy đơn hàng.`,
+                    refundedAmount: refundAmount,
+                    orderStatus: order.status,
+                    data: order,
+                });
             }
+
+            if (name !== undefined) order.name = name;
+            if (status !== undefined) order.status = status;
+            if (address !== undefined) order.address = address;
+            if (phone !== undefined) order.phone = phone;
+            if (email !== undefined) order.email = email;
+            if (total_price !== undefined) order.total_price = total_price;
+            if (payment_method_id !== undefined) order.payment_method_id = payment_method_id;
 
             await order.save({ transaction: t });
             await t.commit();
 
-            try {
-                const user = await UserModel.findByPk(order.user_id);
-                if (user?.email) {
-                    await OrderController.sendOrderCancellationEmail(order, user, user.email, cancellation_reason || "Hoàn tiền tự động vào ví");
-                }
-            } catch (emailError) {
-                console.error("Lỗi gửi email hủy đơn hàng:", emailError);
-            }
-
             return res.status(200).json({
                 status: 200,
-                message: `Đã hoàn tiền ${refundAmount.toLocaleString()} VNĐ vào ví và hủy đơn hàng.`,
-                refundedAmount: refundAmount,
-                orderStatus: order.status,
+                message: "Cập nhật đơn hàng thành công.",
                 data: order,
             });
+
+        } catch (error) {
+            await t.rollback();
+            console.error("Lỗi cập nhật đơn hàng:", error);
+            return res.status(500).json({ error: error.message });
         }
-
-        if (name !== undefined) order.name = name;
-        if (status !== undefined) order.status = status;
-        if (address !== undefined) order.address = address;
-        if (phone !== undefined) order.phone = phone;
-        if (email !== undefined) order.email = email;
-        if (total_price !== undefined) order.total_price = total_price;
-        if (payment_method_id !== undefined) order.payment_method_id = payment_method_id;
-
-        await order.save({ transaction: t });
-        await t.commit();
-
-        return res.status(200).json({
-            status: 200,
-            message: "Cập nhật đơn hàng thành công.",
-            data: order,
-        });
-
-    } catch (error) {
-        await t.rollback();
-        console.error("Lỗi cập nhật đơn hàng:", error);
-        return res.status(500).json({ error: error.message });
     }
-}
 
     static async sendOrderCancellationEmail(order, user, customerEmail, cancellationReason) {
         try {

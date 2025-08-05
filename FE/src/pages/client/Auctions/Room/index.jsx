@@ -68,11 +68,31 @@ export default function AuctionRoom() {
 
     const [showFullDescription, setShowFullDescription] = useState(false);
 
+    const audioRef = useRef(null);
+    const hasBeepedRef = useRef(false);
+
     const [countdown, setCountdown] = useState({
         label: "",
         text: "",
         ms: 0,
     });
+
+    useEffect(() => {
+        audioRef.current = new Audio("/sounds/beep.mp3");
+    }, []);
+
+    useEffect(() => {
+        if (countdown.ms <= 10_000 && countdown.ms > 0 && !hasBeepedRef.current) {
+            audioRef.current
+                .play()
+                .catch(() => {
+                });
+            hasBeepedRef.current = true;
+        }
+        if (countdown.ms > 10_000) {
+            hasBeepedRef.current = false;
+        }
+    }, [countdown.ms]);
 
     const pad2 = (n) => String(n).padStart(2, "0");
     const formatDuration = (ms) => {
@@ -247,6 +267,21 @@ export default function AuctionRoom() {
         const startAt = parseDbLocal(activeAuction.start_time);
         const endAt = parseDbLocal(activeAuction.end_time);
 
+        // const tick = () => {
+        //     const now = new Date();
+        //     if (now < startAt) {
+        //         const ms = startAt - now;
+        //         setCountdown({ label: "Bắt đầu sau", text: formatDuration(ms), ms });
+        //         return;
+        //     }
+        //     if (now >= startAt && now < endAt) {
+        //         const ms = endAt - now;
+        //         setCountdown({ label: "Kết thúc sau", text: formatDuration(ms), ms });
+        //         return;
+        //     }
+        //     setCountdown({ label: "Đã kết thúc", text: "00:00:00", ms: 0 });
+        // };
+
         const tick = () => {
             const now = new Date();
             if (now < startAt) {
@@ -259,7 +294,10 @@ export default function AuctionRoom() {
                 setCountdown({ label: "Kết thúc sau", text: formatDuration(ms), ms });
                 return;
             }
-            setCountdown({ label: "Đã kết thúc", text: "00:00:00", ms: 0 });
+
+            setCountdown({ label: "Đã kết thúc", text: "", ms: 0 });
+
+            clearInterval(itv);
         };
 
         tick();

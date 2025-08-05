@@ -65,7 +65,7 @@ class EmailController {
         const emailHtml = `
   <div style="font-family: Arial, sans-serif; max-width: 700px; margin: auto; background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; color: #333;">
     <div style="text-align: center; padding: 20px; background-color: #f1faff; border-bottom: 2px solid #007acc;">
-      <img src="https://yourdomain.com/image/logo.jpg" alt="Logo doanh nghiệp" style="width: 140px;" />
+      <img src="https://res.cloudinary.com/disgf4yl7/image/upload/v1754403723/xpd7jmghcjjfelzbhyb0.png" alt="Logo doanh nghiệp" style="width: 140px;" />
       <h1 style="margin: 0; font-size: 26px; color: #007acc;">TIMEMASTERS</h1>
       <p style="margin: 4px 0; font-size: 14px; color: #555;">
         Hotline: <a href="tel:+84123456789" style="color: #007acc;">+84 123 456 789</a>

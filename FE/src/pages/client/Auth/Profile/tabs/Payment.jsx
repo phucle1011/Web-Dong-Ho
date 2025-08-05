@@ -130,7 +130,7 @@ export default function Payment() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.url) window.location.href = res.data.url;
-      toast.success("Nạp tiền thành công.");
+      // toast.success("Nạp tiền thành công.");
     } catch {
       toast.error("Không thể tạo phiên thanh toán.");
     } finally {

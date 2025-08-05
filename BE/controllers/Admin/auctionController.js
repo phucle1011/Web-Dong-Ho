@@ -10,6 +10,8 @@ const ProductVariantAttributeValuesModel = require('../../models/productVariantA
 const ProductAttributeModel = require('../../models/productAttributesModel');
 const VariantImageModel = require('../../models/variantImagesModel');
 const AuctionBidModel = require('../../models/auctionBidsModel');
+const OrderModel = require('../../models/ordersModel');
+const OrderDetailModel = require('../../models/orderDetailsModel');
 
 const sequelize = require('../../config/database');
 
@@ -481,13 +483,29 @@ class auctionController {
          if (!topBid) {
             return res.status(200).json({
                message: "Chưa có người chiến thắng cho phiên này",
-               data: {
-                  auction: auction,
-                  winner: null,
-                  winningBid: null
-               }
+               data: { auction, winner: null, winningBid: null, hasPaid: false }
             });
          }
+
+         const winner = topBid.user;
+
+         const detail = await OrderDetailModel.findOne({
+            where: { auction_id: id },
+            include: [{
+               model: OrderModel,
+               as: 'order',
+               where: { user_id: winner.id },
+               attributes: ['status', 'payment_method']
+            }]
+         });
+
+         const orderStatus = detail?.order.status || null;
+         const paymentMethod = detail?.order.payment_method || null;
+
+         const hasPaid = orderStatus != null && !['cancelled'].includes(orderStatus);
+
+         const paymentDeadline = new Date(auction.end_time).getTime() + 24 * 3600 * 1000;
+         const expiredPaymentWindow = Date.now() > paymentDeadline;
 
          return res.status(200).json({
             message: "Lấy người chiến thắng thành công",
@@ -497,14 +515,35 @@ class auctionController {
                winningBid: {
                   id: topBid.id,
                   bidAmount: topBid.bidAmount,
-                  bidTime: topBid.bidTime
-               }
+                  bidTime: topBid.bidTime,
+               },
+               hasPaid,
+               orderStatus,
+               paymentMethod,
+               expiredPaymentWindow
             }
          });
       } catch (error) {
          console.error("Lỗi khi lấy người chiến thắng:", error);
          return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
       }
+   }
+
+   static async hasUserPaidAuction(auctionId, userId) {
+      const order = await OrderModel.findOne({
+         where: { user_id: userId },
+         include: [{
+            model: OrderDetailModel,
+            as: 'orderDetails',
+            where: { auction_id: auctionId }
+         }]
+      });
+      console.log("mmm", order);
+
+
+      if (!order) return false;
+
+      return order.status !== 'pending' && order.status !== 'confirmed' && order.status !== 'shipping' && order.status !== 'delivered' && order.status !== 'completed';
    }
 
 }

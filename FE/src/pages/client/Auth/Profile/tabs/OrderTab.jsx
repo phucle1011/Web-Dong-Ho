@@ -10,7 +10,8 @@ import {
   FaEye,
   FaEyeSlash,
   FaRedo,
-  FaTrashAlt
+  FaTrashAlt,
+  FaTrophy
 } from "react-icons/fa";
 import Constants from "../../../../../Constants.jsx";
 import { toast } from "react-toastify";
@@ -45,6 +46,13 @@ export default function OrderTab() {
   const [confirmDeliveryOrder, setConfirmDeliveryOrder] = useState(null);
   const [user, setUser] = useState(null);
 
+  useEffect(() => {
+    orders.forEach(order => {
+      if (!orderDetailsMap[order.id]) {
+        fetchOrderDetails(order.id);
+      }
+    });
+  }, [orders]);
 
   const translateStatus = (status) => {
     switch (status) {
@@ -539,55 +547,60 @@ export default function OrderTab() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order, index) => (
-                  <React.Fragment key={order.id}>
-                    <tr className="bg-white border-b hover:bg-gray-50">
-                      <td className="text-center py-4">{index + 1}</td>
-                      <td className="text-center py-4">{order.order_code}</td>
-                      <td className="text-center py-4">{order.user?.name || "N/A"}</td>
-                      <td className="text-center py-4 px-2 whitespace-nowrap">
-                        {new Date(order.created_at).toLocaleDateString("vi-VN")}
-                      </td>
-                      <td className="text-center py-4 px-2">
-                        {order.status === "delivered" ? (
-                          <button
-                            onClick={() => setConfirmDeliveryOrder(order)}
-                            className="inline-block whitespace-nowrap h-[32px] bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm px-2"
-                            type="button"
-                          >
-                            Xác nhận hoàn thành
-                          </button>
-                        ) : (
-                          translateStatus(order.status)
-                        )}
-                      </td>
-                      <td className="text-center py-4 px-2 whitespace-nowrap">
-                        {Number(order.total_price).toLocaleString("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        })}
-                      </td>
-                      <td className="text-center py-4 px-2 whitespace-nowrap">{order.payment_method}</td>
-                      <td className="py-4 text-center">
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          <button
-                            onClick={() => {
-                              const isOpeningNew = expandedOrderId !== order.id;
-                              if (isOpeningNew) fetchOrderDetails(order.id);
-                              setExpandedOrderId(isOpeningNew ? order.id : null);
-                            }}
-                            className="w-8 h-8 bg-yellow-300 hover:bg-yellow-400 text-black rounded-full flex items-center justify-center shadow transition"
-                            title={expandedOrderId === order.id ? "Ẩn chi tiết" : "Xem chi tiết"}
-                            type="button"
-                          >
-                            {expandedOrderId === order.id ? (
-                              <FaEyeSlash className="text-red-600" />
-                            ) : (
-                              <FaEye />
-                            )}
-                          </button>
+                {orders.map((order, index) => {
+                  const details = orderDetailsMap[order.id] || [];
 
-                          {order.status === "pending" && (
+                  const isAuctionOrder = details.some(d => d.auction_id != null);
+
+                  return (
+                    <React.Fragment key={order.id}>
+                      <tr className="bg-white border-b hover:bg-gray-50">
+                        <td className="text-center py-4">{index + 1}</td>
+                        <td className="text-center py-4">{order.order_code}</td>
+                        <td className="text-center py-4">{order.user?.name || "N/A"}</td>
+                        <td className="text-center py-4 px-2 whitespace-nowrap">
+                          {new Date(order.created_at).toLocaleDateString("vi-VN")}
+                        </td>
+                        <td className="text-center py-4 px-2">
+                          {order.status === "delivered" ? (
+                            <button
+                              onClick={() => setConfirmDeliveryOrder(order)}
+                              className="inline-block whitespace-nowrap h-[32px] bg-green-500 hover:bg-green-600 text-white font-medium rounded text-sm px-2"
+                              type="button"
+                            >
+                              Xác nhận hoàn thành
+                            </button>
+                          ) : (
+                            translateStatus(order.status)
+                          )}
+                        </td>
+                        <td className="text-center py-4 px-2 whitespace-nowrap">
+                          {Number(order.total_price).toLocaleString("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          })}
+                        </td>
+                        <td className="text-center py-4 px-2 whitespace-nowrap">{order.payment_method}</td>
+                        <td className="py-4 text-center">
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            <button
+                              onClick={() => {
+                                const isOpeningNew = expandedOrderId !== order.id;
+                                if (isOpeningNew) fetchOrderDetails(order.id);
+                                setExpandedOrderId(isOpeningNew ? order.id : null);
+                              }}
+                              className="w-8 h-8 bg-yellow-300 hover:bg-yellow-400 text-black rounded-full flex items-center justify-center shadow transition"
+                              title={expandedOrderId === order.id ? "Ẩn chi tiết" : "Xem chi tiết"}
+                              type="button"
+                            >
+                              {expandedOrderId === order.id ? (
+                                <FaEyeSlash className="text-red-600" />
+                              ) : (
+                                <FaEye />
+                              )}
+                            </button>
+
+                            {/* {order.status === "pending" && (
                             <button
                               onClick={() => setSelectedOrder(order)}
                               className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow transition"
@@ -596,237 +609,256 @@ export default function OrderTab() {
                             >
                               <FaTrashAlt />
                             </button>
-                          )}
+                          )} */}
 
-                          {["cancelled", "completed"].includes(order.status) && (
-                            <button
-                              onClick={() => handleReorder(order)}
-                              className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow transition"
-                              title="Đặt lại đơn"
-                              type="button"
-                            >
-                              <FaRedo />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                            {order.status === "pending" && !isAuctionOrder && (
+                              <button
+                                onClick={() => setSelectedOrder(order)}
+                                className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow transition"
+                                title="Huỷ đơn"
+                                type="button"
+                              >
+                                <FaTrashAlt />
+                              </button>
+                            )}
 
-                    {expandedOrderId === order.id && (
-                      <tr>
-                        <td colSpan="8" className="p-0">
-                          <div className="bg-gray-50 p-4 border-t border-gray-200">
-                            <h3 className="font-semibold mb-4 text-lg">Chi tiết đơn hàng</h3>
-                            <div className="bg-white shadow-md rounded-md p-4 mb-6">
-                              <h4 className="text-xl font-semibold mb-4">Thông tin khách hàng</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                                <div>
-                                  <span className="font-medium">Mã đơn:</span> {order.order_code || "—"}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Họ tên:</span> {order.user?.name || "—"}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Số điện thoại:</span> {order.user?.phone || "—"}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Email:</span> {order.user?.email || "—"}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Địa chỉ:</span> {order.shipping_address || "—"}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Phương thức thanh toán:</span> {order.payment_method || "—"}
-                                </div>
-                                <div>
-                                  <span className="font-medium">Ngày đặt hàng:</span>{" "}
-                                  {order.created_at
-                                    ? new Date(order.created_at).toLocaleDateString()
-                                    : "—"}
-                                </div>
+                            {["cancelled", "completed"].includes(order.status) && (
+                              <button
+                                onClick={() => handleReorder(order)}
+                                className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow transition"
+                                title="Đặt lại đơn"
+                                type="button"
+                              >
+                                <FaRedo />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
 
-                                <div>
-                                  <span className="font-medium">Ghi chú:</span> {order.note || "—"}
+                      {expandedOrderId === order.id && (
+                        <tr>
+                          <td colSpan="8" className="p-0">
+                            <div className="bg-gray-50 p-4 border-t border-gray-200">
+                              <h3 className="font-semibold mb-4 text-lg">Chi tiết đơn hàng</h3>
+                              <div className="bg-white shadow-md rounded-md p-4 mb-6">
+                                <h4 className="text-xl font-semibold mb-4">Thông tin khách hàng</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                  <div>
+                                    <span className="font-medium">Mã đơn:</span> {order.order_code || "—"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Họ tên:</span> {order.user?.name || "—"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Số điện thoại:</span> {order.user?.phone || "—"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Email:</span> {order.user?.email || "—"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Địa chỉ:</span> {order.shipping_address || "—"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Phương thức thanh toán:</span> {order.payment_method || "—"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Ngày đặt hàng:</span>{" "}
+                                    {order.created_at
+                                      ? new Date(order.created_at).toLocaleDateString()
+                                      : "—"}
+                                  </div>
+
+                                  <div>
+                                    <span className="font-medium">Ghi chú:</span> {order.note || "—"}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
 
-                            <div className="bg-white shadow-md rounded-md p-4">
-                              <h4 className="text-xl font-semibold mb-3">Sản phẩm</h4>
-                              <table className="w-full border-collapse border text-center">
-                                <thead>
-                                  <tr className="bg-gray-200">
-                                    <th className="border p-2">Trạng thái</th>
-                                    <th className="border p-2">Tên sản phẩm</th>
-                                    <th className="border p-2">Số lượng</th>
-                                    <th className="border p-2">Đơn giá</th>
-                                    <th className="border p-2">Thành tiền</th>
-                                    <th className="border p-2">Đánh giá</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {(orderDetailsMap[order.id] || []).length > 0 ? (
-                                    <>
-                                      {orderDetailsMap[order.id].map((item, idx) => (
-                                        <tr key={idx} className="border-b">
-                                          <td className="p-2">{translateStatus(order.status)}</td>
-                                          <td className="p-2">{item.variant?.product?.name || "Không xác định"} ({item.variant?.sku})</td>
-                                          <td className="p-2 text-center">{item.quantity}</td>
-                                          <td className="p-2 text-right">
-                                            {Number(item.price).toLocaleString("vi-VN", {
-                                              style: "currency",
-                                              currency: "VND",
-                                            })}
-                                          </td>
-                                          <td className="p-2 text-right">
-                                            {(item.quantity * item.price).toLocaleString("vi-VN", {
-                                              style: "currency",
-                                              currency: "VND",
-                                            })}
-                                          </td>
-                                          <td className="p-2">
-                                            {order.status === "completed" ? (
-                                              <button
-                                                className="text-blue-500 hover:text-blue-900 transition-colors"
-                                                onClick={() => {
-                                                  const product = item.variant?.product;
-                                                  const productId = product?.id;
-                                                  const deliveredAt = new Date(item.updated_at);
-                                                  const currentDate = new Date();
-                                                  const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
+                              <div className="bg-white shadow-md rounded-md p-4">
+                                <h4 className="text-xl font-semibold mb-3">Sản phẩm</h4>
+                                <table className="w-full border-collapse border text-center">
+                                  <thead>
+                                    <tr className="bg-gray-200">
+                                      <th className="border p-2">Trạng thái</th>
+                                      <th className="border p-2">Tên sản phẩm</th>
+                                      <th className="border p-2">Số lượng</th>
+                                      <th className="border p-2">Đơn giá</th>
+                                      <th className="border p-2">Thành tiền</th>
+                                      <th className="border p-2">Đánh giá</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(orderDetailsMap[order.id] || []).length > 0 ? (
+                                      <>
+                                        {orderDetailsMap[order.id].map((item, idx) => (
+                                          <tr key={idx} className="border-b">
+                                            <td className="p-2">{translateStatus(order.status)}</td>
+                                            <td className="p-2">{item.variant?.product?.name || "Không xác định"} ({item.variant?.sku})</td>
+                                            <td className="p-2 text-center">{item.quantity}</td>
+                                            <td className="p-2 text-right">
+                                              {Number(item.price).toLocaleString("vi-VN", {
+                                                style: "currency",
+                                                currency: "VND",
+                                              })}
+                                            </td>
+                                            <td className="p-2 text-right">
+                                              {(item.quantity * item.price).toLocaleString("vi-VN", {
+                                                style: "currency",
+                                                currency: "VND",
+                                              })}
+                                            </td>
+                                            <td className="p-2">
+                                              {order.status === "completed" ? (
+                                                <button
+                                                  className="text-blue-500 hover:text-blue-900 transition-colors"
+                                                  onClick={() => {
+                                                    const product = item.variant?.product;
+                                                    const productId = product?.id;
+                                                    const deliveredAt = new Date(item.updated_at);
+                                                    const currentDate = new Date();
+                                                    const daysPassed = (currentDate - deliveredAt) / (1000 * 60 * 60 * 24);
 
-                                                  if (daysPassed > 7) {
-                                                    toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
-                                                    return;
-                                                  }
+                                                    if (daysPassed > 7) {
+                                                      toast.error("Thời gian đánh giá đã hết. Vượt quá 7 ngày kể từ khi giao hàng.");
+                                                      return;
+                                                    }
 
-                                                  const editedOnce = item.comment && Number(item.comment.edited) === 1;
+                                                    const editedOnce = item.comment && Number(item.comment.edited) === 1;
 
-                                                  if (item.comment) {
-                                                    if (editedOnce) {
-                                                      navigate(`/product#comment-${item.comment.id}`, {
-                                                        state: { productId: product.id },
-                                                      });
+                                                    if (item.comment) {
+                                                      if (editedOnce) {
+                                                        navigate(`/product#comment-${item.comment.id}`, {
+                                                          state: { productId: product.id },
+                                                        });
+                                                      } else {
+                                                        sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
+                                                        navigate(`/product#review`, {
+                                                          state: { productId: product.id },
+                                                        });
+                                                      }
                                                     } else {
                                                       sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
                                                       navigate(`/product#review`, {
                                                         state: { productId: product.id },
                                                       });
                                                     }
-                                                  } else {
-                                                    sessionStorage.setItem("pendingReviewOrderDetailId", item.id);
-                                                    navigate(`/product#review`, {
-                                                      state: { productId: product.id },
-                                                    });
-                                                  }
-                                                }}
-                                              >
-                                                {item.comment ? (
-                                                  Number(item.comment.edited) === 1 ? (
-                                                    <span>Xem đánh giá</span>
+                                                  }}
+                                                >
+                                                  {item.comment ? (
+                                                    Number(item.comment.edited) === 1 ? (
+                                                      <span>Xem đánh giá</span>
+                                                    ) : (
+                                                      <span>Chỉnh sửa đánh giá</span>
+                                                    )
                                                   ) : (
-                                                    <span>Chỉnh sửa đánh giá</span>
-                                                  )
-                                                ) : (
-                                                  <span>Đánh giá</span>
-                                                )}
-                                              </button>
-                                            ) : (
-                                              <span className="text-gray-400 italic">Chưa thể đánh giá</span>
-                                            )}
-                                          </td>
+                                                    <span>Đánh giá</span>
+                                                  )}
+                                                </button>
+                                              ) : (
+                                                <span className="text-gray-400 italic">Chưa thể đánh giá</span>
+                                              )}
+                                            </td>
+                                          </tr>
+                                        ))}
 
+                                        {isAuctionOrder && (
+                                          <tr className="bg-gray-50">
+                                            <td colSpan={5} className="text-right font-medium p-2 border-t"></td>
+                                            <td className="text-right p-2 border-t">
+                                              <span className="inline-flex items-center text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">
+                                                <FaTrophy className="mr-1" />
+                                                Đấu giá
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        )}
 
+                                        {Number(order.shipping_fee) > 0 && (
+                                          <tr className="bg-gray-50">
+                                            <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                              Phí vận chuyển:
+                                            </td>
+                                            <td className="text-right p-2 border-t font-medium">
+                                              +{Number(order.shipping_fee).toLocaleString("vi-VN", {
+                                                style: "currency",
+                                                currency: "VND",
+                                              })}
+                                            </td>
+                                          </tr>
+                                        )}
 
+                                        {Number(order.discount_amount) > 0 && (
+                                          <tr className="bg-gray-50">
+                                            <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                              Số tiền giảm giá:
+                                            </td>
+                                            <td className="text-right p-2 border-t text-red-600 font-medium">
+                                              -{Number(order.discount_amount).toLocaleString("vi-VN", {
+                                                style: "currency",
+                                                currency: "VND",
+                                              })}
+                                            </td>
+                                          </tr>
+                                        )}
 
+                                        {Number(order.special_discount_amount) > 0 && (
+                                          <tr className="bg-gray-50">
+                                            <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                              Giảm giá đặc biệt:
+                                            </td>
+                                            <td className="text-right p-2 border-t text-red-600 font-medium">
+                                              -{Number(order.special_discount_amount).toLocaleString("vi-VN", {
+                                                style: "currency",
+                                                currency: "VND",
+                                              })}
+                                            </td>
+                                          </tr>
+                                        )}
 
-                                        </tr>
-                                      ))}
+                                        {Number(order.wallet_balance) > 0 && order.status !== "cancelled" && (
+                                          <tr className="bg-gray-50">
+                                            <td colSpan={5} className="text-right font-medium p-2 border-t">
+                                              Ví tiền:
+                                            </td>
+                                            <td className="text-right p-2 border-t text-red-600 font-medium">
+                                              -{Number(order.wallet_balance).toLocaleString("vi-VN", {
+                                                style: "currency",
+                                                currency: "VND",
+                                              })}
+                                            </td>
+                                          </tr>
+                                        )}
 
-                                      {Number(order.shipping_fee) > 0 && (
-                                        <tr className="bg-gray-50">
-                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
-                                            Phí vận chuyển:
-                                          </td>
-                                          <td className="text-right p-2 border-t font-medium">
-                                            +{Number(order.shipping_fee).toLocaleString("vi-VN", {
+                                        <tr className="bg-gray-100 font-semibold">
+                                          <td colSpan={5} className="text-right p-2 border-t border-b">Tổng tiền:</td>
+                                          <td className="text-right p-2 border-t border-b text-blue-600">
+                                            {Number(order.total_price).toLocaleString("vi-VN", {
                                               style: "currency",
                                               currency: "VND",
                                             })}
                                           </td>
                                         </tr>
-                                      )}
-
-                                      {Number(order.discount_amount) > 0 && (
-                                        <tr className="bg-gray-50">
-                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
-                                            Số tiền giảm giá:
-                                          </td>
-                                          <td className="text-right p-2 border-t text-red-600 font-medium">
-                                            -{Number(order.discount_amount).toLocaleString("vi-VN", {
-                                              style: "currency",
-                                              currency: "VND",
-                                            })}
-                                          </td>
-                                        </tr>
-                                      )}
-
-                                      {Number(order.special_discount_amount) > 0 && (
-                                        <tr className="bg-gray-50">
-                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
-                                            Giảm giá đặc biệt:
-                                          </td>
-                                          <td className="text-right p-2 border-t text-red-600 font-medium">
-                                            -{Number(order.special_discount_amount).toLocaleString("vi-VN", {
-                                              style: "currency",
-                                              currency: "VND",
-                                            })}
-                                          </td>
-                                        </tr>
-                                      )}
-
-                                      {Number(order.wallet_balance) > 0 && order.status !== "cancelled" && (
-                                        <tr className="bg-gray-50">
-                                          <td colSpan={5} className="text-right font-medium p-2 border-t">
-                                            Ví tiền:
-                                          </td>
-                                          <td className="text-right p-2 border-t text-red-600 font-medium">
-                                            -{Number(order.wallet_balance).toLocaleString("vi-VN", {
-                                              style: "currency",
-                                              currency: "VND",
-                                            })}
-                                          </td>
-                                        </tr>
-                                      )}
-
-                                      <tr className="bg-gray-100 font-semibold">
-                                        <td colSpan={5} className="text-right p-2 border-t border-b">Tổng tiền:</td>
-                                        <td className="text-right p-2 border-t border-b text-blue-600">
-                                          {Number(order.total_price).toLocaleString("vi-VN", {
-                                            style: "currency",
-                                            currency: "VND",
-                                          })}
+                                      </>
+                                    ) : (
+                                      <tr>
+                                        <td colSpan={6} className="border p-2 text-center text-gray-400">
+                                          Không có sản phẩm nào trong đơn này.
                                         </td>
                                       </tr>
-                                    </>
-                                  ) : (
-                                    <tr>
-                                      <td colSpan={6} className="border p-2 text-center text-gray-400">
-                                        Không có sản phẩm nào trong đơn này.
-                                      </td>
-                                    </tr>
-                                  )}
-                                </tbody>
-                              </table>
+                                    )}
+                                  </tbody>
+                                </table>
 
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
                 {orders.length === 0 && (
                   <tr>
                     <td colSpan="8" className="text-center py-4">

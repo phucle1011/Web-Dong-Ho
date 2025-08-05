@@ -797,7 +797,7 @@ export default function CheckoutPage() {
       return response.data.data;
     } catch (error) {
       console.error("Lỗi khi cập nhật thông tin:", error);
-      toast.error("Cập nhật thông tin người dùng thất bại");
+      // toast.error("Cập nhật thông tin người dùng thất bại");
       return null;
     }
   };
@@ -908,9 +908,9 @@ export default function CheckoutPage() {
             id: item.id,
             user_id: item.user_id,
             product_variant_id: item.product_variant_id,
-
+            promotion_product_id: item.variant.promotion.id,
             // auction_id: info.isAuction ? info.auctionId : null,
-              auction_id: item.auction_id,
+            auction_id: item.auction_id,
             quantity: item.quantity,
             unit_price: unitPrice,
             original_price: parseFloat(item.variant.price || 0),
