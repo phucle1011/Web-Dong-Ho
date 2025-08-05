@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendVerificationEmail = async (email, verificationToken) => {
-    const verificationLink = `http://localhost:3000/auth/verify-email?token=${verificationToken}`;
+    const verificationLink = `${CLIENT_URL}/auth/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
         from: `"Hệ thống xác thực" <${process.env.EMAIL_USER}>`,

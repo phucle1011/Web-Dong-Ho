@@ -7,6 +7,8 @@ import Constants from "../../../../Constants";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { GoogleLogin } from '@react-oauth/google';
+import { setAuthData } from "../../../../helper/auth";
+
 
 
 export default function Login() {
@@ -115,6 +117,8 @@ export default function Login() {
 
       localStorage.setItem("token", token);
 
+      setAuthData(result.data);
+
       if (!result.data.user.email_verified_at) {
         toast.info("Vui lòng xác thực email trước khi sử dụng!");
       }
@@ -133,12 +137,10 @@ export default function Login() {
     const idToken = credentialResponse.credential;
     try {
       setLoading(true);
-      const res = await axios.post(`${Constants.DOMAIN_API}/auth/google`, {
-        idToken,
-        rememberMe: checked
-      });
+      const res = await axios.post(`${Constants.DOMAIN_API}/auth/google`, { idToken, rememberMe: checked });
       const { token } = res.data.data;
       localStorage.setItem("token", token);
+      setAuthData(res.data.data);
       toast.success("Đăng nhập bằng Google thành công!");
       navigate("/");
     } catch (err) {
@@ -324,14 +326,14 @@ export default function Login() {
                         {loading ? "Đang xử lý..." : "Đăng nhập"}
                       </button>
                     </div>
-                        
-                    {/* <hr />
+
+                    <hr />
                     <div className="google-login-area mb-4 flex justify-center mt-4">
                       <GoogleLogin
                         onSuccess={handleGoogleLogin}
                         onError={() => toast.error("Đăng nhập Google thất bại!")}
                       />
-                    </div> */}
+                    </div>
 
                     {/* Đăng ký mới */}
                     <div className="signup-area flex justify-center mt-4">

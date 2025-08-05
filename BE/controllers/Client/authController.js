@@ -10,6 +10,7 @@ const { Op } = require('sequelize');
 const { OAuth2Client } = require('google-auth-library');
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(CLIENT_ID);
+const { v4: uuidv4 } = require("uuid");
 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
@@ -91,7 +92,6 @@ class AuthController {
             return errorResponse(res, "Lỗi server, vui lòng thử lại!", 500);
         }
     }
-
 
     static async verifyEmail(req, res) {
         const { token } = req.query;
@@ -275,7 +275,7 @@ class AuthController {
     static async googleLogin(req, res) {
         try {
             const { idToken, rememberMe } = req.body;
-            // Verify ID token
+            // 1. Verify ID token
             const ticket = await googleClient.verifyIdToken({
                 idToken,
                 audience: CLIENT_ID,
@@ -283,12 +283,17 @@ class AuthController {
             const payload = ticket.getPayload();
             const { email, sub: googleId, name, picture } = payload;
 
-            // Tìm hoặc tạo user
+            // 2. Tìm hoặc tạo user
             let user = await UserModel.findOne({ where: { email } });
             if (!user) {
+                // Sinh mật khẩu ngẫu nhiên và hash
+                const randomPassword = uuidv4();
+                const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
                 user = await UserModel.create({
                     name,
                     email,
+                    password: hashedPassword,      // ← thêm trường password
                     avatar: picture,
                     googleId,
                     email_verified_at: new Date(),
@@ -300,15 +305,40 @@ class AuthController {
                 await user.update({ googleId, avatar: picture });
             }
 
-            // Sinh JWT
+            // 3. Sinh JWT với payload thống nhất
             const expiresIn = rememberMe ? '30d' : '2h';
-            const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn });
+            const token = jwt.sign(
+                {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    phone: user.phone,
+                    email_verified_at: user.email_verified_at
+                },
+                JWT_SECRET,
+                { expiresIn }
+            );
 
             if (rememberMe) {
                 await user.update({ remember_token: token });
             }
 
-            return successResponse(res, 'Đăng nhập Google thành công!', { token, user }, 200);
+            // 4. Trả về response giống luồng thường
+            return successResponse(res, 'Đăng nhập Google thành công!', {
+                token,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    email_verified_at: user.email_verified_at,
+                    role: user.role,
+                    status: user.status
+                },
+                rememberToken: rememberMe ? token : null
+            }, 200);
+
         } catch (err) {
             console.error(err);
             return errorResponse(res, 'Token Google không hợp lệ!', 401);
