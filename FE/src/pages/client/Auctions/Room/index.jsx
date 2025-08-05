@@ -1124,7 +1124,7 @@ export default function AuctionRoom() {
                             <p className="mt-2 text-center text-sm text-red-600">
                                 Vui lòng thanh toán trước hạn
                                 nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
-                                bạn sẽ bị cấm đấu giá trong 12 tháng!
+                                bạn sẽ bị cấm đấu giá vĩnh viễn!
                             </p>
 
                             <div className="mt-6 grid gap-3 text-center">

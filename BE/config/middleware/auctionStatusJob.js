@@ -141,7 +141,7 @@ module.exports = (io) => {
         <p>Bạn đã chiến thắng phiên đấu giá <strong>${productName} (${sku})</strong> với giá <strong>${bidAmount.toLocaleString()} VND</strong>.</p>
         <p>Vui lòng thanh toán trước hạn
                                 nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
-                                bạn sẽ bị cấm đấu giá trong 12 tháng!</p>
+                                bạn sẽ bị cấm đấu giá vĩnh viễn!</p>
         <p>-- Hệ thống Đồng Hồ TimesMaster --</p>
       `
       });

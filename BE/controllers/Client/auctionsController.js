@@ -46,11 +46,18 @@ class AuctionController {
         return res.status(401).json({ success: false, message: 'Thiếu thông tin người dùng' });
       }
 
-      const user = await UserModel.findByPk(userId, { attributes: ['id', 'name', 'email', 'balance'] });
+      const user = await UserModel.findByPk(userId, { attributes: ['id', 'name', 'email', 'balance', 'failed_payment_count'] });
       if (!user) {
         return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
       }
 
+      if ((user.failed_payment_count || 0) >= 3) {
+        return res.status(403).json({
+          success: false,
+          message: 'Bạn đã bị cấm đấu giá vì không thanh toán quá 3 lần.'
+        });
+      }
+      
       const email = user.email || req.user.email;
       if (!email) {
         return res.status(400).json({ success: false, message: 'Không tìm thấy email người dùng' });
@@ -359,7 +366,7 @@ class AuctionController {
         auction.current_price = topBid.bidAmount;
         await auction.save({ transaction: t });
 
-         t.afterCommit(async () => {
+        t.afterCommit(async () => {
           try {
             await AuctionController.sendWinnerEmail(
               topBid.user_id,

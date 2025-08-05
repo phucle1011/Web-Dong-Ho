@@ -683,7 +683,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                         <td colSpan={7} className="text-red-700 text-sm p-3">
                           Vui lòng thanh toán trước hạn
                           nếu không bạn sẽ bị trừ 10% số tiền thắng cược trong ví và nếu 3 lần không thanh toán
-                          bạn sẽ bị cấm đấu giá trong 12 tháng!
+                          bạn sẽ bị cấm đấu giá vĩnh viễn!
                         </td>
                       </tr>
                     )}

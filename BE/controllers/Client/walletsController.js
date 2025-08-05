@@ -200,6 +200,8 @@ class WalletsController {
         return res.status(400).json({ success: false, message: 'Người dùng không tồn tại' });
       }
 
+      user.failed_payment_count = (user.failed_payment_count || 0) + 1;
+      
       const deducted = (user.balance || 0) < fee
         ? Number(user.balance)
         : fee;

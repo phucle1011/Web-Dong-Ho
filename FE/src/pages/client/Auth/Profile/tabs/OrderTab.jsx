@@ -122,7 +122,7 @@ export default function OrderTab() {
       setOrders(res.data.data || []);
       setTotalPages(res.data.pagination?.totalPages || 1);
       if (!res.data.data.length) {
-        toast.info("Không tìm thấy đơn hàng nào.");
+        // toast.info("Không tìm thấy đơn hàng nào.");
       }
     } catch (error) {
       console.error("Lỗi khi tải đơn hàng:", error);
