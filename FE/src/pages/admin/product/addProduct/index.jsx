@@ -332,12 +332,7 @@ const handleCancel = async () => {
               <small className="text-danger">{errors.brand_id.message}</small>
             )}
 
-            {showBrandModal && (
-              <AddBrandModal
-                onClose={() => setShowBrandModal(false)}
-                onSuccess={handleBrandAdded}
-              />
-            )}
+            
 
             {/* ========== DANH MỤC ========== */}
 
@@ -577,6 +572,12 @@ const handleCancel = async () => {
           />
         </div>
       </form>
+      {showBrandModal && (
+              <AddBrandModal
+                onClose={() => setShowBrandModal(false)}
+                onSuccess={handleBrandAdded}
+              />
+            )}
     </div>
   );
 };
