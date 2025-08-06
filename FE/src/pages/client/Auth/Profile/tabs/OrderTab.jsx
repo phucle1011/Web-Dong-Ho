@@ -248,27 +248,21 @@ export default function OrderTab() {
       for (const item of items) {
         const variantId = item.variant?.id;
         const quantity = item.quantity;
+        if (!variantId || quantity <= 0) continue;
 
-        if (!variantId || quantity <= 0) {
-
-          continue;
-        }
+        const payload = { userId, productVariantId: variantId, quantity };
+        console.log('[Reorder] Gửi payload:', payload);
 
         try {
           const res = await axios.post(
             `${Constants.DOMAIN_API}/add-to-carts`,
-            {
-              userId,
-              productVariantId: variantId,
-              quantity,
-            },
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+            payload,
+            { headers: { Authorization: `Bearer ${token}` } }
           );
-
+          console.log('[Reorder] Status:', res.status, 'Data:', res.data);
         } catch (err) {
-          console.error("Lỗi khi thêm vào giỏ:", err);
+          console.error('[Reorder] Lỗi thêm vào giỏ:', err.response?.status, err.response?.data);
+          return toast.error(`Không thể mua lại vì sản phẩm hiện đã hết hàng`);
         }
       }
 
