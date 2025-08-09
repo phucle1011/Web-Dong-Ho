@@ -876,6 +876,45 @@ export default function CheckoutPage() {
         toast.error("Vui lòng chọn hoặc thêm địa chỉ giao hàng");
         return;
       }
+
+      const hasNegativeItem = checkoutItems.some(item => {
+        const info = getAuctionInfo(item.variant, user.id, item.created_at);
+        const unitPrice = info.isAuction
+          ? Number(info.bidAmount)
+          : Number(item.variant?.promotion?.discounted_price ?? item.variant?.price ?? 0);
+
+        const qty = Number(item.quantity ?? 0);
+        const lineTotal = unitPrice * qty;
+
+        return unitPrice < 0 || lineTotal < 0; 
+      });
+
+      if (hasNegativeItem) {
+        toast.error("Có sản phẩm có giá không hợp lệ (nhỏ hơn 0). Vui lòng kiểm tra lại giỏ hàng.");
+        return; 
+      }
+
+      if (Number(finalData.shippingFee ?? 0) < 0) {
+        toast.error("Phí vận chuyển không hợp lệ. Vui lòng thử lại sau.");
+        return;
+      }
+      const totalBeforeWallet =
+        Math.max(0, totalPrice - (discountInfo?.voucherDiscount || 0) - (discountInfo?.promoDiscount || 0)) +
+        (finalData.shippingFee || 0);
+
+      if (totalBeforeWallet < 0) {
+        toast.error("Tổng tiền không hợp lệ (nhỏ hơn 0). Vui lòng kiểm tra lại.");
+        return;
+      }
+
+      if (enabled && balance != null) {
+        const afterWallet = totalBeforeWallet - Math.min(balance, totalBeforeWallet);
+        if (afterWallet < 0) {
+          toast.error("Số tiền thanh toán không hợp lệ sau khi trừ ví.");
+          return;
+        }
+      }
+
       const savedVoucher = location.state?.selectedVoucher;
 
       const payload = {

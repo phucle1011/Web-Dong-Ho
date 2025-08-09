@@ -73,7 +73,7 @@ export default function AuctionRoom() {
 
     const [overridePrice, setOverridePrice] = useState(newBidPrice);
 
-    const bidValue = overridePrice;
+    const bidValue = overridePrice ?? newBidPrice;
 
     const [countdown, setCountdown] = useState({
         label: "",
@@ -377,8 +377,8 @@ export default function AuctionRoom() {
     };
 
     const amountInWords = useMemo(() => {
-        return numberToVietnamese(newBidPrice) + " đồng";
-    }, [newBidPrice]);
+        return numberToVietnamese(bidValue) + " đồng";
+    }, [bidValue]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -413,15 +413,38 @@ export default function AuctionRoom() {
 
             if (auction.priceStep) setBidStep(Number(auction.priceStep));
 
+            // const imgList = [];
+            // if (auction.variant?.product?.thumbnail) {
+            //     imgList.push(auction.variant.product.thumbnail);
+            // }
+            // if (imgList.length === 0) {
+            //     imgList.push("https://via.placeholder.com/800x600?text=No+Image");
+            // }
+            // setImages(imgList);
+            // setSelectedImage(imgList[0]);
             const imgList = [];
+
             if (auction.variant?.product?.thumbnail) {
                 imgList.push(auction.variant.product.thumbnail);
             }
+
+            if (auction.variant?.images?.[0]?.image_url) {
+                imgList.push(auction.variant.images[0].image_url);
+            }
+
+            if (auction.variant?.images?.length > 1) {
+                auction.variant.images.slice(1).forEach(img => {
+                    if (img?.image_url) imgList.push(img.image_url);
+                });
+            }
+
             if (imgList.length === 0) {
                 imgList.push("https://via.placeholder.com/800x600?text=No+Image");
             }
+
             setImages(imgList);
             setSelectedImage(imgList[0]);
+
 
         } catch (error) {
             console.error("Lỗi lấy phiên đang diễn ra:", error);
@@ -698,12 +721,22 @@ export default function AuctionRoom() {
 
     const isCooldown = !!cooldownUntil && Date.now() < cooldownUntil;
 
-   const handleInputChange = (e) => {
+    const handleInputChange = (e) => {
 
-  const digitsOnly = e.target.value.replace(/\D/g, "");
+        const digitsOnly = e.target.value.replace(/\D/g, "");
 
-  setOverridePrice(digitsOnly === "" ? newBidPrice : Number(digitsOnly));
-};
+        if (digitsOnly === "") {
+            setOverridePrice("");
+        } else {
+            setOverridePrice(Number(digitsOnly));
+        }
+    };
+
+    const isInvalidBid =
+        !activeAuction ||
+        isMyHighest ||
+        isCooldown ||
+        Number(bidValue || 0) < Number(minAllowed);
 
     return (
         <Layout>
@@ -1089,15 +1122,22 @@ export default function AuctionRoom() {
 
                                 <button
                                     type="button"
-                                    onClick={handleBid}
-                                    disabled={
-                                        !activeAuction ||
-                                        isMyHighest ||
-                                        isCooldown ||
-                                        bidValue < minAllowed   /* chặn khi giá nhập < minAllowed */
-                                    }
+                                    onMouseDown={(e) => {
+                                        if (isInvalidBid) e.preventDefault();
+                                    }}
+                                    // onClick={handleBid}
+                                    // disabled={
+                                    //     !activeAuction ||
+                                    //     isMyHighest ||
+                                    //     isCooldown ||
+                                    //     bidValue < minAllowed   /* chặn khi giá nhập < minAllowed */
+                                    // }
+                                    onClick={() => {
+                                        if (isInvalidBid) return;
+                                        handleBid();
+                                    }}
                                     className={`mt-4 w-full h-12 rounded-full font-semibold shadow
-    ${isCooldown || isMyHighest || bidValue < minAllowed
+                                    ${isCooldown
                                             ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                                             : 'bg-blue-200 hover:bg-blue-300 text-blue-900'
                                         }`}
@@ -1113,25 +1153,31 @@ export default function AuctionRoom() {
                                     <label className="block text-sm font-medium text-gray-200 mb-1">
                                         Hoặc nhập giá:
                                     </label>
-                                   <input
-  type="text"
-  min={minAllowed}
-  step={bidStep}
-  value={overridePrice.toLocaleString("vi-VN")}
-  onChange={handleInputChange}
-  onBlur={() => {
-    if (overridePrice < minAllowed) setOverridePrice(minAllowed);
-  }}
+                                    <input
+                                        type="text"
+                                        min={minAllowed}
+                                        step={bidStep}
+                                        value={
+                                            overridePrice === ""
+                                                ? ""
+                                                : overridePrice.toLocaleString("vi-VN")
+                                        }
+                                        onChange={handleInputChange}
+                                        onBlur={() => {
+                                            // if (overridePrice === "" || overridePrice < minAllowed) {
+                                            //     setOverridePrice(minAllowed);
+                                            // }
+                                        }}
                                         className="w-full px-3 py-2 bg-slate-800 text-white rounded-lg border border-slate-600 focus:outline-none"
                                     />
                                     {/* <div className="text-xs text-slate-400 mt-1">
                                         Giá ≥ {formatVnd(minAllowed)}, step = {formatVnd(bidStep)}
                                     </div> */}
                                     {overridePrice < minAllowed && (
-    <p className="text-red-500 text-sm mt-1">
-      Giá phải lớn hơn hoặc bằng {formatVnd(minAllowed)}
-    </p>
-  )}
+                                        <p className="text-red-500 text-sm mt-1">
+                                            Giá phải lớn hơn hoặc bằng {formatVnd(minAllowed)}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {isMyHighest && (

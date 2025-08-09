@@ -18,6 +18,8 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const [showAllMap, setShowAllMap] = useState({});
   const [failedCount, setFailedCount] = useState(0);
 
+  const hasAuctionInCart = cartItems.some(i => !!i.auction_id);
+
   const formatHHMMSS = (secs) => {
     const h = String(Math.floor(secs / 3600)).padStart(2, "0");
     const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
@@ -257,7 +259,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.product_variant_id !== id)
       );
-            notifyCartChanged();
+      notifyCartChanged();
       toast.success("Xóa sản phẩm khỏi giỏ hàng thành công");
       await fetchCart();
     } catch (error) {
@@ -275,6 +277,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   };
 
   const handleClearCart = async () => {
+    // if (hasAuctionInCart) return;
     const token = localStorage.getItem("token");
 
     try {
@@ -285,7 +288,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
       });
 
       setCartItems([]);
-            notifyCartChanged();
+      notifyCartChanged();
       toast.success("Đã xóa toàn bộ giỏ hàng");
       await fetchCart();
     } catch (error) {
@@ -310,7 +313,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
         }
       );
       await fetchCart();
-            notifyCartChanged();
+      notifyCartChanged();
     } catch (error) {
       toast.error("Cập nhật số lượng thất bại");
     }
@@ -418,7 +421,7 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
 
     } catch (err) {
       console.error("Xử lý hết hạn thất bại:", err);
-      toast.error("Không thể tự động xử lý phí hết hạn");
+      // toast.error("Không thể tự động xử lý phí hết hạn");
     }
   };
 
@@ -466,13 +469,29 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   return (
     <div className={`w-full ${className || ""}`}>
       <div className="flex justify-end items-center mb-4 pr-2">
-        <button
+        {/* <button
           onClick={() => setShowConfirmClear(true)}
           className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
           title="Xóa toàn bộ giỏ hàng"
         >
           <FaTrashAlt size={20} className="font-bold" />
+        </button> */}
+        <button
+          onClick={() => !hasAuctionInCart && setShowConfirmClear(true)}
+          disabled={hasAuctionInCart}
+          className={`p-2 rounded-full transition duration-200 ${hasAuctionInCart
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700"
+            }`}
+          title={
+            hasAuctionInCart
+              ? "Không thể xóa toàn bộ vì có sản phẩm đấu giá trong giỏ hàng"
+              : "Xóa toàn bộ giỏ hàng"
+          }
+        >
+          <FaTrashAlt size={20} className="font-bold" />
         </button>
+
       </div>
       <div className="max-h-96 overflow-y-auto w-full">
         <table className="w-full table-fixed text-sm text-left text-gray-500 dark:text-gray-400">

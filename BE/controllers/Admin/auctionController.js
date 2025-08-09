@@ -12,6 +12,7 @@ const VariantImageModel = require('../../models/variantImagesModel');
 const AuctionBidModel = require('../../models/auctionBidsModel');
 const OrderModel = require('../../models/ordersModel');
 const OrderDetailModel = require('../../models/orderDetailsModel');
+const CartModel = require('../../models/cartDetailsModel');
 
 const sequelize = require('../../config/database');
 
@@ -160,6 +161,19 @@ class auctionController {
             usedIds = usedIds.filter(id => id !== currentVariantId);
          }
 
+         const cartVariants = await CartModel.findAll({
+      attributes: ['product_variant_id'],
+      group: ['product_variant_id'],
+      raw: true
+    });
+    const idsInCart = cartVariants.map(c => c.product_variant_id);
+    const excludeSet = new Set([...usedIds, ...idsInCart]);
+
+    if (currentVariantId !== null) {
+      excludeSet.delete(currentVariantId);
+    }
+    const excludeIds = Array.from(excludeSet);
+
          // const whereClause = {
          //    is_auction_only: 1,
          //    ...(usedIds.length > 0 && { id: { [Op.notIn]: usedIds } })
@@ -168,7 +182,7 @@ class auctionController {
          const whereClause = {
             is_auction_only: 1,
             stock: { [Op.gt]: 0 },
-            ...(usedIds.length > 0 && { id: { [Op.notIn]: usedIds } })
+            ...(excludeIds.length > 0 && { id: { [Op.notIn]: excludeIds } })
          };
 
          const auctionProducts = await ProductVariantModel.findAll({
@@ -268,6 +282,13 @@ class auctionController {
             });
          }
 
+         const variantInCart = await CartModel.count({ where: { product_variant_id } });
+         if (variantInCart > 0) {
+            return res.status(400).json({
+               message: "Biến thể đang có trong giỏ hàng, không thể tạo phiên đấu giá.",
+            });
+         }
+
          const conflict = await AuctionModel.findOne({
             where: {
                product_variant_id,
@@ -362,6 +383,13 @@ class auctionController {
          if (auction.status === 'active' || auction.status === 'ended') {
             return res.status(400).json({
                message: `Không thể cập nhật phiên đã có trạng thái '${auction.status}'.`,
+            });
+         }
+
+         const variantInCart = await CartModel.count({ where: { product_variant_id } });
+         if (variantInCart > 0) {
+            return res.status(400).json({
+               message: "Biến thể đang có trong giỏ hàng, không thể cập nhật phiên đấu giá.",
             });
          }
 
@@ -599,6 +627,12 @@ class auctionController {
       return order.status !== 'pending' && order.status !== 'confirmed' && order.status !== 'shipping' && order.status !== 'delivered' && order.status !== 'completed';
    }
 
+   static async isVariantInAnyCart(variantId) {
+      const count = await CartModel.count({
+         where: { variant_id: variantId }
+      });
+      return count > 0;
+   }
 }
 
 module.exports = auctionController;

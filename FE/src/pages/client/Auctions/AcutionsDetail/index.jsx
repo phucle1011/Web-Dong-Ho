@@ -194,7 +194,6 @@ export default function AuctionsDetail() {
           `${Constants.DOMAIN_API}/admin/auctions/winners/${auctionId}`
         );
         const d = res.data.data;
-        console.log("hehe", d);
 
         setAuction(d.auction);
         if (d.winner) {

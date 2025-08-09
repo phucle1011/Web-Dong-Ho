@@ -370,15 +370,15 @@ function AuctionProductDetail() {
 
             {/* Animation CSS */}
             <style jsx>{`
-      @keyframes blink {
-        50% {
-          opacity: 0;
-        }
-      }
-      .blink {
-        animation: blink 1s step-start infinite;
-      }
-    `}</style>
+              @keyframes blink {
+                50% {
+                  opacity: 0;
+                }
+              }
+              .blink {
+                animation: blink 1s step-start infinite;
+              }
+            `}</style>
           </section>
         )}
 
@@ -409,9 +409,9 @@ function AuctionProductDetail() {
               <div
                 ref={upcomingRef}
                 className="
-      flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2
-      [scrollbar-width:none] [-ms-overflow-style:none]
-    "
+                            flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2
+                            [scrollbar-width:none] [-ms-overflow-style:none]
+                          "
                 style={{ scrollbarWidth: "none" }}
                 onLoad={() => updateScrollButtons(upcomingRef, setUpScroll)}
               >
@@ -421,9 +421,9 @@ function AuctionProductDetail() {
                     <div
                       key={auction.id}
                       className="
-            snap-start flex-none
-            w-[85%] sm:w-[55%] lg:w-[33.333%] xl:w-[33.333%]
-          "
+                      snap-start flex-none
+                      w-[85%] sm:w-[55%] lg:w-[33.333%] xl:w-[33.333%]
+                    "
                     >
                       <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition hover:shadow-2xl">
                         <div className="relative">
@@ -445,9 +445,9 @@ function AuctionProductDetail() {
                           <h3
                             ref={setTitleRef("upcoming", auction.id)}
                             className={`text-lg font-semibold text-gray-800 mb-2
-                  ${expanded ? "" : "line-clamp-2"}
-                  min-h-[3.25rem]  /* giữ chỗ ~2 dòng cho text-lg */
-                `}
+                                          ${expanded ? "" : "line-clamp-2"}
+                                          min-h-[3.25rem]  /* giữ chỗ ~2 dòng cho text-lg */
+                                        `}
                           >
                             {auction.variant?.product?.name || "Không có tên sản phẩm"} ({auction.variant?.sku})
                           </h3>
@@ -479,7 +479,7 @@ function AuctionProductDetail() {
 
                           <Link
                             to={{ pathname: "/AcutionsDetail" }}
-                            state={{ productId: auction.variant?.product?.id }}
+                            state={{ productId: auction.variant?.product?.id, auctionId: auction.id }}
                             className="w-full block text-center py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold shadow hover:from-blue-600 hover:to-indigo-700 transition"
                           >
                             Xem chi tiết

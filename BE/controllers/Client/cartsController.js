@@ -13,167 +13,166 @@ const { Op } = require('sequelize');
 
 class CartController {
     static async getCartByUser(req, res) {
-    try {
-        const userId = req.user.id;
+        try {
+            const userId = req.user.id;
 
-        const count = await CartModel.sum('quantity', { where: { user_id: userId } });
+            const count = await CartModel.sum('quantity', { where: { user_id: userId } });
 
-        const cartItems = await CartModel.findAll({
-            where: { user_id: userId },
-            include: [
-                {
-                    model: ProductVariantsModel,
-                    as: 'variant',
-                    attributes: ['id', 'product_id', 'price', 'stock', 'sku'],
-                    include: [
-                        {
-                            model: ProductModel,
-                            as: 'product',
-                            attributes: ['id', 'name'],
-                            required: false
-                        },
-                        {
-                            model: VariantImageModel,
-                            as: 'images',
-                            attributes: ['image_url'],
-                            required: false
-                        },
-                        {
-                            model: ProductVariantAttributeValuesModel,
-                            as: "attributeValues",
-                            include: [
-                                {
-                                    model: ProductAttribute,
-                                    as: "attribute",
-                                },
-                            ],
-                        },
-                        {
-                            model: PromotionProductModel,
-                            as: "promotionProducts",
-                            include: [
-                                {
-                                    model: PromotionModel,
-                                    as: "promotion",
-                                    where: {
-                                        status: "active",
-                                        start_date: { [Op.lte]: new Date() },
-                                        end_date: { [Op.gte]: new Date() },
+            const cartItems = await CartModel.findAll({
+                where: { user_id: userId },
+                include: [
+                    {
+                        model: ProductVariantsModel,
+                        as: 'variant',
+                        attributes: ['id', 'product_id', 'price', 'stock', 'sku'],
+                        include: [
+                            {
+                                model: ProductModel,
+                                as: 'product',
+                                attributes: ['id', 'name'],
+                                required: false
+                            },
+                            {
+                                model: VariantImageModel,
+                                as: 'images',
+                                attributes: ['image_url'],
+                                required: false
+                            },
+                            {
+                                model: ProductVariantAttributeValuesModel,
+                                as: "attributeValues",
+                                include: [
+                                    {
+                                        model: ProductAttribute,
+                                        as: "attribute",
                                     },
-                                    required: false,
-                                },
-                            ],
-                            required: false,
-                        },
-                        {
-                            model: AuctionModel,
-                            as: 'auctions',
-                            where: { status: 'ended' },
-                            required: false,
-                            include: [
-                                {
-                                    model: AuctionBidModel,
-                                    as: 'bids',
-                                    required: false,
-                                }
-                            ]
+                                ],
+                            },
+                            {
+                                model: PromotionProductModel,
+                                as: "promotionProducts",
+                                include: [
+                                    {
+                                        model: PromotionModel,
+                                        as: "promotion",
+                                        where: {
+                                            status: "active",
+                                            start_date: { [Op.lte]: new Date() },
+                                            end_date: { [Op.gte]: new Date() },
+                                        },
+                                        required: false,
+                                    },
+                                ],
+                                required: false,
+                            },
+                            {
+                                model: AuctionModel,
+                                as: 'auctions',
+                                where: { status: 'ended' },
+                                required: false,
+                                include: [
+                                    {
+                                        model: AuctionBidModel,
+                                        as: 'bids',
+                                        required: false,
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                order: [['id', 'DESC']]
+            });
+
+            const processedCartItems = cartItems.map(item => {
+                const itemJson = item.toJSON();
+                const variant = itemJson.variant;
+                const quantityInCart = itemJson.quantity;
+
+                if (variant && variant.promotionProducts && variant.promotionProducts.length > 0) {
+                    const bestPromotion = variant.promotionProducts.reduce((best, promoProduct) => {
+                        const promo = promoProduct.promotion;
+                        const variantQuantityLimit = promoProduct.variant_quantity || 0;
+                        if (!promo || variantQuantityLimit <= 0) return best;
+
+                        const variantPrice = parseFloat(variant.price) || 0;
+                        let discountPrice = variantPrice;
+                        let discountPercent = 0;
+
+                        if (promo.discount_type === "percentage") {
+                            const originalPrice = discountPrice;
+                            const percentValue = parseFloat(promo.discount_value);
+                            let reducedAmount = (discountPrice * percentValue) / 100;
+
+                            // ⚠ Giới hạn không giảm quá max_price
+                            if (promo.max_price && reducedAmount > promo.max_price) {
+                                reducedAmount = promo.max_price;
+                            }
+
+                            discountPrice -= reducedAmount;
+                            discountPercent = (reducedAmount / originalPrice) * 100;
+                        } else if (promo.discount_type === "fixed") {
+                            discountPrice -= parseFloat(promo.discount_value);
+                            discountPercent = ((variantPrice - discountPrice) / variantPrice) * 100;
                         }
-                    ]
+
+                        discountPrice = Math.max(0, discountPrice);
+
+                        // Bỏ ảnh hưởng bởi số lượng => chỉ lấy giá giảm 1 sản phẩm
+                        const effectivePrice = discountPrice;
+
+                        const newPromo = {
+                            id: promo.id,
+                            code: promo.code,
+                            discount_type: promo.discount_type,
+                            discount_value: parseFloat(promo.discount_value),
+                            discounted_price: parseFloat(effectivePrice.toFixed(2)),  // chỉ 1 giá duy nhất
+                            discount_percent: parseFloat(discountPercent.toFixed(2)),
+                            meets_conditions: true,
+                            limited_quantity: variantQuantityLimit,
+                            discounted_quantity: quantityInCart, // nếu cần vẫn giữ
+                            normal_quantity: 0,
+                        };
+
+
+                        if (!best || newPromo.discounted_price < best.discounted_price) {
+                            return newPromo;
+                        }
+                        return best;
+                    }, null);
+
+
+                    variant.promotion = bestPromotion || {
+                        discounted_price: parseFloat(variant.price) || 0,
+                        discount_percent: 0,
+                        meets_conditions: true,
+                    };
+                } else {
+                    variant.promotion = {
+                        discounted_price: parseFloat(variant.price) || 0,
+                        discount_percent: 0,
+                        meets_conditions: true,
+                    };
                 }
-            ],
-            order: [['id', 'DESC']]
-        });
 
-        const processedCartItems = cartItems.map(item => {
-            const itemJson = item.toJSON();
-            const variant = itemJson.variant;
-            const quantityInCart = itemJson.quantity;
+                return itemJson;
+            });
 
-            if (variant && variant.promotionProducts && variant.promotionProducts.length > 0) {
-                const bestPromotion = variant.promotionProducts.reduce((best, promoProduct) => {
-    const promo = promoProduct.promotion;
-    const variantQuantityLimit = promoProduct.variant_quantity || 0;
-    if (!promo || variantQuantityLimit <= 0) return best;
-
-    const variantPrice = parseFloat(variant.price) || 0;
-    let discountPrice = variantPrice;
-    let discountPercent = 0;
-
-    if (promo.discount_type === "percentage") {
-        const originalPrice = discountPrice;
-        const percentValue = parseFloat(promo.discount_value);
-        let reducedAmount = (discountPrice * percentValue) / 100;
-
-        // ⚠ Giới hạn không giảm quá max_price
-        if (promo.max_price && reducedAmount > promo.max_price) {
-            reducedAmount = promo.max_price;
+            res.status(200).json({
+                status: 200,
+                message: `Lấy giỏ hàng của người dùng ${userId} thành công`,
+                data: processedCartItems,
+                count
+            });
+        } catch (error) {
+            console.error("Lỗi khi lấy giỏ hàng:", error);
+            res.status(500).json({
+                status: 500,
+                message: "Lỗi máy chủ",
+                error: error.message
+            });
         }
-
-        discountPrice -= reducedAmount;
-        discountPercent = (reducedAmount / originalPrice) * 100;
-    } else if (promo.discount_type === "fixed") {
-        discountPrice -= parseFloat(promo.discount_value);
-        discountPercent = ((variantPrice - discountPrice) / variantPrice) * 100;
     }
-
-    discountPrice = Math.max(0, discountPrice);
-
-    // Bỏ ảnh hưởng bởi số lượng => chỉ lấy giá giảm 1 sản phẩm
-const effectivePrice = discountPrice;
-
-    const newPromo = {
-  id: promo.id,
-  code: promo.code,
-  discount_type: promo.discount_type,
-  discount_value: parseFloat(promo.discount_value),
-  discounted_price: parseFloat(effectivePrice.toFixed(2)),  // chỉ 1 giá duy nhất
-  discount_percent: parseFloat(discountPercent.toFixed(2)),
-  meets_conditions: true,
-  limited_quantity: variantQuantityLimit,
-  discounted_quantity: quantityInCart, // nếu cần vẫn giữ
-  normal_quantity: 0,
-};
-
-
-    if (!best || newPromo.discounted_price < best.discounted_price) {
-        return newPromo;
-    }
-    return best;
-}, null);
-
-
-                variant.promotion = bestPromotion || {
-                    discounted_price: parseFloat(variant.price) || 0,
-                    discount_percent: 0,
-                    meets_conditions: true,
-                };
-            } else {
-                variant.promotion = {
-                    discounted_price: parseFloat(variant.price) || 0,
-                    discount_percent: 0,
-                    meets_conditions: true,
-                };
-            }
-
-            return itemJson;
-        });
-
-        res.status(200).json({
-            status: 200,
-            message: `Lấy giỏ hàng của người dùng ${userId} thành công`,
-            data: processedCartItems,
-            count
-        });
-    } catch (error) {
-        console.error("Lỗi khi lấy giỏ hàng:", error);
-        res.status(500).json({
-            status: 500,
-            message: "Lỗi máy chủ",
-            error: error.message
-        });
-    }
-}
-
 
     static async addToCart(req, res) {
         try {

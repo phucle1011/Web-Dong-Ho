@@ -13,6 +13,7 @@ import { FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight } 
 Modal.setAppElement("#root");
 
 export default function AdminAuctionWinnerOnly() {
+    
     const navigate = useNavigate();
     const { id } = useParams();
     const [auction, setAuction] = useState(null);
@@ -29,9 +30,11 @@ export default function AdminAuctionWinnerOnly() {
         start_time: null,
         end_time: null,
     });
+
     const [errors, setErrors] = useState({});
     const [creating, setCreating] = useState(false);
     const [products, setProducts] = useState([]);
+
     const [winnerData, setWinnerData] = useState({
         winner: null,
         winningBid: null,
@@ -101,17 +104,27 @@ export default function AdminAuctionWinnerOnly() {
             .substring(0, 19);
     };
 
+    const normalizeMoney = (v) => {
+        if (v == null) return 0;
+        if (typeof v === "number") return Math.trunc(v);
+        const digits = String(v).replace(/\D/g, "");
+        return digits === "" ? 0 : Math.trunc(Number(digits));
+    };
+
     const handleRetrySubmit = async () => {
         if (!validate()) return;
         setCreating(true);
         try {
-            await axios.post(`${Constants.DOMAIN_API}/admin/auctions`, {
+            const payload = {
                 product_variant_id: form.product_variant_id,
-                start_price: parseInt(form.start_price.toString().replace(/\D/g, ""), 10),
-                priceStep: parseInt(form.priceStep.toString().replace(/\D/g, ""), 10),
+                start_price: normalizeMoney(form.start_price),
+                priceStep: normalizeMoney(form.priceStep),
                 start_time: formatToMySQL(form.start_time),
                 end_time: formatToMySQL(form.end_time),
-            });
+            };
+            console.log("[AUCTION CREATE PAYLOAD]", payload);
+
+            await axios.post(`${Constants.DOMAIN_API}/admin/auctions`, payload);
             toast.success("Tạo phiên mới thành công!");
             closeRetryModal();
             navigate("/admin/auctions/getAll");
@@ -159,23 +172,18 @@ export default function AdminAuctionWinnerOnly() {
         fetchData();
     }, [id]);
 
-    useEffect(() => {
-        if (!auction) return;
-        setForm({
-            product_variant_id: auction.variant.id,
-            start_price: auction.start_price || auction.priceStep,
-            priceStep: auction.priceStep,
-            start_time: null,
-            end_time: null,
-        });
-    }, [auction]);
+    const scaleDown = (v) => {
+        if (v == null) return 0;
+        const n = typeof v === 'number' ? v : Number(String(v).replace(/\D/g, '') || 0);
+        return Math.trunc(n / 100);
+    };
 
     useEffect(() => {
         if (!auction) return;
         setForm({
             product_variant_id: auction.variant.id,
-            start_price: auction.start_price || auction.priceStep,
-            priceStep: auction.priceStep,
+            start_price: scaleDown(auction.start_price ?? auction.priceStep),
+            priceStep: scaleDown(auction.priceStep),
             start_time: null,
             end_time: null,
         });
