@@ -251,7 +251,7 @@ function PromotionGetAll() {
                     }}
                     className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm rounded ml-2"
                 >
-                    Lọc đã sử dụng
+                    đã sử dụng
                 </button>
             </div>
 

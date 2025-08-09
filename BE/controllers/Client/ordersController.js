@@ -25,6 +25,8 @@ const { BACKEND_URL } = require("../../config/url");
 const { FRONTEND_URL } = require("../../config/url");
 
 const crypto = require("crypto");
+const { lookup } = require("dns");
+const { log } = require("console");
 
 class OrderController {
     static async get(req, res) {
@@ -213,25 +215,6 @@ class OrderController {
                             transaction: t,
                         }
                     );
-                }
-            }
-
-            if (order.promotion_user_id) {
-                const promoUser = await PromotionUserModel.findOne({
-                    where: { id: order.promotion_user_id },
-                    include: [{ model: PromotionModel, as: 'promotion' }],
-                    transaction: t,
-                    lock: t.LOCK.UPDATE,
-                });
-
-                if (promoUser) {
-                    promoUser.used = false;
-                    await promoUser.save({ transaction: t });
-
-                    if (promoUser.promotion) {
-                        promoUser.promotion.quantity += 1;
-                        await promoUser.promotion.save({ transaction: t });
-                    }
                 }
             }
 
@@ -612,33 +595,33 @@ class OrderController {
                     await t.rollback();
                     return res.status(400).json({ message: `Sản phẩm ${variant.sku} không đủ kho.` });
                 }
-if (promotion_product_id) {
-  const promoProduct = await PromotionProductModel.findOne({
-    where: {
-      promotion_id: promotion_product_id,
-      product_variant_id: variant.id,
-    },
-    transaction: t,
-    lock: t.LOCK.UPDATE,
-  });
+                if (promotion_product_id) {
+                    const promoProduct = await PromotionProductModel.findOne({
+                        where: {
+                            promotion_id: promotion_product_id,
+                            product_variant_id: variant.id,
+                        },
+                        transaction: t,
+                        lock: t.LOCK.UPDATE,
+                    });
 
-  if (promoProduct && promoProduct.variant_quantity > 0) {
-    const deducted = Math.min(promoProduct.variant_quantity, item.quantity);
+                    if (promoProduct && promoProduct.variant_quantity > 0) {
+                        const deducted = Math.min(promoProduct.variant_quantity, item.quantity);
 
-    // Trừ variant_quantity
-    promoProduct.variant_quantity -= deducted;
-    await promoProduct.save({ transaction: t });
+                        // Trừ variant_quantity
+                        promoProduct.variant_quantity -= deducted;
+                        await promoProduct.save({ transaction: t });
 
-    // Trừ promotion.quantity dựa trên số vừa trừ từ variant
-    await PromotionModel.decrement(
-      { quantity: deducted },
-      {
-        where: { id: promotion_product_id },
-        transaction: t,
-      }
-    );
-  }
-}
+                        // Trừ promotion.quantity dựa trên số vừa trừ từ variant
+                        await PromotionModel.decrement(
+                            { quantity: deducted },
+                            {
+                                where: { id: promotion_product_id },
+                                transaction: t,
+                            }
+                        );
+                    }
+                }
 
                 const price = parseFloat(variant.price);
                 totalPrice += price * item.quantity;
@@ -1360,8 +1343,9 @@ if (promotion_product_id) {
                 products: req.body.products.map((p) => ({
                     quantity: p.quantity,
                     variant_id: p.product_variant_id || p.variant?.id,
+                    promotion_product_id: p.promotion_product_id,
                     price: p.variant?.price || p.price,
-                    auction_id: p.auction_id || null, 
+                    auction_id: p.auction_id || null,
                 })),
                 promotion: req.body.promotion,
                 promotion_user_id: req.body.promotion_user_id || null,
@@ -1519,6 +1503,7 @@ if (promotion_product_id) {
                 promotion_user_id
             } = decoded;
 
+
             const usedFromWallet = Number(decoded.wallet_balance || 0);
             if (usedFromWallet > 0) {
                 const user = await UserModel.findByPk(user_id, {
@@ -1543,6 +1528,9 @@ if (promotion_product_id) {
             const emailProducts = [];
 
             for (const item of products) {
+
+                const promotion_product_id = item.promotion_product_id;
+
                 if (!item.variant_id) {
                     console.error("Sản phẩm không hợp lệ (thiếu variant_id):", item);
                     await t.rollback();
@@ -1562,6 +1550,33 @@ if (promotion_product_id) {
                     return res.redirect(
                         `${process.env.FRONTEND_URL}/payment/failed?error=Product_not_found&productId=${item.variant_id}&orderId=${orderId}`
                     );
+                }
+                if (promotion_product_id) {
+                    const promoProduct = await PromotionProductModel.findOne({
+                        where: {
+                            promotion_id: promotion_product_id,
+                            product_variant_id: item.variant_id,
+                        },
+                        transaction: t,
+                        lock: t.LOCK.UPDATE,
+                    });
+
+                    if (promoProduct && promoProduct.variant_quantity > 0) {
+                        const deducted = Math.min(promoProduct.variant_quantity, item.quantity);
+
+                        // Trừ variant_quantity
+                        promoProduct.variant_quantity -= deducted;
+                        await promoProduct.save({ transaction: t });
+
+                        // Trừ promotion.quantity dựa trên số vừa trừ từ variant
+                        await PromotionModel.decrement(
+                            { quantity: deducted },
+                            {
+                                where: { id: promotion_product_id },
+                                transaction: t,
+                            }
+                        );
+                    }
                 }
 
                 const price = parseFloat(productVariant.price);

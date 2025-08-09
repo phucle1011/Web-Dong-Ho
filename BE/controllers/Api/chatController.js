@@ -220,7 +220,26 @@ class ChatController {
       }
 
       // Fallback: gửi câu hỏi cho Gemini
-      const vietnamesePrompt = `Bạn là chatbot hỗ trợ khách hàng cho website bán đồng hồ. Trả lời câu hỏi sau đây một cách tự nhiên, lịch sự và chuyên nghiệp.\n\n${prompt}`;
+      const knowledgeBasePath = path.join(__dirname, "../../data/knowledgeBase.txt");
+      let knowledgeBase = "";
+
+      try {
+        knowledgeBase = fs.readFileSync(knowledgeBasePath, "utf8");
+      } catch (err) {
+        console.error("Không đọc được file knowledgeBase.txt:", err.message);
+      }
+
+      // Tạo prompt có kiến thức nền
+      const vietnamesePrompt = `
+Bạn là chatbot hỗ trợ khách hàng của website bán đồng hồ. Dưới đây là thông tin nội bộ về chính sách, sản phẩm và hỗ trợ khách hàng:
+
+${knowledgeBase}
+
+Câu hỏi của khách hàng: "${prompt}"
+
+Hãy trả lời một cách ngắn gọn, chuyên nghiệp, lịch sự, đúng theo nội dung trên nếu có.
+Nếu không có thông tin phù hợp, hãy trả lời theo cách lịch sự và trung lập.
+`;
       let fallbackResult;
       let retries = 0;
       const maxRetries = 3;

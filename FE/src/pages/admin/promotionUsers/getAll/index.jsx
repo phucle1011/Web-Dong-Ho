@@ -10,6 +10,7 @@ import Select from "react-select";
 import { FaUserPlus } from 'react-icons/fa';
 
 function PromotionList() {
+  const [userPage, setUserPage] = useState(1);
   const [promotions, setPromotions] = useState([]);
   const [selectedPromotionId, setSelectedPromotionId] = useState(null);
   const [customers, setCustomers] = useState([]);
@@ -29,12 +30,11 @@ function PromotionList() {
   const [promotionPage, setPromotionPage] = useState(1);
   const [promotionSearchTerm, setPromotionSearchTerm] = useState("");
   const [promotionSearchInput, setPromotionSearchInput] = useState("");
-
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [usersNotInPromo, setUsersNotInPromo] = useState([]);
   const [selectedUsersToAdd, setSelectedUsersToAdd] = useState([]);
   const [selectedPromoForAddUser, setSelectedPromoForAddUser] = useState(null);
-
+  const [totalCustomers, setTotalCustomers] = useState(0);
 
   const ITEMS_PER_PAGE = 10;
   const PROMOTIONS_PER_PAGE = 5;
@@ -59,6 +59,7 @@ function PromotionList() {
       fetchCustomersByPromotion(selectedPromotionId);
     } else {
       setCustomers([]);
+      setTotalCustomers(0);
     }
     setSelectedCustomerIds([]);
     setCurrentPage(1);
@@ -85,23 +86,20 @@ function PromotionList() {
     if (!selectedPromoForAddUser || selectedUsersToAdd.length === 0) return;
     try {
       const userIds = selectedUsersToAdd.map((u) => u.value);
-      await axios.post(`${Constants.DOMAIN_API}/admin/promotionusers/add`, {
+      const res = await axios.post(`${Constants.DOMAIN_API}/admin/promotionusers/add`, {
         promotionId: selectedPromoForAddUser,
         userIds,
       });
 
-      toast.success("Đã thêm người dùng vào mã giảm!");
-
+      toast.success(`Đã thêm ${res.data.addedCount || userIds.length} người dùng vào mã giảm!`);
       setIsAddUserModalOpen(false);
       setSelectedUsersToAdd([]);
-      if (selectedPromotionId === selectedPromoForAddUser) {
-        fetchCustomersByPromotion(selectedPromoForAddUser); // chỉ reload nếu đang ở mã đó
-      }
+      // Luôn làm mới danh sách khách hàng
+      fetchCustomersByPromotion(selectedPromoForAddUser);
     } catch {
       toast.error("Không thể thêm người dùng.");
     }
   };
-
 
   const fetchPromotions = async () => {
     setLoadingPromotions(true);
@@ -121,13 +119,25 @@ function PromotionList() {
   const fetchCustomersByPromotion = async (promotionId) => {
     setLoadingCustomers(true);
     try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotionusers/list`, {
-        params: { promotionId },
-      });
-      setCustomers(res.data.data || []);
+      let allCustomers = [];
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const res = await axios.get(`${Constants.DOMAIN_API}/admin/promotionusers/list`, {
+          params: { promotionId, page, limit: 50 },
+        });
+        allCustomers = [...allCustomers, ...res.data.data];
+        totalPages = res.data.pagination.totalPages;
+        setTotalCustomers(res.data.pagination.totalRecords);
+        page += 1;
+      }
+      setCustomers(allCustomers);
+      console.log('Total customers fetched:', allCustomers.length);
     } catch {
       toast.error("Không thể tải danh sách khách hàng.");
       setCustomers([]);
+      setTotalCustomers(0);
     } finally {
       setLoadingCustomers(false);
     }
@@ -373,12 +383,12 @@ function PromotionList() {
 
   const quillModules = {
     toolbar: [
-      [{ 'header': [1, 2, false] }],
+      [{ header: [1, 2, false] }],
       ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ list: 'ordered' }, { list: 'bullet' }],
       ['link', 'image'],
-      [{ 'align': [] }],
-      ['clean']
+      [{ align: [] }],
+      ['clean'],
     ],
   };
 
@@ -417,29 +427,27 @@ function PromotionList() {
                 <li
                   key={promo.id}
                   onClick={() => setSelectedPromotionId(promo.id)}
-                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? "bg-blue-100 shadow" : "hover:bg-blue-50"} ${promo.status === 'expired' || promo.status === 'inactive' ? "opacity-60" : ""}`}
+                  className={`cursor-pointer p-3 mb-2 rounded-lg transition-colors ${selectedPromotionId === promo.id ? 'bg-blue-100 shadow' : 'hover:bg-blue-50'
+                    } ${promo.status === 'expired' || promo.status === 'inactive' ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-base text-blue-900">
-                        {promo.name || "Mã không tên"}
-                      </div>
+                      <div className="font-semibold text-base text-blue-900">{promo.name || 'Mã không tên'}</div>
                       <div className="text-sm text-gray-600">
                         {promo.discount_value !== undefined
-                          ? promo.discount_type === "percentage"
+                          ? promo.discount_type === 'percentage'
                             ? `Giảm ${promo.discount_value}%`
                             : `Giảm ${promo.discount_value.toLocaleString()}đ`
-                          : "Chưa xác định"}
+                          : 'Chưa xác định'}
                         <div className="text-xs text-gray-500">
-                          Trạng thái: {
-                            promo.status === 'active'
-                              ? 'đang diễn ra'
-                              : promo.status === 'expired'
-                                ? 'hết hạn'
-                                : promo.status === 'inactive'
-                                  ? 'không hoạt động'
-                                  : promo.status
-                          }
+                          Trạng thái:{' '}
+                          {promo.status === 'active'
+                            ? 'đang diễn ra'
+                            : promo.status === 'expired'
+                              ? 'hết hạn'
+                              : promo.status === 'inactive'
+                                ? 'không hoạt động'
+                                : promo.status}
                           {promo.code && (
                             <div className="text-xs text-blue-600">
                               Mã: <span className="font-medium">{promo.code}</span>
@@ -467,27 +475,48 @@ function PromotionList() {
             </ul>
             <div className="flex justify-center mt-4">
               <div className="flex items-center space-x-1">
-                <button disabled={promotionPage === 1} onClick={() => setPromotionPage(1)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
+                <button
+                  disabled={promotionPage === 1}
+                  onClick={() => setPromotionPage(1)}
+                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
+                >
                   <FaAngleDoubleLeft />
                 </button>
-                <button disabled={promotionPage === 1} onClick={() => setPromotionPage((prev) => prev - 1)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
+                <button
+                  disabled={promotionPage === 1}
+                  onClick={() => setPromotionPage((prev) => prev - 1)}
+                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
+                >
                   <FaChevronLeft />
                 </button>
                 {[...Array(totalPromotionPages)].map((_, i) => {
                   const page = i + 1;
                   if (page >= promotionPage - 1 && page <= promotionPage + 1) {
                     return (
-                      <button key={page} onClick={() => setPromotionPage(page)} className={`px-3 py-1 border rounded-md text-sm ${page === promotionPage ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100"}`}>
+                      <button
+                        key={page}
+                        onClick={() => setPromotionPage(page)}
+                        className={`px-3 py-1 border rounded-md text-sm ${page === promotionPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+                          }`}
+                      >
                         {page}
                       </button>
                     );
                   }
                   return null;
                 })}
-                <button disabled={promotionPage === totalPromotionPages} onClick={() => setPromotionPage((prev) => prev + 1)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
+                <button
+                  disabled={promotionPage === totalPromotionPages}
+                  onClick={() => setPromotionPage((prev) => prev + 1)}
+                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
+                >
                   <FaChevronRight />
                 </button>
-                <button disabled={promotionPage === totalPromotionPages} onClick={() => setPromotionPage(totalPromotionPages)} className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm">
+                <button
+                  disabled={promotionPage === totalPromotionPages}
+                  onClick={() => setPromotionPage(totalPromotionPages)}
+                  className="px-2 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 text-sm"
+                >
                   <FaAngleDoubleRight />
                 </button>
               </div>
@@ -496,19 +525,22 @@ function PromotionList() {
         )}
       </div>
 
-
       <div className="w-2/3 flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-800">
-            Danh sách khách hàng {promotionTitle}
-          </h3>
-          <div className="flex gap-2">
+        <div className="flex justify-between items-start mb-4 flex-wrap sm:flex-nowrap gap-2">
+
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-semibold text-gray-800 break-words">
+              Danh sách khách hàng {promotionTitle}
+            </h3>
+          </div>
+
+          <div className="flex gap-2 flex-shrink-0">
             <button
               className={`bg-blue-600 text-white px-3 py-2 rounded-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
                 selectedPromotion?.status === 'expired' ||
                 selectedPromotion?.status === 'inactive'
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-blue-700"
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-blue-700'
                 }`}
               onClick={() => handleSendEmails(true)}
               disabled={
@@ -523,8 +555,8 @@ function PromotionList() {
               className={`bg-green-600 text-white px-3 py-2 rounded-md font-semibold transition-opacity ${selectedCustomerIds.length === 0 ||
                 selectedPromotion?.status === 'expired' ||
                 selectedPromotion?.status === 'inactive'
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-green-700"
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-green-700'
                 }`}
               onClick={() => setIsEmailModalOpen(true)}
               disabled={
@@ -547,10 +579,7 @@ function PromotionList() {
             className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
             placeholder="Tìm kiếm theo tên hoặc email..."
           />
-          <button
-            onClick={handleSearch}
-            className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded"
-          >
+          <button onClick={handleSearch} className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z" />
             </svg>
@@ -585,10 +614,7 @@ function PromotionList() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedCustomers.map((cus, index) => (
-                    <tr
-                      key={cus.id}
-                      className={`hover:bg-gray-50 ${selectedCustomerIds.includes(cus.id) ? "bg-blue-50" : ""}`}
-                    >
+                    <tr key={cus.id} className={`hover:bg-gray-50 ${selectedCustomerIds.includes(cus.id) ? 'bg-blue-50' : ''}`}>
                       <td className="p-1 text-center">
                         <input
                           type="checkbox"
@@ -597,39 +623,27 @@ function PromotionList() {
                           disabled={
                             selectedPromotion?.status === 'expired' ||
                             selectedPromotion?.status === 'inactive' ||
-                            cus.promotions.some(
-                              (p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion
-                            )
+                            cus.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion)
                           }
                         />
                       </td>
-                      <td className="border p-1 text-center">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </td>
+                      <td className="border p-1 text-center">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                       <td className="border p-2 text-center">{cus.name}</td>
                       <td className="border p-2 text-center">{cus.email}</td>
                       <td className="border p-2 text-center">{cus.phone}</td>
                       <td className="border p-1 text-center">
-                        {cus.promotions.some(
-                          (p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion
-                        ) ? (
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                            Đã sử dụng
-                          </span>
-                        ) : cus.promotions.some(
-                          (p) => p.promotionId === selectedPromotionId && p.emailSent
-                        ) ? (
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                            Đã gửi
-                          </span>
+                        {cus.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion) ? (
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Đã sử dụng</span>
+                        ) : cus.promotions.some((p) => p.promotionId === selectedPromotionId && p.emailSent) ? (
+                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Đã gửi</span>
                         ) : (
                           <button
                             onClick={() => handleQuickSendEmail(cus.id)}
                             className={`px-3 py-1 rounded text-sm text-white ${selectedPromotion?.status === 'expired' ||
                               selectedPromotion?.status === 'inactive' ||
                               cus.promotions.some((p) => p.promotionId === selectedPromotionId && p.used && p.isSpecialPromotion)
-                              ? "bg-gray-500 cursor-not-allowed"
-                              : "bg-blue-500 hover:bg-blue-600"
+                              ? 'bg-gray-500 cursor-not-allowed'
+                              : 'bg-blue-500 hover:bg-blue-600'
                               }`}
                             disabled={
                               selectedPromotion?.status === 'expired' ||
@@ -669,7 +683,7 @@ function PromotionList() {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-1 border rounded-md text-sm ${page === currentPage ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100"
+                        className={`px-3 py-1 border rounded-md text-sm ${page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
                           }`}
                       >
                         {page}
@@ -702,9 +716,7 @@ function PromotionList() {
             <div className="bg-gradient-to-b from-white to-gray-50 rounded-xl shadow-2xl w-full max-w-3xl p-8 max-h-[90vh] overflow-auto">
               <h3 className="text-2xl font-bold mb-6 text-gray-800">Soạn email {promotionTitle}</h3>
               <div className="mb-6 relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1 transition-all duration-300">
-                  Tiêu đề
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 transition-all duration-300">Tiêu đề</label>
                 <input
                   type="text"
                   value={emailSubject}
@@ -779,15 +791,13 @@ function PromotionList() {
                 </button>
                 <button
                   className={`px-6 py-2 rounded-lg text-white font-medium transition-all duration-300 ${selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   onClick={() => handleSendEmails(false)}
-                  disabled={
-                    selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail
-                  }
+                  disabled={selectedPromotion?.status === 'expired' || selectedPromotion?.status === 'inactive' || sendingEmail}
                 >
-                  {sendingEmail ? "Đang gửi..." : "Gửi email"}
+                  {sendingEmail ? 'Đang gửi...' : 'Gửi email'}
                 </button>
               </div>
             </div>
@@ -811,9 +821,7 @@ function PromotionList() {
                     }
                   }}
                 />
-                <label htmlFor="selectAllUsers" className="text-sm text-gray-700">
-                  Chọn tất cả người dùng
-                </label>
+                <label htmlFor="selectAllUsers" className="text-sm text-gray-700">Chọn tất cả người dùng</label>
               </div>
               <Select
                 isMulti
@@ -823,10 +831,17 @@ function PromotionList() {
                 placeholder="Chọn người dùng..."
               />
               <div className="flex justify-end mt-4 gap-3">
-                <button onClick={() => setIsAddUserModalOpen(false)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+                <button
+                  onClick={() => setIsAddUserModalOpen(false)}
+                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                >
                   Hủy
                 </button>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" disabled={selectedUsersToAdd.length === 0} onClick={handleAddUsersToPromotion}>
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  disabled={selectedUsersToAdd.length === 0}
+                  onClick={handleAddUsersToPromotion}
+                >
                   Thêm
                 </button>
               </div>

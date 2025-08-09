@@ -324,13 +324,12 @@ function PromotionCreate() {
                 const displayValue =
                   typeof field.value === "number"
                     ? field.value.toLocaleString("vi-VN")
-                    : "0";
+                    : "";
                 return (
                   <input
                     {...field}
                     value={displayValue}
                     onChange={handleChange}
-                    placeholder="VD: 1.000.000"
                     className="w-full border rounded px-3 py-2"
                   />
                 );

@@ -9,7 +9,7 @@ class PromotionUserController {
       const {
         searchTerm = '',
         page = 1,
-        limit = 10,
+        limit = 50,
         promotionId,
       } = req.query;
 
@@ -41,14 +41,7 @@ class PromotionUserController {
           {
             model: PromotionModel,
             as: 'Promotion',
-            attributes: [
-              'id',
-              'name',
-              'discount_type',
-              'discount_value',
-              'special_promotion',
-              'status',
-            ],
+            attributes: ['id', 'name', 'discount_type', 'discount_value', 'special_promotion', 'status'],
             where: {
               special_promotion: true,
             },
@@ -134,7 +127,6 @@ class PromotionUserController {
         return res.status(400).json({ message: 'Thiếu promotionId' });
       }
 
-      // Tìm danh sách userId đã có mã này
       const existingEntries = await PromotionUserModel.findAll({
         where: { promotion_id: promotionId },
         attributes: ['user_id'],
@@ -142,11 +134,10 @@ class PromotionUserController {
 
       const existingUserIds = existingEntries.map((entry) => entry.user_id);
 
-      // Lấy những user KHÔNG nằm trong danh sách trên
       const users = await UserModel.findAll({
         where: {
           id: { [Op.notIn]: existingUserIds },
-          status: 'active'
+          status: 'active',
         },
         attributes: ['id', 'name', 'email'],
         order: [['name', 'ASC']],
@@ -176,27 +167,24 @@ class PromotionUserController {
         promotion_id: promotionId,
       }));
 
-      await PromotionUserModel.bulkCreate(newEntries, { ignoreDuplicates: true });
+      const result = await PromotionUserModel.bulkCreate(newEntries, { ignoreDuplicates: true });
 
       const totalUsersInPromotion = await PromotionUserModel.count({
-        where: { promotion_id: promotionId }
+        where: { promotion_id: promotionId },
       });
 
-      await PromotionModel.update(
-        { quantity: totalUsersInPromotion },
-        { where: { id: promotionId } }
-      );
+      await PromotionModel.update({ quantity: totalUsersInPromotion }, { where: { id: promotionId } });
 
       return res.status(200).json({
         status: 200,
         message: 'Thêm người dùng vào mã giảm giá thành công',
+        addedCount: result.length,
       });
     } catch (error) {
       console.error('Lỗi khi thêm người dùng vào mã:', error);
       return res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
   }
-
 }
 
 module.exports = PromotionUserController;
