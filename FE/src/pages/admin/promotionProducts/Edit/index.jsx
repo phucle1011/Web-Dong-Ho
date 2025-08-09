@@ -21,10 +21,10 @@ const PromotionProductEdit = () => {
   });
   const [variantPromotions, setVariantPromotions] = useState({});
   const [selectedPromotion, setSelectedPromotion] = useState(null);
-  const minOrderValue = selectedPromotion?.min_order_value || 0;
-  const [showTooltip, setShowTooltip] = useState(null);
   const [selectedVariantIds, setSelectedVariantIds] = useState([]);
   const [variantQuantities, setVariantQuantities] = useState({});
+  const [maxDiscountValue, setMaxDiscountValue] = useState(0);
+  const [isPromotionExpired, setIsPromotionExpired] = useState(false);
 
   const {
     register,
@@ -97,9 +97,12 @@ const PromotionProductEdit = () => {
           throw new Error("ID khuyến mãi không hợp lệ!");
         }
 
-        const promoRes = await axios.get(
-          `${Constants.DOMAIN_API}/admin/promotions/ss/all`
-        );
+        const [promoRes, variantRes, promotionProductsRes] = await Promise.all([
+          axios.get(`${Constants.DOMAIN_API}/admin/promotions/ss/all`),
+          axios.get(`${Constants.DOMAIN_API}/admin/product-variants`),
+          axios.get(`${Constants.DOMAIN_API}/admin/promotion`),
+        ]);
+
         const promoData = Array.isArray(promoRes.data.data)
           ? promoRes.data.data
           : [];
@@ -119,9 +122,6 @@ const PromotionProductEdit = () => {
         });
         setPromotions(sortedPromotions);
 
-        const variantRes = await axios.get(
-          `${Constants.DOMAIN_API}/admin/product-variants`
-        );
         const variants = Array.isArray(variantRes.data.data)
           ? variantRes.data.data
           : [];
@@ -130,13 +130,9 @@ const PromotionProductEdit = () => {
         }
         setProductVariants(variants);
 
-        const promotionProductsRes = await axios.get(
-          `${Constants.DOMAIN_API}/admin/promotion`
-        );
         const promotionProducts = Array.isArray(promotionProductsRes.data.data)
           ? promotionProductsRes.data.data
           : [];
-
         const usedIds = [
           ...new Set(
             promotionProducts
@@ -199,59 +195,42 @@ const PromotionProductEdit = () => {
         );
         const data = Array.isArray(res.data.data) ? res.data.data : [];
 
-        const variantIds = data.map((item) =>
-          item.product_variant_id.toString()
-        );
-        const quantities = {};
-        data.forEach((item) => {
-          quantities[item.product_variant_id] = item.variant_quantity;
-        });
-        setSelectedVariantIds(variantIds);
-        setVariantQuantities(quantities);
-
         if (!data.length) {
           throw new Error("Không tìm thấy dữ liệu khuyến mãi!");
         }
 
-        const productVariantIds = [
-          ...new Set(
-            data
-              .filter(
-                (item) =>
-                  item.promotion_id === parseInt(id) &&
-                  item.product_variant_id &&
-                  !isNaN(item.product_variant_id)
-              )
-              .map((item) => item.product_variant_id.toString())
-          ),
-        ];
-
-        const expectedVariantCount = data[0]?.promotion?.variant_count || 0;
-        if (
-          productVariantIds.length !== expectedVariantCount &&
-          expectedVariantCount > 0
-        ) {
-          console.warn(
-            `Số lượng biến thể (${productVariantIds.length}) không khớp với variant_count (${expectedVariantCount}) cho promotion_id ${id}`
-          );
-        }
-
-        setExistingVariantIds(productVariantIds);
-        setCustomFormState({ product_variant_id: productVariantIds });
-        setValue("product_variant_id", productVariantIds);
+        const variantIds = data
+          .filter((item) => item.product_variant_id)
+          .map((item) => item.product_variant_id.toString());
+        const quantities = {};
+        data.forEach((item) => {
+          if (item.product_variant_id) {
+            quantities[item.product_variant_id] = item.variant_quantity || 1;
+          }
+        });
+        setSelectedVariantIds(variantIds);
+        setVariantQuantities(quantities);
+        setExistingVariantIds(variantIds);
+        setCustomFormState({ product_variant_id: variantIds });
+        setValue("product_variant_id", variantIds);
 
         const promotion =
           promotions.find((p) => p.id === parseInt(id)) || data[0]?.promotion;
-        if (promotion) {
-          setSelectedPromotion({
-            ...promotion,
-            variant_count: expectedVariantCount,
-            min_order_value: parseFloat(promotion.min_price_threshold) || 0,
-          });
-          setValue("promotion_id", id.toString());
-        } else {
+        if (!promotion) {
           throw new Error(`Không tìm thấy khuyến mãi với ID ${id}`);
         }
+
+        const status = getPromotionStatus(
+          promotion.start_date,
+          promotion.end_date
+        );
+        setIsPromotionExpired(status === "Đã kết thúc");
+        setSelectedPromotion({
+          ...promotion,
+          variant_count: promotion.variant_count || 0,
+          min_price_threshold: parseFloat(promotion.min_price_threshold) || 0,
+        });
+        setValue("promotion_id", id.toString());
 
         trigger("product_variant_id");
       } catch (err) {
@@ -276,7 +255,8 @@ const PromotionProductEdit = () => {
 
   useEffect(() => {
     if (
-      existingVariantIds.length !== customFormState.product_variant_id.length
+      existingVariantIds.length !== customFormState.product_variant_id.length ||
+      existingVariantIds.some((id, i) => id !== customFormState.product_variant_id[i])
     ) {
       setCustomFormState({ product_variant_id: existingVariantIds });
       setValue("product_variant_id", existingVariantIds);
@@ -284,17 +264,90 @@ const PromotionProductEdit = () => {
     }
   }, [existingVariantIds, setValue, trigger]);
 
+  const availableVariants = productVariants
+    .filter((variant) => {
+      if (existingVariantIds.includes(variant.id.toString())) {
+        return true;
+      }
+      if (isPromotionExpired) {
+        return false;
+      }
+      if (usedVariantIds.includes(variant.id)) {
+        return false;
+      }
+      if (
+        selectedPromotion?.min_price_threshold &&
+        parseFloat(variant.price) < parseFloat(selectedPromotion.min_price_threshold)
+      ) {
+        return false;
+      }
+      if (selectedPromotion) {
+        const price = parseFloat(variant.price) || 0;
+        let finalPrice = price;
+        if (selectedPromotion.discount_type === "percentage") {
+          finalPrice = price * (1 - (selectedPromotion.discount_value || 0) / 100);
+        } else if (selectedPromotion.discount_type === "fixed") {
+          finalPrice = price - (selectedPromotion.discount_value || 0);
+        }
+        if (finalPrice <= 0) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .map((variant) => ({
+      value: variant.id.toString(),
+      label: `${variant.sku || "N/A"} (${variant.product?.name || "Không xác định"}) – ${parseFloat(
+        variant.price || 0
+      ).toLocaleString("vi-VN")}₫`,
+      _price: parseFloat(variant.price) || 0,
+    }));
+
+  useEffect(() => {
+    if (selectedPromotion?.discount_type === "percentage") {
+      const prices = availableVariants.map((v) => v._price);
+      const discountAmounts = prices.map(
+        (price) => price * ((selectedPromotion.discount_value || 0) / 100)
+      );
+      const maxDiscount =
+        discountAmounts.length > 0 ? Math.max(...discountAmounts) : 0;
+      setMaxDiscountValue(maxDiscount);
+    } else {
+      setMaxDiscountValue(
+        selectedPromotion?.discount_type === "fixed"
+          ? parseFloat(selectedPromotion.discount_value) || 0
+          : 0
+      );
+    }
+  }, [availableVariants, selectedPromotion]);
+
   const onSubmit = async (formData) => {
+    if (isPromotionExpired) {
+      toast.error("Khuyến mãi đã hết hạn sử dụng, không thể cập nhật khuyến mãi!");
+      return;
+    }
+
     const selectedVariants = formData.product_variant_id || [];
+    if (!selectedVariants.length) {
+      toast.error("Vui lòng chọn ít nhất một biến thể sản phẩm!");
+      return;
+    }
+
     const selectedPromotion = promotions.find(
       (p) => p.id === parseInt(formData.promotion_id)
     );
+    if (!selectedPromotion) {
+      toast.error("Không tìm thấy thông tin khuyến mãi!");
+      return;
+    }
 
     const existingVariantCount = existingVariantIds.length;
     const newVariantCount = selectedVariants.length;
     const variantCountChange = newVariantCount - existingVariantCount;
 
     if (
+      selectedPromotion.quantity !== null &&
+      selectedPromotion.quantity !== undefined &&
       variantCountChange > 0 &&
       selectedPromotion.quantity < variantCountChange
     ) {
@@ -307,14 +360,14 @@ const PromotionProductEdit = () => {
     const overStockVariants = selectedVariantIds.filter((id) => {
       const variant = productVariants.find((v) => v.id === parseInt(id));
       const quantity = parseInt(variantQuantities[id]) || 0;
-      return variant && quantity > variant.stock;
+      return variant && quantity > (variant.stock || 0);
     });
 
     if (overStockVariants.length > 0) {
       const names = overStockVariants
         .map((id) => {
           const variant = productVariants.find((v) => v.id === parseInt(id));
-          return `${variant?.sku} (${variant?.product?.name || "Không rõ"})`;
+          return `${variant?.sku || "N/A"} (${variant?.product?.name || "Không rõ"})`;
         })
         .join(", ");
       toast.error(`Số lượng vượt tồn kho cho: ${names}`);
@@ -332,9 +385,7 @@ const PromotionProductEdit = () => {
         .map((id) => {
           const variant = productVariants.find((v) => v.id === parseInt(id));
           return variant
-            ? `${variant.sku} (${
-                variant.product?.name || "Tên không xác định"
-              })`
+            ? `${variant.sku || "N/A"} (${variant.product?.name || "Tên không xác định"})`
             : id;
         })
         .join(", ");
@@ -347,13 +398,18 @@ const PromotionProductEdit = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const allVariantIds = selectedVariants.map((id) => parseInt(id));
       const invalid = selectedVariantIds.filter(
         (id) => !variantQuantities[id] || variantQuantities[id] < 1
       );
       if (invalid.length) {
+        const invalidNames = invalid
+          .map((id) => {
+            const variant = productVariants.find((v) => v.id === parseInt(id));
+            return variant?.sku || id;
+          })
+          .join(", ");
         toast.error(
-          `Vui lòng nhập số lượng ≥ 1 cho biến thể: ${invalid.join(", ")}`
+          `Vui lòng nhập số lượng ≥ 1 cho biến thể: ${invalidNames}`
         );
         return;
       }
@@ -362,9 +418,11 @@ const PromotionProductEdit = () => {
         promotion_id: parseInt(id, 10),
         products: selectedVariantIds.map((variantId) => ({
           product_variant_id: parseInt(variantId, 10),
-          variant_quantity: variantQuantities[variantId] || 1,
+          variant_quantity: parseInt(variantQuantities[variantId]) || 1,
         })),
       };
+
+      console.log("Payload gửi đi:", payload);
 
       await axios.put(`${Constants.DOMAIN_API}/admin/promotion/${id}`, payload);
 
@@ -399,21 +457,6 @@ const PromotionProductEdit = () => {
     }
   };
 
-  const availableVariants = productVariants.map((variant) => {
-    const price = parseFloat(variant.price) || 0;
-    const disabledByUsage =
-      usedVariantIds.includes(variant.id) &&
-      !existingVariantIds.includes(variant.id.toString());
-    const disabledByPrice = price < minOrderValue;
-
-    return {
-      value: variant.id.toString(),
-      label: `${variant.sku} — Giá: ${price.toLocaleString("vi-VN")}₫`,
-      isDisabled: disabledByUsage || disabledByPrice,
-      _price: price,
-    };
-  });
-
   return (
     <div className="card p-4">
       <style>
@@ -444,15 +487,30 @@ const PromotionProductEdit = () => {
             visibility: visible;
             opacity: 1;
           }
+          .react-select__control {
+            min-height: 48px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+          }
+          .react-select__multi-value {
+            background-color: #e6f3ff;
+            border-radius: 4px;
+          }
+          .react-select__multi-value__label {
+            color: #1a202c;
+          }
+          .react-select__menu {
+            z-index: 1000;
+          }
         `}
       </style>
-      <h4>Cập nhật khuyến mãi</h4>
-      {isLoading && <div className="text-center">Đang tải...</div>}
+      <h4 className="text-xl font-semibold mb-4">Cập nhật khuyến mãi</h4>
+      {isLoading && <div className="text-center text-gray-600">Đang tải...</div>}
       {error && (
-        <div className="alert alert-danger">
+        <div className="alert alert-danger bg-red-100 text-red-800 p-4 rounded mb-4">
           {error}
           <button
-            className="btn btn-secondary ms-2"
+            className="btn btn-secondary ms-2 bg-gray-200 text-gray-800 px-4 py-2 rounded ml-2"
             onClick={() => navigate("/admin/promotion-products/getAll")}
           >
             Quay lại
@@ -461,10 +519,12 @@ const PromotionProductEdit = () => {
       )}
       {!isLoading && !error && (
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="mb-3">
-            <label className="form-label">Khuyến mãi *</label>
+          <div className="mb-4">
+            <label className="form-label block text-sm font-medium text-gray-700 mb-1">
+              Khuyến mãi *
+            </label>
             <select
-              className="form-select"
+              className="form-select w-full p-2 border rounded"
               {...register("promotion_id", {
                 required: "Vui lòng chọn chương trình khuyến mãi",
               })}
@@ -474,45 +534,84 @@ const PromotionProductEdit = () => {
               <option value="">-- Chọn khuyến mãi --</option>
               {promotions.map((promo) => (
                 <option key={promo.id} value={promo.id.toString()}>
-                  {promo.name} (
-                  {getPromotionStatus(promo.start_date, promo.end_date)})
+                  {promo.name} ({getPromotionStatus(promo.start_date, promo.end_date)})
                 </option>
               ))}
             </select>
             {errors.promotion_id && (
-              <small className="text-danger">
+              <small className="text-danger text-red-600 text-sm">
                 {errors.promotion_id.message}
               </small>
             )}
             {selectedPromotion && (
-              <p className="mt-2 text-sm text-gray-600">
-                Tên khuyến mãi: <strong>{selectedPromotion.name}</strong> (Trạng
-                thái:{" "}
-                {getStatusDisplayName(
-                  getPromotionStatus(
-                    selectedPromotion.start_date,
-                    selectedPromotion.end_date
+              <div className="mt-2 text-sm text-gray-600">
+                <p>
+                  Tên khuyến mãi: <strong>{selectedPromotion.name || "Không xác định"}</strong> (Trạng
+                  thái:{" "}
+                  <span
+                    className={`px-2 py-1 rounded ${getStatusBadgeClass(
+                      getPromotionStatus(
+                        selectedPromotion.start_date,
+                        selectedPromotion.end_date
+                      )
+                    )}`}
+                  >
+                    {getStatusDisplayName(
+                      getPromotionStatus(
+                        selectedPromotion.start_date,
+                        selectedPromotion.end_date
+                      )
+                    )}
+                  </span>
                   )
-                )}
-                )
-                <br />
-                Số lượng biến thể:{" "}
-                <strong>{selectedPromotion.variant_count || 0}</strong>
-              </p>
+                </p>
+                <p>
+                  Giảm giá:{" "}
+                  <strong>
+                    {formatDiscountValue(
+                      selectedPromotion.discount_value,
+                      selectedPromotion.discount_type
+                    )}
+                  </strong>
+                </p>
+                <p>
+                  Số tiền giảm tối đa:{" "}
+                  <strong>{maxDiscountValue.toLocaleString("vi-VN")}₫</strong>
+                </p>
+                <p>
+                  Số lượng biến thể tối đa:{" "}
+                  <strong>
+                    {selectedPromotion.quantity === null ||
+                    selectedPromotion.quantity === undefined
+                      ? "Không giới hạn"
+                      : selectedPromotion.quantity}
+                  </strong>
+                </p>
+              </div>
+            )}
+            {isPromotionExpired && (
+              <div className="alert alert-danger bg-red-100 text-red-800 p-4 rounded mt-3">
+                Khuyến mãi đã hết hạn sử dụng, không thể cập nhật khuyến mãi!
+              </div>
             )}
           </div>
 
-          <div className="mb-1">
-            <label className="form-label mb-2">
-              Chọn các biến thể sản phẩm *
+          <div className="mb-4">
+            <label className="form-label block text-sm font-medium text-gray-700 mb-2">
+              Chọn các biến thể sản phẩm * (Có thể chọn nhiều biến thể)
             </label>
             <Select
               isMulti
+               closeMenuOnSelect={false}
               options={availableVariants}
               className="basic-multi-select"
               classNamePrefix="select"
               onChange={(selectedOptions) => {
-                const selectedIds = selectedOptions.map((opt) => opt.value);
+                if (isPromotionExpired) return;
+                const selectedIds = selectedOptions
+                  ? selectedOptions.map((opt) => opt.value)
+                  : [];
+                console.log("Selected Variant IDs:", selectedIds); // Debug
                 setCustomFormState({ product_variant_id: selectedIds });
                 setSelectedVariantIds(selectedIds);
                 const newQuantities = {};
@@ -526,40 +625,90 @@ const PromotionProductEdit = () => {
               value={availableVariants.filter((opt) =>
                 selectedVariantIds.includes(opt.value)
               )}
-              placeholder="Chọn hoặc thêm biến thể sản phẩm..."
+              placeholder="Chọn nhiều biến thể sản phẩm (nhấn để chọn hoặc xóa)..."
               formatOptionLabel={(opt) => (
                 <div
                   style={{
                     opacity: opt.isDisabled ? 0.5 : 1,
                     display: "flex",
                     alignItems: "center",
+                    padding: "4px",
                   }}
                 >
                   <span style={{ flex: 1 }}>{opt.label}</span>
                   {usedVariantIds.includes(+opt.value) &&
                     !existingVariantIds.includes(opt.value) && (
-                      <em className="ms-1 text-sm text-red-500">(Đã dùng)</em>
+                      <em className="ml-2 text-sm text-red-500">
+                        (Đã dùng trong khuyến mãi khác)
+                      </em>
                     )}
-                  {opt._price < minOrderValue && (
-                    <em className="ms-1 text-sm text-blue-500">
-                      (Giá &lt; {minOrderValue.toLocaleString("vi-VN")}₫)
+                  {opt._price < (selectedPromotion?.min_price_threshold || 0) && (
+                    <em className="ml-2 text-sm text-blue-500">
+                      (Giá &lt;{" "}
+                      {(selectedPromotion?.min_price_threshold || 0).toLocaleString(
+                        "vi-VN"
+                      )}
+                      ₫)
                     </em>
                   )}
                 </div>
               )}
-              isOptionDisabled={(opt) => opt.isDisabled}
+              isOptionDisabled={(opt) =>
+                usedVariantIds.includes(+opt.value) &&
+                !existingVariantIds.includes(opt.value)
+              }
+              isDisabled={isPromotionExpired}
+              noOptionsMessage={() => "Không có biến thể nào khả dụng"}
+              styles={{
+                control: (base) => ({
+                  ...base,
+                  borderColor: errors.product_variant_id ? "#e53e3e" : base.borderColor,
+                  "&:hover": {
+                    borderColor: errors.product_variant_id ? "#e53e3e" : base.borderColor,
+                  },
+                }),
+                multiValue: (base) => ({
+                  ...base,
+                  backgroundColor: "#e6f3ff",
+                  borderRadius: "4px",
+                }),
+                multiValueLabel: (base) => ({
+                  ...base,
+                  color: "#1a202c",
+                }),
+              }}
             />
             {errors.product_variant_id && (
-              <small className="text-danger">
+              <small className="text-danger text-red-600 text-sm mt-1">
                 {errors.product_variant_id.message}
               </small>
             )}
+            {availableVariants.length === 0 && !isPromotionExpired && (
+              <small className="text-warning text-yellow-600 text-sm mt-1">
+                Không có biến thể nào khả dụng. Tất cả biến thể đã được sử dụng
+                hoặc không đáp ứng yêu cầu giá tối thiểu.
+              </small>
+            )}
+            {availableVariants.length === 0 && isPromotionExpired && (
+              <small className="text-warning text-yellow-600 text-sm mt-1">
+                Khuyến mãi đã hết hạn, chỉ hiển thị các biến thể đã sử dụng trước
+                đó.
+              </small>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              Bạn có thể chọn nhiều biến thể bằng cách nhấp vào các tùy chọn. Các
+              biến thể đã chọn sẽ hiển thị bên dưới để nhập số lượng.{" "}
+              {selectedPromotion?.quantity !== null &&
+              selectedPromotion?.quantity !== undefined
+                ? `Số lượng biến thể tối đa: ${selectedPromotion.quantity}`
+                : "Số lượng biến thể không giới hạn"}
+            </p>
           </div>
 
           {selectedVariantIds.length > 0 && (
             <div className="mt-6">
-              <label className="form-label block mb-2 text-lg font-semibold">
-                Nhập số lượng áp dụng cho từng biến thể:
+              <label className="form-label block mb-2 text-lg font-semibold text-gray-700">
+                Số lượng áp dụng cho từng biến thể:
               </label>
               <div className="overflow-x-auto border rounded shadow-sm">
                 <table className="w-full table-auto text-sm text-left text-gray-800">
@@ -579,7 +728,7 @@ const PromotionProductEdit = () => {
                       const variant = productVariants.find(
                         (v) => v.id === parseInt(id)
                       );
-                      const stock = variant?.stock || 1;
+                      const stock = variant?.stock || 0;
 
                       return (
                         <tr
@@ -589,9 +738,16 @@ const PromotionProductEdit = () => {
                           <td className="px-4 py-2 border text-center">
                             {index + 1}
                           </td>
-                          <td className="px-4 py-2 border">{variant?.sku}</td>
+                          <td className="px-4 py-2 border">{variant?.sku || "N/A"}</td>
                           <td className="px-4 py-2 border">
-                            {variant?.product?.name || "Tên SP không xác định"}
+                            <div className="truncate-text">
+                              {truncateProductName(
+                                variant?.product?.name || "Tên SP không xác định"
+                              )}
+                              <span className="tooltip">
+                                {variant?.product?.name || "Tên SP không xác định"}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-4 py-2 border text-center">
                             {stock}
@@ -604,7 +760,11 @@ const PromotionProductEdit = () => {
                               value={variantQuantities[id] || 1}
                               onWheel={(e) => e.target.blur()}
                               onKeyDown={(e) => {
-                                const currentVal = variantQuantities[id] || 1;
+                                if (isPromotionExpired) {
+                                  e.preventDefault();
+                                  return;
+                                }
+                                const currentVal = parseInt(variantQuantities[id]) || 1;
                                 if (e.key === "ArrowUp") {
                                   if (currentVal >= stock) {
                                     e.preventDefault();
@@ -633,13 +793,19 @@ const PromotionProductEdit = () => {
                                 }
                               }}
                               onChange={(e) => {
+                                if (isPromotionExpired) return;
                                 const val = parseInt(e.target.value, 10);
                                 if (isNaN(val) || val <= 0) {
                                   setVariantQuantities((prev) => ({
                                     ...prev,
                                     [id]: 1,
                                   }));
+                                  toast.warning("Số lượng tối thiểu là 1!");
                                 } else if (val > stock) {
+                                  setVariantQuantities((prev) => ({
+                                    ...prev,
+                                    [id]: stock,
+                                  }));
                                   toast.warning(
                                     `Số lượng không được vượt quá tồn kho (${stock})!`
                                   );
@@ -651,6 +817,7 @@ const PromotionProductEdit = () => {
                                 }
                               }}
                               className="border px-2 py-1 w-24 rounded text-center"
+                              disabled={isPromotionExpired}
                             />
                           </td>
                         </tr>
@@ -662,11 +829,15 @@ const PromotionProductEdit = () => {
             </div>
           )}
 
-          <div className="mt-8 flex items-center gap-1">
+          <div className="mt-8 flex items-center gap-2">
             <button
               type="submit"
-              disabled={isLoading}
-              className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+              disabled={isLoading || isPromotionExpired}
+              className={`bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition ${
+                isLoading || isPromotionExpired
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
             >
               {isLoading ? "Đang cập nhật..." : "Cập nhật"}
             </button>

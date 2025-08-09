@@ -304,59 +304,97 @@ static async update(req, res) {
   try {
     const { promotion_id, products } = req.body;
 
-    if (!promotion_id || !Array.isArray(products)) {
+    if (!promotion_id || !Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ message: "Thiếu thông tin cập nhật." });
     }
 
-    // Lấy danh sách id biến thể và quantity yêu cầu
+    // 1. Lấy promotion để biết kiểu và giá trị giảm giá
+    const promo = await PromotionModel.findByPk(promotion_id);
+    if (!promo) {
+      return res.status(404).json({ message: "Promotion không tồn tại." });
+    }
+
+    // 2. Lấy id các biến thể từ payload
     const variantIds = products.map(p => p.product_variant_id);
 
-    // Lấy stock của các biến thể
+    // 3. Lấy thông tin stock và giá gốc (price) của các variant
     const variants = await ProductVariantsModel.findAll({
       where: { id: variantIds },
-      attributes: ['id', 'stock']
+      attributes: ['id', 'stock', 'price', 'sku']
     });
 
-    // Tạo map từ id => stock
-    const variantStockMap = {};
+    // Map id => stock, price
+    const variantMap = {};
     variants.forEach(v => {
-      variantStockMap[v.id] = v.stock;
+      variantMap[v.id] = {
+        stock: v.stock,
+        price: parseFloat(v.price),
+        sku: v.sku
+      };
     });
 
-    // Kiểm tra số lượng vượt quá stock
+    // 4. Kiểm tra từng item
     for (const item of products) {
-      const stock = variantStockMap[item.product_variant_id];
-      const qty = parseInt(item.variant_quantity, 10);
+      const { product_variant_id, variant_quantity } = item;
+      const qty = parseInt(variant_quantity, 10);
+
+      // Kiểm quantity hợp lệ
       if (isNaN(qty) || qty <= 0) {
         return res.status(400).json({
-          message: `Số lượng không hợp lệ cho biến thể ID ${item.product_variant_id}.`,
+          message: `Số lượng không hợp lệ cho biến thể ID ${product_variant_id}.`
         });
       }
-      if (qty > stock) {
+
+      const v = variantMap[product_variant_id];
+      if (!v) {
         return res.status(400).json({
-          message: `Số lượt áp dụng (${qty}) vượt quá tồn kho (${stock}) cho biến thể ID ${item.product_variant_id}.`,
+          message: `Không tìm thấy biến thể ID ${product_variant_id}.`
         });
+      }
+
+      // 4a. Check stock
+      if (qty > v.stock) {
+        return res.status(400).json({
+          message: `Số lượt áp dụng (${qty}) vượt quá tồn kho (${v.stock}) cho SKU ${v.sku}.`
+        });
+      }
+
+      // 4b. Nếu là discount % thì kiểm finalPrice > 0
+      if (promo.discount_type === 'percentage') {
+        const finalPrice = v.price * (1 - promo.discount_value / 100);
+        if (finalPrice <= 0) {
+          return res.status(400).json({
+            message: `Sau khi giảm ${promo.discount_value}% biến thể SKU ${v.sku} có giá <= 0.`
+          });
+        }
+      }
+      // 4c. Nếu là discount fixed thì cũng check finalPrice > 0
+      else if (promo.discount_type === 'fixed') {
+        const finalPrice = v.price - promo.discount_value;
+        if (finalPrice <= 0) {
+          return res.status(400).json({
+            message: `Giảm cố định ${promo.discount_value}₫ biến thể SKU ${v.sku} có giá <= 0.`
+          });
+        }
       }
     }
 
-    // Xoá hết biến thể cũ của promotion này
+    // 5. Xoá hết biến thể cũ của promotion này
     await PromotionProductModel.destroy({
       where: { promotion_id },
     });
 
-    // Tạo mới
+    // 6. Tạo mới tất cả
     const created = await Promise.all(
-      products.map((item) => {
-        return PromotionProductModel.create({
-          promotion_id,
-          product_variant_id: item.product_variant_id,
-          variant_quantity: item.variant_quantity,
-        });
-      })
+      products.map(item => PromotionProductModel.create({
+        promotion_id,
+        product_variant_id: item.product_variant_id,
+        variant_quantity: item.variant_quantity,
+      }))
     );
 
     const totalApplied = created.reduce(
-      (sum, item) => sum + item.variant_quantity,
+      (sum, x) => sum + parseInt(x.variant_quantity, 10),
       0
     );
 
@@ -364,11 +402,13 @@ static async update(req, res) {
       message: "Cập nhật khuyến mãi thành công!",
       totalApplied,
     });
+
   } catch (err) {
     console.error("Lỗi khi cập nhật khuyến mãi:", err);
     return res.status(500).json({ message: err.message });
   }
 }
+
 
 
   static async remove(req, res) {

@@ -28,14 +28,12 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
   // Memoize product and variants
   const product = useMemo(() => datas || {}, [datas]);
-
+  const variants = useMemo(() => product.variants || [], [product.variants]);
   const representativeVariant = useMemo(() => {
     return product.representativeVariant || {};
   }, [product.representativeVariant]);
 
-  const variants = useMemo(() => {
-    return product.variants || [];
-  }, [product.variants]);
+
 
   useEffect(() => {
     if (variantImages.length > 0) {
@@ -484,6 +482,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                         }}
                         disabled={!inStock || inAuction}
                         title={inAuction ? "Biến thể đang trong phiên đấu giá" : undefined}
+                        
                       >
                         <p className="font-medium">{name}</p>
                         <p className="text-qred font-semibold">{salePrice.toLocaleString("vi-VN")}₫</p>

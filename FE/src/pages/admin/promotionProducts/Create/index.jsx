@@ -18,8 +18,7 @@ const PromotionProductForm = ({ onSuccess }) => {
   const [selectedPromotionId, setSelectedPromotionId] = useState(null);
   const [selectedPromotion, setSelectedPromotion] = useState(null);
   const [selectedVariantIds, setSelectedVariantIds] = useState([]);
-  const [variantQuantities, setVariantQuantities] = useState({});
-
+  const [variantQuantities, setVariantQuantities] = useState({});const [maxDiscountValue, setMaxDiscountValue] = useState(0);
   const {
     register,
     handleSubmit,
@@ -230,15 +229,35 @@ const PromotionProductForm = ({ onSuccess }) => {
   );
 
   const availableVariants = productVariants
-    .filter(
-      (variant) =>
-        !usedVariantIds.includes(variant.id) &&
-        !selectedVariantIds.includes(variant.id) &&
-        // Chỉ lấy variant.price ≥ ngưỡng
-        (!selectedPromotion?.min_price_threshold ||
-          parseFloat(variant.price) >=
-            parseFloat(selectedPromotion.min_price_threshold))
-    )
+    .filter((variant) => {
+      if (usedVariantIds.includes(variant.id) || selectedVariantIds.includes(variant.id)) {
+        return false;
+      }
+
+      // nếu có ngưỡng min_price_threshold vẫn giữ lại
+      if (selectedPromotion?.min_price_threshold
+          && parseFloat(variant.price) < parseFloat(selectedPromotion.min_price_threshold)
+      ) {
+        return false;
+      }
+
+      // tính giá sau khi giảm
+      if (selectedPromotion) {
+        const price = parseFloat(variant.price);
+        let finalPrice = price;
+        if (selectedPromotion.discount_type === "percentage") {
+          finalPrice = price * (1 - selectedPromotion.discount_value / 100);
+        } else if (selectedPromotion.discount_type === "fixed") {
+          finalPrice = price - selectedPromotion.discount_value;
+        }
+        // ẩn nếu finalPrice <= 0
+        if (finalPrice <= 0) {
+          return false;
+        }
+      }
+
+      return true;
+    })
     .map((variant) => ({
       value: variant.id,
       label: `${variant.sku} (${variant.product?.name}) – ${parseFloat(
@@ -246,6 +265,32 @@ const PromotionProductForm = ({ onSuccess }) => {
       ).toLocaleString()}₫`,
     }));
 
+let maxDiscount = 0;
+if (selectedPromotion?.discount_type === 'percentage') {
+  const prices = availableVariants.map(v => parseFloat(v.price));
+  const discountAmounts = prices.map(price =>
+    price * (selectedPromotion.discount_value / 100)
+  );
+  maxDiscount = discountAmounts.length > 0 ? Math.max(...discountAmounts) : 0;
+}
+
+// Bạn có thể lưu vào state để hiển thị lên UI:
+
+
+useEffect(() => {
+  if (selectedPromotion?.discount_type === 'percentage') {
+    setMaxDiscountValue(maxDiscount);
+  } else {
+    setMaxDiscountValue(0);
+  }
+}, [availableVariants, selectedPromotion]);
+
+// Trong render, bạn có thể show:
+{selectedPromotion?.discount_type === 'percentage' && (
+  <p className="text-sm text-gray-600">
+    Số tiền giảm tối đa: {maxDiscountValue.toLocaleString('vi-VN')}₫
+  </p>
+)}
   const CustomOption = ({ innerProps, label, data }) => (
     <div
       {...innerProps}
@@ -337,6 +382,7 @@ const PromotionProductForm = ({ onSuccess }) => {
             </label>
             <Select
               isMulti
+               closeMenuOnSelect={false}
               options={availableVariants}
               className="basic-multi-select"
               classNamePrefix="select"
