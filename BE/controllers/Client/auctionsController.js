@@ -57,7 +57,7 @@ class AuctionController {
           message: 'Bạn đã bị cấm đấu giá vì không thanh toán quá 3 lần.'
         });
       }
-      
+
       const email = user.email || req.user.email;
       if (!email) {
         return res.status(400).json({ success: false, message: 'Không tìm thấy email người dùng' });
@@ -240,16 +240,14 @@ class AuctionController {
     try {
       const { auctionId } = req.params;
       const userId = req.user.id;
-      const { bidAmount } = req.body;
+      const amount = Number(req.body.bidAmount);
 
-      const amount = Number(bidAmount);
       if (amount <= 0) {
         await t.rollback();
         return res.status(400).json({ success: false, message: 'Giá đặt không hợp lệ' });
       }
 
-      const auction = await AuctionModel.findOne({
-        where: { id: auctionId },
+      const auction = await AuctionModel.findByPk(auctionId, {
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
@@ -264,7 +262,7 @@ class AuctionController {
         return res.status(400).json({ success: false, message: 'Phiên đấu giá đã kết thúc' });
       }
 
-      const currentPrice = Number(auction.current_price || auction.start_price || 0);
+      const currentPrice = Number(auction.current_price ?? auction.start_price ?? 0);
       if (amount <= currentPrice) {
         await t.rollback();
         return res.status(400).json({ success: false, message: 'Giá đặt phải cao hơn giá hiện tại' });
@@ -310,10 +308,9 @@ class AuctionController {
       });
     } catch (err) {
       await t.rollback();
-      console.error('Lỗi placeBid:', err?.message, err?.stack);
+      console.error('Lỗi placeBid:', err);
       return res.status(500).json({ success: false, message: err.message || 'Lỗi server' });
     }
-
   }
 
   static async finalize(req, res) {

@@ -445,6 +445,10 @@ class auctionController {
       try {
          const { id } = req.params;
 
+         const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+         const limit = Math.max(parseInt(req.query.limit, 10) || 5, 1);
+         const offset = (page - 1) * limit;
+
          const auction = await AuctionModel.findOne({
             where: { id },
             include: [
@@ -480,10 +484,46 @@ class auctionController {
             order: [['bidAmount', 'DESC']],
          });
 
+         const { count: totalItems, rows: bids } = await AuctionBidModel.findAndCountAll({
+            where: { auction_id: id },
+            include: [{ model: UsersModel, as: 'user', attributes: ['id', 'name', 'email'] }],
+            order: [
+               ['bidAmount', 'DESC'],
+               ['bidTime', 'ASC']
+            ],
+            limit,
+            offset
+         });
+
+         const allBids = await AuctionBidModel.findAll({
+            where: { auction_id: id },
+            include: [{
+               model: UsersModel,
+               as: 'user',
+               attributes: ['id', 'name', 'email']
+            }],
+            order: [
+               ['bidAmount', 'DESC'],
+               ['bidTime', 'ASC']
+            ],
+         });
+
          if (!topBid) {
             return res.status(200).json({
                message: "Chưa có người chiến thắng cho phiên này",
-               data: { auction, winner: null, winningBid: null, hasPaid: false }
+               data: {
+                  auction,
+                  winner: null,
+                  winningBid: null,
+                  bids,
+                  pagination: {
+                     page,
+                     limit,
+                     totalPages: Math.ceil(totalItems / limit),
+                     totalItems
+                  },
+                  hasPaid: false
+               }
             });
          }
 
@@ -508,14 +548,27 @@ class auctionController {
          const expiredPaymentWindow = Date.now() > paymentDeadline;
 
          return res.status(200).json({
-            message: "Lấy người chiến thắng thành công",
+            message: "Lấy người chiến thắng và lịch sử đặt giá thành công",
             data: {
-               auction: auction,
-               winner: topBid.user,
+               auction,
+               winner: winner,
                winningBid: {
                   id: topBid.id,
                   bidAmount: topBid.bidAmount,
                   bidTime: topBid.bidTime,
+               },
+               bids,
+               allBids: allBids.map(b => ({
+                  id: b.id,
+                  user: b.user,
+                  bidAmount: b.bidAmount,
+                  bidTime: b.bidTime,
+               })),
+               pagination: {
+                  page,
+                  limit,
+                  totalPages: Math.ceil(totalItems / limit),
+                  totalItems
                },
                hasPaid,
                orderStatus,

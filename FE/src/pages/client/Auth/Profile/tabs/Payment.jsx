@@ -132,7 +132,7 @@ export default function Payment() {
       if (res.data.url) window.location.href = res.data.url;
       // toast.success("Nạp tiền thành công.");
     } catch {
-      toast.error("Không thể tạo phiên thanh toán.");
+      toast.error("Số tiền không được lớn hơn 99.999.999đ.");
     } finally {
       setIsSubmitting(false);
     }
@@ -140,6 +140,9 @@ export default function Payment() {
 
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
+     if (amount > 99_999_999) {
+    return toast.warning("Số tiền không được vượt quá 99.999.999₫");
+  }
     if (!amount || !selectedBank || !bankAccount) return toast.warning("Vui lòng nhập đầy đủ.");
     if (amount > balance - pending) return toast.warning(`Không đủ số dư: ${formatCurrency(balance - pending)}`);
     const confirm = await Swal.fire({

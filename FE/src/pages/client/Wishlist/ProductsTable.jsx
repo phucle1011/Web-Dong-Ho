@@ -9,15 +9,14 @@ import Swal from "sweetalert2";
 export default function ProductsTable({ products = [], onWishlistChange, onSelectItems }) {
   const token = localStorage.getItem("token");
   let userId = null;
-
   if (token) {
     const decoded = decodeToken(token);
-    if (decoded && decoded.id) {
-      userId = decoded.id;
-    }
+    if (decoded && decoded.id) userId = decoded.id;
   }
 
   const [selectedItems, setSelectedItems] = useState([]);
+  // state để quản lý hàng nào đang mở rộng
+  const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
     onSelectItems(selectedItems);
@@ -29,7 +28,6 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
     );
     setSelectedItems(validSelected);
   }, [products]);
-
 
   const handleCheckboxChange = (productVariantId) => {
     setSelectedItems((prev) =>
@@ -44,7 +42,6 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
       toast.error("Vui lòng đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
       return;
     }
-
     const result = await Swal.fire({
       title: "Xác nhận xóa",
       text: "Bạn có chắc muốn xóa sản phẩm này khỏi danh sách yêu thích?",
@@ -55,9 +52,7 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
       confirmButtonText: "Xóa",
       cancelButtonText: "Hủy",
     });
-
     if (!result.isConfirmed) return;
-
     try {
       const response = await axios.delete(
         `${Constants.DOMAIN_API}/users/${userId}/wishlist/${productVariantId}`,
@@ -71,6 +66,11 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
         error.response?.data?.message || "Lỗi khi xóa sản phẩm khỏi danh sách yêu thích.";
       toast.error(errorMessage);
     }
+  };
+
+  // Bật/tắt show all attributes cho 1 row
+  const toggleRow = (rowId) => {
+    setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
   };
 
   return (
@@ -107,18 +107,10 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                   ? parseFloat(item.variant.price).toLocaleString("vi-VN") + "₫"
                   : "N/A";
 
-                const attributes =
-                  item.variant?.attributeValues?.length > 0 ? (
-                    <ul className="text-left list-disc list-inside space-y-1">
-                      {item.variant.attributeValues.map((av) => (
-                        <li key={av.id}>
-                          <strong>{av.attribute?.name || "Thuộc tính"}:</strong> {av.value}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="italic text-gray-400">Chưa có thuộc tính</span>
-                  );
+                const avs = item.variant?.attributeValues || [];
+                const isExpanded = expandedRows[item.id];
+                // Hiển thị 3 đầu hoặc tất cả
+                const displayAVs = isExpanded ? avs : avs.slice(0, 3);
 
                 const imageUrl =
                   item.variant?.images?.[0]?.image_url ||
@@ -150,7 +142,39 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 text-center">{attributes}</td>
+                    <td className="py-4 text-left">
+                      <ul className="list-inside space-y-1">
+                        {displayAVs.map((av) => {
+                          const name = av.attribute?.name || "Thuộc tính";
+                          const val = av.value;
+                          const isColor = /^#([0-9A-F]{3}){1,2}$/i.test(val);
+                          return (
+                            <li key={av.id} className="flex items-center">
+                              <strong className="mr-1">{name}:</strong>
+                              {isColor ? (
+                                <>
+                                  <span
+                                    className="inline-block w-4 h-4 rounded-full border mr-2"
+                                    style={{ backgroundColor: val }}
+                                  />
+                                  <span>{val}</span>
+                                </>
+                              ) : (
+                                <span>{val}</span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {avs.length > 3 && (
+                        <button
+                          onClick={() => toggleRow(item.id)}
+                          className="mt-1 text-blue-600 hover:underline text-sm"
+                        >
+                          {isExpanded ? "Thu gọn" : `Xem thêm (${avs.length - 3})`}
+                        </button>
+                      )}
+                    </td>
                     <td className="py-4 text-center">{price}</td>
                     <td className="py-4 text-center">{item.variant?.stock ?? "—"}</td>
                     <td className="py-4 text-center">{price}</td>

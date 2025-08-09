@@ -47,34 +47,36 @@ module.exports = (io) => {
         lock: t.LOCK.UPDATE,
       });
 
-      if (topBid) {
+      const allBids = await AuctionBidModel.findAll({
+        where: { auction_id: auction.id },
+        order: [
+          ['bidAmount', 'DESC'],
+          ['created_at', 'ASC'],
+        ],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
 
-        const baseTime = topBid.bidTime
-          ? new Date(topBid.bidTime)
-          : (topBid.created_at ? new Date(topBid.created_at) : new Date());
+      if (allBids.length > 0) {
+        for (const bid of allBids) {
+          const baseTime = bid.bidTime
+            ? new Date(bid.bidTime)
+            : (bid.created_at ? new Date(bid.created_at) : new Date());
+          const expireAt = new Date(baseTime.getTime() + 5 * 60 * 1000);
 
-        const expireAt = new Date(baseTime.getTime() + 5 * 60 * 1000);
+          await CartDetail.create({
+            user_id: bid.user_id,
+            product_variant_id: auction.product_variant_id,
+            quantity: 1,
+            expire_at: expireAt
+          }, { transaction: t });
+        }
 
-        await AuctionBidModel.destroy({
-          where: { auction_id: auction.id, id: { [Op.ne]: topBid.id } },
-          transaction: t,
-        });
-
-        auction.current_price = topBid.bidAmount;
+        auction.current_price = allBids[0].bidAmount;
         auction.status = 'ended';
         await auction.save({ transaction: t });
-
-        const variantId = auction.product_variant_id;
-        await CartDetail.create({
-          user_id: topBid.user_id,
-          product_variant_id: variantId,
-          quantity: 1,
-          expire_at: expireAt
-        }, { transaction: t });
-
       } else {
 
-        await AuctionBidModel.destroy({ where: { auction_id: auction.id }, transaction: t });
         auction.status = 'ended';
         await auction.save({ transaction: t });
       }

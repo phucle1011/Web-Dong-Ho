@@ -71,11 +71,19 @@ export default function AuctionRoom() {
     const audioRef = useRef(null);
     const hasBeepedRef = useRef(false);
 
+    const [overridePrice, setOverridePrice] = useState(newBidPrice);
+
+    const bidValue = overridePrice;
+
     const [countdown, setCountdown] = useState({
         label: "",
         text: "",
         ms: 0,
     });
+
+    useEffect(() => {
+        setOverridePrice(newBidPrice);
+    }, [newBidPrice]);
 
     useEffect(() => {
         audioRef.current = new Audio("/sounds/beep.mp3");
@@ -438,7 +446,7 @@ export default function AuctionRoom() {
     const handleBid = async () => {
         if (!activeAuction) return;
         if (isCooldown) return;
-        if (newBidPrice < minAllowed) {
+        if (bidValue < minAllowed) {
             toast.warning(`Giá tối thiểu phải từ ${formatVnd(minAllowed)}`);
             return;
         }
@@ -450,7 +458,7 @@ export default function AuctionRoom() {
         try {
             await axios.post(
                 `${Constants.DOMAIN_API}/auctions/${activeAuction.id}/bids`,
-                { bidAmount: newBidPrice },
+                { bidAmount: bidValue },
                 { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
             setCooldownUntil(new Date(Date.now() + 10_000));
@@ -689,6 +697,13 @@ export default function AuctionRoom() {
     }, [cooldownUntil]);
 
     const isCooldown = !!cooldownUntil && Date.now() < cooldownUntil;
+
+   const handleInputChange = (e) => {
+
+  const digitsOnly = e.target.value.replace(/\D/g, "");
+
+  setOverridePrice(digitsOnly === "" ? newBidPrice : Number(digitsOnly));
+};
 
     return (
         <Layout>
@@ -1055,19 +1070,9 @@ export default function AuctionRoom() {
                                     Giá tối thiểu có thể đặt
                                 </div>
 
+                                {/* ====== Kết thúc ô nhập ====== */}
+
                                 {/* <button
-                                    type="button"
-                                    onClick={handleBid}
-                                    disabled={!activeAuction || isMyHighest}
-                                    className={`mt-4 w-full h-12 rounded-full font-semibold shadow
-    ${isMyHighest
-                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                                            : 'bg-blue-200 hover:bg-blue-300 text-blue-900'}
-  `}
-                                >
-                                    Trả giá <span className="font-extrabold">{formatVnd(newBidPrice)}</span>
-                                </button> */}
-                                <button
                                     type="button"
                                     onClick={handleBid}
                                     disabled={!activeAuction || isMyHighest || isCooldown}
@@ -1080,7 +1085,54 @@ export default function AuctionRoom() {
                                     {isCooldown
                                         ? `Đang tạm khóa (${Math.ceil(cooldownLeft / 1000)}s)`
                                         : <>Trả giá <span className="font-extrabold">{formatVnd(newBidPrice)}</span></>}
+                                </button> */}
+
+                                <button
+                                    type="button"
+                                    onClick={handleBid}
+                                    disabled={
+                                        !activeAuction ||
+                                        isMyHighest ||
+                                        isCooldown ||
+                                        bidValue < minAllowed   /* chặn khi giá nhập < minAllowed */
+                                    }
+                                    className={`mt-4 w-full h-12 rounded-full font-semibold shadow
+    ${isCooldown || isMyHighest || bidValue < minAllowed
+                                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                            : 'bg-blue-200 hover:bg-blue-300 text-blue-900'
+                                        }`}
+                                >
+                                    {isCooldown
+                                        ? `Đang tạm khóa (${Math.ceil(cooldownLeft / 1000)}s)`
+                                        : <>Trả giá <span className="font-extrabold">{formatVnd(bidValue)}</span></>
+                                    }
                                 </button>
+
+                                {/* ====== Ô nhập giá thủ công ====== */}
+                                <div className="mt-4">
+                                    <label className="block text-sm font-medium text-gray-200 mb-1">
+                                        Hoặc nhập giá:
+                                    </label>
+                                   <input
+  type="text"
+  min={minAllowed}
+  step={bidStep}
+  value={overridePrice.toLocaleString("vi-VN")}
+  onChange={handleInputChange}
+  onBlur={() => {
+    if (overridePrice < minAllowed) setOverridePrice(minAllowed);
+  }}
+                                        className="w-full px-3 py-2 bg-slate-800 text-white rounded-lg border border-slate-600 focus:outline-none"
+                                    />
+                                    {/* <div className="text-xs text-slate-400 mt-1">
+                                        Giá ≥ {formatVnd(minAllowed)}, step = {formatVnd(bidStep)}
+                                    </div> */}
+                                    {overridePrice < minAllowed && (
+    <p className="text-red-500 text-sm mt-1">
+      Giá phải lớn hơn hoặc bằng {formatVnd(minAllowed)}
+    </p>
+  )}
+                                </div>
 
                                 {isMyHighest && (
                                     <div className="mt-2 text-center text-amber-400 text-sm">
@@ -1171,7 +1223,7 @@ export default function AuctionRoom() {
                                         setShowWinModal(false);
                                         navigate("/cart");
                                     }}
-                                    className="h-11 rounded-xl bg-gradient-to-r from-blue-400 to-blue-600 font-semibold text-white hover:from-pink-600 hover:to-red-600 text-center"
+                                    className="h-11 rounded-xl bg-gradient-to-r from-blue-400 to-blue-600 font-semibold text-white hover:from-blue-600 hover:to-blue-600 text-center"
                                 >
                                     Thanh toán ngay
                                 </button>

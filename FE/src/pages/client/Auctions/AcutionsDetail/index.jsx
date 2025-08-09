@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
 import axios from "axios";
 import Layout from "../../Partials/LayoutHomeThree";
-import { FaGavel, FaBookOpen } from "react-icons/fa";
+import { FaGavel, FaBookOpen, FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Star, StarHalf, Star as StarOutline } from "lucide-react";
 import Constants from "../../../../Constants";
 
@@ -10,9 +10,18 @@ import Constants from "../../../../Constants";
 export default function AuctionsDetail() {
   const { state } = useLocation();
   // const { productId: productIdFromState } = state || {};
-  const { productId: productIdFromParams } = useParams();
-  const { productId: productIdFromState, auctionId } = state || {};
+  // const { productId: productIdFromParams } = useParams();
+  // const { productId: productIdFromState, auctionId } = state || {};
+  // const productId = productIdFromState || productIdFromParams;
+
+  const { productId: productIdFromState, auctionId: auctionIdFromState } = state || {};
+  const {
+    productId: productIdFromParams,
+    auctionId: auctionIdFromParams,
+  } = useParams();
+
   const productId = productIdFromState || productIdFromParams;
+  const auctionId = auctionIdFromState || auctionIdFromParams;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -37,6 +46,17 @@ export default function AuctionsDetail() {
 
   const shortDescription = productData?.short_description || "";
   const longDescriptionHTML = productData?.description || "";
+
+  const [auction, setAuction] = useState(null);
+
+  const [winnerData, setWinnerData] = useState({
+    winner: null,
+    winningBid: null,
+    allBids: [],
+    orderStatus: null,
+    paymentMethod: null,
+    expiredPaymentWindow: false,
+  });
 
   const renderStars = (avg) => {
     const fullStars = Math.floor(avg);
@@ -156,6 +176,63 @@ export default function AuctionsDetail() {
 
   const selectedAuction = selectedVariant?.auctions?.find(a => a.id === auctionId);
 
+  const [allBids, setAllBids] = useState([]);
+  const [bidPage, setBidPage] = useState(1);
+  const bidsPerPage = 5;
+
+  useEffect(() => {
+    if (selectedAuction) {
+      setAllBids(selectedAuction.bids || []);
+      setBidPage(1);
+    }
+  }, [selectedAuction]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await axios.get(
+          `${Constants.DOMAIN_API}/admin/auctions/winners/${auctionId}`
+        );
+        const d = res.data.data;
+        console.log("hehe", d);
+
+        setAuction(d.auction);
+        if (d.winner) {
+          setWinnerData({
+            winner: d.winner,
+            winningBid: d.winningBid,
+            orderStatus: d.orderStatus,
+            paymentMethod: d.paymentMethod,
+            expiredPaymentWindow: d.expiredPaymentWindow,
+            allBids: d.allBids,
+          });
+          setAllBids(d.allBids || []);
+        } else {
+          setWinnerData({
+            winner: null,
+            winningBid: null,
+            orderStatus: null,
+            paymentMethod: null,
+            expiredPaymentWindow: false,
+            allBids: [],
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Không tải được dữ liệu");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [auctionId]);
+
+  const totalBidPages = Math.ceil(allBids.length / bidsPerPage);
+  const paginatedBids = allBids.slice(
+    (bidPage - 1) * bidsPerPage,
+    bidPage * bidsPerPage
+  );
+
   return (
     <Layout>
       <div
@@ -222,35 +299,143 @@ export default function AuctionsDetail() {
         }
 
         return (
-          <div className="mt-10 mx-auto max-w-3xl px-8 py-6 bg-blue-50 border border-blue-200 rounded-2xl shadow-xl">
-            <h4 className="text-center text-3xl font-bold text-blue-800 mb-8 tracking-wide">
-              Người Chiến Thắng
+          <div className="mt-12 mx-auto max-w-7xl px-6 py-8 bg-blue-50 border border-blue-200 rounded-2xl shadow-lg">
+            <h4 className="text-center text-3xl font-extrabold text-blue-800 mb-10 tracking-wide">
+              Kết quả phiên đấu giá
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Tên người chiến thắng</p>
-                <p className="text-xl font-semibold text-gray-900">
-                  {selectedAuction.winner.user_name}
-                </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Người chiến thắng */}
+              <div className="bg-white p-8 rounded-2xl shadow-md flex flex-col items-center">
+                <h5 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-2 w-full text-center">
+                  Người chiến thắng
+                </h5>
+                <div className="space-y-4 text-center w-full">
+                  <p className="text-base text-gray-600">
+                    <span className="font-medium text-gray-800">Tên:</span>{" "}
+                    {selectedAuction.winner.user_name}
+                  </p>
+                  <p className="text-base text-gray-600">
+                    <span className="font-medium text-gray-800">Số tiền:</span>{" "}
+                    <span className="text-green-600">
+                      {Number(selectedAuction.winner.bidAmount).toLocaleString("vi-VN")}₫
+                    </span>
+                  </p>
+                  <p className="text-base text-gray-600">
+                    <span className="font-medium text-gray-800">Kết thúc lúc:</span>{" "}
+                    {selectedAuction.endTime.replace("T", " ").substring(0, 19)}
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Số tiền chiến thắng</p>
-                <p className="text-xl font-semibold text-green-700">
-                  {Number(selectedAuction.winner.bidAmount).toLocaleString("vi-VN")}₫
-                </p>
-              </div>
+              {/* Lịch sử đặt giá */}
+              <div className="bg-white p-8 rounded-2xl shadow-md">
+                <h5 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-2">
+                  Lịch sử đặt giá
+                </h5>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full table-fixed bg-white divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        {["#", "Tên người đặt", "Số tiền", "Thời gian"].map((title) => (
+                          <th
+                            key={title}
+                            className="px-4 py-3 text-left text-sm font-medium text-gray-700 capitalize"
+                          >
+                            {title}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {paginatedBids.length > 0 ? (
+                        paginatedBids.map((bid, idx) => (
+                          <tr
+                            key={bid.id}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="px-4 py-3 text-sm text-gray-700">
+                              {(bidPage - 1) * bidsPerPage + idx + 1}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700">
+                              {bid.user.name}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-green-600">
+                              {Number(bid.bidAmount).toLocaleString("vi-VN")}₫
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700">
+                              {bid.bidTime.replace("T", " ").substring(0, 19)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="px-4 py-6 text-center text-gray-500"
+                          >
+                            Chưa có lượt đặt giá nào
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  <div className="flex justify-center mt-6">
+                    <div className="flex items-center space-x-1">
+                      <button
+                        disabled={bidPage === 1}
+                        onClick={() => setBidPage(1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                      >
+                        <FaAngleDoubleLeft />
+                      </button>
+                      <button
+                        disabled={bidPage === 1}
+                        onClick={() => setBidPage(bidPage - 1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                      >
+                        <FaChevronLeft />
+                      </button>
 
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Thời gian kết thúc</p>
-                <p className="text-xl font-semibold text-gray-900">
-                  {(selectedAuction.endTime).replace("T", " ").substring(0, 19)}
-                </p>
+                      {[...Array(totalBidPages)].map((_, i) => {
+                        const page = i + 1;
+                        if (page >= bidPage - 1 && page <= bidPage + 1) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => setBidPage(page)}
+                              className={`w-8 h-8 border rounded text-sm ${page === bidPage
+                                ? "bg-blue-600 text-white"
+                                : "bg-white hover:bg-blue-100"
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+
+                      <button
+                        disabled={bidPage === totalBidPages}
+                        onClick={() => setBidPage(bidPage + 1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                      >
+                        <FaChevronRight />
+                      </button>
+                      <button
+                        disabled={bidPage === totalBidPages}
+                        onClick={() => setBidPage(totalBidPages)}
+                        className="px-2 py-1 border rounded disabled:opacity-50"
+                      >
+                        <FaAngleDoubleRight />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
         );
       })()}
 

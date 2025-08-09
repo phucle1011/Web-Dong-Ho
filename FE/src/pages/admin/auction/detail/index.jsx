@@ -8,6 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { toast } from "react-toastify";
 import Select from "react-select";
 import moment from "moment-timezone";
+import { FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 Modal.setAppElement("#root");
 
@@ -15,7 +16,7 @@ export default function AdminAuctionWinnerOnly() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [auction, setAuction] = useState(null);
-    const [winnerData, setWinnerData] = useState(null);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [timeUp, setTimeUp] = useState(false);
@@ -31,11 +32,31 @@ export default function AdminAuctionWinnerOnly() {
     const [errors, setErrors] = useState({});
     const [creating, setCreating] = useState(false);
     const [products, setProducts] = useState([]);
+    const [winnerData, setWinnerData] = useState({
+        winner: null,
+        winningBid: null,
+        allBids: [],
+        orderStatus: null,
+        paymentMethod: null,
+        expiredPaymentWindow: false
+    });
+
+    const [bidPage, setBidPage] = useState(1);
+    const bidsPerPage = 5;
+
+    useEffect(() => {
+        setBidPage(1);
+    }, [winnerData.allBids]);
+
+    const totalBidPages = Math.ceil((winnerData.allBids || []).length / bidsPerPage);
+    const paginatedBids = (winnerData.allBids || []).slice(
+        (bidPage - 1) * bidsPerPage,
+        bidPage * bidsPerPage
+    );
 
     const formatToMySQL = (date) => {
         return moment.tz(date, "Asia/Ho_Chi_Minh").format("YYYY-MM-DD HH:mm:ss");
     };
-
 
     const formatHHMMSS = (secs) => {
         const h = String(Math.floor(secs / 3600)).padStart(2, "0");
@@ -43,13 +64,13 @@ export default function AdminAuctionWinnerOnly() {
         const s = String(secs % 60).padStart(2, "0");
         return `${h}:${m}:${s}`;
     };
+
     function CountdownTimer({ endTime, onExpire }) {
         const [remaining, setRemaining] = useState(() => {
             const diff = Math.floor((new Date(endTime) - Date.now()) / 1000);
             return diff > 0 ? diff : 0;
         });
         useEffect(() => {
-            // nếu ban đầu đã hết hạn thì gọi onExpire ngay
             if (remaining === 0) {
                 onExpire?.();
                 return;
@@ -71,6 +92,7 @@ export default function AdminAuctionWinnerOnly() {
             ? <span className="font-mono ml-2">{formatHHMMSS(remaining)}</span>
             : <span className="text-red-600 ml-2">Hết hạn</span>;
     }
+
     const add24Hours = (isoEndTime) => {
         const t = Date.parse(isoEndTime) + 24 * 60 * 60 * 1000;
         return new Date(t)
@@ -114,10 +136,18 @@ export default function AdminAuctionWinnerOnly() {
                         winningBid: d.winningBid,
                         orderStatus: d.orderStatus,
                         paymentMethod: d.paymentMethod,
-                        expiredPaymentWindow: d.expiredPaymentWindow
+                        expiredPaymentWindow: d.expiredPaymentWindow,
+                        allBids: d.allBids,
                     });
                 } else {
-                    setWinnerData(null);
+                    setWinnerData({
+                        winner: null,
+                        winningBid: null,
+                        orderStatus: null,
+                        paymentMethod: null,
+                        expiredPaymentWindow: false,
+                        allBids: [],
+                    });
                 }
             } catch (err) {
                 console.error(err);
@@ -187,34 +217,27 @@ export default function AdminAuctionWinnerOnly() {
     if (loading) return <div className="p-4 text-center">Đang tải...</div>;
     if (error) return <div className="p-4 text-center text-red-600">{error}</div>;
 
-    if (!winnerData) {
+    if (!winnerData.winner) {
         return (
             <div className="container mx-auto p-4">
-                {!winnerData ? (
-                    <>
-                        <h2 className="text-xl font-semibold mb-4">Phiên đấu giá #{id}</h2>
-                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                            Không có người trả giá cho phiên đấu giá này
-                        </div>
-                        <div className="flex items-center gap-2 mt-4">
-                            <button
-                                onClick={openRetryModal}
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                            >
-                                Tạo lại phiên đấu giá
-                            </button>
-                            <button
-                                onClick={() => navigate("/admin/auctions/getAll")}
-                                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                            >
-                                Quay lại
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    /* ... phần render khi có winnerData như bạn đã làm ... */
-                    <WinnerBlock {...{ auction, winnerData, timeUp, openRetryModal }} />
-                )}
+                <h2 className="text-xl font-semibold mb-4">Phiên đấu giá #{id}</h2>
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                    Không có người trả giá cho phiên đấu giá này
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                    <button
+                        onClick={openRetryModal}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    >
+                        Tạo lại phiên đấu giá
+                    </button>
+                    <button
+                        onClick={() => navigate("/admin/auctions/getAll")}
+                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    >
+                        Quay lại
+                    </button>
+                </div>
 
                 {/*** Modal chỉ cho no-winner ***/}
                 <Modal
@@ -434,6 +457,7 @@ export default function AdminAuctionWinnerOnly() {
                 </>
             ) : (
                 <>
+                    <h3 className="text-xl font-semibold mt-3 mb-3">Thông tin sản phẩm</h3>
                     {auction?.variant?.product && (
                         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
                             <p>
@@ -510,6 +534,7 @@ export default function AdminAuctionWinnerOnly() {
                     </div>
                     {/* ==== END THÊM ==== */}
 
+                    <h3 className="text-xl font-semibold mt-3 mb-3">Thông tin người chiến thắng</h3>
                     <table className="w-full border-collapse border text-center">
                         <thead>
                             <tr className="bg-gray-200">
@@ -528,6 +553,95 @@ export default function AdminAuctionWinnerOnly() {
                             </tr>
                         </tbody>
                     </table>
+
+                    <h3 className="text-xl font-semibold mt-5 mb-3">Lịch sử tất cả lượt đặt giá</h3>
+                    <table className="w-full border-collapse border text-center">
+                        <thead>
+                            <tr className="bg-gray-200">
+                                <th className="border p-2">#</th>
+                                <th className="border p-2">Tên người đặt</th>
+                                <th className="border p-2">Email</th>
+                                <th className="border p-2">Số tiền đặt giá</th>
+                                <th className="border p-2">Thời gian đặt giá</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginatedBids.map((bid, idx) => (
+                                <tr key={bid.id}>
+                                    <td className="border px-4 py-2">       {(bidPage - 1) * bidsPerPage + idx + 1}</td>
+                                    <td className="border px-4 py-2">{bid.user.name}</td>
+                                    <td className="border px-4 py-2">{bid.user.email}</td>
+                                    <td className="border px-4 py-2">
+                                        {Number(bid.bidAmount).toLocaleString("vi-VN")}₫
+                                    </td>
+                                    <td className="border px-4 py-2">
+                                        {bid.bidTime.replace("T", " ").substring(0, 19)}
+                                    </td>
+                                </tr>
+                            ))}
+                            {paginatedBids.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="border px-4 py-2 text-gray-500">
+                                        Chưa có lượt đặt giá nào
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+
+                    </table>
+
+                    <div className="flex justify-center mt-6">
+                        <div className="flex items-center space-x-1">
+                            <button
+                                disabled={bidPage === 1}
+                                onClick={() => setBidPage(1)}
+                                className="px-2 py-1 border rounded disabled:opacity-50"
+                            >
+                                <FaAngleDoubleLeft />
+                            </button>
+                            <button
+                                disabled={bidPage === 1}
+                                onClick={() => setBidPage(bidPage - 1)}
+                                className="px-2 py-1 border rounded disabled:opacity-50"
+                            >
+                                <FaChevronLeft />
+                            </button>
+
+                            {[...Array(totalBidPages)].map((_, i) => {
+                                const page = i + 1;
+                                if (page >= bidPage - 1 && page <= bidPage + 1) {
+                                    return (
+                                        <button
+                                            key={page}
+                                            onClick={() => setBidPage(page)}
+                                            className={`w-8 h-8 border rounded text-sm ${page === bidPage
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-white hover:bg-blue-100"
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                }
+                                return null;
+                            })}
+
+                            <button
+                                disabled={bidPage === totalBidPages}
+                                onClick={() => setBidPage(bidPage + 1)}
+                                className="px-2 py-1 border rounded disabled:opacity-50"
+                            >
+                                <FaChevronRight />
+                            </button>
+                            <button
+                                disabled={bidPage === totalBidPages}
+                                onClick={() => setBidPage(totalBidPages)}
+                                className="px-2 py-1 border rounded disabled:opacity-50"
+                            >
+                                <FaAngleDoubleRight />
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="mt-4">
                         <button

@@ -211,7 +211,7 @@ export default function AllProductPage() {
           ? productsData[0].pagination?.totalProducts || productsData.length
           : 0,
       }));
-      navigate(location.pathname, { replace: true }); // Xóa state
+      // navigate(location.pathname, { replace: true }); // Xóa state
       setError(null);
     } catch (error) {
       console.error("API Error:", error.response?.data || error.message);

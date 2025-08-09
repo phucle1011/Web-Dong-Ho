@@ -269,7 +269,6 @@ function AuctionProductDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Load một phiên đang diễn ra gần nhất
     axios
       .get(`${Constants.DOMAIN_API}/admin/auctions`, {
         params: { status: "active", limit: 1 },
