@@ -113,48 +113,54 @@ export default function AllProductPage() {
   };
 
  useEffect(() => {
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const selectedCategoryIds = Object.keys(categoryFilters || {}).filter(
-        (key) => categoryFilters[key]
-      );
-      const selectedBrandIds = Object.keys(brandFilters || {}).filter(
-        (key) => brandFilters[key]
-      );
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const selectedCategoryIds = Object.keys(categoryFilters || {}).filter(
+          (key) => categoryFilters[key]
+        );
+        const selectedBrandIds = Object.keys(brandFilters || {}).filter(
+          (key) => brandFilters[key]
+        );
 
-      const isFiltering =
-        selectedCategoryIds.length > 0 ||
-        selectedBrandIds.length > 0 ||
-        volume[0] !== 0 ||
-        volume[1] !== 1000000000;
+        const isFiltering =
+          selectedCategoryIds.length > 0 ||
+          selectedBrandIds.length > 0 ||
+          volume[0] !== 0 ||
+          volume[1] !== 1000000000;
+         
+        // 👉 Nếu có brandId từ location và chưa lọc gì khác, ưu tiên gọi riêng
+        if (brandId && !isFiltering) {
+          const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
+            params: { brand_id: brandId },
+            headers: { "Cache-Control": "no-cache" },
+          });
+          
 
-      let productsData = [];
+          setProducts(res.data.data || []);
+          setPagination((prev) => ({
+            ...prev,
+            totalProducts: res.data.pagination?.totalProducts || 0,
+          }));
+          setError(null);
+          return; // 🛑 dừng tại đây để không gọi thêm lần nữa
+        }
+         if (categoryId && !isFiltering) {
+          const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
+            params: { category_id: categoryId },
+            headers: { "Cache-Control": "no-cache" },
+          });
+          
 
-      if (keyword || searchAttrVals || searchAttrIds) {
-        const res = await axios.get(`${Constants.DOMAIN_API}/products/search`, {
-          params: {
-            keyword,
-            attribute_values: searchAttrVals,
-            attribute_ids: searchAttrIds,
-            page: pagination.currentPage,
-            limit: pagination.limit,
-          },
-        });
-        productsData = res.data.data;
-      } else if (brandId && !isFiltering) {
-        const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
-          params: { brand_id: brandId, include: "variants" }, // Thêm include=variants nếu API hỗ trợ
-          headers: { "Cache-Control": "no-cache" },
-        });
-        productsData = res.data.data || [];
-      } else if (categoryId && !isFiltering) {
-        const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
-          params: { category_id: categoryId, include: "variants" }, // Thêm include=variants nếu API hỗ trợ
-          headers: { "Cache-Control": "no-cache" },
-        });
-        productsData = res.data.data || [];
-      } else {
+          setProducts(res.data.data || []);
+          setPagination((prev) => ({
+            ...prev,
+            totalProducts: res.data.pagination?.totalProducts || 0,
+          }));
+          setError(null);
+          return; // 🛑 dừng tại đây để không gọi thêm lần nữa
+        }
+
         const params = {
           page: pagination.currentPage,
           limit: pagination.limit,
@@ -162,89 +168,49 @@ export default function AllProductPage() {
           max_price: volume[1] !== 1000000000 ? volume[1] : undefined,
           category_id: selectedCategoryIds.join(",") || undefined,
           brand_id: selectedBrandIds.join(",") || undefined,
-          include: "variants", // Thêm include=variants nếu API hỗ trợ
         };
 
         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
           params,
           headers: { "Cache-Control": "no-cache" },
         });
-        productsData = res.data.data || [];
+
+        setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+        setPagination((prev) => ({
+          ...prev,
+          totalProducts: res.data.pagination?.totalProducts || 0,
+        }));
+        navigate(location.pathname, { replace: true }); // Xóa state
+        setError(null);
+      } catch (error) {
+        console.error("API Error:", error.response?.data || error.message);
+
+        let errorMessage =
+          "Không thể tải danh sách sản phẩm. Vui lòng thử lại hoặc thay đổi bộ lọc.";
+        if (error.response?.status === 400) {
+          errorMessage =
+            "Tham số bộ lọc không hợp lệ. Vui lòng kiểm tra lại các bộ lọc.";
+        } else if (error.response?.status === 500) {
+          errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau.";
+        }
+
+        setProducts([]);
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // Nếu API không trả về variants, thực hiện yêu cầu bổ sung để lấy variants cho từng sản phẩm
-      const enrichedProducts = await Promise.all(
-        productsData.map(async (product) => {
-          try {
-            const variantRes = await axios.get(
-              `${Constants.DOMAIN_API}/products/${product.id}/variants`
-            );
-            return {
-              ...product,
-              variants: variantRes.data.product.variants || [],
-              representativeVariant:
-                variantRes.data.product.representativeVariant || {},
-              thumbnail: variantRes.data.product.thumbnail || "/images/no-image.jpg",
-              averageRating: parseFloat(variantRes.data.product.averageRating) || 0,
-              ratingCount: parseInt(variantRes.data.product.ratingCount) || 0,
-              total_stock: variantRes.data.product.total_stock || 0,
-            };
-          } catch (error) {
-            console.error(`Lỗi khi lấy variants cho sản phẩm ${product.id}:`, error);
-            return {
-              ...product,
-              variants: [],
-              representativeVariant: {},
-              thumbnail: "/images/no-image.jpg",
-              averageRating: 0,
-              ratingCount: 0,
-              total_stock: 0,
-            };
-          }
-        })
-      );
+    fetchProducts();
+  }, [
+    pagination.currentPage,
+    categoryFilters,
+    brandFilters,
+    volume,
+    brandId,
+    brandList,location.state
+  ]);
 
-      setProducts(enrichedProducts);
-      setPagination((prev) => ({
-        ...prev,
-        totalProducts: productsData.length
-          ? productsData[0].pagination?.totalProducts || productsData.length
-          : 0,
-      }));
-      // navigate(location.pathname, { replace: true }); // Xóa state
-      setError(null);
-    } catch (error) {
-      console.error("API Error:", error.response?.data || error.message);
-      let errorMessage =
-        "Không thể tải danh sách sản phẩm. Vui lòng thử lại hoặc thay đổi bộ lọc.";
-      if (error.response?.status === 400) {
-        errorMessage =
-          "Tham số bộ lọc không hợp lệ. Vui lòng kiểm tra lại các bộ lọc.";
-      } else if (error.response?.status === 500) {
-        errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau.";
-      }
-      setProducts([]);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchProducts();
-}, [
-  pagination.currentPage,
-  keyword,
-  searchAttrVals,
-  searchAttrIds,
-  categoryFilters,
-  brandFilters,
-  volume,
-  brandId,
-  categoryId,
-]);
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [pagination.currentPage]);
 
   const handlePageChange = (newPage) => {
     const totalPages = Math.ceil(pagination.totalProducts / pagination.limit);
@@ -298,10 +264,11 @@ export default function AllProductPage() {
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${pageNum === currentPage
-                    ? "bg-blue-500 text-white"
-                    : "bg-white text-gray-700 hover:bg-blue-50"
-                    }`}
+                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${
+                    pageNum === currentPage
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-gray-700 hover:bg-blue-50"
+                  }`}
                   aria-label={`Trang ${pageNum}`}
                 >
                   {pageNum}

@@ -341,18 +341,14 @@ const PromotionProductEdit = () => {
       return;
     }
 
-    const existingVariantCount = existingVariantIds.length;
-    const newVariantCount = selectedVariants.length;
-    const variantCountChange = newVariantCount - existingVariantCount;
-
+    const totalVariants = selectedVariants.length;
     if (
       selectedPromotion.quantity !== null &&
       selectedPromotion.quantity !== undefined &&
-      variantCountChange > 0 &&
-      selectedPromotion.quantity < variantCountChange
+      totalVariants > selectedPromotion.quantity
     ) {
       toast.error(
-        `Không thể thêm ${variantCountChange} biến thể. Khuyến mãi chỉ còn ${selectedPromotion.quantity} lượt khả dụng.`
+        `Không thể chọn ${totalVariants} biến thể. Khuyến mãi chỉ cho phép tối đa ${selectedPromotion.quantity} biến thể.`
       );
       return;
     }
@@ -440,15 +436,15 @@ const PromotionProductEdit = () => {
       let errorMessage = "Lỗi khi cập nhật khuyến mãi!";
       if (err.response?.status === 400) {
         errorMessage =
-          err.response.data.error ||
+          err.response.data.message ||
           "Dữ liệu không hợp lệ! Vui lòng kiểm tra lại.";
       } else if (err.response?.status === 404) {
         errorMessage = "Không tìm thấy khuyến mãi để chỉnh sửa!";
       } else if (err.response?.status === 409) {
         errorMessage =
           "Một hoặc nhiều biến thể đã được sử dụng trong khuyến mãi khác!";
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
       }
       toast.error(errorMessage);
       setError(errorMessage);
@@ -498,6 +494,14 @@ const PromotionProductEdit = () => {
           }
           .react-select__multi-value__label {
             color: #1a202c;
+          }
+          .react-select__multi-value__remove {
+            color: #e53e3e;
+            cursor: pointer;
+          }
+          .react-select__multi-value__remove:hover {
+            color: #c53030;
+            background-color: #fed7d7;
           }
           .react-select__menu {
             z-index: 1000;
@@ -598,19 +602,30 @@ const PromotionProductEdit = () => {
 
           <div className="mb-4">
             <label className="form-label block text-sm font-medium text-gray-700 mb-2">
-              Chọn các biến thể sản phẩm * (Có thể chọn nhiều biến thể)
+              Chọn các biến thể sản phẩm * (Tìm kiếm và chọn liên tục nhiều biến thể)
             </label>
             <Select
               isMulti
-               closeMenuOnSelect={false}
+              closeMenuOnSelect={false}
               options={availableVariants}
               className="basic-multi-select"
-              classNamePrefix="select"
+              classNamePrefix="react-select"
               onChange={(selectedOptions) => {
                 if (isPromotionExpired) return;
                 const selectedIds = selectedOptions
                   ? selectedOptions.map((opt) => opt.value)
                   : [];
+                if (
+                  selectedPromotion &&
+                  selectedPromotion.quantity !== null &&
+                  selectedPromotion.quantity !== undefined &&
+                  selectedIds.length > selectedPromotion.quantity
+                ) {
+                  toast.error(
+                    `Không thể chọn ${selectedIds.length} biến thể. Khuyến mãi chỉ cho phép tối đa ${selectedPromotion.quantity} biến thể.`
+                  );
+                  return;
+                }
                 console.log("Selected Variant IDs:", selectedIds); // Debug
                 setCustomFormState({ product_variant_id: selectedIds });
                 setSelectedVariantIds(selectedIds);
@@ -625,7 +640,7 @@ const PromotionProductEdit = () => {
               value={availableVariants.filter((opt) =>
                 selectedVariantIds.includes(opt.value)
               )}
-              placeholder="Chọn nhiều biến thể sản phẩm (nhấn để chọn hoặc xóa)..."
+              placeholder="Tìm kiếm và chọn liên tục nhiều biến thể (nhập SKU hoặc tên sản phẩm)..."
               formatOptionLabel={(opt) => (
                 <div
                   style={{
@@ -662,9 +677,13 @@ const PromotionProductEdit = () => {
               styles={{
                 control: (base) => ({
                   ...base,
-                  borderColor: errors.product_variant_id ? "#e53e3e" : base.borderColor,
+                  minHeight: "48px",
+                  borderRadius: "8px",
+                  border: errors.product_variant_id
+                    ? "2px solid #e53e3e"
+                    : "2px solid #e2e8f0",
                   "&:hover": {
-                    borderColor: errors.product_variant_id ? "#e53e3e" : base.borderColor,
+                    borderColor: errors.product_variant_id ? "#e53e3e" : "#cbd5e0",
                   },
                 }),
                 multiValue: (base) => ({
@@ -675,6 +694,18 @@ const PromotionProductEdit = () => {
                 multiValueLabel: (base) => ({
                   ...base,
                   color: "#1a202c",
+                }),
+                multiValueRemove: (base) => ({
+                  ...base,
+                  color: "#e53e3e",
+                  ":hover": {
+                    color: "#c53030",
+                    backgroundColor: "#fed7d7",
+                  },
+                }),
+                menu: (base) => ({
+                  ...base,
+                  zIndex: 1000,
                 }),
               }}
             />
@@ -696,8 +727,7 @@ const PromotionProductEdit = () => {
               </small>
             )}
             <p className="text-xs text-gray-500 mt-2">
-              Bạn có thể chọn nhiều biến thể bằng cách nhấp vào các tùy chọn. Các
-              biến thể đã chọn sẽ hiển thị bên dưới để nhập số lượng.{" "}
+              Tìm kiếm bằng SKU hoặc tên sản phẩm để chọn liên tục nhiều biến thể. Nhấn vào tùy chọn để thêm hoặc xóa. Các biến thể đã chọn sẽ hiển thị bên dưới để nhập số lượng.{" "}
               {selectedPromotion?.quantity !== null &&
               selectedPromotion?.quantity !== undefined
                 ? `Số lượng biến thể tối đa: ${selectedPromotion.quantity}`

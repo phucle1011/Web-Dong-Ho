@@ -145,7 +145,7 @@ const PromotionProductList = () => {
       await axios.delete(
         `${Constants.DOMAIN_API}/admin/promotions/${deleteItem.id}`
       );
-      toast.success("Xóa thành công! Đã hoàn lại 1 lượt sử dụng.");
+      toast.success("Xóa biến thành công!");
       fetchPromotions(pagination.page, searchTerm);
       setExpanded(deleteItem.name); // Tự động mở lại phần mở rộng
     } catch (err) {
