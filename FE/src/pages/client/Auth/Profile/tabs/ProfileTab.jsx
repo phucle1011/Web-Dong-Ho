@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import InputCom from "../../../Helpers/InputCom";
 import axios from "axios";
-import { uploadToCloudinary } from "../../../../../Upload/uploadToCloudinary"; // Đường dẫn đúng với cấu trúc dự án của bạn
+import { uploadToCloudinary } from "../../../../../Upload/uploadToCloudinary";
 import { decodeToken } from "../../../Helpers/jwtDecode";
 import { toast } from "react-toastify";
 import Constants from "../../../../.././Constants";
@@ -20,21 +20,20 @@ export default function ProfileTab() {
     },
   });
 
+  const [errors, setErrors] = useState({ name: "", phone: "" });
   const [profileImg, setProfileImg] = useState(null);
   const profileImgInput = useRef(null);
   const [initialUser, setInitialUser] = useState(null);
 
   const browseProfileImg = () => {
-    profileImgInput.current.click();
+    profileImgInput.current?.click();
   };
 
   const profileImgChangeHandler = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setProfileImg(event.target.result); // Hiển thị ảnh tạm thời
-      };
+      reader.onload = (event) => setProfileImg(event.target.result);
       reader.readAsDataURL(file);
     }
   };
@@ -46,26 +45,20 @@ export default function ProfileTab() {
         const decoded = decodeToken(token);
         const response = await axios.get(
           `${Constants.DOMAIN_API}/users/${decoded.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
         const defaultAddress = response.data.data.addresses?.find(
           (addr) => addr.is_default === 1
         );
 
-        setUser({
-          ...response.data.data,
-          address: defaultAddress || null, // nếu không có thì set null
-        });
-        setInitialUser({
+        const merged = {
           ...response.data.data,
           address: defaultAddress || null,
-        });
+        };
 
+        setUser(merged);
+        setInitialUser(merged);
         setProfileImg(response.data.data.avatar);
       } catch (error) {
         console.error("Lỗi khi lấy thông tin user:", error);
@@ -75,64 +68,91 @@ export default function ProfileTab() {
     fetchUser();
   }, []);
 
-const deleteCloudImage = async (public_id) => {
-  try {
-    await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
-      public_id,
-    });
-    console.log("Đã xóa ảnh Cloudinary:", public_id);
-  } catch (err) {
-    console.error("Xóa ảnh thất bại:", err);
-  }
-};
-const handleCancel = async () => {
-  const file = profileImgInput.current?.files?.[0];
-
-  // Nếu người dùng đã chọn ảnh mới
-  if (file && profileImg !== initialUser?.avatar) {
+  const deleteCloudImage = async (public_id) => {
     try {
-      const uploaded = await uploadToCloudinary(file); // kiểm tra upload ảnh
-      if (uploaded?.public_id) {
-        await deleteCloudImage(uploaded.public_id);     // Gọi API xoá
-      }
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id,
+      });
+      console.log("Đã xóa ảnh Cloudinary:", public_id);
     } catch (err) {
-      console.error("Lỗi xử lý ảnh khi hủy:", err);
+      console.error("Xóa ảnh thất bại:", err);
     }
-  }
+  };
 
-  // Reset lại dữ liệu ban đầu
-  if (initialUser) {
-    setUser(initialUser);
-    setProfileImg(initialUser.avatar);
-    if (profileImgInput.current) {
-      profileImgInput.current.value = ""; // reset input file
+  const handleCancel = async () => {
+    const file = profileImgInput.current?.files?.[0];
+
+    if (file && profileImg !== initialUser?.avatar) {
+      try {
+        const uploaded = await uploadToCloudinary(file);
+        if (uploaded?.public_id) {
+          await deleteCloudImage(uploaded.public_id);
+        }
+      } catch (err) {
+        console.error("Lỗi xử lý ảnh khi hủy:", err);
+      }
     }
-  }
 
-  toast.info("Đã hủy thay đổi.");
-};
+    if (initialUser) {
+      setUser(initialUser);
+      setProfileImg(initialUser.avatar);
+      profileImgInput.current && (profileImgInput.current.value = "");
+      setErrors({ name: "", phone: "" });
+    }
+
+    toast.info("Đã hủy thay đổi.");
+  };
+
+  // ===== VALIDATION =====
+  const validateName = (name) => {
+    const value = (name || "").trim();
+    if (!value) return "Tên không được để trống.";
+    return "";
+  };
+
+  // Đúng 10 số, đầu số VN: 03/05/07/08/09
+  const VN_PHONE_REGEX = /^(03|05|07|08|09)\d{8}$/;
+  const validatePhone = (phone) => {
+    const value = (phone || "").trim();
+    if (!value) return "Số điện thoại không được để trống.";
+    if (value.length !== 10) return "Số điện thoại phải có đúng 10 chữ số.";
+    if (!VN_PHONE_REGEX.test(value))
+      return "Số điện thoại không đúng định dạng VN (bắt đầu bằng 03, 05, 07, 08 hoặc 09).";
+    return "";
+  };
+
+  const runValidate = () => {
+    const nameErr = validateName(user.name);
+    const phoneErr = validatePhone(user.phone);
+    const nextErrors = { name: nameErr, phone: phoneErr };
+    setErrors(nextErrors);
+    return !nameErr && !phoneErr;
+  };
+
   const handleUpdate = async () => {
+    if (!runValidate()) {
+      toast.error("Vui lòng kiểm tra lại thông tin.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
 
       let avatarUrl = user.avatar;
-      const file = profileImgInput.current?.files[0];
+      const file = profileImgInput.current?.files?.[0];
       if (file) {
-        avatarUrl = await uploadToCloudinary(file);
+        const uploaded = await uploadToCloudinary(file);
+        avatarUrl = uploaded?.url || avatarUrl;
       }
 
       await axios.put(
         `${Constants.DOMAIN_API}/users/${user.id}`,
         {
-          name: user.name,
-          phone: user.phone,
-          avatar: avatarUrl.url,
+          name: user.name.trim(),
+          phone: user.phone.trim(),
+          avatar: avatarUrl,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       toast.success("Cập nhật thông tin thành công!");
@@ -142,23 +162,50 @@ const handleCancel = async () => {
     }
   };
 
+  // ===== HANDLERS (giới hạn input số điện thoại) =====
+  const onNameChange = (e) => {
+    const value = e.target.value;
+    setUser((prev) => ({ ...prev, name: value }));
+    if (errors.name) setErrors((prev) => ({ ...prev, name: validateName(value) }));
+  };
+
+  const onPhoneChange = (e) => {
+    // chỉ cho số & tối đa 10 ký tự
+    const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setUser((prev) => ({ ...prev, phone: digitsOnly }));
+    if (errors.phone)
+      setErrors((prev) => ({ ...prev, phone: validatePhone(digitsOnly) }));
+  };
+
+  const onNameBlur = () =>
+    setErrors((prev) => ({ ...prev, name: validateName(user.name) }));
+
+  const onPhoneBlur = () =>
+    setErrors((prev) => ({ ...prev, phone: validatePhone(user.phone) }));
+
   return (
     <>
       <div className="flex space-x-8">
         <div className="w-[570px]">
-          <div className="input-item mb-8">
+          {/* NAME */}
+          <div className="input-item mb-2">
             <input
-              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-              label="Name*"
+              className={`w-full border rounded px-2 py-1 text-sm ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              }`}
               placeholder="Your full name"
               type="text"
-              inputClasses="h-[50px]"
               value={user.name || ""}
-              onChange={(e) => setUser({ ...user, name: e.target.value })}
+              onChange={onNameChange}
+              onBlur={onNameBlur}
             />
+            {errors.name && (
+              <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+            )}
           </div>
 
-          <div className="input-item flex space-x-2.5 mb-8">
+          {/* EMAIL + PHONE */}
+          <div className="input-item flex space-x-2.5 mb-2">
             <div className="w-1/2 h-full">
               <input
                 className="w-full border border-gray-300 rounded px-2 py-1 text-sm opacity-50 cursor-not-allowed"
@@ -166,25 +213,30 @@ const handleCancel = async () => {
                 placeholder="demoemail@gmail.com"
                 readOnly
                 value={user.email || ""}
-                onChange={(e) => setUser({ ...user, email: e.target.value })}
               />
             </div>
             <div className="w-1/2 h-full">
               <input
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                label="Phone Number*"
-                placeholder="012 3 *******"
-                type="text"
-                inputClasses="h-[50px]"
+                className={`w-full border rounded px-2 py-1 text-sm ${
+                  errors.phone ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Số điện thoại (10 số)"
+                type="tel"
+                inputMode="numeric"
                 value={user.phone || ""}
-                onChange={(e) => setUser({ ...user, phone: e.target.value })}
+                onChange={onPhoneChange}
+                onBlur={onPhoneBlur}
               />
+              {errors.phone && (
+                <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+              )}
             </div>
           </div>
 
+          {/* ADDRESS */}
           {user.address ? (
             <>
-              <div className="mb-4">
+              <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">
                   Địa chỉ chi tiết
                 </label>
@@ -197,7 +249,7 @@ const handleCancel = async () => {
                 />
               </div>
 
-              <div className="mb-4">
+              <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">
                   Phường / Xã
                 </label>
@@ -210,7 +262,7 @@ const handleCancel = async () => {
                 />
               </div>
 
-              <div className="mb-4">
+              <div className="mb-2">
                 <label className="block text-sm font-medium mb-1">
                   Quận / Huyện
                 </label>
@@ -249,6 +301,7 @@ const handleCancel = async () => {
           )}
         </div>
 
+        {/* AVATAR */}
         <div className="flex-1">
           <div className="update-logo w-full mb-9">
             <h1 className="text-xl font-bold text-qblack flex items-center mb-2">
@@ -276,6 +329,7 @@ const handleCancel = async () => {
                 <div
                   onClick={browseProfileImg}
                   className="w-[32px] h-[32px] absolute bottom-7 sm:right-0 right-[105px]  bg-qblack rounded-full cursor-pointer"
+                  title="Đổi ảnh đại diện"
                 >
                   <svg
                     width="32"
@@ -300,20 +354,21 @@ const handleCancel = async () => {
         </div>
       </div>
 
+      {/* ACTIONS */}
       <div className="action-area flex space-x-4 items-center">
         <button
-  type="button"
-  className="text-sm bg-red-600 hover:bg-red-700 text-white font-semibold px-4 h-[50px] rounded transition"
-  onClick={handleCancel}
->
-  Hủy
-</button>
-
+          type="button"
+          className="text-sm bg-red-600 hover:bg-red-700 text-white font-semibold px-4 h-[50px] rounded transition"
+          onClick={handleCancel}
+        >
+          Hủy
+        </button>
 
         <button
           type="button"
-          className="w-[164px] h-[50px] bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition"
+          className="w-[164px] h-[50px] bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition disabled:opacity-60"
           onClick={handleUpdate}
+          disabled={!!errors.name || !!errors.phone}
         >
           Cập nhật tài khoản
         </button>

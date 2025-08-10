@@ -108,12 +108,12 @@ const NotificationList = () => {
   return (
     <div className="container mx-auto p-4 bg-white shadow rounded">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Quản lý thông báo khuyến mãi</h2>
+        <h2 className="text-xl font-semibold">Quản lý slideshow</h2>
         <Link
           to="/admin/notification/create"
           className="inline-block bg-[#073272] text-white px-4 py-2 rounded"
         >
-          + Thêm thông báo
+          + Thêm slideshow
         </Link>
       </div>
 
@@ -138,7 +138,17 @@ const NotificationList = () => {
           }}
           className="bg-[#073272] text-white px-4 py-2 rounded"
         >
-         <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 512 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M505 442.7L405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34zM208 336c-70.7 0-128-57.2-128-128 0-70.7 57.2-128 128-128 70.7 0 128 57.2 128 128 0 70.7-57.2 128-128 128z"></path></svg>
+          <svg
+            stroke="currentColor"
+            fill="currentColor"
+            stroke-width="0"
+            viewBox="0 0 512 512"
+            height="1em"
+            width="1em"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M505 442.7L405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34zM208 336c-70.7 0-128-57.2-128-128 0-70.7 57.2-128 128-128 70.7 0 128 57.2 128 128 0 70.7-57.2 128-128 128z"></path>
+          </svg>
         </button>
       </div>
 
@@ -148,7 +158,7 @@ const NotificationList = () => {
         <div className="text-center text-red-600 py-6">{error}</div>
       ) : paginatedNotifications.length === 0 ? (
         <div className="text-center text-gray-500 py-6">
-          Không có thông báo khuyến mãi nào.
+          Không có slideshow.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -221,18 +231,20 @@ const NotificationList = () => {
                           <Link
                             to={`/admin/notification/edit/${noti.id}`}
                             className="bg-yellow-500 text-white p-2 rounded w-8 h-8 inline-flex items-center justify-center"
-                            title="Sửa thông báo"
+                            title="Sửa slideshow"
                           >
                             <FaEdit size={20} className="font-bold" />
                           </Link>
 
-                          <button
-                            onClick={() => handleDeleteClick(noti)}
-                            className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                            title="Xoá thông báo"
-                          >
-                            <FaTrashAlt size={20} className="font-bold" />
-                          </button>
+                          {status === 0 && (
+                            <button
+                              onClick={() => handleDeleteClick(noti)}
+                              className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+                              title="Xoá slideshow"
+                            >
+                              <FaTrashAlt size={20} className="font-bold" />
+                            </button>
+                          )}
 
                           <button
                             onClick={() =>
@@ -329,7 +341,7 @@ const NotificationList = () => {
                                     colSpan="6"
                                     className="text-center p-3 italic text-gray-500"
                                   >
-                                    Không có Flash Sale nào trong thông báo này.
+                                    Không có Flash Sale nào trong slideshow này.
                                   </td>
                                 </tr>
                               )}
@@ -422,7 +434,7 @@ const NotificationList = () => {
           onClose={cancelDelete}
           onConfirm={confirmDelete}
           message={`Bạn có chắc chắn muốn xoá "${
-            deleteItem.title || "thông báo"
+            deleteItem.title || "slideshow"
           }" không?`}
         />
       )}

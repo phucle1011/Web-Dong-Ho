@@ -163,7 +163,7 @@ const EditNotification = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto bg-white rounded shadow">
-      <h2 className="text-2xl font-semibold mb-6">Chỉnh sửa Thông Báo</h2>
+      <h2 className="text-2xl font-semibold mb-6">Chỉnh sửa slideshow</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Card 1 */}
         {/* Card 1 */}
@@ -262,7 +262,7 @@ const EditNotification = () => {
                 <DatePicker
                   selected={startDate}
                   onChange={setStartDate}
-                  showTimeSelect
+                  // showTimeSelect
                   className="w-full border rounded px-4 py-2"
                   minDate={new Date()}
                   maxDate={endDate || null}
@@ -279,7 +279,7 @@ const EditNotification = () => {
                 <DatePicker
                   selected={endDate}
                   onChange={setEndDate}
-                  showTimeSelect
+                  // showTimeSelect
                   className="w-full  border rounded px-4 py-2"
                   minDate={startDate || new Date()}
                   minTime={endMin}
@@ -296,7 +296,7 @@ const EditNotification = () => {
             )}
           </div>
           <div className="flex-1 border border-gray-300 rounded p-4 shadow-lg bg-white mb-6 md:mb-0">
-            <h3 className="text-lg font-medium mb-4">Ảnh thông báo</h3>
+            <h3 className="text-lg font-medium mb-4">Ảnh slideshow</h3>
 
             <div>
               <label className="block mb-1 font-medium">Tải ảnh</label>
@@ -331,7 +331,7 @@ const EditNotification = () => {
         <div className="flex justify-start items-center gap-2 mt-6">
           <button
             type="button"
-            className="px-6 py-2 bg-gray-500 text-gray-800 rounded hover:bg-gray-400"
+            className="px-6 py-2 bg-gray-500 text-gray-800 rounded "
             onClick={handleCancel}
           >
             Quay lại

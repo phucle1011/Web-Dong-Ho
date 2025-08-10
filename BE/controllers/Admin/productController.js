@@ -196,31 +196,57 @@ static async getPublishedProducts(req, res) {
 
 static async getPublishedAuctionProducts(req, res) {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Truy vấn 1: Tìm ID các sản phẩm hợp lệ
+    const searchTerm = (req.query.searchTerm || "").trim();
+    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : null;
+    const brandId    = req.query.brandId    ? parseInt(req.query.brandId)    : null;
+
+    // where cho Product
+    const productWhere = {
+      publication_status: 'published',
+      ...(categoryId ? { category_id: categoryId } : {}),
+      ...(brandId    ? { brand_id: brandId }       : {}),
+      ...(searchTerm ? { name: { [Op.like]: `%${searchTerm}%` } } : {}),
+    };
+
+    // --- Query 1: đếm + lấy IDs (bắt buộc có variant is_auction_only=1) ---
     const { count: totalProducts, rows: products } = await Product.findAndCountAll({
-      where: { publication_status: 'published' },
+      where: productWhere,
       include: [
         {
           model: ProductVariant,
           as: 'variants',
           where: { is_auction_only: 1 },
           required: true,
-          attributes: [], // không lấy dữ liệu variant ở đây
+          attributes: [], // không lấy dữ liệu variant khi đếm
         },
       ],
       order: [['created_at', 'DESC']],
       limit,
       offset,
-      distinct: true,
+      distinct: true, // để count theo Product, không bị nhân bản bởi include
     });
 
-    const productIds = products.map(p => p.id);
+    if (!products.length) {
+      return res.status(200).json({
+        status: 200,
+        message: 'Không có sản phẩm đấu giá phù hợp',
+        data: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 0,
+          totalProducts: 0,
+        },
+        totalVariants: 0,
+      });
+    }
 
-    // Truy vấn 2: Lấy đầy đủ thông tin sản phẩm
+    const productIds = products.map((p) => p.id);
+
+    // --- Query 2: lấy đầy đủ thông tin cho các id vừa tìm được ---
     const productsFull = await Product.findAll({
       where: { id: productIds },
       order: [['created_at', 'DESC']],
@@ -240,13 +266,13 @@ static async getPublishedAuctionProducts(req, res) {
           ],
         },
         { model: CategoryModel, as: 'category', attributes: ['id', 'name'] },
-        { model: BrandModel, as: 'brand', attributes: ['id', 'name'] },
+        { model: BrandModel,    as: 'brand',    attributes: ['id', 'name'] },
       ],
     });
 
-    const data = productsFull.map((product) => {
-      const j = product.toJSON();
-      j.variantCount = product.variants?.length || 0;
+    const data = productsFull.map((p) => {
+      const j = p.toJSON();
+      j.variantCount = p.variants?.length || 0;
       return j;
     });
 

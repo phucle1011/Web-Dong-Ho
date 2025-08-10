@@ -576,6 +576,8 @@ class OrderController {
             for (const item of products) {
                 const variant = item.variant;
                 const promotion_product_id = item.promotion_product_id;
+                let promotionAppliedQty = 0;
+                let promotionProductIdToSave = null; 
                 if (!variant) {
                     await t.rollback();
                     return res.status(400).json({ message: "Thiếu thông tin biến thể sản phẩm." });
@@ -595,48 +597,55 @@ class OrderController {
                     await t.rollback();
                     return res.status(400).json({ message: `Sản phẩm ${variant.sku} không đủ kho.` });
                 }
-                if (promotion_product_id) {
-                    const promoProduct = await PromotionProductModel.findOne({
-                        where: {
-                            promotion_id: promotion_product_id,
-                            product_variant_id: variant.id,
-                        },
-                        transaction: t,
-                        lock: t.LOCK.UPDATE,
-                    });
 
-                    if (promoProduct && promoProduct.variant_quantity > 0) {
-                        const deducted = Math.min(promoProduct.variant_quantity, item.quantity);
 
-                        // Trừ variant_quantity
-                        promoProduct.variant_quantity -= deducted;
-                        await promoProduct.save({ transaction: t });
+if (promotion_product_id) { 
+  const promoProd = await PromotionProductModel.findOne({
+    where: {
+      promotion_id: promotion_product_id,        
+      product_variant_id: variant.id,
+    },
+    transaction: t,
+    lock: t.LOCK.UPDATE,
+  });
 
-                        // Trừ promotion.quantity dựa trên số vừa trừ từ variant
-                        await PromotionModel.decrement(
-                            { quantity: deducted },
-                            {
-                                where: { id: promotion_product_id },
-                                transaction: t,
-                            }
-                        );
-                    }
-                }
+  if (promoProd && promoProd.variant_quantity > 0) {
+    promotionAppliedQty = Math.min(promoProd.variant_quantity, item.quantity);
 
-                const price = parseFloat(variant.price);
-                totalPrice += price * item.quantity;
+    await promoProd.update(
+      { variant_quantity: promoProd.variant_quantity - promotionAppliedQty },
+      { transaction: t }
+    );
 
-                detailedCart.push({
-                    variant: variant.id,
-                    name: variant.sku,
-                    price,
-                    quantity: item.quantity,
-                    total: price * item.quantity,
-                    auction_id: item.auction_id || null,
-                });
+    await PromotionModel.decrement(
+      { quantity: promotionAppliedQty },
+      {
+        where: { id: promoProd.promotion_id },     
+        transaction: t,
+      }
+    );
 
-                productVariant.stock -= item.quantity;
-                await productVariant.save({ transaction: t });
+    promotionProductIdToSave = promoProd.id;       
+  }
+}
+
+const price = parseFloat(variant.price);
+totalPrice += price * item.quantity;
+
+detailedCart.push({
+  variant: variant.id,
+  name: variant.sku,
+  price,
+  quantity: item.quantity,
+  total: price * item.quantity,
+  auction_id: item.auction_id || null,
+  promotion_product_id: promotionProductIdToSave,  
+  promotion_applied_qty: promotionAppliedQty || 0, 
+});
+
+productVariant.stock -= item.quantity;
+await productVariant.save({ transaction: t });
+
             }
 
             let promoUser = null;
@@ -768,12 +777,15 @@ class OrderController {
             }, { transaction: t });
 
             const orderDetails = detailedCart.map(item => ({
-                order_id: newOrder.id,
-                product_variant_id: item.variant,
-                quantity: item.quantity,
-                price: item.price,
-                auction_id: item.auction_id
-            }));
+    order_id: newOrder.id,
+    product_variant_id: item.variant,
+    quantity: item.quantity,
+    price: item.price,
+    auction_id: item.auction_id,
+    promotion_product_id: item.promotion_product_id || null,
+    promotion_applied_qty: item.promotion_applied_qty || 0
+}));
+
 
             await OrderDetail.bulkCreate(orderDetails, { transaction: t });
 

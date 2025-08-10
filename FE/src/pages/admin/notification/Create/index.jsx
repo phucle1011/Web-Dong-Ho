@@ -131,7 +131,7 @@ const handleCancel = async () => {
   const endMax = computeMaxTime(endDate);
   return (
     <div className="p-6 max-w-7xl mx-auto bg-white rounded shadow">
-      <h2 className="text-2xl font-semibold mb-6">Tạo Thông Báo</h2>
+      <h2 className="text-2xl font-semibold mb-6">Tạo slideshow</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
@@ -229,7 +229,7 @@ const handleCancel = async () => {
                 <DatePicker
                   selected={startDate}
                   onChange={setStartDate}
-                  showTimeSelect
+                  // showTimeSelect
                   className="w-full border rounded px-4 py-2"
                   minDate={new Date()}
                   maxDate={endDate || null}
@@ -249,7 +249,7 @@ const handleCancel = async () => {
                 <DatePicker
                   selected={endDate}
                   onChange={setEndDate}
-                  showTimeSelect
+                  // showTimeSelect
                   className="w-full border rounded px-4 py-2"
                   minDate={startDate || new Date()}
                   minTime={endMin}
@@ -266,10 +266,10 @@ const handleCancel = async () => {
             )}
           </div>
 
-          {/* Card 3: Ảnh thông báo */}
+          {/* Card 3: Ảnh slideshow */}
           <div className="border border-gray-300 rounded p-4 shadow-lg bg-white min-h-[300px]">
             <h3 className="text-lg font-medium mb-4">
-              Ảnh thông báo
+              Ảnh slideshow
               <span style={{ color: "red", fontWeight: "bold" }}>*</span>
             </h3>
 
@@ -308,7 +308,7 @@ const handleCancel = async () => {
         <div className="flex justify-start items-center gap-2 mt-4">
           <button
             type="button"
-            className="px-6 py-2 bg-gray-500 text-gray-800 rounded hover:bg-gray-400"
+            className="px-6 py-2 bg-gray-500 text-gray-800 rounded "
             onClick={handleCancel}
           >
             Quay lại
@@ -316,7 +316,7 @@ const handleCancel = async () => {
 
           <button
             type="submit"
-            className="px-6 py-2 bg-[#073272] text-white rounded hover:bg-blue-700"
+            className="px-6 py-2 bg-[#073272] text-white rounded "
           >
             Gửi
           </button>

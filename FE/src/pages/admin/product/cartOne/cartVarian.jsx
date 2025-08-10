@@ -1,6 +1,7 @@
 import React from "react";
+import Select from "react-select";
 import { uploadToCloudinary } from "../../../../Upload/uploadToCloudinary.js";
-import { deleteImageFromCloudinary  } from "../../../../Upload/uploadToCloudinary.js";
+import { deleteImageFromCloudinary } from "../../../../Upload/uploadToCloudinary.js";
 
 const CartVarian = ({
   sku,
@@ -13,33 +14,45 @@ const CartVarian = ({
   attributes,
   setAttributes,
   allAttributes,
-  handleAttributeChange,
+  handleAttributeChange, // (index, field, value)
   removeAttributeRow,
   addAttributeRow,
   images,
   setImages,
 }) => {
+  // Tạo options cho react-select từ allAttributes
+  const attrOptions = (excludeIds = []) =>
+    (allAttributes || [])
+      .filter((opt) => !excludeIds.includes(String(opt.id)))
+      .map((opt) => ({ value: String(opt.id), label: opt.name }));
+
+  // Helper: lấy option theo id hiện tại
+  const getOptionById = (id) => {
+    if (!id) return null;
+    const found = (allAttributes || []).find((a) => String(a.id) === String(id));
+    return found ? { value: String(found.id), label: found.name } : null;
+  };
+
   const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
-    const uploadPromises = files.map(uploadToCloudinary); // upload từng ảnh
-    const uploadedUrls = await Promise.all(uploadPromises); // chờ tất cả ảnh upload xong
-    setImages(uploadedUrls); // truyền lên file cha
-    
+    const uploadPromises = files.map(uploadToCloudinary);
+    const uploadedUrls = await Promise.all(uploadPromises);
+    setImages(uploadedUrls);
   };
-const handleImageDelete = async (public_id) => {
-  try {
-    const res = await deleteImageFromCloudinary(public_id);
-    
-    if (res.message) {
-      const updatedImages = images.filter((img) => img.public_id !== public_id);
-      setImages(updatedImages);
-    } else {
-      console.error("Không thể xóa ảnh:", res);
+
+  const handleImageDelete = async (public_id) => {
+    try {
+      const res = await deleteImageFromCloudinary(public_id);
+      if (res.message) {
+        const updatedImages = images.filter((img) => img.public_id !== public_id);
+        setImages(updatedImages);
+      } else {
+        console.error("Không thể xóa ảnh:", res);
+      }
+    } catch (err) {
+      console.error("Lỗi khi gọi API xóa ảnh:", err);
     }
-  } catch (err) {
-    console.error("Lỗi khi gọi API xóa ảnh:", err);
-  }
-};
+  };
 
   return (
     <div className="space-y-6">
@@ -54,37 +67,45 @@ const handleImageDelete = async (public_id) => {
             onChange={(e) => setSku(e.target.value)}
             className="w-full border px-3 py-2 rounded"
           />
-          {errors.sku && (
-            <p className="text-red-600 text-sm mt-1">{errors.sku}</p>
-          )}
+          {errors.sku && <p className="text-red-600 text-sm mt-1">{errors.sku}</p>}
         </div>
 
         {/* Giá */}
         <div className="w-1/3">
           <label className="block font-medium mb-2">Giá *</label>
           <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            type="text"
+            value={price ? Number(price).toLocaleString("vi-VN") : ""}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^\d]/g, "");
+              const numeric = parseInt(raw || "0", 10);
+              setPrice(numeric > 0 ? numeric : "");
+            }}
+            onBlur={() => {
+              if (!price || Number(price) <= 0) setPrice("");
+            }}
             className="w-full border px-3 py-2 rounded"
           />
-          {errors.price && (
-            <p className="text-red-600 text-sm mt-1">{errors.price}</p>
-          )}
+          {errors.price && <p className="text-red-600 text-sm mt-1">{errors.price}</p>}
         </div>
 
         {/* Tồn kho */}
         <div className="w-1/3">
           <label className="block font-medium mb-2">Số lượng tồn kho *</label>
           <input
-            type="number"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
+            type="text"
+            value={stock ? Number(stock).toLocaleString("vi-VN") : ""}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^\d]/g, "");
+              const numeric = parseInt(raw || "0", 10);
+              setStock(numeric > 0 ? numeric : "");
+            }}
+            onBlur={() => {
+              if (!stock || Number(stock) <= 0) setStock("");
+            }}
             className="w-full border px-3 py-2 rounded"
           />
-          {errors.stock && (
-            <p className="text-red-600 text-sm mt-1">{errors.stock}</p>
-          )}
+          {errors.stock && <p className="text-red-600 text-sm mt-1">{errors.stock}</p>}
         </div>
       </div>
 
@@ -92,46 +113,45 @@ const handleImageDelete = async (public_id) => {
       <div className="flex gap-6">
         {/* Thuộc tính biến thể */}
         <div className="w-1/2">
-          <label className="block font-medium mb-2">
-            Thuộc tính biến thể *
-          </label>
+          <label className="block font-medium mb-2">Thuộc tính biến thể *</label>
 
           {attributes.map((attr, index) => {
-            const selectedAttr = allAttributes.find(
-              (a) => a.id.toString() === attr.attribute_id?.toString()
+            const selectedAttr = (allAttributes || []).find(
+              (a) => String(a.id) === String(attr.attribute_id)
             );
             const isColor = selectedAttr?.name?.toLowerCase() === "màu sắc";
 
+            // Loại bỏ những attribute_id đã chọn ở các hàng khác
+            const selectedIdsOtherRows = attributes
+              .map((a, i) => (i !== index ? String(a.attribute_id) : null))
+              .filter(Boolean);
+
             return (
               <div key={index} className="flex gap-4 mb-2 items-center">
-                {/* Loại thuộc tính */}
+                {/* Loại thuộc tính (react-select có tìm kiếm) */}
                 <div className="w-1/2">
-                  <select
-                    value={attr.attribute_id || ""}
-                    onChange={(e) =>
-                      handleAttributeChange(
-                        index,
-                        "attribute_id",
-                        e.target.value
-                      )
-                    }
-                    className="h-[40px] px-3 border rounded"
-                  >
-                    <option value="">-- Chọn thuộc tính --</option>
-                    {allAttributes
-                      .filter((opt) => {
-                        const selectedIds = attributes
-                          .map((a, i) => (i !== index ? a.attribute_id : null))
-                          .filter(Boolean);
-                        return !selectedIds.includes(opt.id.toString());
-                      })
-                      .map((opt) => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.name}
-                        </option>
-                      ))}
-                  </select>
-
+                  <Select
+                    classNamePrefix="attr-select"
+                    placeholder="-- Chọn thuộc tính --"
+                    options={attrOptions(selectedIdsOtherRows)}
+                    value={getOptionById(attr.attribute_id)}
+                    onChange={(opt) => {
+                      // set attribute_id (string/id)
+                      handleAttributeChange(index, "attribute_id", opt ? opt.value : "");
+                      // reset value khi đổi loại thuộc tính
+                      handleAttributeChange(index, "value", "");
+                    }}
+                    isSearchable // bật tìm kiếm
+                    noOptionsMessage={() => "Không có kết quả"}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: 40,
+                        borderColor: errors?.[`attr_${index}_id`] ? "#ef4444" : base.borderColor,
+                        boxShadow: "none",
+                      }),
+                    }}
+                  />
                   {errors?.[`attr_${index}_id`] && (
                     <p className="text-red-600 text-sm mt-1">
                       {errors[`attr_${index}_id`]}
@@ -144,9 +164,7 @@ const handleImageDelete = async (public_id) => {
                   <input
                     type={isColor ? "color" : "text"}
                     value={attr.value || ""}
-                    onChange={(e) =>
-                      handleAttributeChange(index, "value", e.target.value)
-                    }
+                    onChange={(e) => handleAttributeChange(index, "value", e.target.value)}
                     className={`w-full border rounded ${
                       isColor ? "h-10 p-1" : "h-10 px-4 py-3"
                     }`}
@@ -190,7 +208,7 @@ const handleImageDelete = async (public_id) => {
           <button
             type="button"
             onClick={addAttributeRow}
-            className="text-blue-600  text-sm mt-2"
+            className="text-blue-600 text-sm mt-2"
           >
             + Thêm thuộc tính
           </button>
@@ -199,37 +217,30 @@ const handleImageDelete = async (public_id) => {
         {/* Ảnh biến thể */}
         <div className="w-1/2">
           <label className="block font-medium mb-2">Ảnh biến thể</label>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageChange}
-          />
+          <input type="file" accept="image/*" multiple onChange={handleImageChange} />
 
-          {errors.images && (
-            <p className="text-red-600 text-sm mt-1">{errors.images}</p>
-          )}
-<div className="overflow-x-auto mt-3">
-  <div className="flex gap-3 flex-nowrap">
-    {images.map((img, idx) => (
-      <div key={idx} className="relative flex-shrink-0">
-        <img
-          src={img.url || img}
-          alt={`variant-${idx}`}
-          className="w-20 h-20 object-cover border rounded"
-        />
-        <button
-          type="button"
-          onClick={() => handleImageDelete(img.public_id)}
-          className="absolute top-0 right-0 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-        >
-          ×
-        </button>
-      </div>
-    ))}
-  </div>
-</div>
+          {errors.images && <p className="text-red-600 text-sm mt-1">{errors.images}</p>}
 
+          <div className="overflow-x-auto mt-3">
+            <div className="flex gap-3 flex-nowrap">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative flex-shrink-0">
+                  <img
+                    src={img.url || img}
+                    alt={`variant-${idx}`}
+                    className="w-20 h-20 object-cover border rounded"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleImageDelete(img.public_id)}
+                    className="absolute top-0 right-0 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

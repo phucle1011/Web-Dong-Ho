@@ -40,6 +40,8 @@ const AdminProductDetail = () => {
   const [brandOptions, setBrandOptions] = useState([]);
   const [attrExpanded, setAttrExpanded] = useState({});
   const [deletedImages, setDeletedImages] = useState([]);
+// phía trên cùng component
+const [errors, setErrors] = useState({});
 
   const toggleAttr = (variantId) =>
     setAttrExpanded((prev) => ({ ...prev, [variantId]: !prev[variantId] }));
@@ -61,7 +63,19 @@ const AdminProductDetail = () => {
       console.error("Lỗi khi lấy biến thể:", error);
     }
   };
+const validate = () => {
+  const v = {};
 
+  // ✅ BẮT những field bạn muốn
+  if (!formData?.name?.trim()) v.name = "Vui lòng nhập tên sản phẩm";
+  if (!formData?.category?.value) v.category = "Vui lòng chọn danh mục";
+  if (!formData?.brand?.value) v.brand = "Vui lòng chọn thương hiệu";
+
+  // ❌ KHÔNG BẮT 4 FIELD SAU: slug, thumbnail, short_description, description
+  // (Không thêm gì ở đây)
+
+  return v;
+};
   const fetchProduct = async () => {
     try {
       const res = await axios.get(
@@ -167,7 +181,14 @@ const AdminProductDetail = () => {
       }));
     }
   };
-
+const onChangeCategory = (selected) => {
+  setErrors((p) => ({ ...p, category: undefined }));
+  setFormData((prev) => ({ ...prev, category: selected }));
+};
+const onChangeBrand = (selected) => {
+  setErrors((p) => ({ ...p, brand: undefined }));
+  setFormData((prev) => ({ ...prev, brand: selected }));
+};
   const productData = {
     ...formData,
     category_id: formData?.category?.value || null,
@@ -175,22 +196,34 @@ const AdminProductDetail = () => {
     description: description || "",
   };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      await axios.put(
-        `${Constants.DOMAIN_API}/admin/products/${id}`,
-        productData
-      );
-      toast.success("Cập nhật sản phẩm thành công!");
-      navigate("/admin/products/getAll");
-      // fetchProduct(); // Cập nhật lại dữ liệu
-    } catch (error) {
-      console.error("Lỗi khi cập nhật sản phẩm:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
+ const handleSave = async () => {
+  const v = validate();
+  if (Object.keys(v).length) {
+    setErrors(v);
+    toast.error("Vui lòng kiểm tra các trường bắt buộc.");
+    const firstKey = Object.keys(v)[0];
+    const el = document.querySelector(`[data-error="${firstKey}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  try {
+    setSaving(true);
+    await axios.put(`${Constants.DOMAIN_API}/admin/products/${id}`, {
+      ...formData,
+      category_id: formData?.category?.value || null,
+      brand_id: formData?.brand?.value || null,
+      description, // vẫn gửi mô tả nếu bạn đang dùng TinyMCE state 'description'
+    });
+    toast.success("Cập nhật sản phẩm thành công!");
+    navigate("/admin/products/getAll");
+  } catch (error) {
+    console.error("Lỗi khi cập nhật sản phẩm:", error);
+    toast.error("Cập nhật thất bại. Vui lòng thử lại.");
+  } finally {
+    setSaving(false);
+  }
+};
   const deleteProduct = async () => {
     if (!selectedProduct) return;
 
@@ -282,15 +315,17 @@ const AdminProductDetail = () => {
           <div className="p-4 border rounded shadow bg-white">
             {/* Tên sản phẩm */}
             <div>
-              <label className="font-semibold mb-1 block">Tên sản phẩm:</label>
-              <input
-                type="text"
-                name="name"
-                className="border rounded p-2 w-full"
-                value={formData.name}
-                onChange={handleChange}
-              />
-            </div>
+  <label className="font-semibold mb-1 block">Tên sản phẩm:</label>
+  <input
+    type="text"
+    name="name"
+    data-error="name"
+    className={`border rounded p-2 w-full ${errors.name ? "border-red-500" : ""}`}
+    value={formData.name || ""}
+    onChange={handleChange}
+  />
+  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+</div>
 
             {/* Gạch ngang */}
             <hr className="my-3" />
@@ -312,41 +347,55 @@ const AdminProductDetail = () => {
           <div className="p-4 border rounded shadow bg-white">
             {/* Danh mục */}
             <div style={{ position: "relative", zIndex: 1 }}>
-              <label className="font-semibold mb-1 block">Danh mục:</label>
-              <Select
-                options={categoryOptions}
-                value={formData?.category || null}
-                onChange={(selected) =>
-                  setFormData((prev) => ({ ...prev, category: selected }))
-                }
-                placeholder="Chọn danh mục"
-                isClearable
-                menuPortalTarget={document.body}
-                styles={{
-                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                }}
-              />
-            </div>
+  <label className="font-semibold mb-1 block">Danh mục:</label>
+  <div data-error="category">
+    <Select
+      options={categoryOptions}
+      value={formData?.category || null}
+      onChange={onChangeCategory}
+      placeholder="Chọn danh mục"
+      isClearable
+      menuPortalTarget={document.body}
+      styles={{
+        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+        control: (base) => ({
+          ...base,
+          borderColor: errors.category ? "#ef4444" : base.borderColor,
+          boxShadow: errors.category ? "0 0 0 1px #ef4444" : base.boxShadow,
+          "&:hover": { borderColor: errors.category ? "#ef4444" : base.borderColor },
+        }),
+      }}
+    />
+  </div>
+  {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+</div>
 
             <hr className="my-3" />
 
             {/* Thương hiệu */}
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <label className="font-semibold mb-1 block">Thương hiệu:</label>
-              <Select
-                options={brandOptions}
-                value={formData?.brand || null}
-                onChange={(selected) =>
-                  setFormData((prev) => ({ ...prev, brand: selected }))
-                }
-                placeholder="Chọn thương hiệu"
-                isClearable
-                menuPortalTarget={document.body}
-                styles={{
-                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-                }}
-              />
-            </div>
+           <div style={{ position: "relative", zIndex: 1 }}>
+  <label className="font-semibold mb-1 block">Thương hiệu:</label>
+  <div data-error="brand">
+    <Select
+      options={brandOptions}
+      value={formData?.brand || null}
+      onChange={onChangeBrand}
+      placeholder="Chọn thương hiệu"
+      isClearable
+      menuPortalTarget={document.body}
+      styles={{
+        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+        control: (base) => ({
+          ...base,
+          borderColor: errors.brand ? "#ef4444" : base.borderColor,
+          boxShadow: errors.brand ? "0 0 0 1px #ef4444" : base.boxShadow,
+          "&:hover": { borderColor: errors.brand ? "#ef4444" : base.borderColor },
+        }),
+      }}
+    />
+  </div>
+  {errors.brand && <p className="text-red-500 text-sm mt-1">{errors.brand}</p>}
+</div>
           </div>
 
           {/* Card 4: Trạng thái */}

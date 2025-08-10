@@ -100,35 +100,42 @@ const AdminProductList = () => {
   ]);
 
   // Tách hàm search riêng
-  const searchProducts = async (
-    page,
-    search,
-    categoryId = "",
-    brandId = "",
-    status = ""
-  ) => {
-    try {
-      const res = await axios.get(
-        `${Constants.DOMAIN_API}/admin/products/productList/search`,
-        {
-          params: {
-            searchTerm: search,
-            categoryId: categoryId || undefined,
-            brandId: brandId || undefined,
-            publicationStatus: status || undefined,
-            page,
-            limit: recordsPerPage,
-          },
-        }
-      );
-      setProducts(res.data.data);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm sản phẩm:", error);
-      setProducts([]);
-      setTotalPages(1);
-    }
-  };
+  const searchProducts = async (page, search, categoryId = "", brandId = "", status = "") => {
+  try {
+    const isAuction = status === "auction";
+    const url = isAuction
+      ? `${Constants.DOMAIN_API}/admin/published-auction-products`
+      : `${Constants.DOMAIN_API}/admin/products/productList/search`;
+
+    const params = {
+      page,
+      limit: recordsPerPage,
+      ...(search && { searchTerm: search }),
+      ...(categoryId && { categoryId }),
+      ...(brandId && { brandId }),
+      ...(!isAuction && status && { publicationStatus: status }),
+    };
+
+    const [resMain, resPublished, resDraft, resAuction] = await Promise.all([
+      axios.get(url, { params }),
+      axios.get(`${Constants.DOMAIN_API}/admin/products/published`, { params: { page: 1, limit: 1 } }),
+      axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, { params: { page: 1, limit: 1 } }),
+      axios.get(`${Constants.DOMAIN_API}/admin/published-auction-products`, { params: { page: 1, limit: 1 } }),
+    ]);
+
+    setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
+    setDraftCount(resDraft.data.pagination?.totalProducts || 0);
+    setAuctionCount(resAuction.data.pagination?.totalProducts || 0);
+
+    setProducts(resMain.data.data);
+    setTotalPages(resMain.data.pagination?.totalPages || 1);
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm sản phẩm:", error);
+    setProducts([]);
+    setTotalPages(1);
+  }
+};
+
 
   const deleteProduct = async () => {
     if (!selectedProduct) return;
@@ -167,73 +174,49 @@ const AdminProductList = () => {
     }
   };
 
-  const fetchProducts = async (page, search = "") => {
+const fetchProducts = async (page, search = "") => {
   try {
     const params = { page, limit: 10 };
     let url = "";
-    let fetchMainData;
+    const isAuction = publicationStatus === "auction";
 
-    // Nếu có tìm kiếm
+    // gắn filter chung (nếu có)
+    const categoryId = selectedCategory?.value;
+    const brandId = selectedBrand?.value;
+    if (categoryId) params.categoryId = categoryId;
+    if (brandId) params.brandId = brandId;
+
     if (search) {
-      url = `${Constants.DOMAIN_API}/admin/products/productList/search`;
-      params.searchTerm = search;
-      if (publicationStatus) {
-        params.publicationStatus = publicationStatus;
+      if (isAuction) {
+        url = `${Constants.DOMAIN_API}/admin/published-auction-products`;
+        params.searchTerm = search;
+      } else {
+        url = `${Constants.DOMAIN_API}/admin/products/productList/search`;
+        params.searchTerm = search;
+        if (publicationStatus) params.publicationStatus = publicationStatus;
       }
-
-      // Gọi API chính
-      fetchMainData = axios.get(url, { params });
-
-      // Gọi song song 3 API đếm số lượng các trạng thái
-      const [resMain, resPublished, resDraft, resAuction] = await Promise.all([
-        fetchMainData,
-        axios.get(`${Constants.DOMAIN_API}/admin/products/published`, {
-          params: { page: 1, limit: 1 },
-        }),
-        axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, {
-          params: { page: 1, limit: 1 },
-        }),
-        axios.get(`${Constants.DOMAIN_API}/admin/published-auction-products`, {
-          params: { page: 1, limit: 1 },
-        }),
-      ]);
-
-      setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
-      setDraftCount(resDraft.data.pagination?.totalProducts || 0);
-      setAuctionCount(resAuction.data.pagination?.totalProducts || 0);
-
-      setProducts(resMain.data.data);
-      setTotalPages(resMain.data.pagination?.totalPages || 1);
     } else {
-      // Không có tìm kiếm
-      if (publicationStatus === "published") {
-        url = `${Constants.DOMAIN_API}/admin/products/published`;
-      } else if (publicationStatus === "draft") {
-        url = `${Constants.DOMAIN_API}/admin/products/draft`;
-      } else if (publicationStatus === "auction") {
-        url = `${Constants.DOMAIN_API}/admin/published-auction-products`; // API mới
-      }
-
-      const [resMain, resPublished, resDraft, resAuction] = await Promise.all([
-        axios.get(url, { params }),
-        axios.get(`${Constants.DOMAIN_API}/admin/products/published`, {
-          params: { page: 1, limit: 1 },
-        }),
-        axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, {
-          params: { page: 1, limit: 1 },
-        }),
-        axios.get(`${Constants.DOMAIN_API}/admin/published-auction-products`, {
-          params: { page: 1, limit: 1 },
-        }),
-      ]);
-
-      setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
-      setDraftCount(resDraft.data.pagination?.totalProducts || 0);
-      setAuctionCount(resAuction.data.pagination?.totalProducts || 0);
-
-      setProducts(resMain.data.data);
-      setTotalPages(resMain.data.pagination?.totalPages || 1);
+      url =
+        publicationStatus === "published"
+          ? `${Constants.DOMAIN_API}/admin/products/published`
+          : publicationStatus === "draft"
+          ? `${Constants.DOMAIN_API}/admin/products/draft`
+          : `${Constants.DOMAIN_API}/admin/published-auction-products`; // auction
     }
+
+    const [resMain, resPublished, resDraft, resAuction] = await Promise.all([
+      axios.get(url, { params }),
+      axios.get(`${Constants.DOMAIN_API}/admin/products/published`, { params: { page: 1, limit: 1 } }),
+      axios.get(`${Constants.DOMAIN_API}/admin/products/draft`, { params: { page: 1, limit: 1 } }),
+      axios.get(`${Constants.DOMAIN_API}/admin/published-auction-products`, { params: { page: 1, limit: 1 } }),
+    ]);
+
+    setPublishedCount(resPublished.data.pagination?.totalProducts || 0);
+    setDraftCount(resDraft.data.pagination?.totalProducts || 0);
+    setAuctionCount(resAuction.data.pagination?.totalProducts || 0);
+
+    setProducts(resMain.data.data);
+    setTotalPages(resMain.data.pagination?.totalPages || 1);
   } catch (error) {
     console.error("Lỗi khi lấy sản phẩm:", error);
     setProducts([]);
@@ -242,49 +225,50 @@ const AdminProductList = () => {
 };
 
 
+
   const handleSearchInputChange = (e) => {
     setSearchInput(e.target.value);
   };
 
   const handleSearchSubmit = async () => {
-    const trimmedSearch = searchInput.trim();
-    setCurrentPage(1); // reset page
+  const trimmedSearch = (searchInput || "").trim();
+  setCurrentPage(1);
 
-    if (
-      !trimmedSearch &&
-      !selectedCategory &&
-      !selectedBrand &&
-      !publicationStatus
-    ) {
-      setSearchTerm("");
-      fetchProducts(1);
-      return;
-    }
+  const categoryId = selectedCategory?.value || "";
+  const brandId = selectedBrand?.value || "";
+  const isAuction = publicationStatus === "auction";
 
-    try {
-      const res = await axios.get(
-        `${Constants.DOMAIN_API}/admin/products/productList/search`,
-        {
-          params: {
-            searchTerm: trimmedSearch,
-            categoryId: selectedCategory || undefined,
-            brandId: selectedBrand || undefined,
-            publicationStatus: publicationStatus || undefined,
-            page: 1,
-            limit: recordsPerPage,
-          },
-        }
-      );
+  if (!trimmedSearch && !categoryId && !brandId) {
+    setSearchTerm("");
+    fetchProducts(1, "");
+    return;
+  }
 
-      setProducts(res.data.data);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      setSearchTerm(trimmedSearch);
-    } catch (error) {
-      console.error("Lỗi khi tìm kiếm sản phẩm:", error);
-      setProducts([]);
-      setTotalPages(1);
-    }
-  };
+  try {
+    const url = isAuction
+      ? `${Constants.DOMAIN_API}/admin/published-auction-products`
+      : `${Constants.DOMAIN_API}/admin/products/productList/search`;
+
+    const params = {
+      page: 1,
+      limit: recordsPerPage,
+      ...(trimmedSearch && { searchTerm: trimmedSearch }),
+      ...(categoryId && { categoryId }),
+      ...(brandId && { brandId }),
+      ...(!isAuction && publicationStatus && { publicationStatus }),
+    };
+
+    const res = await axios.get(url, { params });
+    setProducts(res.data.data);
+    setTotalPages(res.data.pagination?.totalPages || 1);
+    setSearchTerm(trimmedSearch);
+  } catch (error) {
+    console.error("Lỗi khi tìm kiếm sản phẩm:", error);
+    setProducts([]);
+    setTotalPages(1);
+  }
+};
+
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
