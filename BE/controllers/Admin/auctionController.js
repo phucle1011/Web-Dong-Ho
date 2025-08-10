@@ -14,122 +14,282 @@ const OrderModel = require('../../models/ordersModel');
 const OrderDetailModel = require('../../models/orderDetailsModel');
 const CartModel = require('../../models/cartDetailsModel');
 
-const sequelize = require('../../config/database');
+const { fn, col, literal, where } = require('../../config/database');
 
 class auctionController {
 
    //--------------------------[ GET ALL ]---------------------------
+   // static async get(req, res) {
+   //    try {
+   //       const page = parseInt(req.query.page) || 1;
+   //       const limit = parseInt(req.query.limit) || 10;
+   //       const offset = (page - 1) * limit;
+
+   //       const { searchTerm, startDate, endDate, status } = req.query;
+   //       const whereClause = {};
+
+   //       if (searchTerm) {
+   //          whereClause.product_variant_id = {
+   //             [Op.like]: `%${searchTerm}%`,
+   //          };
+   //       }
+
+   //       if (startDate || endDate) {
+   //          whereClause.start_time = {};
+   //          if (startDate) {
+   //             whereClause.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
+   //          }
+   //          if (endDate) {
+   //             whereClause.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
+   //          }
+   //       }
+
+   //       const allAuctions = await AuctionModel.findAll({
+   //          where: whereClause,
+   //          include: [
+   //             {
+   //                model: ProductVariantModel,
+   //                as: 'variant',
+   //                include: [
+   //                   {
+   //                      model: ProductModel,
+   //                      as: 'product',
+   //                      include: [
+   //                         {
+   //                            model: CategoryModel,
+   //                            as: 'category',
+   //                         },
+   //                         {
+   //                            model: BrandModel,
+   //                            as: "brand"
+   //                         }
+   //                      ],
+   //                   },
+   //                   {
+   //                      model: ProductVariantAttributeValuesModel,
+   //                      as: 'attributeValues',
+   //                      include: [
+   //                         {
+   //                            model: ProductAttributeModel,
+   //                            as: 'attribute',
+   //                         },
+   //                      ],
+   //                   },
+   //                   {
+   //                      model: VariantImageModel,
+   //                      as: 'images',
+   //                   },
+   //                ],
+   //             },
+   //          ],
+   //          order: [['start_time', 'ASC']],
+   //       });
+
+   //       const statusCounts = {
+   //          all: allAuctions.length,
+   //          upcoming: allAuctions.filter(a => a.status === "upcoming").length,
+   //          active: allAuctions.filter(a => a.status === "active").length,
+   //          ended: allAuctions.filter(a => a.status === "ended").length,
+   //       };
+
+   //       let filteredAuctions = allAuctions;
+   //       if (status === "upcoming" || status === "active" || status === "ended") {
+   //          filteredAuctions = allAuctions.filter(a => a.status === status);
+   //       }
+
+   //       const statusPriority = { active: 1, upcoming: 2, ended: 3 };
+
+   //       filteredAuctions.sort((a, b) => {
+   //          const priorityA = statusPriority[a.status] || 99;
+   //          const priorityB = statusPriority[b.status] || 99;
+
+   //          if (priorityA === priorityB) {
+   //             if (a.status === "ended") {
+   //                return new Date(b.start_time) - new Date(a.start_time);
+   //             } else {
+   //                return new Date(a.start_time) - new Date(b.start_time);
+   //             }
+   //          }
+
+   //          return priorityA - priorityB;
+   //       });
+
+   //       const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
+
+   //       return res.status(200).json({
+   //          status: 200,
+   //          message: "Lấy danh sách phiên đấu giá thành công",
+   //          data: paginatedAuctions,
+   //          pagination: {
+   //             currentPage: page,
+   //             totalPages: Math.ceil(filteredAuctions.length / limit),
+   //             totalItems: filteredAuctions.length,
+   //          },
+   //          statusCounts,
+   //       });
+   //    } catch (error) {
+   //       console.error("Lỗi khi lấy danh sách đấu giá:", error);
+   //       return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+   //    }
+   // }
+
    static async get(req, res) {
       try {
-         const page = parseInt(req.query.page) || 1;
-         const limit = parseInt(req.query.limit) || 10;
+         const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+         const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
          const offset = (page - 1) * limit;
 
          const { searchTerm, startDate, endDate, status } = req.query;
-         const whereClause = {};
 
-         if (searchTerm) {
-            whereClause.product_variant_id = {
-               [Op.like]: `%${searchTerm}%`,
-            };
-         }
+         const whereAuction = {};
 
          if (startDate || endDate) {
-            whereClause.start_time = {};
-            if (startDate) {
-               whereClause.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
-            }
-            if (endDate) {
-               whereClause.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
-            }
+            whereAuction.start_time = {};
+            if (startDate) whereAuction.start_time[Op.gte] = new Date(`${startDate}T00:00:00`);
+            if (endDate) whereAuction.start_time[Op.lte] = new Date(`${endDate}T23:59:59`);
          }
 
-         const allAuctions = await AuctionModel.findAll({
-            where: whereClause,
+         if (['upcoming', 'active', 'ended'].includes(status)) {
+            whereAuction.status = status;
+         }
+
+         const includeDef = [
+            {
+               model: ProductVariantModel,
+               as: 'variant',
+               required: true,
+               include: [
+                  {
+                     model: ProductModel,
+                     as: 'product',
+                     required: true,
+                     include: [
+                        { model: CategoryModel, as: 'category' },
+                        { model: BrandModel, as: 'brand' },
+                     ],
+                  },
+                  {
+                     model: ProductVariantAttributeValuesModel,
+                     as: 'attributeValues',
+                     include: [{ model: ProductAttributeModel, as: 'attribute' }],
+                  },
+                  { model: VariantImageModel, as: 'images' },
+               ],
+            },
+         ];
+
+         const finalWhere = { ...whereAuction };
+         if (searchTerm && String(searchTerm).trim() !== '') {
+            const raw = String(searchTerm).trim();
+            const term = `%${raw}%`;
+
+            let namePart = null, skuPart = null;
+            const m = raw.match(/^(.+?)\s*\((.+?)\)\s*$/);
+            if (m) {
+               namePart = m[1].trim();
+               skuPart = m[2].trim();
+            }
+
+            const orConds = [
+               where(col('variant.sku'), { [Op.like]: term }),
+               where(col('variant->product.name'), { [Op.like]: term }),
+
+               { product_variant_id: { [Op.like]: term } },
+            ];
+
+            if (namePart || skuPart) {
+               const andConds = [];
+               if (namePart) andConds.push(where(col('variant->product.name'), { [Op.like]: `%${namePart}%` }));
+               if (skuPart) andConds.push(where(col('variant.sku'), { [Op.like]: `%${skuPart}%` }));
+               if (andConds.length) orConds.push({ [Op.and]: andConds });
+            }
+
+            finalWhere[Op.or] = orConds;
+         }
+
+         const statusPriorityCase = literal(`
+  CASE 
+    WHEN \`auctions\`.\`status\` = 'active' THEN 1
+    WHEN \`auctions\`.\`status\` = 'upcoming' THEN 2
+    WHEN \`auctions\`.\`status\` = 'ended' THEN 3
+    ELSE 99
+  END
+`);
+
+         const nonEndedTimeSort = literal(`
+  CASE WHEN \`auctions\`.\`status\` <> 'ended' THEN \`auctions\`.\`start_time\` END
+`);
+
+         const endedTimeSort = literal(`
+  CASE WHEN \`auctions\`.\`status\` = 'ended' THEN \`auctions\`.\`start_time\` END
+`);
+
+         const { rows: auctions, count: totalItems } = await AuctionModel.findAndCountAll({
+            where: finalWhere,
+            include: includeDef,
+            order: [
+               [statusPriorityCase, 'ASC'],
+               [nonEndedTimeSort, 'ASC'],
+               [endedTimeSort, 'DESC'],
+            ],
+            limit,
+            offset,
+            distinct: true,
+         });
+
+         const whereForCounts = { ...finalWhere };
+         delete whereForCounts.status;
+
+         const statusCountRows = await AuctionModel.findAll({
+            where: whereForCounts,
+
             include: [
                {
                   model: ProductVariantModel,
                   as: 'variant',
+                  required: true,
+                  attributes: [],
                   include: [
                      {
                         model: ProductModel,
                         as: 'product',
-                        include: [
-                           {
-                              model: CategoryModel,
-                              as: 'category',
-                           },
-                           {
-                              model: BrandModel,
-                              as: "brand"
-                           }
-                        ],
-                     },
-                     {
-                        model: ProductVariantAttributeValuesModel,
-                        as: 'attributeValues',
-                        include: [
-                           {
-                              model: ProductAttributeModel,
-                              as: 'attribute',
-                           },
-                        ],
-                     },
-                     {
-                        model: VariantImageModel,
-                        as: 'images',
+                        required: true,
+                        attributes: [],
                      },
                   ],
                },
             ],
-            order: [['start_time', 'ASC']],
+            attributes: [
+               [col('auctions.status'), 'status'],
+               [fn('COUNT', col('auctions.id')), 'count'],
+            ],
+            group: [col('auctions.status')],
+            raw: true,
+            subQuery: false,
          });
 
-         const statusCounts = {
-            all: allAuctions.length,
-            upcoming: allAuctions.filter(a => a.status === "upcoming").length,
-            active: allAuctions.filter(a => a.status === "active").length,
-            ended: allAuctions.filter(a => a.status === "ended").length,
-         };
-
-         let filteredAuctions = allAuctions;
-         if (status === "upcoming" || status === "active" || status === "ended") {
-            filteredAuctions = allAuctions.filter(a => a.status === status);
+         const statusCounts = { all: 0, upcoming: 0, active: 0, ended: 0 };
+         for (const r of statusCountRows) {
+            const s = r.status;
+            const c = Number(r.count) || 0;
+            if (['upcoming', 'active', 'ended'].includes(s)) statusCounts[s] = c;
+            statusCounts.all += c;
          }
-
-         const statusPriority = { active: 1, upcoming: 2, ended: 3 };
-
-         filteredAuctions.sort((a, b) => {
-            const priorityA = statusPriority[a.status] || 99;
-            const priorityB = statusPriority[b.status] || 99;
-
-            if (priorityA === priorityB) {
-               if (a.status === "ended") {
-                  return new Date(b.start_time) - new Date(a.start_time);
-               } else {
-                  return new Date(a.start_time) - new Date(b.start_time);
-               }
-            }
-
-            return priorityA - priorityB;
-         });
-
-         const paginatedAuctions = filteredAuctions.slice(offset, offset + limit);
 
          return res.status(200).json({
             status: 200,
-            message: "Lấy danh sách phiên đấu giá thành công",
-            data: paginatedAuctions,
+            message: 'Lấy danh sách phiên đấu giá thành công',
+            data: auctions,
             pagination: {
                currentPage: page,
-               totalPages: Math.ceil(filteredAuctions.length / limit),
-               totalItems: filteredAuctions.length,
+               totalPages: Math.ceil(totalItems / limit),
+               totalItems,
             },
             statusCounts,
          });
       } catch (error) {
-         console.error("Lỗi khi lấy danh sách đấu giá:", error);
-         return res.status(500).json({ message: "Lỗi server, vui lòng thử lại sau!" });
+         console.error('Lỗi khi lấy danh sách đấu giá:', error);
+         return res.status(500).json({ message: 'Lỗi server, vui lòng thử lại sau!' });
       }
    }
 
@@ -162,17 +322,17 @@ class auctionController {
          }
 
          const cartVariants = await CartModel.findAll({
-      attributes: ['product_variant_id'],
-      group: ['product_variant_id'],
-      raw: true
-    });
-    const idsInCart = cartVariants.map(c => c.product_variant_id);
-    const excludeSet = new Set([...usedIds, ...idsInCart]);
+            attributes: ['product_variant_id'],
+            group: ['product_variant_id'],
+            raw: true
+         });
+         const idsInCart = cartVariants.map(c => c.product_variant_id);
+         const excludeSet = new Set([...usedIds, ...idsInCart]);
 
-    if (currentVariantId !== null) {
-      excludeSet.delete(currentVariantId);
-    }
-    const excludeIds = Array.from(excludeSet);
+         if (currentVariantId !== null) {
+            excludeSet.delete(currentVariantId);
+         }
+         const excludeIds = Array.from(excludeSet);
 
          // const whereClause = {
          //    is_auction_only: 1,
@@ -619,8 +779,6 @@ class auctionController {
             where: { auction_id: auctionId }
          }]
       });
-      console.log("mmm", order);
-
 
       if (!order) return false;
 

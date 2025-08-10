@@ -362,7 +362,7 @@ function OrderGetAll() {
                       <td className="p-2 border border-gray-300 text-center">{order.order_code}</td>
                       <td className="p-2 border border-gray-300 text-center">{order.user?.name || "N/A"}</td>
                       <td className="p-2 border border-gray-300 text-center">
-                        {new Date(order.created_at).toLocaleString("vi-VN", { hour12: false })}
+                        {(order.created_at).replace("T", " ").substring(0, 19)}
                       </td>
                       <td className="p-2 border border-gray-300 text-center">
                         {Number(order.total_price).toLocaleString("vi-VN", {

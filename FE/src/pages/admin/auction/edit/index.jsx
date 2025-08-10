@@ -33,11 +33,25 @@ const AuctionEdit = () => {
             const res = await axios.get(`${Constants.DOMAIN_API}/admin/auction-products`,
                 { params: { auctionId: id } })
             // const available = res.data.data.filter(p => p.stock > 0);
-            const options = res.data.data.map(p => ({
-                value: p.id,
-                label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-                    }`,
-            }));
+            // const options = res.data.data.map(p => ({
+            //     value: p.id,
+            //     label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+            //         }`,
+            // }));
+            // setProducts(options);
+            const data = Array.isArray(res.data?.data) ? res.data.data : [];
+            const options = data.length
+                ? data.map((p) => ({
+                    value: p.id,
+                    label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN")}₫`,
+                }))
+                : [
+                    {
+                        value: null,
+                        label: "Không có sản phẩm đấu giá",
+                        isDisabled: true,
+                    },
+                ];
             setProducts(options);
         } catch (err) {
             toast.error("Lỗi khi tải danh sách sản phẩm");
@@ -230,13 +244,22 @@ const AuctionEdit = () => {
                         </label>
                         <Select
                             options={products}
-                            value={products.find(p => String(p.value) === String(form.product_variant_id))}
-                            onChange={(selected) =>
-                                handleChange("product_variant_id", selected?.value || null)
+                            // value={products.find(p => String(p.value) === String(form.product_variant_id))}
+                            // onChange={(selected) =>
+                            //     handleChange("product_variant_id", selected?.value || null)
+                            // }
+                            value={
+                                products.find(o => o.value === form.product_variant_id)
+                                || (products.length === 1 && products[0].isDisabled ? products[0] : null)
                             }
+                            onChange={(selected) =>
+                                handleChange("product_variant_id", selected?.value ?? null)
+                            }
+                            isOptionDisabled={(opt) => !!opt.isDisabled}
+                            isDisabled={products.length === 1 && products[0].isDisabled}
                             placeholder="Chọn sản phẩm"
                             className={errors.product_variant_id ? "border-red-500" : ""}
-                            isDisabled={loading}
+                        // isDisabled={loading}
                         />
                         {errors.product_variant_id && (
                             <p className="text-red-500 text-sm mt-1">{errors.product_variant_id}</p>

@@ -1208,7 +1208,7 @@ export default function CheckoutPage() {
                                 {defaultAddress.address_line}, Việt Nam
                               </p>
                             </div>
-                            <i className="fas fa-chevron-right text-gray-400 text-base"></i>
+                            {/* <i className="fas fa-chevron-right text-gray-400 text-base"></i> */}
                           </div>
                         ) : null}
 

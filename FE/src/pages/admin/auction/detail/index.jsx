@@ -13,7 +13,7 @@ import { FaAngleDoubleLeft, FaAngleDoubleRight, FaChevronLeft, FaChevronRight } 
 Modal.setAppElement("#root");
 
 export default function AdminAuctionWinnerOnly() {
-    
+
     const navigate = useNavigate();
     const { id } = useParams();
     const [auction, setAuction] = useState(null);
@@ -34,6 +34,8 @@ export default function AdminAuctionWinnerOnly() {
     const [errors, setErrors] = useState({});
     const [creating, setCreating] = useState(false);
     const [products, setProducts] = useState([]);
+
+    const canCreate = auction?.status === 'ended';
 
     const [winnerData, setWinnerData] = useState({
         winner: null,
@@ -113,6 +115,12 @@ export default function AdminAuctionWinnerOnly() {
 
     const handleRetrySubmit = async () => {
         if (!validate()) return;
+
+        if (!canCreate) {
+            toast.error('Phiên chưa kết thúc. Không thể tạo lại!');
+            return;
+        }
+
         setCreating(true);
         try {
             const payload = {
@@ -142,6 +150,8 @@ export default function AdminAuctionWinnerOnly() {
                     `${Constants.DOMAIN_API}/admin/auctions/winners/${id}`
                 );
                 const d = res.data.data;
+                console.log("sjhdgfbwr", d);
+
                 setAuction(d.auction);
                 if (d.winner) {
                     setWinnerData({
@@ -189,7 +199,14 @@ export default function AdminAuctionWinnerOnly() {
         });
     }, [auction]);
 
-    const openRetryModal = () => setShowRetryModal(true);
+    // const openRetryModal = () => setShowRetryModal(true);
+    const openRetryModal = () => {
+        if (!canCreate) {
+            toast.error('Chỉ được tạo lại khi phiên đấu giá đã kết thúc (status = ended)');
+            return;
+        }
+        setShowRetryModal(true);
+    };
     const closeRetryModal = () => setShowRetryModal(false);
 
     const handleDateChange = (key, date) => {
@@ -212,10 +229,24 @@ export default function AdminAuctionWinnerOnly() {
             axios
                 .get(`${Constants.DOMAIN_API}/admin/auction-products`)
                 .then(res => {
-                    const opts = res.data.data.map(p => ({
-                        value: p.id,
-                        label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN")}₫`
-                    }));
+                    // const opts = res.data.data.map(p => ({
+                    //     value: p.id,
+                    //     label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN")}₫`
+                    // }));
+                    // setProducts(opts);
+                    const data = Array.isArray(res.data?.data) ? res.data.data : [];
+                    const opts = data.length
+                        ? data.map((p) => ({
+                            value: p.id,
+                            label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN")}₫`,
+                        }))
+                        : [
+                            {
+                                value: null,
+                                label: "Không có sản phẩm đấu giá",
+                                isDisabled: true,
+                            },
+                        ];
                     setProducts(opts);
                 })
                 .catch(() => toast.error("Lỗi khi tải sản phẩm"));
@@ -229,16 +260,31 @@ export default function AdminAuctionWinnerOnly() {
         return (
             <div className="container mx-auto p-4">
                 <h2 className="text-xl font-semibold mb-4">Phiên đấu giá #{id}</h2>
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-                    Không có người trả giá cho phiên đấu giá này
-                </div>
+                {canCreate
+                    ? <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                        Không có người trả giá cho phiên đấu giá này
+                    </div>
+                    : (
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
+                            Phiên đấu giá chưa diễn ra
+                        </div>
+                    )}
+
                 <div className="flex items-center gap-2 mt-4">
-                    <button
+                    {/* <button
                         onClick={openRetryModal}
                         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                     >
                         Tạo lại phiên đấu giá
-                    </button>
+                    </button> */}
+                    {canCreate && (
+                        <button
+                            onClick={openRetryModal}
+                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                        >
+                            Tạo lại phiên đấu giá
+                        </button>
+                    )}
                     <button
                         onClick={() => navigate("/admin/auctions/getAll")}
                         className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
@@ -291,8 +337,15 @@ export default function AdminAuctionWinnerOnly() {
                             </label>
                             <Select
                                 options={products}
-                                value={products.find(o => o.value === form.product_variant_id) || null}
-                                onChange={opt => setForm(f => ({ ...f, product_variant_id: opt?.value }))}
+                                // value={products.find(o => o.value === form.product_variant_id) || null}
+                                // onChange={opt => setForm(f => ({ ...f, product_variant_id: opt?.value }))}
+                                value={
+                                    products.find(o => o.value === form.product_variant_id)
+                                    || (products.length === 1 && products[0].isDisabled ? products[0] : null)
+                                }
+                                onChange={opt => setForm(f => ({ ...f, product_variant_id: opt?.value ?? null }))}
+                                isOptionDisabled={(opt) => !!opt.isDisabled}
+                                isDisabled={products.length === 1 && products[0].isDisabled}
                             />
                             {errors.product_variant_id && (
                                 <p className="text-red-500 text-sm mt-1">{errors.product_variant_id}</p>
@@ -439,6 +492,8 @@ export default function AdminAuctionWinnerOnly() {
     const showRetry = ["Đã hủy", "Hết hạn thanh toán"].includes(
         badgeText
     );
+
+    // const showRetry = canCreate;
 
     return (
         <div className="container mx-auto p-4">

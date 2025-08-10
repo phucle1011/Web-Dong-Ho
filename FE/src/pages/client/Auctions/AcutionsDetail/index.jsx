@@ -205,6 +205,7 @@ export default function AuctionsDetail() {
             expiredPaymentWindow: d.expiredPaymentWindow,
             allBids: d.allBids,
           });
+
           setAllBids(d.allBids || []);
         } else {
           setWinnerData({
@@ -298,71 +299,87 @@ export default function AuctionsDetail() {
         }
 
         return (
-          <div className="mt-12 mx-auto max-w-7xl px-6 py-8 bg-blue-50 border border-blue-200 rounded-2xl shadow-lg">
-            <h4 className="text-center text-3xl font-extrabold text-blue-800 mb-10 tracking-wide">
+          <div className="mt-12 mx-auto max-w-7xl px-6 py-8 bg-blue-50/60 border border-blue-200 rounded-2xl shadow-lg">
+            <h4 className="text-center text-2xl font-extrabold text-blue-800 mb-10 tracking-wide">
               Kết quả phiên đấu giá
             </h4>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-10">
               {/* Người chiến thắng */}
-              <div className="bg-white p-8 rounded-2xl shadow-md flex flex-col items-center">
-                <h5 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-2 w-full text-center">
-                  Người chiến thắng
+              <div className="bg-white p-8 rounded-2xl shadow-md lg:col-span-4">
+                <h5 className="text-xl font-semibold text-gray-800 mb-6 border-b pb-2 text-center">
+                  Thông tin người chiến thắng
                 </h5>
-                <div className="space-y-4 text-center w-full">
-                  <p className="text-base text-gray-600">
-                    <span className="font-medium text-gray-800">Tên:</span>{" "}
-                    {selectedAuction.winner.user_name}
-                  </p>
-                  <p className="text-base text-gray-600">
-                    <span className="font-medium text-gray-800">Số tiền:</span>{" "}
-                    <span className="text-green-600">
+
+                {/* 4 phần hiển thị gọn đẹp */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                  <div className="rounded-xl">
+                    <p className="text-xs text-gray-500 mb-1">Họ và tên</p>
+                    <p className="font-semibold text-gray-800 break-words border border-gray-100 bg-gray-50">
+                      {selectedAuction.winner.user_name}
+                    </p>
+                  </div>
+                  <div className="rounded-xl">
+                    <p className="text-xs text-gray-500 mb-1">Email</p>
+                    <p className="font-semibold text-gray-800 break-words border border-gray-100 bg-gray-50">
+                      {winnerData.winner?.email
+                        || selectedAuction.winner?.email
+                        || selectedAuction.winner?.user?.email
+                        || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl">
+                    <p className="text-xs text-gray-500 mb-1">Số tiền</p>
+                    <p className="font-semibold text-green-600 whitespace-nowrap border border-gray-100 bg-gray-50">
                       {Number(selectedAuction.winner.bidAmount).toLocaleString("vi-VN")}₫
-                    </span>
-                  </p>
-                  <p className="text-base text-gray-600">
-                    <span className="font-medium text-gray-800">Kết thúc lúc:</span>{" "}
-                    {selectedAuction.endTime.replace("T", " ").substring(0, 19)}
-                  </p>
+                    </p>
+                  </div>
+                  <div className="rounded-xl">
+                    <p className="text-xs text-gray-500 mb-1">Kết thúc lúc</p>
+                    <p className="font-semibold text-gray-800 whitespace-nowrap border border-gray-100 bg-gray-50">
+                      {selectedAuction.endTime.replace("T", " ").substring(0, 19)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Lịch sử đặt giá */}
-              <div className="bg-white p-8 rounded-2xl shadow-md">
-                <h5 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-2">
+             <div className="bg-white p-8 rounded-2xl shadow-md lg:col-span-6">
+                <h5 className="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">
                   Lịch sử đặt giá
                 </h5>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full table-fixed bg-white divide-y divide-gray-200">
-                    <thead className="bg-gray-100">
+
+                <div className="overflow-x-auto rounded-xl ring-1 ring-gray-100">
+                  <table className="min-w-full table-fixed bg-white">
+                    <thead className="bg-gray-100/70">
                       <tr>
-                        {["#", "Tên người đặt", "Số tiền", "Thời gian"].map((title) => (
+                        {["#", "Tên người đặt", "Email", "Số tiền", "Thời gian"].map((title) => (
                           <th
                             key={title}
-                            className="px-4 py-3 text-left text-sm font-medium text-gray-700 capitalize"
+                            className="px-4 py-3 text-left text-sm font-medium text-gray-700"
                           >
                             {title}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
+                    <tbody className="divide-y divide-gray-100">
                       {paginatedBids.length > 0 ? (
                         paginatedBids.map((bid, idx) => (
-                          <tr
-                            key={bid.id}
-                            className="hover:bg-gray-50 transition-colors"
-                          >
+                          <tr key={bid.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-4 py-3 text-sm text-gray-700">
                               {(bidPage - 1) * bidsPerPage + idx + 1}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700">
                               {bid.user.name}
                             </td>
-                            <td className="px-4 py-3 text-sm font-medium text-green-600">
+                            <td className="px-4 py-3 text-sm text-gray-700 break-words">
+                              {bid.user.email}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-green-600 whitespace-nowrap">
                               {Number(bid.bidAmount).toLocaleString("vi-VN")}₫
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">
+                            <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                               {bid.bidTime.replace("T", " ").substring(0, 19)}
                             </td>
                           </tr>
@@ -379,57 +396,59 @@ export default function AuctionsDetail() {
                       )}
                     </tbody>
                   </table>
-                  <div className="flex justify-center mt-6">
-                    <div className="flex items-center space-x-1">
-                      <button
-                        disabled={bidPage === 1}
-                        onClick={() => setBidPage(1)}
-                        className="px-2 py-1 border rounded disabled:opacity-50"
-                      >
-                        <FaAngleDoubleLeft />
-                      </button>
-                      <button
-                        disabled={bidPage === 1}
-                        onClick={() => setBidPage(bidPage - 1)}
-                        className="px-2 py-1 border rounded disabled:opacity-50"
-                      >
-                        <FaChevronLeft />
-                      </button>
+                </div>
 
-                      {[...Array(totalBidPages)].map((_, i) => {
-                        const page = i + 1;
-                        if (page >= bidPage - 1 && page <= bidPage + 1) {
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => setBidPage(page)}
-                              className={`w-8 h-8 border rounded text-sm ${page === bidPage
+                {/* Giữ nguyên cụm phân trang của bạn ở dưới */}
+                <div className="flex justify-center mt-6">
+                  <div className="flex items-center space-x-1">
+                    <button
+                      disabled={bidPage === 1}
+                      onClick={() => setBidPage(1)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaAngleDoubleLeft />
+                    </button>
+                    <button
+                      disabled={bidPage === 1}
+                      onClick={() => setBidPage(bidPage - 1)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaChevronLeft />
+                    </button>
+
+                    {[...Array(totalBidPages)].map((_, i) => {
+                      const page = i + 1;
+                      if (page >= bidPage - 1 && page <= bidPage + 1) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setBidPage(page)}
+                            className={`w-8 h-8 border rounded text-sm ${page === bidPage
                                 ? "bg-blue-600 text-white"
                                 : "bg-white hover:bg-blue-100"
-                                }`}
-                            >
-                              {page}
-                            </button>
-                          );
-                        }
-                        return null;
-                      })}
+                              }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
 
-                      <button
-                        disabled={bidPage === totalBidPages}
-                        onClick={() => setBidPage(bidPage + 1)}
-                        className="px-2 py-1 border rounded disabled:opacity-50"
-                      >
-                        <FaChevronRight />
-                      </button>
-                      <button
-                        disabled={bidPage === totalBidPages}
-                        onClick={() => setBidPage(totalBidPages)}
-                        className="px-2 py-1 border rounded disabled:opacity-50"
-                      >
-                        <FaAngleDoubleRight />
-                      </button>
-                    </div>
+                    <button
+                      disabled={bidPage === totalBidPages}
+                      onClick={() => setBidPage(bidPage + 1)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaChevronRight />
+                    </button>
+                    <button
+                      disabled={bidPage === totalBidPages}
+                      onClick={() => setBidPage(totalBidPages)}
+                      className="px-2 py-1 border rounded disabled:opacity-50"
+                    >
+                      <FaAngleDoubleRight />
+                    </button>
                   </div>
                 </div>
               </div>

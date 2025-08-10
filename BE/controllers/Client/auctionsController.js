@@ -440,7 +440,7 @@ class AuctionController {
       if (!auction) return;
 
       const productName = auction.variant?.product?.name || 'sản phẩm';
-      const variantName = auction.variant?.name || '';
+      const variantName = auction.variant?.sku || '';
 
       await transporter.sendMail({
         from: process.env.EMAIL_USER,

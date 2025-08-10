@@ -169,27 +169,17 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
   const fetchCart = async () => {
     const token = localStorage.getItem("token");
     try {
-      // const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
-      //   headers: {
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      // });
-      // setCartItems(res.data.data);
-
       const res = await axios.get(`${Constants.DOMAIN_API}/carts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // map thêm auction_id vào mỗi item
       const itemsWithAuction = res.data.data.map(item => {
         const info = getAuctionInfo(item.variant, meId, item.created_at);
         return {
           ...item,
-          // nếu là đấu giá thì đính kèm auctionId, ngược lại null
           auction_id: info.isAuction ? info.auctionId : null
         };
       });
       setCartItems(itemsWithAuction);
-      // gọi luôn callback lên cha
       onCartItemsChange?.(itemsWithAuction);
     } catch (error) {
       console.error("Lỗi khi lấy giỏ hàng:", error);
