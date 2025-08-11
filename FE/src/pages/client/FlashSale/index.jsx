@@ -49,8 +49,8 @@ export default function FlashSale() {
         productsFromApi[0]?.images?.[0]?.image_url ||
         `${process.env.REACT_APP_PUBLIC_URL}/assets/images/flash-sale-ads.png`;
 
-      setBannerUrl(notification?.banner_url || fallback);
-
+      setBannerUrl(notification?.thumbnail || fallback);
+      
       // Gán end date nếu có
       if (end_date) setEndDate(end_date);
     } catch (err) {
