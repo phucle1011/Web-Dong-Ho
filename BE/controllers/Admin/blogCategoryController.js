@@ -5,18 +5,13 @@ const slugify = require('slugify');
 const sequelize = require('sequelize');
 
 class BlogCategoryController {
-  static async getAll(req, res) {
+static async getAll(req, res) {
   try {
     const { status, page = 1, limit = 10, searchTerm = "" } = req.query;
 
     const whereCondition = {};
-    if (status !== undefined) {
-      whereCondition.status = status;
-    }
-
-    if (searchTerm) {
-      whereCondition.name = { [Op.like]: `%${searchTerm}%` };
-    }
+    if (status !== undefined) whereCondition.status = status;
+    if (searchTerm) whereCondition.name = { [Op.like]: `%${searchTerm}%` };
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -25,22 +20,38 @@ class BlogCategoryController {
       limit: parseInt(limit),
       offset,
       order: [["id", "DESC"]],
+      distinct: true,                 // <— tránh nhân bản count do JOIN
+      include: [{
+        model: Blog,
+        attributes: ["id"],           // <— phải lấy ít nhất 1 field để có mảng Blogs
+        required: false
+      }]
+    });
+
+    const categoriesWithBlogCount = rows.map((category) => {
+      const json = category.toJSON();
+      return {
+        ...json,
+        blogCount: Array.isArray(json.Blogs) ? json.Blogs.length : 0
+      };
     });
 
     res.json({
       success: true,
-      data: rows,
+      data: categoriesWithBlogCount,
       pagination: {
-        totalItems: count,
-        totalPages: Math.ceil(count / limit),
+        totalItems: typeof count === "number" ? count : count.length, // phòng khi driver trả mảng
+        totalPages: Math.ceil((typeof count === "number" ? count : count.length) / limit),
         currentPage: parseInt(page),
-      },
+      }
     });
   } catch (error) {
     console.error("Lỗi server:", error);
     res.status(500).json({ success: false, message: "Lỗi server", error });
   }
 }
+
+
 
 
   static async getById(req, res) {

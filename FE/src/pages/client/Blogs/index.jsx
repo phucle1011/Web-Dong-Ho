@@ -35,7 +35,7 @@ export default function Blogs() {
     categoryPage * categoriesPerPage
   );
 
-  // ----- Lấy danh sách bài viết (lọc theo danh mục & ngày khi nhấn tìm) -----
+  // ----- Lấy danh sách bài viết -----
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
@@ -98,9 +98,9 @@ export default function Blogs() {
 
   const handleCategoryClick = (slug) => {
     if (categorySlug === slug) {
-      navigate("/blogs"); // Hủy lọc
+      navigate("/blogs");
     } else {
-      navigate(`/blogs?category=${slug}`); // Lọc theo slug
+      navigate(`/blogs?category=${slug}`);
     }
   };
 
@@ -162,10 +162,11 @@ export default function Blogs() {
       </div>
 
       <div className="w-full py-[60px] bg-white">
-        <div className="container-x mx-auto">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar bên trái */}
-            <aside className="w-full lg:w-[230px] flex-shrink-0">
+        {/* Nới rộng container để đủ chỗ cho 4 card với kích cỡ hiện tại */}
+        <div className="mx-auto w-full max-w-[1600px] px-4">
+          <div className="flex flex-col xl:flex-row gap-8">
+            {/* Sidebar bên trái (đẩy sát trái, gọn) */}
+            <aside className="w-full xl:w-[220px] flex-shrink-0">
               <div className="mb-7">
                 <h3 className="text-[15px] font-bold mb-2">DANH MỤC TIN TỨC</h3>
                 <ul className="border-b pb-3 mb-3">
@@ -173,8 +174,9 @@ export default function Blogs() {
                     <li key={cat.id} className="mb-1">
                       <button
                         onClick={() => handleCategoryClick(cat.slug)}
-                        className={`w-full text-left text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${categorySlug === cat.slug ? "bg-gray-200 font-semibold" : ""
-                          }`}
+                        className={`w-full text-left text-[15px] py-1 px-2 rounded hover:bg-gray-100 ${
+                          categorySlug === cat.slug ? "bg-gray-200 font-semibold" : ""
+                        }`}
                         title={cat.name}
                       >
                         {cat.name.length > 20 ? cat.name.slice(0, 20) + "..." : cat.name}
@@ -224,17 +226,16 @@ export default function Blogs() {
                     >
                       <FaSearch />
                     </button>
-                    {/* Không thêm nút Clear bên ngoài: dùng Clear trong popup lịch */}
                   </div>
                 </div>
               </div>
             </aside>
 
-            {/* Nội dung chính giữa */}
-            <main className="flex-[1.4] min-w-0">
+            {/* Nội dung chính giữa (mở rộng để đủ 4 card) */}
+            <main className="flex-1 min-w-0">
               <div className="w-full">
-                {/* Card: ảnh vuông + text bên dưới; 1 cột ở md, 2 cột ở xl */}
-                <div className="grid grid-cols-1 md:grid-cols-1 xl:grid-cols-2 gap-8 xl:gap-10">
+                {/* 4 cột ở xl, giữ nguyên style card nên kích cỡ không bị nhỏ lại */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8 xl:gap-10">
                   {pagedBlogs.map((blog) => (
                     <Link
                       to={`/blogs/${blog.id}`}
@@ -255,9 +256,8 @@ export default function Blogs() {
                       {/* Phần chữ tách dưới ảnh */}
                       <div className="p-4 md:p-5">
                         <div className="flex items-center gap-2 text-[13px] text-gray-500">
-                          <span>{formatDateVN(blog.created_at)}</span>
-                          <span className="text-gray-300">•</span>
-                          <span className="truncate">{blog.user_name}</span>
+                          <span>{formatDateVN(blog.created_at)} | {blog.user_name}</span>
+                          
                         </div>
 
                         <h3 className="mt-1.5 md:mt-2 text-lg md:text-xl font-semibold text-gray-900 line-clamp-2 group-hover:text-primary transition-colors">
@@ -268,22 +268,14 @@ export default function Blogs() {
                           {
                             (() => {
                               const raw = blog.meta_description || blog.content || "";
-
-                              // 1. Xóa tất cả thẻ HTML
                               const plainText = raw.replace(/<\/?[^>]+(>|$)/g, "");
-
-                              // 2. Giải mã các HTML entities (&aacute; -> á, &ocirc; -> ô)
                               const textArea = document.createElement("textarea");
                               textArea.innerHTML = plainText;
                               const decoded = textArea.value;
-
-                              // 3. Cắt tối đa 130 ký tự
                               return decoded.length > 130 ? decoded.slice(0, 130) + "..." : decoded;
                             })()
                           }
                         </p>
-
-
                       </div>
                     </Link>
                   ))}
@@ -311,8 +303,8 @@ export default function Blogs() {
               </div>
             </main>
 
-            {/* Sidebar phải - Chủ đề hot */}
-            <aside className="w-full lg:w-[250px] flex-shrink-0">
+            {/* Sidebar phải (đẩy sát phải) */}
+            <aside className="w-full xl:w-[240px] flex-shrink-0">
               <div className="mb-7">
                 <h4 className="font-bold text-xs text-gray-700 uppercase mb-3">
                   Chủ đề hot

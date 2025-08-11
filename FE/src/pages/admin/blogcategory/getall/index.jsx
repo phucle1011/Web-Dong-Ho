@@ -27,25 +27,27 @@ function Blogcategory() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
-  useEffect(() => {
-    fetchCategories(currentPage, searchTerm);
-  }, [currentPage]);
+ useEffect(() => {
+  fetchCategories(currentPage, searchTerm);
+}, [currentPage]);
 
-  const fetchCategories = async (page = 1, search = "") => {
-    try {
-      const res = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
-        params: { page, limit: perPage, searchTerm: search }
-      });
-      setCategories(res.data.data || []);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      if (search && res.data.data?.length === 0) {
-        toast.info("Không tìm thấy danh mục nào.");
-      }
-    } catch (error) {
-      console.error("Lỗi khi lấy danh mục bài viết:", error);
-      toast.error("Không thể tải danh mục.");
+const fetchCategories = async (page = 1, search = "") => {
+  try {
+    const res = await axios.get(`${Constants.DOMAIN_API}/admin/blogcategory/list`, {
+      params: { page, limit: perPage, searchTerm: search }
+    });
+    console.log(res.data.data); // Kiểm tra dữ liệu trả về
+    setCategories(res.data.data || []);
+    setTotalPages(res.data.pagination?.totalPages || 1);
+    if (search && res.data.data?.length === 0) {
+      toast.info("Không tìm thấy danh mục nào.");
     }
-  };
+  } catch (error) {
+    console.error("Lỗi khi lấy danh mục bài viết:", error);
+    toast.error("Không thể tải danh mục.");
+  }
+};
+
 
 const handleSearch = async () => {
   const trimmedSearch = searchTerm.trim();
@@ -165,66 +167,71 @@ const handleSearch = async () => {
           </tr>
         </thead>
 
-        <tbody>
-          {categories.map((cat, index) => (
-            <tr key={cat.id} className="hover:bg-gray-50 text-center">
-              {/* STT */}
-              <td className="border p-2">{(currentPage - 1) * perPage + index + 1}</td>
+ <tbody>
+  {categories.map((cat, index) => (
+    <tr key={cat.id} className="hover:bg-gray-50 text-center">
+      {/* STT */}
+      <td className="border p-2">{(currentPage - 1) * perPage + index + 1}</td>
 
-              {/* Tên danh mục */}
-              <td className="border p-2 max-w-[300px] text-left whitespace-nowrap overflow-hidden text-ellipsis">
-                {cat.name.length <= 50 ? (
-                  cat.name
-                ) : (
-                  <>
-                    {showFullId === cat.id ? cat.name : `${cat.name.slice(0, 50)} `}
-                    {showFullId !== cat.id && (
-                      <button
-                        onClick={() => setShowFullId(cat.id)}
-                        className="text-blue-500 underline ml-1"
-                      >
-                        ...
-                      </button>
-                    )}
-                  </>
-                )}
-              </td>
+      {/* Tên danh mục */}
+      <td className="border p-2 max-w-[300px] text-left whitespace-nowrap overflow-hidden text-ellipsis">
+        {cat.name.length <= 50 ? (
+          cat.name
+        ) : (
+          <>
+            {showFullId === cat.id ? cat.name : `${cat.name.slice(0, 50)} `}
+            {showFullId !== cat.id && (
+              <button
+                onClick={() => setShowFullId(cat.id)}
+                className="text-blue-500 underline ml-1"
+              >
+                ...
+              </button>
+            )}
+          </>
+        )}
+      </td>
 
-              {/* Trạng thái */}
-              <td className="border p-2">
-                <span
-                  className={`px-2 py-1 rounded-full text-xs ${cat.status
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                    }`}
-                >
-                  {cat.status ? "Hiển thị" : "Ẩn"}
-                </span>
-              </td>
+      {/* Trạng thái */}
+      <td className="border p-2">
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${cat.status
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+            }`}
+        >
+          {cat.status ? "Hiển thị" : "Ẩn"}
+        </span>
+      </td>
 
-              {/* Hành động */}
-              <td className="border p-2">
-                <div className="flex justify-center gap-2">
-                  <button
-                    className="btn btn-warning btn-sm"
-                    onClick={() => navigate(`/admin/blogcategory/edit/${cat.id}`)}
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
-                    onClick={() => {
-                      setDeleteId(cat.id);
-                      setIsDeleteOpen(true);
-                    }}
-                  >
-                    <FaTrashAlt size={20} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+      {/* Hành động */}
+      <td className="border p-2">
+        <div className="flex justify-center gap-2">
+          <button
+            className="btn btn-warning btn-sm"
+            onClick={() => navigate(`/admin/blogcategory/edit/${cat.id}`)}
+          >
+            <FaEdit />
+          </button>
+
+          {/* Ẩn nút xóa nếu có bài viết */}
+          {cat.blogCount === 0 && (
+            <button
+              className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
+              onClick={() => {
+                setDeleteId(cat.id);
+                setIsDeleteOpen(true);
+              }}
+            >
+              <FaTrashAlt size={20} />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
 
       </table>
 

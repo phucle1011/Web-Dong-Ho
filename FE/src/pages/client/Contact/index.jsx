@@ -1,12 +1,34 @@
 import InputForm from "../Helpers/InputForm";
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router-dom";
+
+/** Decode JWT (FE) */
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => `%${("00" + c.charCodeAt(0).toString(16)).slice(-2)}`)
+        .join("")
+    );
+    const decoded = JSON.parse(jsonPayload);
+    if (decoded.exp && Date.now() >= decoded.exp * 1000) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+};
 
 export default function Contact() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     first_name: "",
     email: "",
@@ -14,21 +36,49 @@ export default function Contact() {
     message: "",
   });
 
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const decoded = token ? decodeToken(token) : null;
+
+    if (decoded && decoded.email) {
+      setIsAuthed(true);
+      setFormData((prev) => ({
+        ...prev,
+        email: decoded.email, // gắn email từ user đăng nhập
+        first_name: prev.first_name || decoded.name || decoded.fullName || "",
+      }));
+    } else {
+      setIsAuthed(false);
+    }
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Khóa ô email, tránh bị sửa để chống spam
+    if (name === "email") return;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
+
   const validateForm = () => {
     const { first_name, email, subject, message } = formData;
+
+    if (!isAuthed) {
+      toast.error("Bạn cần đăng nhập để gửi liên hệ.");
+      return false;
+    }
 
     if (!first_name || !email || !subject || !message) {
       toast.error("Vui lòng điền đầy đủ thông tin!");
       return false;
     }
 
+    // email lấy từ token, nhưng vẫn check định dạng cho chắc
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast.error("Địa chỉ email không hợp lệ!");
@@ -38,25 +88,47 @@ export default function Contact() {
     return true;
   };
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const token = localStorage.getItem("token");
+    const decoded = token ? decodeToken(token) : null;
+
+    if (!decoded || !decoded.email) {
+      toast.error("Bạn cần đăng nhập để gửi liên hệ.");
+      navigate("/login?redirect=/contact");
+      return;
+    }
 
     if (!validateForm()) return;
 
     try {
-      await axios.post("http://localhost:5000/contact", formData);
+      setIsSubmitting(true);
+      await axios.post(
+        "http://localhost:5000/contact",
+        {
+          first_name: formData.first_name,
+          subject: formData.subject,
+          message: formData.message,
+          email: formData.email, // ✅ gửi email trong body
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       toast.success(" Gửi thành công! Chúng tôi sẽ phản hồi trong 24h tới");
 
-      // Reset form
+      // Reset form (giữ lại email từ token)
       setFormData({
         first_name: "",
-        email: "",
+        email: decoded.email,
         subject: "",
         message: "",
       });
     } catch (error) {
       toast.error(" Phản hồi của bạn không gửi được!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -74,6 +146,7 @@ export default function Contact() {
       <div className="contact-wrapper w-full mb-10">
         <div className="container-x mx-auto">
           <div className="main-wrapper w-full lg:flex lg:space-x-[30px]">
+            {/* CỘT TRÁI */}
             <div className="lg:w-1/2 w-full">
               <h1 className="text-[22px] font-semibold text-qblack leading-[30px] mb-1">
                 Thông Tin Liên Hệ
@@ -84,6 +157,7 @@ export default function Contact() {
               </p>
 
               <div className="xl:flex xl:space-x-[30px] mb-[30px]">
+                {/* Card Số Điện Thoại */}
                 <div className="xl:w-1/2 w-full  h-[196px] flex flex-col item justify-center bg-[#FFEAE5] p-5">
                   <div className="flex justify-center mb-3 ">
                     <svg
@@ -95,7 +169,7 @@ export default function Contact() {
                     >
                       <circle cx="22" cy="22" r="21.5" stroke="#FFBB38" />
                       <path
-                        d="M10.4708 17.7624L10.4708 17.7624C10.4976 19.0577 10.9088 20.276 11.473 21.4906C13.5525 25.9672 16.7815 29.3804 21.081 31.7969C22.5665 32.6319 24.0756 33.2848 25.7334 33.4698L25.7335 33.4698C26.8399 33.5935 27.7241 33.3528 28.4392 32.5473L28.4392 32.5473C28.724 32.2265 29.0458 31.9115 29.3517 31.612C29.514 31.4532 29.6717 31.2987 29.8172 31.15L29.8174 31.1498C30.2031 30.7562 30.3337 30.4343 30.336 30.1731C30.3383 29.9141 30.2153 29.5973 29.8364 29.2104L29.8363 29.2104C28.988 28.3441 28.1276 27.4873 27.2602 26.637L27.2601 26.6369C26.8659 26.2503 26.5505 26.126 26.2959 26.1268C26.0403 26.1277 25.7225 26.2552 25.3251 26.6438L25.325 26.6439C24.8114 27.1458 24.3044 27.6511 23.8109 28.166L23.8108 28.1661C23.6684 28.3146 23.4735 28.4645 23.2169 28.5099C22.9464 28.5578 22.7021 28.4739 22.5009 28.341C22.2427 28.1708 21.9677 28.0004 21.686 27.8258C21.0293 27.4187 20.3358 26.9889 19.7325 26.4866C18.0622 25.0969 16.5823 23.48 15.5981 21.4476C15.4993 21.2439 15.4281 21.0037 15.4728 20.7408C15.5179 20.4753 15.6665 20.2715 15.8341 20.112L15.8342 20.1119C16.3521 19.6191 16.86 19.1182 17.3507 18.6035L17.3508 18.6034C17.7203 18.2159 17.84 17.9093 17.8397 17.663C17.8395 17.4176 17.7199 17.1127 17.3474 16.7286L17.3474 16.7286C16.4823 15.8366 15.605 14.9566 14.7136 14.0922C14.3582 13.7475 14.053 13.6318 13.7983 13.6338C13.5412 13.6359 13.2305 13.7585 12.8676 14.1078L10.4708 17.7624ZM10.4708 17.7624L10.4706 17.757M10.4708 17.7624L10.4706 17.757M10.4706 17.757C10.4433 16.8876 10.7133 16.1864 11.3505 15.6062M10.4706 17.757L11.3505 15.6062M11.3505 15.6062C11.6606 15.3245 11.9774 15.0025 12.2815 14.6935C12.4844 14.4873 12.6817 14.2868 12.8675 14.1079L11.3505 15.6062Z"
+                        d="M10.4708 17.7624L10.4708 17.7624C10.4976 19.0577 10.9088 20.276 11.473 21.4906C13.5525 25.9672 16.7815 29.3804 21.081 31.7969C22.5665 32.6319 24.0756 33.2848 25.7334 33.4698L25.7335 33.4698C26.8399 33.5935 27.7241 33.3528 28.4392 32.5473L28.4392 32.5473C28.724 32.2265 29.0458 31.9115 29.3517 31.612C29.514 31.4532 29.6717 31.2987 29.8172 31.15L29.8174 31.1498C30.2031 30.7562 30.3337 30.4343 30.336 30.1731C30.3383 29.9141 30.2153 29.5973 29.8364 29.2104L29.8363 29.2104C28.988 28.3441 28.1276 27.4873 27.2602 26.637L27.2601 26.6369C26.8659 26.2503 26.5505 26.126 26.2959 26.1268C26.0403 26.1277 25.7225 26.2552 25.3251 26.6438L25.325 26.6439C24.8114 27.1458 24.3044 27.6511 23.8109 28.166L23.8108 28.1661C23.6684 28.3146 23.4735 28.4645 23.2169 28.5099C22.9464 28.5578 22.7021 28.4739 22.5009 28.341C22.2427 28.1708 21.9677 28.0004 21.686 27.8258C21.0293 27.4187 20.3358 26.9889 19.7325 26.4866C18.0622 25.0969 16.5823 23.48 15.5981 21.4476C15.4993 21.2439 15.4281 21.0037 15.4728 20.7408C15.5179 20.4753 15.6665 20.2715 15.8341 20.112L15.8342 20.1119C16.3521 19.6191 16.86 19.1182 17.3507 18.6035L17.3508 18.6034C17.7203 18.2159 17.84 17.9093 17.8397 17.663C17.8395 17.4176 17.7199 17.1127 17.3474 16.7286L17.3474 16.7286C16.4823 15.8366 15.605 14.9566 14.7136 14.0922C14.3582 13.7475 14.053 13.6318 13.7983 13.6338C13.5412 13.6359 13.2305 13.7585 12.8676 14.1078L10.4708 17.7624ZM10.4706 17.757C10.4433 16.8876 10.7133 16.1864 11.3505 15.6062M11.3505 15.6062C11.6606 15.3245 11.9774 15.0025 12.2815 14.6935C12.4844 14.4873 12.6817 14.2868 12.8675 14.1079L11.3505 15.6062Z"
                         fill="#FFBB38"
                         stroke="#FFBB38"
                       />
@@ -121,6 +195,8 @@ export default function Contact() {
                     +(84) 0795 9827 67
                   </p>
                 </div>
+
+                {/* Card Email */}
                 <div className="xl:w-1/2 w-full h-[196px] flex flex-col item justify-center bg-[#D3EFFF] p-5">
                   <div className="flex justify-center mb-3 ">
                     <svg
@@ -143,7 +219,7 @@ export default function Contact() {
                       <path
                         fillRule="evenodd"
                         clipRule="evenodd"
-                        d="M11.001 19.8174C11.001 19.7663 11.001 19.7152 11.001 19.6641C11.001 19.6641 11.001 19.664 11.001 19.664C11.0011 19.4508 11.0011 19.2376 11.0012 19.0245C11.0017 18.9566 11.0054 18.889 11.0098 18.8091C11.0126 18.7601 11.0155 18.7066 11.0181 18.6455C11.0841 18.6869 11.1449 18.7243 11.2021 18.7596C11.3047 18.8227 11.3959 18.8789 11.4849 18.9382M11.6145 19.0246C11.6167 19.026 11.6188 19.0274 11.6209 19.0288C11.7476 19.1133 11.8744 19.1978 12.0011 19.2823C12.001 19.6829 12.0009 20.0834 12.0008 20.4839C11.6675 20.2617 11.3342 20.0396 11.001 19.8174M19.3208 25.365C16.881 23.7376 14.4411 22.1107 12.0008 20.4839C12.0007 20.616 12.0007 20.7482 12.0006 20.8803C11.9998 23.3541 11.9989 25.8265 12.002 28.299L12.002 28.2991C12.0025 28.7664 12.1435 29.0368 12.2981 29.1898C12.4539 29.344 12.7318 29.4858 13.2097 29.4862L13.2094 30.4862L13.21 29.4862C13.2099 29.4862 13.2098 29.4862 13.2097 29.4862C19.064 29.4877 24.9183 29.4877 30.7726 29.4862L30.7728 30.4829L30.7723 29.4862C30.7724 29.4862 30.7725 29.4862 30.7726 29.4862C31.2688 29.4858 31.5467 29.3418 31.6992 29.1899C31.8512 29.0386 31.9952 28.7634 31.9957 28.2707L31.9957 28.2705C31.999 25.6758 31.9978 23.0816 31.9965 20.4862C32.3297 20.264 32.6629 20.0418 32.9961 19.8196C32.9961 19.7617 32.996 19.7037 32.996 19.6457C32.996 19.6443 32.996 19.6428 32.996 19.6414C32.9959 19.4406 32.9958 19.2399 32.9957 19.0391C32.9957 18.9617 32.9881 18.8846 32.9793 18.7965C32.9748 18.7505 32.9699 18.7014 32.9657 18.6478C32.9212 18.6763 32.8797 18.7029 32.8404 18.728C32.7205 18.8046 32.6216 18.8678 32.5236 18.9328C32.4704 18.9682 32.4173 19.0037 32.3641 19.0391C32.364 19.0392 32.3638 19.0393 32.3637 19.0394C32.2411 19.1212 32.1184 19.2029 31.9958 19.2847C31.996 19.545 31.9961 19.8053 31.9962 20.0655C31.9963 20.2057 31.9964 20.346 31.9965 20.4862C31.3081 20.9452 30.6197 21.4042 29.9313 21.8633C28.1836 23.0288 26.4356 24.1945 24.6874 25.3598L24.1327 24.5277L24.6874 25.3598C24.6874 25.3598 24.6874 25.3598 24.6874 25.3598C23.8278 25.9329 22.9502 26.288 22.0029 26.2892C21.055 26.2904 20.1783 25.9371 19.3208 25.365ZM19.3208 25.365L19.8742 24.5353L19.3207 25.365C19.3207 25.365 19.3208 25.365 19.3208 25.365ZM11.4849 18.9382C11.5281 18.967 11.5713 18.9958 11.6145 19.0246L11.4849 18.9382Z"
+                        d="M11.001 19.8174C11.001 19.7663 11.001 19.7152 11.001 19.6641C11.001 19.6641 11.001 19.664 11.001 19.664C11.0011 19.4508 11.0011 19.2376 11.0012 19.0245C11.0017 18.9566 11.0054 18.889 11.0098 18.8091C11.0126 18.7601 11.0155 18.7066 11.0181 18.6455C11.0841 18.6869 11.1449 18.7243 11.2021 18.7596C11.3047 18.8227 11.3959 18.8789 11.4849 18.9382M11.6145 19.0246C11.6167 19.026 11.6188 19.0274 11.6209 19.0288C11.7476 19.1133 11.8744 19.1978 12.0011 19.2823C12.001 19.6829 12.0009 20.0834 12.0008 20.4839C11.6675 20.2617 11.3342 20.0396 11.001 19.8174M19.3208 25.365C16.881 23.7376 14.4411 22.1107 12.0008 20.4839C12.0007 20.616 12.0007 20.7482 12.0006 20.8803C11.9998 23.3541 11.9989 25.8265 12.002 28.299L12.002 28.2991C12.0025 28.7664 12.1435 29.0368 12.2981 29.1898C12.4539 29.344 12.7318 29.4858 13.2097 29.4862L13.2094 30.4862L13.21 29.4862C13.2099 29.4862 13.2098 29.4862 13.2097 29.4862C19.064 29.4877 24.9183 29.4877 30.7726 29.4862L30.7728 30.4829L30.7723 29.4862C30.7724 29.4862 30.7725 29.4862 30.7726 29.4862C31.2688 29.4858 31.5467 29.3418 31.6992 29.1899C31.8512 29.0386 31.9952 28.7634 31.9957 28.2707L31.9957 28.2705C31.999 25.6758 31.9978 23.0816 31.9965 20.4862C32.3297 20.264 32.6629 20.0418 32.9961 19.8196C32.9961 19.7617 32.996 19.7037 32.996 19.6457C32.996 19.6443 32.996 19.6428 32.996 19.6414C32.9959 19.4406 32.9958 19.2399 32.9957 19.0391C32.9957 18.9617 32.9881 18.8846 32.9793 18.7965C32.9748 18.7505 32.9699 18.7014 32.9657 18.6478C32.9212 18.6763 32.8797 18.7029 32.8404 18.728C32.7205 18.8046 32.6216 18.8678 32.5236 18.9328C32.4704 18.9682 32.4173 19.0037 32.3641 19.0391C32.364 19.0392 32.3638 19.0393 32.3637 19.0394C32.2411 19.1212 32.1184 19.2029 31.9958 19.2847C31.996 19.545 31.9961 19.8053 31.9962 20.0655C31.9963 20.2057 31.9964 20.346 31.9965 20.4862C31.3081 20.9452 30.6197 21.4042 29.9313 21.8633C28.1836 23.0288 26.4356 24.1945 24.6874 25.3598L24.1327 24.5277L24.6874 25.3598C24.6874 25.3598 24.6874 25.3598 24.6874 25.3598C23.8278 25.9329 22.9502 26.288 22.0029 26.2892C21.055 26.2904 20.1783 25.9371 19.3208 25.365Z"
                         fill="#FFBB38"
                       />
                       <path
@@ -169,6 +245,8 @@ export default function Contact() {
                   </p>
                 </div>
               </div>
+
+              {/* Khối địa chỉ + bản đồ */}
               <div className="p-5 flex flex-col justify-between w-full bg-[#E7F2EC]">
                 <div className="flex space-x-5">
                   <span>
@@ -207,6 +285,8 @@ export default function Contact() {
                 </div>
               </div>
             </div>
+
+            {/* CỘT PHẢI: Form */}
             <div className="flex-1 bg-white sm:p-10 p-3">
               <form onSubmit={handleSubmit}>
                 <div className="title flex flex-col items-center">
@@ -228,63 +308,87 @@ export default function Contact() {
                     </svg>
                   </span>
                 </div>
-<div className="inputs mt-5">
-  <div className="mb-4">
-    <InputForm
-      label="Tên Khách Hàng"
-      placeholder=""
-      name="first_name"
-      inputClasses="h-[55px] text-lg px-5 rounded-[8px]" // 👈 bo góc
-      value={formData.first_name}
-      inputHandler={handleChange}
-      type="text"
-    />
-  </div>
-  <div className="mb-4">
-    <InputForm
-      label="Địa Chỉ Email"
-      placeholder=""
-      name="email"
-      inputClasses="h-[55px] text-lg px-5 rounded-[10px]"
-      value={formData.email}
-      inputHandler={handleChange}
-      type="email"
-    />
-  </div>
-  <div className="mb-4">
-    <InputForm
-      label="Phản Hồi"
-      placeholder=""
-      name="subject"
-      inputClasses="h-[55px] text-lg px-5 rounded-[10px]"
-      value={formData.subject}
-      inputHandler={handleChange}
-      type="text"
-    />
-  </div>
-  <div className="mb-5">
-    <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 rounded-[8px]">
-      Nội Dung Phản Hồi
-    </h6>
-    <textarea
-      placeholder=""
-      name="message"
-      value={formData.message}
-      onChange={handleChange}
-      className="w-full h-[140px] text-lg p-4 border border-qgray-border focus:ring-0 focus:outline-none placeholder:text-sm rounded-[8px]" // 👈 textarea bo góc
-    ></textarea>
-  </div>
-  <div>
-    <button
-      type="submit"
-      className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center rounded-[8px]" // 👈 nút bo góc
-    >
-      <span>Gửi Phản Hồi</span>
-    </button>
+
+                <div className="inputs mt-5">
+                  <div className="mb-4">
+                    <InputForm
+                      label="Tên Khách Hàng"
+                      placeholder=""
+                      name="first_name"
+                      inputClasses="h-[55px] text-lg px-5 rounded-[8px]"
+                      value={formData.first_name}
+                      inputHandler={handleChange}
+                      type="text"
+                      disabled={!isAuthed || isSubmitting}
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <InputForm
+                      label="Địa Chỉ Email"
+                      placeholder=""
+                      name="email"
+                      inputClasses="h-[55px] text-lg px-5 rounded-[10px]"
+                      value={formData.email}
+                      inputHandler={handleChange}
+                      type="email"
+                      readOnly
+                      disabled
+                    />
+                    {!isAuthed && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Vui lòng{" "}
+                        <span
+                          className="cursor-pointer"
+                          onClick={() => navigate("/login?redirect=/contact")}
+                        >
+                          đăng nhập
+                        </span>{" "}
+                        để gửi liên hệ.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mb-4">
+                    <InputForm
+                      label="Phản Hồi"
+                      placeholder=""
+                      name="subject"
+                      inputClasses="h-[55px] text-lg px-5 rounded-[10px]"
+                      value={formData.subject}
+                      inputHandler={handleChange}
+                      type="text"
+                      disabled={!isAuthed || isSubmitting}
+                    />
+                  </div>
+
+                  <div className="mb-5">
+                    <h6 className="input-label text-qgray capitalize text-[13px] font-normal block mb-2 rounded-[8px]">
+                      Nội Dung Phản Hồi
+                    </h6>
+                    <textarea
+                      placeholder=""
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      disabled={!isAuthed || isSubmitting}
+                      className="w-full h-[140px] text-lg p-4 border border-qgray-border focus:ring-0 focus:outline-none placeholder:text-sm rounded-[8px]"
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      className="black-btn text-sm font-semibold w-full h-[50px] flex justify-center items-center rounded-[8px]"
+                      disabled={!isAuthed || isSubmitting}
+                    >
+                      <span>{isSubmitting ? "Đang gửi..." : "Gửi Phản Hồi"}</span>
+                    </button>
                   </div>
                 </div>
               </form>
             </div>
+
           </div>
         </div>
       </div>
