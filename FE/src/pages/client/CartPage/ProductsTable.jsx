@@ -511,16 +511,21 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
               </tr>
             ) : (
               cartItems.map((item) => {
-                const variant = item.variant;
+                const variant = item?.variant || null;
                 const image = variant?.images?.[0]?.image_url || "";
-                const originalPrice = parseFloat(variant.price || 0);
+                // const originalPrice = parseFloat(variant.price || 0);
+                const originalPrice = parseFloat(variant?.price ?? 0);
                 // const price = parseFloat(variant.promotion?.discounted_price || variant.price || 0);
-                const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
+                // const discountPercent = parseFloat(variant.promotion?.discount_percent || 0);
+                const discountPercent = parseFloat(variant?.promotion?.discount_percent ?? 0);
                 const quantity = item.quantity;
-                const stock = variant.stock;
+                // const stock = variant.stock;
+                const stock = Number(variant?.stock ?? 0);
 
-                const name = variant.product.name;
-                const attributes = item.variant.attributeValues || [];
+                // const name = variant.product.name;
+                const productName = variant?.product?.name || "(Sản phẩm không còn tồn tại)";
+                // const attributes = item.variant.attributeValues || [];
+                const attributes = variant?.attributeValues || [];
                 const showAll = !!showAllMap[item.id];
                 const displayedAttrs = showAll ? attributes : attributes.slice(0, 2);
                 const showFullName = !!showNameMap[item.id];
@@ -533,12 +538,16 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                 // const total = price * quantity;
                 const auctionInfo = getAuctionInfo(variant, meId, item.created_at);
                 const isAuction = auctionInfo.isAuction;
-                const price = isAuction
-                  ? auctionInfo.bidAmount
-                  : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                // const price = isAuction
+                //   ? auctionInfo.bidAmount
+                //   : parseFloat(variant.promotion?.discounted_price || variant.price || 0);
+                 const price = isAuction
+  ? Number(auctionInfo.bidAmount || 0)
+  : parseFloat(variant?.promotion?.discounted_price ?? variant?.price ?? 0);
                 const total = price * quantity;
 
-                const targetAuction = item.variant.auctions.find(a => a.id === auctionInfo.auctionId);
+                // const targetAuction = item.variant.auctions.find(a => a.id === auctionInfo.auctionId);
+                const targetAuction = variant?.auctions?.find?.(a => a.id === auctionInfo.auctionId);
 
                 return (
                   <>
@@ -581,10 +590,12 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                                   : {}
                               }
                             >
-                              {name} ({variant.sku})
+                              {/* {name} ({variant.sku}) */}
+                              {productName} ({variant?.sku || "—"})
                             </p>
 
-                            {name.length > 40 && (
+                            {/* {name.length > 40 && ( */}
+                            {productName && productName.length > 40 && (
                               <button
                                 onClick={() => toggleShowName(item.id)}
                                 className="mt-1 text-blue-600 hover:text-blue-800 text-sm"
@@ -597,12 +608,13 @@ const ProductsTable = ({ className, onTotalChange, onSelectedItemsChange, onCart
                       </td>
                       <td className="py-4 px-2 w-[180px] align-top">
                         <div className="flex flex-col gap-1">
-                          {displayedAttrs.map((attr) => {
+                          {displayedAttrs.map((attr, idx) => {
                             const name = attr.attribute?.name;
                             const val = attr.value;
                             const isColor = name?.toLowerCase() === "color";
                             return (
-                              <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
+                              // <div key={attr.id} className="flex flex-wrap items-center gap-x-1">
+                              <div key={attr?.id ?? idx} className="flex flex-wrap items-center gap-x-1">
                                 <span className="font-semibold">{name}</span>
                                 {isColor
                                   ? <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: val }} title={val} />
