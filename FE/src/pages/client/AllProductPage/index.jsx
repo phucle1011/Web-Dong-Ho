@@ -18,6 +18,9 @@ export default function AllProductPage() {
   const [products, setProducts] = useState([]);
   const [categoryFilters, setCategoryFilters] = useState({});
   const [brandFilters, setBrandFilters] = useState({});
+  
+
+
 
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -204,6 +207,7 @@ export default function AllProductPage() {
           category_id: selectedCategoryIds.join(",") || undefined,
           brand_id: selectedBrandIds.join(",") || undefined,
         };
+        
 
         const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
           params,
@@ -216,6 +220,8 @@ export default function AllProductPage() {
           totalProducts: res.data.pagination?.totalProducts || 0,
         }));
         navigate(location.pathname, { replace: true }); // Xóa state
+        window.scrollTo({ top: 0, behavior: "instant" }); // hoặc "smooth"
+
         setError(null);
       } catch (error) {
         console.error("API Error:", error.response?.data || error.message);
@@ -261,6 +267,8 @@ export default function AllProductPage() {
       }
     }
   };
+
+
 
   const renderPagination = () => {
     const { currentPage, limit, totalProducts } = pagination;
