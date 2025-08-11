@@ -195,8 +195,14 @@ function WalletUserDetail() {
                                                 </p>
                                                 {type === "withdraw" && (
                                                     <>
+                                                        <p><strong>Tên người nhận:</strong> {item.receiver_name}</p>
                                                         <p><strong>Ngân hàng:</strong> {item.bank_name}</p>
                                                         <p><strong>Số tài khoản:</strong> {item.bank_account}</p>
+                                                        {item.status === "rejected" && item.cancellation_reason && (
+                                                            <p className="mt-1">
+                                                                <strong>Lý do từ chối:  </strong>{item.cancellation_reason}
+                                                            </p>
+                                                        )}
                                                     </>
                                                 )}
                                                 {type === "refund" && (

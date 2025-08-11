@@ -59,7 +59,7 @@ class WalletsController {
 
   static async requestWithdraw(req, res) {
     try {
-      const { amount, method, bank_account, note, bank_name } = req.body;
+      const { amount, method, bank_account, note, bank_name, receiver_name  } = req.body;
       const userId = req.user.id;
 
       if (!amount || !method || !bank_account || !bank_name) {
@@ -83,12 +83,13 @@ class WalletsController {
         method: "bank",
         bank_account,
         bank_name,
+        receiver_name,
         note: note || 'Yêu cầu rút tiền',
         status: 'pending',
         type: 'withdraw'
       });
 
-      await WalletsController.sendWithdrawEmail(wallet, amount, bank_name, bank_account);
+      await WalletsController.sendWithdrawEmail(wallet, amount, bank_name, bank_account, receiver_name);
 
       res.status(200).json({
         success: true,
@@ -103,7 +104,7 @@ class WalletsController {
     }
   }
 
-  static async sendWithdrawEmail(wallet, amount, bankName, bankAccount) {
+  static async sendWithdrawEmail(wallet, amount, bankName, bankAccount, receiver_name) {
     try {
       const formattedAmount = new Intl.NumberFormat("vi-VN").format(amount);
       const transporter = nodemailer.createTransport({
@@ -121,6 +122,7 @@ class WalletsController {
         html: `
           <p>Chào ${wallet.name || "bạn"},</p>
           <p>Bạn vừa gửi yêu cầu rút <strong>${formattedAmount}₫</strong> về tài khoản ngân hàng.</p>
+          <p><strong>Tên người nhận:</strong> ${receiver_name}</p>
           <p><strong>Ngân hàng:</strong> ${bankName.toUpperCase()}</p>
           <p><strong>Số tài khoản:</strong> ${bankAccount}</p>
           <p><strong>Trạng thái hiện tại:</strong> Đang chờ duyệt</p>
@@ -184,7 +186,6 @@ class WalletsController {
   static async deductFee(req, res) {
     const userId = req.user.id;
     const { orderId, amount } = req.body;
-    console.log("const", orderId, amount);
 
     if (!orderId || !amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Thiếu dữ liệu hoặc amount không hợp lệ' });

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Constants from "../../../../Constants";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { FaTrophy } from "react-icons/fa";
 
 function OrderDetail() {
   const { id } = useParams();
@@ -57,6 +58,8 @@ function OrderDetail() {
   const totalAmount = Array.isArray(orderDetails)
     ? orderDetails.reduce((sum, item) => sum + item.quantity * parseFloat(item.price), 0)
     : 0;
+
+  const isAuctionOrder = Array.isArray(orderDetails) && orderDetails.some(d => d?.auction_id != null);
 
   return (
     <div className="container mx-auto p-4">
@@ -137,6 +140,12 @@ function OrderDetail() {
                     </td>
                     <td className="p-2">
                       {item.variant?.product?.name || "Không có tên sản phẩm"} ({item.variant?.sku})
+                      {item?.auction_id != null && (
+                        <span className="ml-2 inline-flex items-center text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded">
+                          <FaTrophy className="mr-1" />
+                          Đấu giá
+                        </span>
+                      )}
                     </td>
                     <td className="p-2 text-center">{item.quantity}</td>
                     <td className="p-2 text-right">

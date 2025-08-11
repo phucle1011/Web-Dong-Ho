@@ -400,7 +400,7 @@ class WalletsController {
 
   static async updateWithdrawStatus(req, res) {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, cancellation_reason } = req.body;
 
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ error: 'Trạng thái không hợp lệ.' });
@@ -441,11 +441,14 @@ class WalletsController {
 
         await request.update({ status: 'approved' });
       } else if (status === 'rejected') {
-        await request.update({ status: 'rejected' });
-        await WalletsController.sendWithdrawRejectedEmail(user, amount, request.bank_name, request.bank_account);
+        if (!cancellation_reason || !String(cancellation_reason).trim()) {
+          return res.status(400).json({ error: 'Vui lòng chọn/lý do từ chối.' });
+        }
+        await request.update({ status: 'rejected', cancellation_reason });
+        await WalletsController.sendWithdrawRejectedEmail(user, amount, request.bank_name, request.bank_account, cancellation_reason);
       }
 
-      return res.json({ message: `Đã duyệt yêu cầu rút tiền.` });
+      return res.json({ message: status === 'approved' ? 'Đã duyệt yêu cầu rút tiền.' : 'Đã từ chối yêu cầu rút tiền.' });
     } catch (err) {
       console.error("Lỗi xử lý yêu cầu:", err);
       return res.status(500).json({ error: 'Đã xảy ra lỗi.' });
@@ -492,7 +495,7 @@ class WalletsController {
     }
   }
 
-  static async sendWithdrawRejectedEmail(user, amount, bankName, bankAccount) {
+  static async sendWithdrawRejectedEmail(user, amount, bankName, bankAccount, cancellation_reason) {
     try {
       const formattedAmount = new Intl.NumberFormat('vi-VN').format(amount);
 
@@ -513,6 +516,7 @@ class WalletsController {
         <p>Yêu cầu rút tiền <strong>${formattedAmount}₫</strong> của bạn đã bị <span style="color:red;"><strong>TỪ CHỐI</strong></span>.</p>
         <p><strong>Ngân hàng:</strong> ${bankName.toUpperCase()}</p>
         <p><strong>Số tài khoản:</strong> ${bankAccount}</p>
+        <p><strong>Lý do:</strong> ${cancellation_reason}</p>
         <p>Vui lòng kiểm tra lại thông tin hoặc liên hệ với chúng tôi nếu cần hỗ trợ.</p>
         <hr />
         <p style="color:#444;"><em>Nếu có bất kỳ sai sót nào, vui lòng liên hệ chúng tôi để được hỗ trợ xử lý kịp thời:</em></p>

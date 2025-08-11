@@ -114,11 +114,11 @@ function OrderGetAll() {
   const getStatusesForOrder = (currentStatus) => {
     switch (currentStatus) {
       case "pending":
-        return ["pending", "confirmed", "shipping", "delivered", "completed", "cancelled"];
+        return ["pending", "confirmed", "cancelled"];
       case "confirmed":
-        return ["confirmed", "shipping", "delivered", "completed"];
+        return ["confirmed", "shipping", "cancelled"];
       case "shipping":
-        return ["shipping", "delivered", "completed"];
+        return ["shipping", "delivered"];
       case "delivered":
         return ["delivered", "completed"];
       case "completed":

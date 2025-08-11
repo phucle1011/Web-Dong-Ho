@@ -39,6 +39,9 @@ function WashletGetAll() {
     action: null,
   });
 
+  const [rejectModal, setRejectModal] = useState({ isOpen: false, id: null });
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const formatDateLocal = (date) => {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -87,10 +90,11 @@ function WashletGetAll() {
     }
   };
 
-  const handleReject = async (id) => {
+  const handleReject = async (id, reason) => {
     try {
       const res = await axios.put(`${Constants.DOMAIN_API}/admin/wallets/withdraw/${id}`, {
         status: "rejected",
+        cancellation_reason: reason,
       });
       toast.success(res.data.message || "Đã từ chối yêu cầu rút tiền.");
       fetchWallets(currentPage);
@@ -115,8 +119,6 @@ function WashletGetAll() {
 
     if (action === "approve") {
       await handleApprove(id);
-    } else if (action === "reject") {
-      await handleReject(id);
     }
   };
 
@@ -255,7 +257,8 @@ function WashletGetAll() {
                             </button>
 
                             <button
-                              onClick={() => openConfirmModal(item.id, "reject")}
+                              // onClick={() => openConfirmModal(item.id, "reject")}
+                              onClick={() => setRejectModal({ isOpen: true, id: item.id })}
                               className="bg-red-100 text-red-600 p-2 rounded w-8 h-8 inline-flex items-center justify-center"
                               title="Từ chối yêu cầu"
                             >
@@ -313,18 +316,135 @@ function WashletGetAll() {
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false, id: null, action: null })}
         onConfirm={handleConfirmAction}
-        title={confirmModal.action === "approve" ? "Xác nhận duyệt yêu cầu" : "Xác nhận từ chối yêu cầu"}
-        message={
-          confirmModal.action === "approve"
-            ? "Bạn có chắc chắn muốn duyệt yêu cầu rút tiền này?"
-            : "Bạn có chắc chắn muốn từ chối yêu cầu rút tiền này và hoàn tiền về ví?"
-        }
-        confirmText={confirmModal.action === "approve" ? "Duyệt" : "Từ chối"}
-        type={confirmModal.action}
+        title={"Xác nhận duyệt yêu cầu"}
+        message={"Bạn có chắc chắn muốn duyệt yêu cầu rút tiền này?"}
+        confirmText={"Duyệt"}
+        type={"approve"}
       />
+
+      {rejectModal.isOpen && (
+        <RejectReasonModal
+          submitting={rejectSubmitting}
+          onClose={() => {
+            if (rejectSubmitting) return;
+            setRejectModal({ isOpen: false, id: null });
+            setRejectReason("");
+          }}
+          onConfirm={async () => {
+            if (!rejectReason.trim()) {
+              toast.warning("Vui lòng chọn/nhập lý do từ chối.");
+              return;
+            }
+            if (rejectSubmitting) return;
+            try {
+              setRejectSubmitting(true);
+              await handleReject(rejectModal.id, rejectReason.trim());
+              setRejectModal({ isOpen: false, id: null });
+              setRejectReason("");
+            } finally {
+              setRejectSubmitting(false);
+            }
+          }}
+          reason={rejectReason}
+          setReason={setRejectReason}
+        />
+      )}
 
     </div>
   );
 }
 
 export default WashletGetAll;
+
+function RejectReasonModal({ onClose, onConfirm, reason, setReason }) {
+  const presets = [
+    "Thông tin tài khoản không khớp tên người nhận",
+    "Số tài khoản/Ngân hàng không hợp lệ",
+    "Nghi ngờ gian lận",
+    "Khác..."
+  ];
+
+
+  const [selected, setSelected] = React.useState("");
+  const isOther = selected === "Khác...";
+
+  const handleSelectChange = (e) => {
+    const v = e.target.value;
+    setSelected(v);
+    if (v === "Khác...") {
+      setReason("");
+    } else {
+
+      setReason(v);
+    }
+  };
+
+  const canConfirm = (isOther ? reason.trim().length > 0 : selected && selected !== "");
+
+  return (
+    <div className="fixed inset-0 z-[9999]" aria-modal="true" role="dialog">
+
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div
+          className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden relative"
+          onClick={(e) => e.stopPropagation()}
+        >
+
+          <div className="px-5 py-4 border-b flex items-center justify-center relative">
+            <h3 className="text-lg font-semibold text-center flex-1">Chọn lý do từ chối</h3>
+            <button
+              onClick={onClose}
+              aria-label="Đóng"
+              title="Đóng"
+              className="w-10 h-10 text-2xl absolute right-2 top-2 flex items-center justify-center rounded-full hover:text-red-600 text-gray-500"
+            >
+              ×
+            </button>
+
+          </div>
+
+          <div className="p-5 space-y-3">
+            <label className="text-sm font-medium">Chọn lý do</label>
+            <select
+              className="w-full border rounded px-3 py-2"
+              onChange={handleSelectChange}
+              value={selected}
+            >
+              <option value="" disabled>— Chọn lý do —</option>
+              {presets.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            {isOther && (
+              <>
+                <label className="text-sm font-medium">Nhập lý do cụ thể</label>
+                <textarea
+                  placeholder="Nhập lý do từ chối..."
+                  className="w-full border rounded px-3 py-2 min-h-28"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </>
+            )}
+          </div>
+
+          <div className="px-5 py-4 border-t flex gap-2 justify-end">
+            <button className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={onClose}>
+              Hủy
+            </button>
+            <button
+              className={`bg-red-600 hover:bg-red-800 text-white px-4 py-2 rounded-md ${canConfirm}`}
+              onClick={onConfirm}
+              disabled={!canConfirm}
+            >
+              Xác nhận từ chối
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

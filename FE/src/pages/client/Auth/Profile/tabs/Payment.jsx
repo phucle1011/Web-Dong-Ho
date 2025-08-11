@@ -50,6 +50,11 @@ export default function Payment() {
   const [totalWithdraws, setTotalWithdraws] = useState(0);
   const [totalRefunds, setTotalRefunds] = useState(0);
 
+  const [showTerms, setShowTerms] = useState(false);
+
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [receiverName, setReceiverName] = useState("");
+
   const AccordionItem = ({ title, children }) => {
     const [open, setOpen] = useState(false);
     return (
@@ -140,16 +145,18 @@ export default function Payment() {
 
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
-     if (amount > 99_999_999) {
-    return toast.warning("Số tiền không được vượt quá 99.999.999₫");
-  }
-    if (!amount || !selectedBank || !bankAccount) return toast.warning("Vui lòng nhập đầy đủ.");
+
+    if (amount > 99_999_999) {
+      return toast.warning("Số tiền không được vượt quá 99.999.999₫");
+    }
+    if (!amount || !selectedBank || !bankAccount || !receiverName) return toast.warning("Vui lòng nhập đầy đủ.");
     if (amount > balance - pending) return toast.warning(`Không đủ số dư: ${formatCurrency(balance - pending)}`);
     const confirm = await Swal.fire({
       title: "Xác nhận thông tin",
       icon: "warning",
       html: `
         <div style="text-align:left">
+        <p><strong>Tên người nhận:</strong> ${receiverName}</p>
           <p><strong>Số tiền:</strong> ${formatCurrency(amount)}</p>
           <p><strong>Ngân hàng:</strong> ${selectedBank.toUpperCase()}</p>
           <p><strong>Số tài khoản:</strong> ${bankAccount}</p>
@@ -165,12 +172,12 @@ export default function Payment() {
     try {
       setIsSubmitting(true);
       const res = await axios.post(`${Constants.DOMAIN_API}/wallets/transactions`, {
-        amount, method: selectedBank, bank_account: bankAccount, bank_name: selectedBank, note,
+        amount, method: selectedBank, bank_account: bankAccount, bank_name: selectedBank, note, receiver_name: receiverName,
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(res.data.message || "Đã gửi yêu cầu rút.");
-      setWithdrawAmount(""); setSelectedBank(""); setBankAccount(""); setNote("");
+      setWithdrawAmount(""); setSelectedBank(""); setBankAccount(""); setNote(""); setReceiverName("");
       fetchWalletInfo();
       fetchWalletDetails();
     } catch {
@@ -204,7 +211,6 @@ export default function Payment() {
     }
   })();
 
-  // Copy đúng helper từ ProductsTable:
   function getTopBid(bids = []) {
     if (!Array.isArray(bids) || bids.length === 0) return null;
     return bids
@@ -228,7 +234,6 @@ export default function Payment() {
     return { isAuction: true, bidAmount: Number(topBid.bidAmount) };
   }
 
-  // 1) Fetch cart giống ProductsTable
   useEffect(() => {
     const token = localStorage.getItem("token");
     axios
@@ -237,7 +242,6 @@ export default function Payment() {
       .catch(() => {/* lỗi load giỏ hàng */ });
   }, []);
 
-  // 2) Khi cartItems thay đổi, chạy kiểm tra
   useEffect(() => {
     const found = cartItems.some(item => {
       const info = getAuctionInfo(item.variant, meId, item.created_at);
@@ -265,6 +269,17 @@ export default function Payment() {
       <section className="bg-white shadow-lg rounded-xl -mt-4 mx-4 sm:mx-auto max-w-2xl flex justify-center text-center">
         <ActionButton icon={<BiPlusCircle size={22} />} label="Nạp tiền" onClick={() => setShowTopUpInput(prev => !prev)} />
         <ActionButton icon={<BiMoneyWithdraw size={22} />} label="Rút tiền" onClick={() => setShowWithdrawSection(prev => !prev)} />
+
+        <ActionButton
+          icon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M6 4h9l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M9 9h6M9 12h6M9 15h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          }
+          label="Điều khoản - Điều kiện"
+          onClick={() => setShowTerms(true)}
+        />
       </section>
 
       {showTopUpInput && (
@@ -288,6 +303,16 @@ export default function Payment() {
       {showWithdrawSection && (
         <div className="mt-4 max-w-2xl mx-auto px-4">
           <div className="bg-white p-4 rounded-lg shadow space-y-3">
+            <label htmlFor="" className="block form-control">Tên người nhận<span className="text-red-600">*</span></label>
+            <input
+              type="text"
+              placeholder="Tên người nhận"
+              value={typeof receiverName === "string" ? receiverName : ""}
+              onChange={e => setReceiverName(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+            />
+
+            <label htmlFor="" className="block form-control">Số tiền cần rút <span className="text-red-600">*</span></label>
             <input
               type="number"
               value={withdrawAmount}
@@ -295,6 +320,7 @@ export default function Payment() {
               placeholder="Số tiền cần rút"
               className="w-full border rounded px-3 py-2"
             />
+            <label htmlFor="" className="block form-control">Chọn ngân hàng <span className="text-red-600">*</span></label>
             <select
               value={selectedBank}
               onChange={e => setSelectedBank(e.target.value)}
@@ -307,6 +333,7 @@ export default function Payment() {
                 </option>
               ))}
             </select>
+            <label htmlFor="" className="block form-control">Số tài khoản <span className="text-red-600">*</span></label>
             <input
               type="text"
               placeholder="Số tài khoản"
@@ -314,12 +341,29 @@ export default function Payment() {
               onChange={e => setBankAccount(e.target.value)}
               className="w-full border rounded px-3 py-2"
             />
+            <label htmlFor="" className="block form-control">Ghi chú</label>
             <textarea
               placeholder="Ghi chú (không bắt buộc)"
               value={note}
               onChange={e => setNote(e.target.value)}
               className="w-full border rounded px-3 py-2"
             />
+
+            <div className="flex items-center space-x-2 mt-3">
+              <input
+                type="checkbox"
+                id="agreeTerms"
+                checked={agreeTerms}
+                onChange={() => setAgreeTerms(!agreeTerms)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="agreeTerms" className="text-sm">
+                Tôi đồng ý với{" "}
+                <a target="_blank" className="text-blue-600 underline">
+                  Điều khoản & Điều kiện
+                </a>
+              </label>
+            </div>
 
             {hasActiveAuction && (
               <p className="text-red-600 text-sm">
@@ -330,7 +374,7 @@ export default function Payment() {
             <button
               className="w-full rounded px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
               onClick={handleWithdraw}
-              disabled={isSubmitting || hasPendingWithdraw || hasActiveAuction}
+              disabled={isSubmitting || hasPendingWithdraw || hasActiveAuction || !agreeTerms}
             >
               {hasActiveAuction
                 ? "Bạn có đơn đấu giá đang chờ thanh toán nên không thể rút tiền"
@@ -381,7 +425,7 @@ export default function Payment() {
                         }
                       >
                         <div className="text-sm text-gray-700 space-y-2 mt-2">
-                          <p><strong>Ngày tạo:</strong>
+                          <p><strong>Ngày tạo: </strong>
                             {(() => {
                               const date = new Date(item.created_at);
                               const pad = (n) => String(n).padStart(2, '0');
@@ -395,9 +439,15 @@ export default function Payment() {
                             })()} </p>
                           {type === "withdraw" && (
                             <>
+                              <p><strong>Tên người nhận:</strong> {item.receiver_name}</p>
                               <p><strong>Ngân hàng:</strong> {item.bank_name}</p>
                               <p><strong>Số tài khoản:</strong> {item.bank_account}</p>
                               <p><strong>Ghi chú:</strong> {item.note}</p>
+                              {item.status === "rejected" && item.cancellation_reason && (
+                                <p className="mt-1">
+                                  <strong>Lý do từ chối:  </strong>{item.cancellation_reason}
+                                </p>
+                              )}
                             </>
                           )}
                           {type === "refund" && (
@@ -487,6 +537,7 @@ export default function Payment() {
           </div>
         )}
       </div>
+      {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
 
     </div>
   );
@@ -498,5 +549,119 @@ function ActionButton({ icon, label, onClick }) {
       <div className="w-11 h-11 flex items-center justify-center bg-orange-100 rounded-full">{icon}</div>
       <span className="text-xs font-medium">{label}</span>
     </button>
+  );
+}
+
+function TermsModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-[9999]">
+      {/* backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* modal */}
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* header */}
+          <div className="px-6 py-4 border-b flex items-center justify-between">
+            <h2 className="text-lg font-bold">Điều khoản &amp; Điều kiện sử dụng Ví tiền</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-red-700 text-xl leading-none"
+              aria-label="Đóng"
+              title="Đóng"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* body */}
+          <div className="p-6 max-h-[70vh] overflow-y-auto text-sm leading-6 text-gray-800">
+            <p className="mb-4">
+              Bằng việc kích hoạt và sử dụng Ví tiền, bạn xác nhận đã đọc, hiểu và đồng ý bị ràng buộc bởi các điều khoản - điều kiện bên dưới.
+              Tài liệu này có thể được cập nhật theo thời gian; phiên bản mới sẽ thay thế phiên bản cũ kể từ khi công bố.
+            </p>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">1. Ví tiền là số tiền ảo trong tài khoản của bạn, dùng để:</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Nạp tiền vào.</li>
+              <li>Thanh toán khi mua hàng.</li>
+              <li>Rút tiền về ngân hàng.</li>
+              <li>Nhận hoàn tiền khi bạn xác nhận hủy đơn.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">2. Nạp tiền</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Cách nạp: </strong>Chuyển khoản ngân hàng (Stripe).</li>
+              <li><strong>Thời gian xử lý: </strong>Thường cộng tiền ngay.</li>
+              <li><strong>Phí: </strong>Hoàn toàn miễn phí.</li>
+              <li>Nếu giao dịch đã trừ tiền từ ngân hàng chưa cộng vào Ví, vui lòng liên hệ chúng tôi để được hỗ trợ ngay kèm hình ảnh minh chứng; chúng tôi sẽ kiểm tra và xử lý ngay.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">3. Rút tiền</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Điều kiện:</strong> Đảm bảo số dư còn đủ; không có yêu cầu rút tiền nào trước đó đang chờ duyệt và không có đơn hàng đấu giá nào đang chờ thanh toán.</li>
+              <li><strong>Cách rút:</strong> Chuyển khoản trực tiếp về tài khoản ngân hàng bạn đã cung cấp.</li>
+              <li><strong>Thời gian xử lý:</strong> Thường trong giờ làm việc, có thể lâu hơn nếu cần kiểm tra.</li>
+              <li><strong>Phí:</strong> Hoàn toàn miễn phí.</li>
+              <li><strong>Trách nhiệm thông tin:</strong> Người dùng sẽ tự chịu mọi trách nhiệm về tính chính xác của ngân hàng/số tài khoản/tên người nhận do người dùng đã cung cấp.</li>
+              <li>Nếu giao dịch đã trừ tiền vào Ví nhưng bạn chưa nhận được, vui lòng liên hệ chúng tôi để được hỗ trợ ngay kèm hình ảnh minh chứng; chúng tôi sẽ kiểm tra và xử lý ngay.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">4. Hoàn tiền</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li><strong>Khi nào được hoàn tiền:</strong> Khi bạn hủy đơn, sản phẩm lỗi do từ phía nhà cung cấp.</li>
+              <li><strong>Cách hoàn:</strong> Hoàn vào ví của bạn (mặc định).</li>
+              <li><strong>Thời gian xử lý:</strong> Thông thường trong giờ làm việc; có thể lâu hơn nếu cần kiểm tra.</li>
+              <li><strong>Phí:</strong> Hoàn toàn miễn phí.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">5. Trách nhiệm của bạn</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Cung cấp thông tin chính xác (tên người nhận, tên ngân hàng, số tài khoản).</li>
+              <li>Không dùng ví cho mục đích gian lận hoặc bất hợp pháp.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">6. Trách nhiệm của chúng tôi</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Bảo mật thông tin của bạn.</li>
+              <li>Xử lý giao dịch đúng thời gian cam kết.</li>
+              <li>Hỗ trợ khi bạn gặp sự cố.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">7. Lưu ý khác</h3>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Điều khoản có thể thay đổi, hệ thống sẽ cập nhật nếu có bản mới.</li>
+              <li>Nếu xảy ra tranh chấp không xử lý được sẽ giải quyết theo pháp luật Việt Nam.</li>
+            </ul>
+
+            <h3 className="font-semibold text-base mt-4 mb-2">8. Liên hệ</h3>
+            <p>
+              Nếu cần hỗ trợ hoặc có bất kỳ thắc mắc nào, vui lòng liên hệ bộ phận Chăm sóc khách hàng của chúng tôi qua:
+            </p>
+            <ul className="list-disc list-inside mt-2">
+              <li>Email: <a href="mailto:phuc628780@gmail.com" className="text-blue-600 underline">phuc628780@gmail.com</a></li>
+              <li>Điện thoại: <a href="tel:0379169731" className="text-blue-600 underline">0379 169 731</a></li>
+            </ul>
+
+            <p className="text-xs text-gray-500 mt-6">
+              *Tài liệu này mang tính tham khảo và có thể cần điều chỉnh để phù hợp chính sách nội bộ và quy định pháp luật hiện hành.
+            </p>
+          </div>
+
+          {/* footer */}
+          <div className="px-6 py-4 border-t flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Đã hiểu
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
