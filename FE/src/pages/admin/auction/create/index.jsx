@@ -287,6 +287,43 @@ const AuctionCreate = () => {
         const found = (allAttributes || []).find((a) => String(a.id) === String(id));
         return found ? { value: String(found.id), label: found.name } : null;
     };
+const handleVariantImageUpload = async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+
+  setUploadingImg(true);
+  try {
+    const uploaded = await Promise.all(
+      files.map(async (f) => {
+        const { url, public_id } = await uploadToCloudinary(f);
+        return { url, public_id };
+      })
+    );
+    setVariantImages((prev) => [...prev, ...uploaded]);
+    toast.success("Tải ảnh lên thành công!");
+  } catch (err) {
+    console.error(err);
+    toast.error("Upload ảnh thất bại!");
+  } finally {
+    setUploadingImg(false);
+    e.target.value = ""; // reset input
+  }
+};
+
+const removeVariantImage = async (idx) => {
+  const img = variantImages[idx];
+  try {
+    if (img?.public_id) {
+      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+        public_id: img.public_id,
+      });
+    }
+  } catch (e) {
+    console.error("Xoá ảnh Cloudinary lỗi:", e);
+  } finally {
+    setVariantImages((prev) => prev.filter((_, i) => i !== idx));
+  }
+};
 
 
     return (
@@ -613,12 +650,13 @@ const AuctionCreate = () => {
                         Hủy
                     </button>
                     <button
-                        className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
-                        disabled={creatingVariant || uploadingImg}
-                        onClick={submitVariant}
-                    >
-                        {creatingVariant ? "Đang tạo..." : "Tạo biến thể"}
-                    </button>
+  className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+  disabled={creatingVariant || uploadingImg}
+  onClick={submitVariant}
+>
+  {creatingVariant ? "Đang tạo..." : uploadingImg ? "Đang tải ảnh..." : "Tạo biến thể"}
+</button>
+
                 </div>
             </Modal>
         </div>

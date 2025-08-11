@@ -49,6 +49,8 @@ const AddProduct = () => {
 
   const [variants, setVariants] = useState([]);
   const [attributes, setAttributes] = useState([]);
+// gần các useState khác
+const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
   const handleBrandAdded = () => {
     setShowBrandModal(false);
@@ -186,20 +188,22 @@ const AddProduct = () => {
   };
 
   const handleThumbnailChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setThumbnailFile(file);
-      console.log(file);
+  const file = e.target.files[0];
+  if (!file) return;
 
-      try {
-        const url = await uploadToCloudinary(file);
-        setThumbnailUrl(url);
-      } catch (err) {
-        console.error("Upload failed:", err);
-        toast.error(" Upload ảnh thất bại");
-      }
-    }
-  };
+  setIsUploadingThumb(true); // ⬅️ khóa submit
+  try {
+    const res = await uploadToCloudinary(file); // giả định trả { url, public_id }
+    setThumbnailUrl(res);                        // ⬅️ lưu cả object
+    toast.success("Upload ảnh thành công");
+  } catch (err) {
+    console.error("Upload failed:", err);
+    toast.error("Upload ảnh thất bại");
+  } finally {
+    setIsUploadingThumb(false); // ⬅️ mở submit
+  }
+};
+
   const generateSlug = (text) => {
     return text
       .toLowerCase()
@@ -474,13 +478,16 @@ const handleCancel = async () => {
                 Quay lại
               </button>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
-              >
-                {loading ? "Đang thêm..." : "Thêm sản phẩm"}
-              </button>
+<button
+  type="submit"
+  disabled={loading || isUploadingThumb}
+  className={`bg-[#073272] text-white px-6 py-2 rounded transition ${
+    loading || isUploadingThumb ? "opacity-50 cursor-not-allowed" : "hover:bg-[#052354]"
+  }`}
+>
+  {loading ? "Đang thêm..." : isUploadingThumb ? "Đang tải ảnh..." : "Thêm sản phẩm"}
+</button>
+
             </div>
           </div>
 

@@ -40,8 +40,10 @@ const AdminProductDetail = () => {
   const [brandOptions, setBrandOptions] = useState([]);
   const [attrExpanded, setAttrExpanded] = useState({});
   const [deletedImages, setDeletedImages] = useState([]);
-// phía trên cùng component
-const [errors, setErrors] = useState({});
+  // phía trên cùng component
+  const [errors, setErrors] = useState({});
+  // phía trên cùng component (cùng nhóm useState khác)
+  const [isUploadingThumb, setIsUploadingThumb] = useState(false);
 
   const toggleAttr = (variantId) =>
     setAttrExpanded((prev) => ({ ...prev, [variantId]: !prev[variantId] }));
@@ -63,19 +65,19 @@ const [errors, setErrors] = useState({});
       console.error("Lỗi khi lấy biến thể:", error);
     }
   };
-const validate = () => {
-  const v = {};
+  const validate = () => {
+    const v = {};
 
-  // ✅ BẮT những field bạn muốn
-  if (!formData?.name?.trim()) v.name = "Vui lòng nhập tên sản phẩm";
-  if (!formData?.category?.value) v.category = "Vui lòng chọn danh mục";
-  if (!formData?.brand?.value) v.brand = "Vui lòng chọn thương hiệu";
+    // ✅ BẮT những field bạn muốn
+    if (!formData?.name?.trim()) v.name = "Vui lòng nhập tên sản phẩm";
+    if (!formData?.category?.value) v.category = "Vui lòng chọn danh mục";
+    if (!formData?.brand?.value) v.brand = "Vui lòng chọn thương hiệu";
 
-  // ❌ KHÔNG BẮT 4 FIELD SAU: slug, thumbnail, short_description, description
-  // (Không thêm gì ở đây)
+    // ❌ KHÔNG BẮT 4 FIELD SAU: slug, thumbnail, short_description, description
+    // (Không thêm gì ở đây)
 
-  return v;
-};
+    return v;
+  };
   const fetchProduct = async () => {
     try {
       const res = await axios.get(
@@ -110,10 +112,9 @@ const validate = () => {
 
       // Gọi song song danh sách danh mục và thương hiệu
       const [categoriesRes, brandsRes] = await Promise.all([
-  axios.get(`${Constants.DOMAIN_API}/admin/product/get-category`),
-  axios.get(`${Constants.DOMAIN_API}/admin/product/get-brand`),
-]);
-
+        axios.get(`${Constants.DOMAIN_API}/admin/product/get-category`),
+        axios.get(`${Constants.DOMAIN_API}/admin/product/get-brand`),
+      ]);
 
       // Gán options cho Select
       setCategoryOptions(
@@ -181,14 +182,14 @@ const validate = () => {
       }));
     }
   };
-const onChangeCategory = (selected) => {
-  setErrors((p) => ({ ...p, category: undefined }));
-  setFormData((prev) => ({ ...prev, category: selected }));
-};
-const onChangeBrand = (selected) => {
-  setErrors((p) => ({ ...p, brand: undefined }));
-  setFormData((prev) => ({ ...prev, brand: selected }));
-};
+  const onChangeCategory = (selected) => {
+    setErrors((p) => ({ ...p, category: undefined }));
+    setFormData((prev) => ({ ...prev, category: selected }));
+  };
+  const onChangeBrand = (selected) => {
+    setErrors((p) => ({ ...p, brand: undefined }));
+    setFormData((prev) => ({ ...prev, brand: selected }));
+  };
   const productData = {
     ...formData,
     category_id: formData?.category?.value || null,
@@ -196,34 +197,34 @@ const onChangeBrand = (selected) => {
     description: description || "",
   };
 
- const handleSave = async () => {
-  const v = validate();
-  if (Object.keys(v).length) {
-    setErrors(v);
-    toast.error("Vui lòng kiểm tra các trường bắt buộc.");
-    const firstKey = Object.keys(v)[0];
-    const el = document.querySelector(`[data-error="${firstKey}"]`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
+  const handleSave = async () => {
+    const v = validate();
+    if (Object.keys(v).length) {
+      setErrors(v);
+      toast.error("Vui lòng kiểm tra các trường bắt buộc.");
+      const firstKey = Object.keys(v)[0];
+      const el = document.querySelector(`[data-error="${firstKey}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
 
-  try {
-    setSaving(true);
-    await axios.put(`${Constants.DOMAIN_API}/admin/products/${id}`, {
-      ...formData,
-      category_id: formData?.category?.value || null,
-      brand_id: formData?.brand?.value || null,
-      description, // vẫn gửi mô tả nếu bạn đang dùng TinyMCE state 'description'
-    });
-    toast.success("Cập nhật sản phẩm thành công!");
-    navigate("/admin/products/getAll");
-  } catch (error) {
-    console.error("Lỗi khi cập nhật sản phẩm:", error);
-    toast.error("Cập nhật thất bại. Vui lòng thử lại.");
-  } finally {
-    setSaving(false);
-  }
-};
+    try {
+      setSaving(true);
+      await axios.put(`${Constants.DOMAIN_API}/admin/products/${id}`, {
+        ...formData,
+        category_id: formData?.category?.value || null,
+        brand_id: formData?.brand?.value || null,
+        description, // vẫn gửi mô tả nếu bạn đang dùng TinyMCE state 'description'
+      });
+      toast.success("Cập nhật sản phẩm thành công!");
+      navigate("/admin/products/getAll");
+    } catch (error) {
+      console.error("Lỗi khi cập nhật sản phẩm:", error);
+      toast.error("Cập nhật thất bại. Vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const deleteProduct = async () => {
     if (!selectedProduct) return;
 
@@ -254,10 +255,10 @@ const onChangeBrand = (selected) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setIsUploadingThumb(true); // ⬅️ bắt đầu chặn nút Lưu
     try {
       const imageUrl = await uploadToCloudinary(file);
 
-      // Nếu có public_id thì lưu vào deletedImages
       if (imageUrl.public_id) {
         setDeletedImages((prev) => [...prev, imageUrl.public_id]);
       }
@@ -271,8 +272,11 @@ const onChangeBrand = (selected) => {
     } catch (error) {
       console.error("Lỗi khi upload ảnh:", error);
       toast.error("Tải ảnh thất bại!");
+    } finally {
+      setIsUploadingThumb(false); // ⬅️ Cloudinary trả về xong → mở nút Lưu
     }
   };
+
   const deleteImagesOnCloudinary = async () => {
     for (const public_id of deletedImages) {
       try {
@@ -315,17 +319,21 @@ const onChangeBrand = (selected) => {
           <div className="p-4 border rounded shadow bg-white">
             {/* Tên sản phẩm */}
             <div>
-  <label className="font-semibold mb-1 block">Tên sản phẩm:</label>
-  <input
-    type="text"
-    name="name"
-    data-error="name"
-    className={`border rounded p-2 w-full ${errors.name ? "border-red-500" : ""}`}
-    value={formData.name || ""}
-    onChange={handleChange}
-  />
-  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-</div>
+              <label className="font-semibold mb-1 block">Tên sản phẩm:</label>
+              <input
+                type="text"
+                name="name"
+                data-error="name"
+                className={`border rounded p-2 w-full ${
+                  errors.name ? "border-red-500" : ""
+                }`}
+                value={formData.name || ""}
+                onChange={handleChange}
+              />
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+              )}
+            </div>
 
             {/* Gạch ngang */}
             <hr className="my-3" />
@@ -347,55 +355,73 @@ const onChangeBrand = (selected) => {
           <div className="p-4 border rounded shadow bg-white">
             {/* Danh mục */}
             <div style={{ position: "relative", zIndex: 1 }}>
-  <label className="font-semibold mb-1 block">Danh mục:</label>
-  <div data-error="category">
-    <Select
-      options={categoryOptions}
-      value={formData?.category || null}
-      onChange={onChangeCategory}
-      placeholder="Chọn danh mục"
-      isClearable
-      menuPortalTarget={document.body}
-      styles={{
-        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-        control: (base) => ({
-          ...base,
-          borderColor: errors.category ? "#ef4444" : base.borderColor,
-          boxShadow: errors.category ? "0 0 0 1px #ef4444" : base.boxShadow,
-          "&:hover": { borderColor: errors.category ? "#ef4444" : base.borderColor },
-        }),
-      }}
-    />
-  </div>
-  {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
-</div>
+              <label className="font-semibold mb-1 block">Danh mục:</label>
+              <div data-error="category">
+                <Select
+                  options={categoryOptions}
+                  value={formData?.category || null}
+                  onChange={onChangeCategory}
+                  placeholder="Chọn danh mục"
+                  isClearable
+                  menuPortalTarget={document.body}
+                  styles={{
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                    control: (base) => ({
+                      ...base,
+                      borderColor: errors.category
+                        ? "#ef4444"
+                        : base.borderColor,
+                      boxShadow: errors.category
+                        ? "0 0 0 1px #ef4444"
+                        : base.boxShadow,
+                      "&:hover": {
+                        borderColor: errors.category
+                          ? "#ef4444"
+                          : base.borderColor,
+                      },
+                    }),
+                  }}
+                />
+              </div>
+              {errors.category && (
+                <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+              )}
+            </div>
 
             <hr className="my-3" />
 
             {/* Thương hiệu */}
-           <div style={{ position: "relative", zIndex: 1 }}>
-  <label className="font-semibold mb-1 block">Thương hiệu:</label>
-  <div data-error="brand">
-    <Select
-      options={brandOptions}
-      value={formData?.brand || null}
-      onChange={onChangeBrand}
-      placeholder="Chọn thương hiệu"
-      isClearable
-      menuPortalTarget={document.body}
-      styles={{
-        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-        control: (base) => ({
-          ...base,
-          borderColor: errors.brand ? "#ef4444" : base.borderColor,
-          boxShadow: errors.brand ? "0 0 0 1px #ef4444" : base.boxShadow,
-          "&:hover": { borderColor: errors.brand ? "#ef4444" : base.borderColor },
-        }),
-      }}
-    />
-  </div>
-  {errors.brand && <p className="text-red-500 text-sm mt-1">{errors.brand}</p>}
-</div>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <label className="font-semibold mb-1 block">Thương hiệu:</label>
+              <div data-error="brand">
+                <Select
+                  options={brandOptions}
+                  value={formData?.brand || null}
+                  onChange={onChangeBrand}
+                  placeholder="Chọn thương hiệu"
+                  isClearable
+                  menuPortalTarget={document.body}
+                  styles={{
+                    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                    control: (base) => ({
+                      ...base,
+                      borderColor: errors.brand ? "#ef4444" : base.borderColor,
+                      boxShadow: errors.brand
+                        ? "0 0 0 1px #ef4444"
+                        : base.boxShadow,
+                      "&:hover": {
+                        borderColor: errors.brand
+                          ? "#ef4444"
+                          : base.borderColor,
+                      },
+                    }),
+                  }}
+                />
+              </div>
+              {errors.brand && (
+                <p className="text-red-500 text-sm mt-1">{errors.brand}</p>
+              )}
+            </div>
           </div>
 
           {/* Card 4: Trạng thái */}
@@ -531,11 +557,12 @@ const onChangeBrand = (selected) => {
         <div className="flex gap-2 mt-4">
           <button
             onClick={handleSave}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            disabled={saving}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={saving || isUploadingThumb} // ⬅️ thêm isUploadingThumb
           >
             {saving ? "Đang lưu..." : "Lưu"}
           </button>
+
           <Link
             to="/admin/products/getAll"
             className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600"
@@ -576,7 +603,10 @@ const onChangeBrand = (selected) => {
 
                   return (
                     <tr key={variant.id} className="border-b">
-                      <td className="p-2 border text-center">{index + 1}</td>
+                      <td className="p-2 border text-center">
+                        {(currentPage - 1) * limit + index + 1}
+                      </td>
+
                       <td className="p-2 border">{variant.sku}</td>
 
                       {/* 🔹 HIỂN THỊ LOẠI */}
@@ -599,9 +629,7 @@ const onChangeBrand = (selected) => {
                       {/* 🔹 (Tuỳ chọn) Thể hiện stock rõ hơn khi là đấu giá */}
                       <td className="p-2 border">
                         {isAuction ? (
-                          <span>
-                            {variant.stock}
-                          </span>
+                          <span>{variant.stock}</span>
                         ) : (
                           variant.stock ?? "Chưa có"
                         )}

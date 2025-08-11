@@ -21,6 +21,8 @@ const EditVariantForm = () => {
     images: [],
     is_auction_only: 0,
   });
+// phía trên cùng component, cùng nhóm useState khác
+const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   // ---- NEW: errors state ----
   const [errors, setErrors] = useState({});
@@ -114,30 +116,35 @@ initialAuctionRef.current = Number(data.is_auction_only) || 0;
   };
 
   const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
 
-    try {
-      const uploadedImages = [];
-
-      for (const file of files) {
+  setIsUploadingImages(true); // ⬅️ chặn submit trong lúc upload
+  try {
+    // Upload song song, gọn hơn
+    const uploaded = await Promise.all(
+      files.map(async (file) => {
         const { url, public_id } = await uploadToCloudinary(file);
-        uploadedImages.push({ id: null, url: { url, public_id } });
-      }
+        return { id: null, url: { url, public_id } };
+      })
+    );
 
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...uploadedImages],
-      }));
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...uploaded],
+    }));
 
-      toast.success("Tải ảnh lên thành công!");
-    } catch (error) {
-      console.error("Upload thất bại:", error);
-      toast.error("Lỗi khi upload ảnh lên Cloudinary!");
-    }
+    toast.success("Tải ảnh lên thành công!");
+  } catch (error) {
+    console.error("Upload thất bại:", error);
+    toast.error("Lỗi khi upload ảnh lên Cloudinary!");
+  } finally {
+    setIsUploadingImages(false); // ⬅️ mở submit khi xong
+  }
 
-    e.target.value = ""; // reset input
-  };
+  e.target.value = ""; // reset input
+};
+
 
   const handleDeleteAttribute = async (id) => {
     const newAttributes = [...formData.attributes];
@@ -564,11 +571,15 @@ initialAuctionRef.current = Number(data.is_auction_only) || 0;
       {/* Nút submit */}
       <div className="flex flex-col md:flex-row items-start md:items-center gap-2 justify-start">
         <button
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
-        >
-          Cập nhật
-        </button>
+  type="submit"
+  disabled={isUploadingImages}
+  className={`bg-blue-600 text-white py-2 px-4 rounded text-sm ${
+    isUploadingImages ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+  }`}
+>
+  {isUploadingImages ? "Đang tải ảnh..." : "Cập nhật"}
+</button>
+
         <button
           type="button"
           onClick={handleBack}
