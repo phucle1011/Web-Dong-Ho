@@ -246,7 +246,7 @@ export default function AuctionRoom() {
                 },
                 ...prev,
             ]);
-            setCooldownUntil(new Date(Date.now() + 10_000));
+            // setCooldownUntil(new Date(Date.now() + 10_000));
         };
 
         s.on("auction:status", onStatus);
@@ -484,7 +484,7 @@ export default function AuctionRoom() {
                 { bidAmount: bidValue },
                 { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
             );
-            setCooldownUntil(new Date(Date.now() + 10_000));
+            // setCooldownUntil(new Date(Date.now() + 10_000));
             setExitLocked(true);
             setStepCount(1);
         } catch (err) {
@@ -699,7 +699,7 @@ export default function AuctionRoom() {
             ...prev,
         ]);
 
-        setCooldownUntil(new Date(Date.now() + 10_000));
+        // setCooldownUntil(new Date(Date.now() + 10_000));
     };
 
     useEffect(() => {

@@ -76,6 +76,7 @@ const AuctionCreate = () => {
             const options = data.length
                 ? data.map((p) => ({
                     value: p.id,
+                    price: Number(p.price) || 0,
                     label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN")}₫`,
                 }))
                 : [
@@ -138,21 +139,19 @@ const AuctionCreate = () => {
 
     const validateField = (name, value) => {
         let error = "";
-
         if (!value) {
             error = "Trường này không được bỏ trống";
-        } else if ((name === "start_price" || name === "priceStep") && parseCurrency(value) <= 0) {
+        } else if (name === "start_price" && parseCurrency(value) <= 0) {
             error = "Giá trị phải lớn hơn 0";
         } else if (name === "end_time" && form.start_time && value <= form.start_time) {
             error = "Thời gian kết thúc phải sau thời gian bắt đầu";
         }
-
         setErrors(prev => ({ ...prev, [name]: error }));
         return !error;
     };
 
     const handleChange = (key, value) => {
-        if (key === "start_price" || key === "priceStep") {
+        if (key === "start_price") {
             const formattedValue = formatCurrency(value);
             setForm({ ...form, [key]: formattedValue });
             validateField(key, formattedValue);
@@ -160,6 +159,23 @@ const AuctionCreate = () => {
             setForm({ ...form, [key]: value });
             validateField(key, value);
         }
+
+    };
+
+    const handleSelectVariant = (selected) => {
+        const variantId = selected?.value ?? null;
+        const price = Number(selected?.price || 0);
+
+        const roundTo = 10000;
+        const step = Math.ceil((price * 0.1) / roundTo) * roundTo;
+
+        setForm((prev) => ({
+            ...prev,
+            product_variant_id: variantId,
+            priceStep: step > 0 ? formatCurrency(step) : "",
+        }));
+
+        setErrors((prev) => ({ ...prev, product_variant_id: "", priceStep: "" }));
     };
 
     const formatToMySQL = (date) => {
@@ -168,19 +184,26 @@ const AuctionCreate = () => {
 
     const validateForm = () => {
         let isValid = true;
-        const newErrors = { ...errors };
+        let newErrors = { ...errors };
 
         if (!form.product_variant_id) {
             newErrors.product_variant_id = "Vui lòng chọn sản phẩm";
             isValid = false;
         }
-        if (!form.priceStep) {
-            newErrors.priceStep = "Vui lòng nhập bước giá";
+
+        const selectedOpt = products.find((o) => o.value === form.product_variant_id);
+        const roundTo = 10000;
+        const computedStep = selectedOpt
+            ? Math.ceil((Number(selectedOpt.price || 0) * 0.1) / roundTo) * roundTo
+            : 0;
+
+        if (!computedStep || computedStep <= 0) {
+            newErrors.priceStep = "Không tính được bước giá (10% giá sản phẩm).";
             isValid = false;
-        } else if (parseCurrency(form.priceStep) <= 0) {
-            newErrors.priceStep = "Bước giá phải lớn hơn 0";
-            isValid = false;
+        } else {
+            newErrors.priceStep = "";
         }
+
         if (!form.start_time) {
             newErrors.start_time = "Vui lòng chọn thời gian bắt đầu";
             isValid = false;
@@ -204,10 +227,13 @@ const AuctionCreate = () => {
             return;
         }
 
+        const selectedOpt = products.find((o) => o.value === form.product_variant_id);
+        const computedStep = selectedOpt ? Math.floor(Number(selectedOpt.price || 0) * 0.1) : 0;
+
         const payload = {
             ...form,
             start_price: parseCurrency(form.start_price),
-            priceStep: parseCurrency(form.priceStep),
+            priceStep: computedStep,
             start_time: formatToMySQL(form.start_time),
             end_time: formatToMySQL(form.end_time),
         };
@@ -287,43 +313,43 @@ const AuctionCreate = () => {
         const found = (allAttributes || []).find((a) => String(a.id) === String(id));
         return found ? { value: String(found.id), label: found.name } : null;
     };
-const handleVariantImageUpload = async (e) => {
-  const files = Array.from(e.target.files || []);
-  if (!files.length) return;
+    const handleVariantImageUpload = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
 
-  setUploadingImg(true);
-  try {
-    const uploaded = await Promise.all(
-      files.map(async (f) => {
-        const { url, public_id } = await uploadToCloudinary(f);
-        return { url, public_id };
-      })
-    );
-    setVariantImages((prev) => [...prev, ...uploaded]);
-    toast.success("Tải ảnh lên thành công!");
-  } catch (err) {
-    console.error(err);
-    toast.error("Upload ảnh thất bại!");
-  } finally {
-    setUploadingImg(false);
-    e.target.value = ""; // reset input
-  }
-};
+        setUploadingImg(true);
+        try {
+            const uploaded = await Promise.all(
+                files.map(async (f) => {
+                    const { url, public_id } = await uploadToCloudinary(f);
+                    return { url, public_id };
+                })
+            );
+            setVariantImages((prev) => [...prev, ...uploaded]);
+            toast.success("Tải ảnh lên thành công!");
+        } catch (err) {
+            console.error(err);
+            toast.error("Upload ảnh thất bại!");
+        } finally {
+            setUploadingImg(false);
+            e.target.value = ""; // reset input
+        }
+    };
 
-const removeVariantImage = async (idx) => {
-  const img = variantImages[idx];
-  try {
-    if (img?.public_id) {
-      await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
-        public_id: img.public_id,
-      });
-    }
-  } catch (e) {
-    console.error("Xoá ảnh Cloudinary lỗi:", e);
-  } finally {
-    setVariantImages((prev) => prev.filter((_, i) => i !== idx));
-  }
-};
+    const removeVariantImage = async (idx) => {
+        const img = variantImages[idx];
+        try {
+            if (img?.public_id) {
+                await axios.post(`${Constants.DOMAIN_API}/admin/products/imagesClauding`, {
+                    public_id: img.public_id,
+                });
+            }
+        } catch (e) {
+            console.error("Xoá ảnh Cloudinary lỗi:", e);
+        } finally {
+            setVariantImages((prev) => prev.filter((_, i) => i !== idx));
+        }
+    };
 
 
     return (
@@ -357,9 +383,7 @@ const removeVariantImage = async (idx) => {
                                 products.find(o => o.value === form.product_variant_id)
                                 || (products.length === 1 && products[0].isDisabled ? products[0] : null)
                             }
-                            onChange={(selected) =>
-                                handleChange("product_variant_id", selected?.value ?? null)
-                            }
+                            onChange={handleSelectVariant}
                             isOptionDisabled={(opt) => !!opt.isDisabled}
                             isDisabled={products.length === 1 && products[0].isDisabled}
                             placeholder="Chọn sản phẩm"
@@ -382,12 +406,14 @@ const removeVariantImage = async (idx) => {
                             <div className="relative">
                                 <input
                                     type="text"
-                                    className={`form-control w-full px-3 py-2 border rounded pl-8 ${errors.priceStep ? "border-red-500" : ""}`}
-                                    placeholder="Nhập bước giá"
+                                    className={`form-control w-full px-3 py-2 border rounded ${errors.priceStep ? "border-red-500" : ""}`}
+                                    placeholder="Tự động = 10% giá sản phẩm"
                                     value={form.priceStep}
-                                    onChange={(e) => handleChange("priceStep", e.target.value)}
-                                    onBlur={(e) => validateField("priceStep", e.target.value)}
+                                    readOnly
+                                    disabled
+                                    title="Bước giá được tính tự động = 10% giá sản phẩm"
                                 />
+
                             </div>
                             {errors.priceStep && (
                                 <p className="text-red-500 text-sm mt-1">{errors.priceStep}</p>
@@ -650,12 +676,12 @@ const removeVariantImage = async (idx) => {
                         Hủy
                     </button>
                     <button
-  className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
-  disabled={creatingVariant || uploadingImg}
-  onClick={submitVariant}
->
-  {creatingVariant ? "Đang tạo..." : uploadingImg ? "Đang tải ảnh..." : "Tạo biến thể"}
-</button>
+                        className="bg-[#073272] text-white px-6 py-2 rounded hover:bg-[#052354] transition"
+                        disabled={creatingVariant || uploadingImg}
+                        onClick={submitVariant}
+                    >
+                        {creatingVariant ? "Đang tạo..." : uploadingImg ? "Đang tải ảnh..." : "Tạo biến thể"}
+                    </button>
 
                 </div>
             </Modal>

@@ -1,6 +1,6 @@
 import PageTitle from "../Helpers/PageTitle";
 import Layout from "../Partials/LayoutHomeThree";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { decodeToken } from "../Helpers/jwtDecode";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -57,6 +57,7 @@ export default function CheckoutPage() {
   const [balance, setBalance] = useState(null);
   const savedVoucher = location.state?.selectedVoucher;
 
+
   const getAuctionInfo = (variant, userId, createdAt) => {
     const auctions = variant?.auctions || [];
     const won = auctions.filter(a =>
@@ -78,6 +79,13 @@ export default function CheckoutPage() {
       bidAmount: Number(topBid.bidAmount)
     };
   };
+
+    const isAuctionOrder = useMemo(() => {
+    return checkoutItems.some(item => {
+      const info = getAuctionInfo(item.variant, user?.id, item.created_at);
+      return info.isAuction || !!item.auction_id;
+    });
+  }, [checkoutItems, user?.id]);
 
   useEffect(() => {
     console.log("location", location.state);
@@ -316,7 +324,8 @@ export default function CheckoutPage() {
             </select>
           </div>
           <div class="form-check mb-3 flex items-center">
-            <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${address?.is_default === 1 ? "checked" : ""}>
+           
+          <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${(!address && allAddresses.length === 0) || address?.is_default === 1 ? "checked" : ""}>
             <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
           </div>
         </form>
@@ -484,28 +493,36 @@ export default function CheckoutPage() {
 
   const handleAddAddress = async (addressData) => {
     try {
-      const hasDefault = allAddresses.some(addr => addr.is_default === 1);
+      if (allAddresses.length === 0) {
+        addressData.is_default = 1;
+      } else {
+        const hasDefault = allAddresses.some(addr => addr.is_default === 1);
 
-      if (hasDefault && addressData.is_default === 1) {
-        const result = await Swal.fire({
-          title: "Đã có địa chỉ mặc định",
-          text: "Bạn muốn thay thế địa chỉ mặc định hiện tại bằng địa chỉ mới này?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonText: "Có, thay thế",
-          cancelButtonText: "Không",
-        });
+        if (hasDefault && addressData.is_default === 1) {
+          const result = await Swal.fire({
+            title: "Đã có địa chỉ mặc định",
+            text: "Bạn muốn thay thế địa chỉ mặc định hiện tại bằng địa chỉ mới này?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Có, thay thế",
+            cancelButtonText: "Không",
+          });
 
-        if (!result.isConfirmed) {
-          toast.info("Bạn đã hủy thao tác thêm địa chỉ mặc định mới.");
-          return;
+          if (!result.isConfirmed) {
+            toast.info("Bạn đã hủy thao tác thêm địa chỉ mặc định mới.");
+            return;
+          }
         }
       }
 
       const res = await axios.post(`${Constants.DOMAIN_API}/admin/user/${id}/addresses`, addressData);
 
+      // if (addressData.is_default === 1) {
+      //   setDefaultAddress(res.data);
+      // }
+
       if (addressData.is_default === 1) {
-        setDefaultAddress(res.data);
+        setDefaultAddress(res.data?.data || res.data);
       }
 
       fetchAllAddresses();
@@ -846,6 +863,11 @@ export default function CheckoutPage() {
         return;
       }
 
+      if (isAuctionOrder && selectedPaymentMethod === "COD") {
+        toast.error("Đơn hàng đấu giá không hỗ trợ COD. Vui lòng chọn MoMo hoặc VNPay.");
+        return;
+      }
+
       const name = user?.name?.trim();
       if (!name) {
         toast.error("Vui lòng nhập họ và tên");
@@ -886,12 +908,12 @@ export default function CheckoutPage() {
         const qty = Number(item.quantity ?? 0);
         const lineTotal = unitPrice * qty;
 
-        return unitPrice < 0 || lineTotal < 0; 
+        return unitPrice < 0 || lineTotal < 0;
       });
 
       if (hasNegativeItem) {
         toast.error("Có sản phẩm có giá không hợp lệ (nhỏ hơn 0). Vui lòng kiểm tra lại giỏ hàng.");
-        return; 
+        return;
       }
 
       if (Number(finalData.shippingFee ?? 0) < 0) {
@@ -1543,6 +1565,11 @@ export default function CheckoutPage() {
 
                   <div className="shipping mt-[30px]">
                     <ul className="flex flex-col space-y-1">
+                      {isAuctionOrder && (
+                        <div className="mb-2 text-sm text-orange-600">
+                          Vì đây là sản phẩm đấu giá nên chỉ hỗ trợ thanh toán MoMo hoặc VNPay.
+                        </div>
+                      )}
                       <li>
                         <div className="flex space-x-2.5 items-center mb-5">
                           <div className="input-radio">
@@ -1572,20 +1599,22 @@ export default function CheckoutPage() {
                           </label>
                         </div>
                       </li>
-                      <li>
-                        <div className="flex space-x-2.5 items-center mb-5">
-                          <div className="input-radio">
-                            <input
-                              type="radio"
-                              name="payment_method"
-                              value="COD"
-                            />
+                      {!isAuctionOrder && (
+                        <li>
+                          <div className="flex space-x-2.5 items-center mb-5">
+                            <div className="input-radio">
+                              <input
+                                type="radio"
+                                name="payment_method"
+                                value="COD"
+                              />
+                            </div>
+                            <label htmlFor="cod" className="text-[18px] text-normal text-qblack">
+                              Thanh toán khi nhận hàng
+                            </label>
                           </div>
-                          <label htmlFor="cod" className="text-[18px] text-normal text-qblack">
-                            Thanh toán khi nhận hàng
-                          </label>
-                        </div>
-                      </li>
+                        </li>
+                      )}
                     </ul>
                   </div>
                   <button

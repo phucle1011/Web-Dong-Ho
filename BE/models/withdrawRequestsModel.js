@@ -23,6 +23,10 @@ const WithdrawRequestsModel = connection.define('withdraw_requests', {
         type: DataTypes.TEXT,
         allowNull: false
     },
+    receiver_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
     status: {
         type: DataTypes.ENUM('pending', 'approved', 'rejected'),
         allowNull: false
@@ -43,7 +47,11 @@ const WithdrawRequestsModel = connection.define('withdraw_requests', {
     order_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
-    }
+    },
+    cancellation_reason: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
 }, {
     tableName: 'withdraw_requests',
     timestamps: true,

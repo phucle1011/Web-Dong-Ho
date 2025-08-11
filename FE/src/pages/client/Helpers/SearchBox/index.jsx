@@ -228,7 +228,7 @@ export default function SearchBox({ className, onSearch }) {
             <div className="absolute left-0 mt-1 p-3 bg-white border rounded shadow z-50 w-[360px] max-w-[92vw]">
               {/* Thuộc tính */}
               <div className="mb-3">
-                <div className="text-xs font-medium mb-1">Thuộc tính</div>
+                <div className="text-xs font-small mb-1">Thuộc tính</div>
                 <Select
                   classNamePrefix="attr-select"
                   placeholder="Chọn tên thuộc tính…"

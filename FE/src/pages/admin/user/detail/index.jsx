@@ -227,7 +227,8 @@ function UserDetail() {
             </select>
           </div>
           <div class="form-check mb-3 flex items-center">
-            <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${address?.is_default === 1 ? "checked" : ""}>
+           
+            <input type="checkbox" class="form-check-input mr-2" id="swal-is_default" ${(!address && addresses.length === 0) || address?.is_default === 1 ? "checked" : ""}>
             <label class="form-check-label font-semibold" for="swal-is_default">Đặt làm địa chỉ mặc định</label>
           </div>
         </form>
@@ -298,7 +299,17 @@ function UserDetail() {
 
             if (districtId) {
               wardSelect.disabled = false;
-              const wards = await fetchWards(districtId);
+              // const wards = await fetchWards(districtId);
+              // wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
+              // wList.forEach((w) => {
+              //   const option = document.createElement("option");
+              //   option.value = w.WardCode;
+              //   option.text = w.WardName;
+              //   if (w.WardName === address.ward) option.selected = true;
+              //   wardSelect.appendChild(option);
+              // });
+
+              const wList = await fetchWards(districtId);
               wardSelect.innerHTML = '<option value="">Chọn xã/phường</option>';
               wList.forEach((w) => {
                 const option = document.createElement("option");
@@ -307,6 +318,7 @@ function UserDetail() {
                 if (w.WardName === address.ward) option.selected = true;
                 wardSelect.appendChild(option);
               });
+
             }
           }
           updateFullAddress();
@@ -382,7 +394,28 @@ function UserDetail() {
   };
 
   const handleAddAddress = async (addressData) => {
-    if (addressData.is_default === 1) {
+    if (addresses.length === 0) {
+      addressData.is_default = 1;
+    }
+
+    // if (addressData.is_default === 1) {
+    //   const hasDefault = addresses.some((addr) => addr.is_default === 1);
+    //   if (hasDefault) {
+    //     const confirmResult = await Swal.fire({
+    //       title: "Đã có địa chỉ mặc định",
+    //       text: "Bạn có muốn thay đổi địa chỉ mặc định không?",
+    //       icon: "warning",
+    //       showCancelButton: true,
+    //       confirmButtonText: "Có, thay đổi",
+    //       cancelButtonText: "Không",
+    //     });
+    //     if (!confirmResult.isConfirmed) {
+    //       return;
+    //     }
+    //   }
+    // }
+
+    if (addresses.length > 0 && addressData.is_default === 1) {
       const hasDefault = addresses.some((addr) => addr.is_default === 1);
       if (hasDefault) {
         const confirmResult = await Swal.fire({
@@ -393,9 +426,7 @@ function UserDetail() {
           confirmButtonText: "Có, thay đổi",
           cancelButtonText: "Không",
         });
-        if (!confirmResult.isConfirmed) {
-          return;
-        }
+        if (!confirmResult.isConfirmed) return;
       }
     }
 

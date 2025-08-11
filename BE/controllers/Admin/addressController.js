@@ -95,7 +95,17 @@ class AddressController {
         return res.status(400).json({ success: false, message: 'user_id là bắt buộc' });
       }
 
-      if (is_default) {
+      // if (is_default) {
+      //   await AddressModel.update({ is_default: false }, { where: { user_id } });
+      // }
+
+      const addressCount = await AddressModel.count({ where: { user_id } });
+
+      if (addressCount === 0) {
+        req.body.is_default = true;
+      }
+
+      if (req.body.is_default) {
         await AddressModel.update({ is_default: false }, { where: { user_id } });
       }
 
@@ -104,7 +114,7 @@ class AddressController {
         city,
         district,
         ward,
-        is_default: !!is_default, 
+        is_default: !!is_default,
         user_id
       });
 
@@ -138,7 +148,7 @@ class AddressController {
           {
             where: {
               user_id: address.user_id,
-              id: { [Op.ne]: id } 
+              id: { [Op.ne]: id }
             }
           }
         );
