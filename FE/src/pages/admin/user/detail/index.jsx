@@ -89,20 +89,20 @@ function UserDetail() {
 
   const getReasonOptionsForStatus = (status) => {
     switch (status) {
-      case "inactive":
-        return (
-          <>
-            <option value="">-- Chọn lý do --</option>
-            <option value="Không hoạt động trong thời gian dài">
-              Không hoạt động trong thời gian dài
-            </option>
-            <option value="Yêu cầu tạm dừng của người dùng">
-              Yêu cầu tạm dừng của người dùng
-            </option>
-            <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
-            <option value="Khác">Khác</option>
-          </>
-        );
+      // case "inactive":
+      //   return (
+      //     <>
+      //       <option value="">-- Chọn lý do --</option>
+      //       <option value="Không hoạt động trong thời gian dài">
+      //         Không hoạt động trong thời gian dài
+      //       </option>
+      //       <option value="Yêu cầu tạm dừng của người dùng">
+      //         Yêu cầu tạm dừng của người dùng
+      //       </option>
+      //       <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
+      //       <option value="Khác">Khác</option>
+      //     </>
+      //   );
       case "locked":
         return (
           <>
@@ -139,8 +139,8 @@ function UserDetail() {
     switch (englishStatus) {
       case "active":
         return "Hoạt động";
-      case "inactive":
-        return "Ngưng hoạt động";
+      // case "inactive":
+      //   return "Ngưng hoạt động";
       case "locked":
         return "Bị khóa";
       default:
@@ -552,7 +552,7 @@ function UserDetail() {
                   className="text-gray-800 border border-gray-200 rounded px-3 py-1.5 bg-gray-50 w-full focus:outline-none"
                 >
                   <option value="active">Hoạt động</option>
-                  <option value="inactive">Ngưng hoạt động</option>
+                  {/* <option value="inactive">Ngưng hoạt động</option> */}
                   <option value="locked">Bị khóa</option>
                 </select>
               </div>

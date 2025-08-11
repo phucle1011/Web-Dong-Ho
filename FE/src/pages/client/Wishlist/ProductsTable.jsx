@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FaTrashAlt } from "react-icons/fa";
 import axios from "axios";
 import Constants from "../../../Constants";
@@ -15,12 +15,11 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
   }
 
   const [selectedItems, setSelectedItems] = useState([]);
-  // state để quản lý hàng nào đang mở rộng
   const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
     onSelectItems(selectedItems);
-  }, [selectedItems]);
+  }, [selectedItems, onSelectItems]);
 
   useEffect(() => {
     const validSelected = selectedItems.filter((id) =>
@@ -68,9 +67,8 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
     }
   };
 
-  // Bật/tắt show all attributes cho 1 row
   const toggleRow = (rowId) => {
-    setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
+    setExpandedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
   };
 
   return (
@@ -106,12 +104,11 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                 const price = item.variant?.price
                   ? parseFloat(item.variant.price).toLocaleString("vi-VN") + "₫"
                   : "N/A";
-
                 const avs = item.variant?.attributeValues || [];
                 const isExpanded = expandedRows[item.id];
-                // Hiển thị 3 đầu hoặc tất cả
-                const displayAVs = isExpanded ? avs : avs.slice(0, 3);
-
+                const displayAVs = useMemo(() => {
+                  return isExpanded ? avs : avs.slice(0, 3);
+                }, [avs, isExpanded]);
                 const imageUrl =
                   item.variant?.images?.[0]?.image_url ||
                   product.thumbnail ||
@@ -147,15 +144,16 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                         {displayAVs.map((av) => {
                           const name = av.attribute?.name || "Thuộc tính";
                           const val = av.value;
-                          const isColor = /^#([0-9A-F]{3}){1,2}$/i.test(val);
+                          const isColor = /^#([0-9A-F]{3}){1,2}$/i.test(val) || CSS.supports("color", val);
                           return (
                             <li key={av.id} className="flex items-center">
                               <strong className="mr-1">{name}:</strong>
                               {isColor ? (
                                 <>
                                   <span
-                                    className="inline-block w-4 h-4 rounded-full border mr-2"
+                                    className="inline-block w-5 h-5 rounded border mr-2 transition-transform hover:scale-110"
                                     style={{ backgroundColor: val }}
+                                    title={`Mã màu: ${val}`}
                                   />
                                   <span>{val}</span>
                                 </>
@@ -169,9 +167,23 @@ export default function ProductsTable({ products = [], onWishlistChange, onSelec
                       {avs.length > 3 && (
                         <button
                           onClick={() => toggleRow(item.id)}
-                          className="mt-1 text-blue-600 hover:underline text-sm"
+                          className="mt-1 flex items-center text-blue-600 hover:text-blue-800 transition text-sm"
                         >
-                          {isExpanded ? "Thu gọn" : `Xem thêm (${avs.length - 3})`}
+                          {isExpanded ? (
+                            <>
+                              <span className="mr-1">Thu gọn</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              <span className="mr-1">Xem thêm ({avs.length - 3})</span>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </>
+                          )}
                         </button>
                       )}
                     </td>

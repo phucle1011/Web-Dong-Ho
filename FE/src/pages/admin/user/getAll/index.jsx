@@ -20,7 +20,7 @@ function UserList() {
     const [reasonOption, setReasonOption] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [userCounts, setUserCounts] = useState({ all: 0, active: 0, inactive: 0, locked: 0 });
+    const [userCounts, setUserCounts] = useState({ all: 0, active: 0, locked: 0 });
     const limit = 10;
     const [processingReason, setProcessingReason] = useState(false);
 
@@ -122,7 +122,7 @@ function UserList() {
     const getVietnameseStatus = (englishStatus) => {
         switch (englishStatus) {
             case "active": return "Hoạt động";
-            case "inactive": return "Ngưng hoạt động";
+            // case "inactive": return "Ngưng hoạt động";
             case "locked": return "Bị khóa";
             default: return englishStatus;
         }
@@ -130,16 +130,16 @@ function UserList() {
 
     const getReasonOptionsForStatus = (status) => {
         switch (status) {
-            case "inactive":
-                return (
-                    <>
-                        <option value="">-- Chọn lý do --</option>
-                        <option value="Không hoạt động trong thời gian dài">Không hoạt động trong thời gian dài</option>
-                        <option value="Yêu cầu tạm dừng của người dùng">Yêu cầu tạm dừng của người dùng</option>
-                        <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
-                        <option value="Khác">Khác</option>
-                    </>
-                );
+            // case "inactive":
+            //     return (
+            //         <>
+            //             <option value="">-- Chọn lý do --</option>
+            //             <option value="Không hoạt động trong thời gian dài">Không hoạt động trong thời gian dài</option>
+            //             <option value="Yêu cầu tạm dừng của người dùng">Yêu cầu tạm dừng của người dùng</option>
+            //             <option value="Lý do nội bộ hệ thống">Lý do nội bộ hệ thống</option>
+            //             <option value="Khác">Khác</option>
+            //         </>
+            //     );
             case "locked":
                 return (
                     <>
@@ -180,7 +180,7 @@ function UserList() {
                     {[
                         { key: "", label: "Tất cả", color: "bg-gray-300", textColor: "text-gray-700", countKey: "all" },
                         { key: "active", label: "Hoạt động", color: "bg-green-300", textColor: "text-green-800", countKey: "active" },
-                        { key: "inactive", label: "Ngưng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
+                        // { key: "inactive", label: "Ngưng hoạt động", color: "bg-red-300", textColor: "text-red-800", countKey: "inactive" },
                         { key: "locked", label: "Bị khóa", color: "bg-purple-300", textColor: "text-purple-800", countKey: "locked" },
                     ].map(({ key, label, color, textColor, countKey }) => (
                         <button
@@ -265,7 +265,7 @@ function UserList() {
                                                     className="border rounded px-2 py-1"
                                                 >
                                                     <option value="active">Hoạt động</option>
-                                                    <option value="inactive">Ngưng hoạt động</option>
+                                                    {/* <option value="inactive">Ngưng hoạt động</option> */}
                                                     <option value="locked">Bị khóa</option>
                                                 </select>
                                             </td>

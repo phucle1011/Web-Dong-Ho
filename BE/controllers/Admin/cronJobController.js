@@ -62,47 +62,47 @@ async function updatePromotionStatuses() {
     }
 }
 
-async function deactivateStaleUsers() {
-    try {
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+// async function deactivateStaleUsers() {
+//     try {
+//         const threeMonthsAgo = new Date();
+//         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-        const usersToDeactivate = await UserModel.findAll({
-            where: {
-                status: 'active',
-                last_active_at: { [Op.lte]: threeMonthsAgo }
-            }
-        });
+//         const usersToDeactivate = await UserModel.findAll({
+//             where: {
+//                 status: 'active',
+//                 last_active_at: { [Op.lte]: threeMonthsAgo }
+//             }
+//         });
 
-        if (usersToDeactivate.length === 0) return;
+//         if (usersToDeactivate.length === 0) return;
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
+//         const transporter = nodemailer.createTransport({
+//             service: 'gmail',
+//             auth: {
+//                 user: process.env.EMAIL_USER,
+//                 pass: process.env.EMAIL_PASS
+//             }
+//         });
 
-        for (const user of usersToDeactivate) {
-            user.status = 'inactive';
-            user.lockout_reason = 'Không hoạt động trong thời gian dài';
-            await user.save();
+//         for (const user of usersToDeactivate) {
+//             user.status = 'inactive';
+//             user.lockout_reason = 'Không hoạt động trong thời gian dài';
+//             await user.save();
 
-            const html = getEmailTemplate(user.name, 'inactive', user.lockout_reason);
-            await transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: user.email,
-                subject: 'Tài khoản của bạn đã bị vô hiệu hóa',
-                html
-            });
-        }
+//             const html = getEmailTemplate(user.name, 'inactive', user.lockout_reason);
+//             await transporter.sendMail({
+//                 from: process.env.EMAIL_USER,
+//                 to: user.email,
+//                 subject: 'Tài khoản của bạn đã bị vô hiệu hóa',
+//                 html
+//             });
+//         }
 
-        console.log(`Deactivated ${usersToDeactivate.length} stale users.`);
-    } catch (err) {
-        console.error('Lỗi khi deactive stale users:', err);
-    }
-}
+//         console.log(`Deactivated ${usersToDeactivate.length} stale users.`);
+//     } catch (err) {
+//         console.error('Lỗi khi deactive stale users:', err);
+//     }
+// }
 
 
 async function updateNotificationStatuses() {
@@ -136,9 +136,9 @@ cron.schedule('59 23 * * *', () => {
     updatePromotionStatuses();
 });
 
-cron.schedule('0 0 * * *', deactivateStaleUsers);
+// cron.schedule('0 0 * * *', deactivateStaleUsers);
 cron.schedule('1 0 * * *', updateNotificationStatuses); 
 
 
-module.exports = { updatePromotionStatuses, notifyWishlistPromotions, deactivateStaleUsers,  updateNotificationStatuses
+module.exports = { updatePromotionStatuses, notifyWishlistPromotions,  updateNotificationStatuses
  };

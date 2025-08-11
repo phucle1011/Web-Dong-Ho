@@ -1,9 +1,10 @@
+// FE/src/pages/admin/wishlist/getAll/index.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import Constants from "../../../../Constants.jsx";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
-import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaSearch, FaEye } from 'react-icons/fa';
+import { FaAngleDoubleLeft, FaChevronLeft, FaChevronRight, FaAngleDoubleRight, FaEye } from 'react-icons/fa';
 import Chart from 'react-apexcharts';
 
 function WishlistList() {
@@ -20,67 +21,162 @@ function WishlistList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const limit = 10;
 
+  // Giữ lại mỗi icon menu (download)
+  const chartToolbarMenuOnly = useMemo(() => ({
+    toolbar: {
+      show: true,
+      tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
+      export: {
+        csv: { filename: 'wishlist' },
+        svg: { filename: 'wishlist' },
+        png: { filename: 'wishlist' },
+      },
+    },
+  }), []);
+
+  // Rút gọn giữa, giữ đuôi (ví dụ: "Đồng hồ O…GL-D")
+  const middleEllipsis = (s, max = 18, tail = 6) => {
+    const str = String(s ?? "");
+    if (str.length <= max) return str;
+    const headLen = Math.max(1, max - tail - 1);
+    return `${str.slice(0, headLen)}…${str.slice(-tail)}`;
+  };
+
   const sanitizedMost = useMemo(
-    () => mostFavoritedVariants.filter(v => v?.variant?.product?.name),
+    () => mostFavoritedVariants.filter(v => v?.variant?.product?.name?.trim()),
     [mostFavoritedVariants]
   );
   const sanitizedRecent = useMemo(
-    () => recentlyFavoritedVariants.filter(v => v?.variant?.product?.name),
+    () => recentlyFavoritedVariants.filter(v => v?.variant?.product?.name?.trim()),
     [recentlyFavoritedVariants]
   );
 
+  // -------- PIE --------
   const pieSeries = useMemo(
     () => sanitizedMost.map(item => Number(item.favoriteCount || 0)),
     [sanitizedMost]
   );
+
+  // Tổng % luôn = 100.0
+  const correctedPercents = useMemo(() => {
+    const total = pieSeries.reduce((a, b) => a + (+b || 0), 0);
+    if (!total) return [];
+    const raw = pieSeries.map(c => (c * 100) / total);
+    const rounded = raw.map(p => Math.round(p * 10) / 10);
+    const sum = +rounded.reduce((a, b) => a + b, 0).toFixed(1);
+    const diff = +(100 - sum).toFixed(1);
+    if (Math.abs(diff) >= 0.1) {
+      const idx = raw.indexOf(Math.max(...raw));
+      rounded[idx] = +(rounded[idx] + diff).toFixed(1);
+    }
+    return rounded;
+  }, [pieSeries]);
+
   const pieOptions = useMemo(() => ({
+    chart: { ...chartToolbarMenuOnly },
     title: { text: 'Top sản phẩm được yêu thích nhiều nhất', align: 'center' },
     labels: sanitizedMost.map(item => item.variant.product.name),
     legend: { position: 'bottom' },
+    dataLabels: {
+      enabled: true,
+      formatter: (_val, opts) => `${(correctedPercents[opts.seriesIndex] ?? 0).toFixed(1)}%`
+    },
+    tooltip: {
+      y: {
+        formatter: (_val, { seriesIndex }) => {
+          const count = pieSeries[seriesIndex] || 0;
+          const pct = correctedPercents[seriesIndex] || 0;
+          return `${count} lượt (${pct.toFixed(1)}%)`;
+        }
+      }
+    },
     responsive: [{ breakpoint: 480, options: { chart: { width: 300 }, legend: { position: 'bottom' } } }]
-  }), [sanitizedMost]);
+  }), [sanitizedMost, pieSeries, correctedPercents, chartToolbarMenuOnly]);
 
-  const barData = useMemo(() => {
-    const map = new Map();
-    sanitizedRecent.forEach(item => {
-      const name = item.variant.product.name;
-      map.set(name, (map.get(name) || 0) + 1);
-    });
-    return {
-      categories: Array.from(map.keys()),
-      series: [{ name: 'Số lượt', data: Array.from(map.values()) }]
-    };
-  }, [sanitizedRecent]);
+  // -------- BAR (gần đây) --------
+  const categoriesRecent = useMemo(
+    () => sanitizedRecent.map(v => (v?.variant?.product?.name || '').trim() || '(Không tên)'),
+    [sanitizedRecent]
+  );
+
+  const barData = useMemo(() => ({
+    categories: categoriesRecent,
+    series: [{ name: 'Số lượt', data: sanitizedRecent.map(v => Number(v.favoriteCount || 0)) }]
+  }), [categoriesRecent, sanitizedRecent]);
 
   const barSeries = barData.series;
-  const barOptions = useMemo(() => ({
-    chart: { type: 'bar', height: 350 },
-    title: { text: 'Sản phẩm được yêu thích gần đây', align: 'center' },
-    plotOptions: { bar: { borderRadius: 4 } },
-    xaxis: { categories: barData.categories },
-    dataLabels: { enabled: false }
-  }), [barData]);
 
-  useEffect(() => {
-    fetchGroupedWishlist(currentPage);
-  }, [currentPage, appliedSearchTerm]);
-
-  useEffect(() => {
-    fetchStatistics();
-  }, []);
-
-  const groupWishlistData = (data) => {
-    const grouped = {};
-    data.forEach(item => {
-      const userId = item.user?.id;
-      if (userId) {
-        if (!grouped[userId]) grouped[userId] = { user: item.user, wishlistItems: [] };
-        grouped[userId].wishlistItems.push(item);
-      }
-    });
-    return Object.values(grouped);
+  // Tính yMax đẹp (1/2/5 * 10^n) + 10% headroom
+  const niceCeil = (n) => {
+    if (n <= 0) return 5;
+    const x = n * 1.1; // headroom
+    const pow = Math.pow(10, Math.floor(Math.log10(x)));
+    const norm = x / pow;
+    let nice = 1;
+    if (norm <= 1) nice = 1;
+    else if (norm <= 2) nice = 2;
+    else if (norm <= 5) nice = 5;
+    else nice = 10;
+    return nice * pow;
   };
 
+  const rawMax = useMemo(() => {
+    const arr = (barSeries?.[0]?.data || []).map(Number);
+    return arr.length ? Math.max(...arr) : 0;
+  }, [barSeries]);
+
+  const yMax = useMemo(() => {
+    if (rawMax <= 10) return Math.max(5, Math.ceil(rawMax)); // nhỏ thì để bước 1
+    return niceCeil(rawMax);
+  }, [rawMax]);
+
+  const tickAmount = useMemo(() => {
+    // nhỏ (<=10): 0..yMax (bước 1). Lớn: 6 tick để đỡ rối
+    return yMax <= 10 ? yMax + 1 : 6;
+  }, [yMax]);
+
+  const barOptions = useMemo(() => ({
+    chart: { type: 'bar', height: 350, ...chartToolbarMenuOnly },
+    title: { text: 'Sản phẩm được yêu thích gần đây', align: 'center' },
+    plotOptions: { bar: { borderRadius: 4 } },
+    xaxis: {
+      categories: barData.categories,
+      tickPlacement: 'on',
+      labels: {
+        show: true, rotate: 0, trim: true,
+        hideOverlappingLabels: false, showDuplicates: true,
+        formatter: (val) => middleEllipsis(val, 18, 6)
+      }
+    },
+    tooltip: {
+      x: { formatter: (_v, { dataPointIndex }) => categoriesRecent[dataPointIndex] || '(Không tên)' },
+      y: {
+        formatter: (val) => new Intl.NumberFormat('vi-VN').format(val) + ' lượt'
+      }
+    },
+    dataLabels: { enabled: false },
+    yaxis: {
+      min: 0,
+      max: yMax,
+      tickAmount,
+      forceNiceScale: true,
+      labels: {
+        formatter: (val) => {
+          // ≥ 1000: rút gọn 1,2 N | còn lại: số nguyên có phân cách
+          if (yMax >= 1000) {
+            return new Intl.NumberFormat('vi-VN', { notation: 'compact', compactDisplay: 'short' }).format(val);
+          }
+          return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(val);
+        }
+      }
+    }
+  }), [barData, categoriesRecent, chartToolbarMenuOnly, yMax, tickAmount]);
+
+  // ---------- Effects ----------
+  useEffect(() => { fetchGroupedWishlist(currentPage); }, [currentPage, appliedSearchTerm]);
+  useEffect(() => { fetchStatistics(); }, []);
+
+  // ---------- API ----------
   const fetchGroupedWishlist = async (page) => {
     setLoading(true);
     try {
@@ -90,7 +186,7 @@ function WishlistList() {
       const params = { page, limit, ...(appliedSearchTerm.trim() && { searchTerm: appliedSearchTerm.trim() }) };
       const res = await axios.get(url, { params });
       if (res.data.status === 200) {
-        setGroupedWishlistItems(groupWishlistData(res.data.data));
+        setGroupedWishlistItems(res.data.data);
         setTotalPages(res.data.totalPages || 1);
         setSearchError('');
       } else {
@@ -98,8 +194,7 @@ function WishlistList() {
         setTotalPages(1);
         setSearchError('Không tìm thấy danh sách yêu thích nào.');
       }
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách yêu thích:', error);
+    } catch {
       toast.error('Lỗi khi tải danh sách yêu thích');
     } finally { setLoading(false); }
   };
@@ -108,23 +203,22 @@ function WishlistList() {
     try {
       const mostRes = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist/most-favorited?limit=5`);
       if (mostRes.data.status === 200) setMostFavoritedVariants(mostRes.data.data);
-      const recentRes = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist/recently-favorited?limit=5`);
+      const recentRes = await axios.get(`${Constants.DOMAIN_API}/admin/wishlist/recently-favorited?days=30&limit=5`);
       if (recentRes.data.status === 200) setRecentlyFavoritedVariants(recentRes.data.data);
     } catch (error) {
-      console.error('Lỗi khi lấy thống kê:', error);
-      toast.error('Lỗi khi tải thống kê');
+      toast.error(`Lỗi khi tải thống kê: ${error?.response?.data?.error || error.message}`);
     }
   };
 
-  const handleSearchChange = (e) => setSearchTerm(e.target.value);
+  // ---------- Helpers ----------
   const handleSearchSubmit = () => { setCurrentPage(1); setAppliedSearchTerm(searchTerm.trim()); };
-  const handleKeyDown = e => { if (e.key === 'Enter') handleSearchSubmit(); };
   const handlePageChange = (page) => setCurrentPage(page);
-  const formatCurrency = (price) => price ? parseFloat(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '';
-
+  const formatCurrency = (price) =>
+    price ? parseFloat(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : '';
   const openModal = (items) => { setModalItems(items); setIsModalOpen(true); };
   const closeModal = () => { setIsModalOpen(false); setModalItems([]); };
 
+  // Render
   return (
     <div className="container mx-auto p-2">
       <div className="bg-white p-4 shadow rounded-md">
@@ -144,7 +238,8 @@ function WishlistList() {
             type="text"
             placeholder="Tìm kiếm tên người dùng..."
             value={searchTerm}
-            onChange={handleSearchChange}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
             className="flex-grow border border-gray-300 rounded py-2 px-4 text-gray-700 leading-tight focus:ring-2 focus:ring-blue-500"
           />
           <button onClick={handleSearchSubmit} className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-1.5 rounded">
@@ -172,20 +267,23 @@ function WishlistList() {
               ) : groupedWishlistItems.length > 0 ? (
                 groupedWishlistItems.map((grp, idx) => (
                   <tr key={grp.user.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2 border">
-                      {(currentPage - 1) * limit + idx + 1}
-                    </td>
+                    <td className="p-2 border">{(currentPage - 1) * limit + idx + 1}</td>
                     <td className="p-2 border font-medium w-[180px] whitespace-nowrap overflow-hidden text-ellipsis">
                       {grp.user.name}
                     </td>
-
                     <td className="p-2 border">
                       <div className="grid grid-cols-4 gap-1 p-1">
                         {grp.wishlistItems.slice(0, 4).map(item => {
                           const prod = item.variant?.product;
                           return (
-                            <div key={item.id} className="border p-1 rounded-md text-center max-w-[120]">
-                              {prod?.thumbnail && <img src={prod.thumbnail.startsWith('http') ? prod.thumbnail : `${Constants.DOMAIN_API}/Uploads/${prod.thumbnail}`} alt={prod?.name} className="w-10 h-10 object-cover rounded mx-auto" />}
+                            <div key={item.id} className="border p-1 rounded-md text-center max-w-[120px]">
+                              {prod?.thumbnail && (
+                                <img
+                                  src={prod.thumbnail.startsWith('http') ? prod.thumbnail : `${Constants.DOMAIN_API}/Uploads/${prod.thumbnail}`}
+                                  alt={prod?.name}
+                                  className="w-10 h-10 object-cover rounded mx-auto"
+                                />
+                              )}
                               <div className="text-sm font-medium truncate w-full">{prod?.name}</div>
                               <div className="text-xs text-gray-600">{formatCurrency(item.variant?.price)}</div>
                             </div>
@@ -199,8 +297,7 @@ function WishlistList() {
                       </div>
                     </td>
                     <td className="p-2 border text-center">
-                      <Link to={`/admin/wishlist/detail/${grp.user.id}`}
-                        className="bg-blue-500 text-white p-2 rounded inline-flex justify-center">
+                      <Link to={`/admin/wishlist/detail/${grp.user.id}`} className="bg-blue-500 text-white p-2 rounded inline-flex justify-center">
                         <FaEye size={16} />
                       </Link>
                     </td>
@@ -215,28 +312,11 @@ function WishlistList() {
 
         <div className="flex justify-center mt-4 items-center">
           <div className="flex items-center space-x-1">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(1)}
-              className="px-2 py-1 border rounded disabled:opacity-50"
-            >
-              <FaAngleDoubleLeft />
-            </button>
-            <button
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-              className="px-2 py-1 border rounded disabled:opacity-50"
-            >
-              <FaChevronLeft />
-            </button>
+            <button disabled={currentPage === 1} onClick={() => handlePageChange(1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleLeft /></button>
+            <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronLeft /></button>
             {currentPage > 2 && (
               <>
-                <button
-                  onClick={() => handlePageChange(1)}
-                  className="px-3 py-1 border rounded"
-                >
-                  1
-                </button>
+                <button onClick={() => handlePageChange(1)} className="px-3 py-1 border rounded">1</button>
                 {currentPage > 3 && <span className="px-2">...</span>}
               </>
             )}
@@ -247,10 +327,7 @@ function WishlistList() {
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 border rounded ${currentPage === page
-                      ? "bg-blue-500 text-white"
-                      : "bg-blue-100 text-black hover:bg-blue-200"
-                      }`}
+                    className={`px-3 py-1 border rounded ${currentPage === page ? "bg-blue-500 text-white" : "bg-blue-100 text-black hover:bg-blue-200"}`}
                   >
                     {page}
                   </button>
@@ -261,28 +338,11 @@ function WishlistList() {
             {currentPage < totalPages - 1 && (
               <>
                 {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-                <button
-                  onClick={() => handlePageChange(totalPages)}
-                  className="px-3 py-1 border rounded"
-                >
-                  {totalPages}
-                </button>
+                <button onClick={() => handlePageChange(totalPages)} className="px-3 py-1 border rounded">{totalPages}</button>
               </>
             )}
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
-              className="px-2 py-1 border rounded disabled:opacity-50"
-            >
-              <FaChevronRight />
-            </button>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => handlePageChange(totalPages)}
-              className="px-2 py-1 border rounded disabled:opacity-50"
-            >
-              <FaAngleDoubleRight />
-            </button>
+            <button disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="px-2 py-1 border rounded disabled:opacity-50"><FaChevronRight /></button>
+            <button disabled={currentPage === totalPages} onClick={() => handlePageChange(totalPages)} className="px-2 py-1 border rounded disabled:opacity-50"><FaAngleDoubleRight /></button>
           </div>
         </div>
       </div>
@@ -290,14 +350,7 @@ function WishlistList() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-11/12 md:w-3/4 max-w-3xl p-6 relative max-h-[80vh] overflow-y-auto">
-            {/* Nút đóng */}
-            <button
-              onClick={closeModal}
-              className="absolute top-3 right-3 text-gray-700 hover:text-black text-xl font-bold"
-            >
-              ✕
-            </button>
-
+            <button onClick={closeModal} className="absolute top-3 right-3 text-gray-700 hover:text-black text-xl font-bold">✕</button>
             <h3 className="text-lg font-semibold mb-4">Danh sách yêu thích</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {modalItems.map(item => {

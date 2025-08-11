@@ -50,7 +50,7 @@ class UserController {
                 offset: offset
             });
 
-            const allStatuses = ['active', 'inactive', 'locked'];
+            const allStatuses = ['active', 'locked'];
             const counts = await Promise.all(
                 allStatuses.map(s => UserModel.count({ where: { status: s } }))
             );
@@ -58,8 +58,8 @@ class UserController {
             const countsObject = {
                 all: totalAll,
                 active: counts[0],
-                inactive: counts[1],
-                locked: counts[2]    // đúng là phần tử thứ ba của mảng
+                // inactive: counts[1],
+                locked: counts[1]    // đúng là phần tử thứ ba của mảng
             };
 
 
@@ -135,7 +135,7 @@ class UserController {
                 });
             }
 
-            if (!['active', 'inactive', 'locked'].includes(status)) {
+            if (!['active', 'locked'].includes(status)) {
                 return res.status(400).json({ message: "Trạng thái không hợp lệ." });
             }
 
@@ -157,7 +157,7 @@ class UserController {
             await sendEmail(user.email, "Thông báo thay đổi trạng thái tài khoản", htmlContent);
 
             // build lại counts để FE có thể lấy luôn mà không cần fetch lại
-            const allStatuses = ['active', 'inactive', 'locked'];
+            const allStatuses = ['active', 'locked'];
             const counts = await Promise.all(
                 allStatuses.map(s => UserModel.count({ where: { status: s } }))
             );
@@ -165,8 +165,8 @@ class UserController {
             const countsObject = {
                 all: totalAll,
                 active: counts[0],
-                inactive: counts[1],
-                locked: counts[2]
+                // inactive: counts[1],
+                locked: counts[1]
             };
 
             res.status(200).json({
@@ -199,7 +199,7 @@ class UserController {
                 ]
             };
 
-            if (status && ['active', 'inactive', 'locked'].includes(status)) {
+            if (status && ['active', 'locked'].includes(status)) {
                 whereClause.status = status;
             }
 
@@ -224,7 +224,7 @@ class UserController {
             const allCounts = await Promise.all([
                 UserModel.count(),
                 UserModel.count({ where: { status: 'active' } }),
-                UserModel.count({ where: { status: 'inactive' } }),
+                // UserModel.count({ where: { status: 'inactive' } }),
                 UserModel.count({ where: { status: 'locked' } })
             ]);
 
@@ -237,8 +237,8 @@ class UserController {
                 counts: {
                     all: allCounts[0],
                     active: status === 'active' ? count : allCounts[1],
-                    inactive: status === 'inactive' ? count : allCounts[2],
-                    locked: status === 'locked' ? count : allCounts[3]
+                    // inactive: status === 'inactive' ? count : allCounts[2],
+                    locked: status === 'locked' ? count : allCounts[2]
                 }
             });
 

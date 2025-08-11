@@ -47,7 +47,7 @@ export default function AllProductPage() {
   const brandId = location.state?.brandId;
   const categoryId = location.state?.categoryId;
 
-  const searchParams = new URLSearchParams(location.search);
+   const searchParams = new URLSearchParams(location.search);
   const keyword = searchParams.get("keyword") || "";
   const searchBrandIds = searchParams.get("brand_ids") || "";
   const searchAttrVals = searchParams.get("attribute_values") || "";
@@ -112,7 +112,7 @@ export default function AllProductPage() {
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
- useEffect(() => {
+  useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
@@ -128,14 +128,49 @@ export default function AllProductPage() {
           selectedBrandIds.length > 0 ||
           volume[0] !== 0 ||
           volume[1] !== 1000000000;
-         
+
+
+        // NEW: Nhánh tìm kiếm theo từ khóa / thuộc tính nếu có query trên URL
+        const hasSearchQuery =
+          (keyword && keyword.trim() !== "") ||
+          (searchAttrVals && searchAttrVals.trim() !== "") ||
+          (searchAttrIds && searchAttrIds.trim() !== "");
+
+        if (hasSearchQuery) {
+          const res = await axios.get(
+            `${Constants.DOMAIN_API}/search/products`,
+            {
+              params: {
+                keyword: keyword || undefined,
+                attribute_values: searchAttrVals || undefined,
+                attribute_ids: searchAttrIds || undefined,
+                page: pagination.currentPage,
+                limit: pagination.limit,
+              },
+              headers: { "Cache-Control": "no-cache" },
+            }
+          );
+
+          setProducts(Array.isArray(res.data.data) ? res.data.data : []);
+          setPagination((prev) => ({
+            ...prev,
+            totalProducts:
+              res.data.pagination?.totalItems ??
+              res.data.pagination?.totalProducts ??
+              (Array.isArray(res.data.data) ? res.data.data.length : 0),
+          }));
+          setError(null);
+          return; // dừng để không rơi xuống nhánh /products
+        }
+
+
         // 👉 Nếu có brandId từ location và chưa lọc gì khác, ưu tiên gọi riêng
         if (brandId && !isFiltering) {
           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
             params: { brand_id: brandId },
             headers: { "Cache-Control": "no-cache" },
           });
-          
+
 
           setProducts(res.data.data || []);
           setPagination((prev) => ({
@@ -145,12 +180,12 @@ export default function AllProductPage() {
           setError(null);
           return; // 🛑 dừng tại đây để không gọi thêm lần nữa
         }
-         if (categoryId && !isFiltering) {
+        if (categoryId && !isFiltering) {
           const res = await axios.get(`${Constants.DOMAIN_API}/products`, {
             params: { category_id: categoryId },
             headers: { "Cache-Control": "no-cache" },
           });
-          
+
 
           setProducts(res.data.data || []);
           setPagination((prev) => ({
@@ -208,7 +243,10 @@ export default function AllProductPage() {
     brandFilters,
     volume,
     brandId,
-    brandList,location.state
+    brandList, location.state,
+    keyword,
+    searchAttrIds,
+    searchAttrVals,
   ]);
 
 
@@ -264,11 +302,10 @@ export default function AllProductPage() {
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${
-                    pageNum === currentPage
-                      ? "bg-blue-500 text-white"
-                      : "bg-white text-gray-700 hover:bg-blue-50"
-                  }`}
+                  className={`px-4 py-1.5 border border-gray-300 rounded-md transition-colors ${pageNum === currentPage
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-blue-50"
+                    }`}
                   aria-label={`Trang ${pageNum}`}
                 >
                   {pageNum}

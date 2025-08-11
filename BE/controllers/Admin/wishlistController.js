@@ -9,47 +9,49 @@ const { Op, fn, col } = require('sequelize');
 
 
 class WishlistController {
-
     static async getAllWishlists(req, res) {
         try {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
             const offset = (page - 1) * limit;
 
-            const wishlists = await WishlistModel.findAndCountAll({
-                limit: limit,
-                offset: offset,
-                order: [['id', 'DESC']],
+            const { count, rows: users } = await UserModel.findAndCountAll({
                 include: [
                     {
-                        model: ProductVariantsModel,
-                        as: 'variant',
-                        attributes: ['id', 'price'],
+                        model: WishlistModel,
+                        as: 'wishlists',
+                        required: true,
+                        paranoid: false,
                         include: [
                             {
-                                model: ProductModel,
-                                as: 'product',
-                                attributes: ['id', 'name', 'slug', 'thumbnail'],
-                            },
-                        ],
-                    },
-                    {
-                        model: UserModel,
-                        as: 'user',
-                        attributes: ['id', 'name', 'email'],
-                    },
+                                model: ProductVariantsModel,
+                                as: 'variant',
+                                attributes: ['id', 'price', 'sku', 'stock'],
+                                include: [{ model: ProductModel, as: 'product', attributes: ['id', 'name', 'slug', 'thumbnail'] }]
+                            }
+                        ]
+                    }
                 ],
+                distinct: true,
+                subQuery: false,                 // ✅
+                order: [['id', 'DESC']],
+                limit, offset
             });
+
+            const grouped = users.map(u => ({
+                user: { id: u.id, name: u.name, email: u.email },
+                wishlistItems: (u.wishlists || [])
+            }));
 
             res.status(200).json({
                 status: 200,
-                message: "Lấy danh sách wishlist thành công",
-                data: wishlists.rows,
-                totalPages: Math.ceil(wishlists.count / limit),
-                currentPage: page,
+                message: "Lấy danh sách wishlist theo người dùng thành công",
+                data: grouped,
+                totalPages: Math.ceil(count / limit),
+                currentPage: page
             });
         } catch (error) {
-            console.error("Lỗi khi lấy toàn bộ wishlist:", error);
+            console.error("Lỗi khi lấy wishlist theo user:", error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -340,48 +342,111 @@ class WishlistController {
         }
     }
 
+    // BE/controllers/Admin/wishlistController.js
     static async getRecentlyFavoritedVariants(req, res) {
         try {
-            const limit = parseInt(req.query.limit) || 5;
+            const days = parseInt(req.query.days, 10) || 30;
+            const limit = parseInt(req.query.limit, 10) || 5;
+
+            const since = new Date();
+            since.setDate(since.getDate() - days);
+
             const variants = await WishlistModel.findAll({
-                paranoid: false, // nếu đã bật soft delete để giữ lịch sử
-                limit,
-                order: [['created_at', 'DESC']],
+                paranoid: false,
+                where: { created_at: { [Op.gte]: since } },
+                attributes: [
+                    'product_variant_id',
+                    [fn('COUNT', col('product_variant_id')), 'favoriteCount'],
+                    [fn('MAX', col('created_at')), 'lastFavoritedAt'],
+                ],
                 include: [
                     {
                         model: ProductVariantsModel,
                         as: 'variant',
+                        required: true,
                         attributes: ['id', 'sku', 'price'],
-                        required: true, // ép INNER JOIN
                         include: [
                             {
                                 model: ProductModel,
                                 as: 'product',
+                                required: true,
                                 attributes: ['id', 'name', 'thumbnail'],
-                                required: true, // ép INNER JOIN
                             },
                         ],
                     },
-                    {
-                        model: UserModel,
-                        as: 'user',
-                        attributes: ['id', 'name'],
-                    },
                 ],
+                group: [
+                    'product_variant_id',
+                    'variant.id', 'variant.sku', 'variant.price',
+                    'variant->product.id', 'variant->product.name', 'variant->product.thumbnail'
+                ],
+                order: [
+                    [fn('COUNT', col('product_variant_id')), 'DESC'],
+                    [fn('MAX', col('created_at')), 'DESC']
+                ],
+                limit,
                 raw: true,
                 nest: true,
             });
 
-            res.status(200).json({
+            return res.status(200).json({
                 status: 200,
-                message: 'Lấy danh sách sản phẩm biến thể được yêu thích gần đây thành công',
+                message: 'Lấy top sản phẩm được yêu thích gần đây thành công',
                 data: variants,
             });
-        } catch (error) {
-            console.error("Lỗi khi lấy sản phẩm yêu thích gần đây:", error);
-            res.status(500).json({ error: error.message });
+        } catch (_) {
+            // Fallback im lặng: gom theo variant rồi hydrate thông tin variant/product
+            try {
+                const days = parseInt(req.query.days, 10) || 30;
+                const limit = parseInt(req.query.limit, 10) || 5;
+                const since = new Date();
+                since.setDate(since.getDate() - days);
+
+                const rows = await WishlistModel.findAll({
+                    paranoid: false,
+                    where: { created_at: { [Op.gte]: since } },
+                    attributes: [
+                        'product_variant_id',
+                        [fn('COUNT', col('product_variant_id')), 'favoriteCount']
+                    ],
+                    group: ['product_variant_id'],
+                    order: [[fn('COUNT', col('product_variant_id')), 'DESC']],
+                    limit,
+                    raw: true,
+                });
+
+                const ids = rows.map(r => r.product_variant_id).filter(Boolean);
+                const metas = ids.length ? await ProductVariantsModel.findAll({
+                    where: { id: ids },
+                    attributes: ['id', 'sku', 'price'],
+                    include: [{
+                        model: ProductModel,
+                        as: 'product',
+                        attributes: ['id', 'name', 'thumbnail'],
+                        required: true
+                    }],
+                    raw: true,
+                    nest: true,
+                }) : [];
+
+                const map = new Map(metas.map(m => [m.id, m]));
+                const data = rows.map(r => ({
+                    product_variant_id: r.product_variant_id,
+                    favoriteCount: Number(r.favoriteCount || 0),
+                    variant: map.get(r.product_variant_id) || null
+                }));
+
+                return res.status(200).json({
+                    status: 200,
+                    message: 'Lấy top sản phẩm được yêu thích gần đây (fallback) thành công',
+                    data
+                });
+            } catch {
+                return res.status(500).json({ error: 'Internal error' });
+            }
         }
     }
+
 
 }
 
