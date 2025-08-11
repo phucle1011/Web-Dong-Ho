@@ -138,7 +138,7 @@ export default function AllProductPage() {
 
         if (hasSearchQuery) {
           const res = await axios.get(
-            `${Constants.DOMAIN_API}/search/products`,
+            `${Constants.DOMAIN_API}/products/search`,
             {
               params: {
                 keyword: keyword || undefined,

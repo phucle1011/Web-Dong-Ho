@@ -11,6 +11,12 @@ const PromoProd = require('../../models/promotionProductsModel');
 const Promotion = require('../../models/promotionsModel');
 const ProductModel = require('../../models/productsModel');
 
+const toUrl = (u, req) => {
+  if (!u) return u;
+  if (/^https?:\/\//i.test(u)) return u; // đã là absolute
+  const base = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  return `${base}/${String(u).replace(/^\/+/, '')}`;
+};
 class SearchController {
   static async searchProducts(req, res) {
     try {
@@ -55,7 +61,14 @@ class SearchController {
             ...tokens.map(t => ({ description: { [Op.like]: `%${t}%` } })),
           ];
         }
-        const prods = await Product.findAll({ where: prodWhere, attributes: ['id'], raw: true });
+        const prods = await Product.findAll({
+          where: prodWhere,
+          attributes: ['id'],
+          include: [
+            { model: Brand, as: 'brand', attributes: [], required: true, where: { status: 1 } } // Chỉ brand active
+          ],
+          raw: true
+        });
         const nameDescIds = prods.map(p => p.id);
 
         // 1b SKU
@@ -127,7 +140,7 @@ class SearchController {
       const products = await Product.findAll({
         where: { id: pageIds },
         include: [
-          { model: Brand, as: 'brand', attributes: ['id', 'name'] },
+          { model: Brand, as: 'brand', attributes: ['id', 'name'], where: { status: 1 }, required: true },
           { model: Category, as: 'category', attributes: ['id', 'name'] },
           {
             model: Variant, as: 'variants',
@@ -152,7 +165,7 @@ class SearchController {
         id: p.id,
         name: p.name,
         description: p.description,
-        thumbnail: p.thumbnail,
+        thumbnail: toUrl(p.thumbnail, req),
         brand: p.brand?.name,
         category: p.category?.name,
         variants: p.variants.map(v => {
@@ -168,7 +181,10 @@ class SearchController {
             sku: v.sku,
             price: parseFloat(v.price),
             final_price: Math.max(finalPrice, 0),
-            images: v.images.map(i => i.image_url),
+            images: v.images.map(i => ({
+              id: i.id,
+              image_url: toUrl(i.image_url, req)
+            })),
             attributes: v.attributeValues.map(av => ({
               id: av.attribute.id,
               name: av.attribute.name,
@@ -288,12 +304,12 @@ class SearchController {
   static async getProductAttributes(req, res) {
     try {
       const attrs = await Attribute.findAll({
-        attributes: ['id','name'],
-        order: [['id','ASC']],
+        attributes: ['id', 'name'],
+        order: [['id', 'ASC']],
         raw: true
       });
       return res.json({ status: 200, data: attrs });
-    } catch(err) {
+    } catch (err) {
       console.error('Get product attributes error:', err);
       return res.status(500).json({
         status: 500,
