@@ -26,6 +26,38 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const [ratingCount, setRatingCount] = useState(0);
   const navigate = useNavigate();
 
+  const formatDiscountPercent = (original, sale) => {
+    if (!original || sale >= original) return 0;
+    const p = ((original - sale) / original) * 100;
+    return p > 0 && p < 1 ? Number(p.toFixed(1)) : Math.round(p);
+  };
+
+  const getVariantLabel = (variant) => {
+    if (!variant) return "";
+    const byName = variant.name?.trim();
+    const bySku = variant.sku?.trim();
+    const byAttrs = Array.isArray(variant.attributeValues)
+      ? variant.attributeValues
+          .map((av) => av?.value)
+          .filter(Boolean)
+          .join(" / ")
+      : "";
+    return byName || bySku || byAttrs || "";
+  };
+  // thêm trên cùng file (cùng scope với component)
+  const hydrateSelectedVariant = async (productId, variantId) => {
+    try {
+      const res = await axios.get(
+        `${Constants.DOMAIN_API}/products/${productId}/variants`
+      );
+      const full = res.data?.product?.variants?.find((v) => v.id === variantId);
+      return full || null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
   // Memoize product and variants
   const product = useMemo(() => datas || {}, [datas]);
 
@@ -140,6 +172,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       safe(representativeVariant?.price) ||
       safe(product.price) ||
       0;
+
     const sale =
       safe(selectedVariant?.final_price) ||
       safe(selectedVariant?.promotion?.discounted_price) ||
@@ -149,13 +182,19 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       original;
 
     const discountAmount = Math.max(0, original - sale);
-    const discountPercent =
-      original > 0 ? Math.round((discountAmount / original) * 100) : 0;
+    const percentExact = original > 0 ? (discountAmount / original) * 100 : 0;
+
+    // Hiển thị: nếu <1% thì giữ 1 số thập phân, còn lại làm tròn số nguyên
+    const discountPercentDisplay =
+      percentExact > 0 && percentExact < 1
+        ? Number(percentExact.toFixed(1))
+        : Math.round(percentExact);
+
     const hasStock = totalStock > 0;
     const discountType =
       selectedVariant?.promotion?.discount_type ||
       representativeVariant?.promotion?.discount_type ||
-      product.promotion?.discount_type ||
+      product?.promotion?.discount_type ||
       null;
 
     return {
@@ -163,7 +202,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       displayPrice: sale,
       hasStock,
       discountAmount,
-      discountPercent,
+      discountPercent: discountPercentDisplay, // <— dùng cái này để render
       discountType,
     };
   }, [selectedVariant, representativeVariant, product, totalStock]);
@@ -177,15 +216,29 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     discountType,
   } = priceInfo;
 
-  const thumbnail = selectedImage || product.thumbnail?.trim() || "/images/no-image.jpg";
-  const productName = product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
+  const thumbnail =
+    selectedImage || product.thumbnail?.trim() || "/images/no-image.jpg";
+  const productName =
+    product.name?.trim() || product.title?.trim() || "Sản phẩm không tên";
+
+  // sau dòng: const productName = product.name?.trim() || ...
+  const variantLabel = useMemo(
+    () => getVariantLabel(selectedVariant),
+    [selectedVariant]
+  );
+  const displayName = variantLabel
+    ? `${productName} - ${variantLabel}`
+    : productName;
 
   const maxStock = 5;
-  const stockPercentage = totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
+  const stockPercentage =
+    totalStock > 0 ? Math.min((totalStock / maxStock) * 100, 100) : 0;
 
   const handleAddToCart = async (variantId, quantity) => {
     if (selectedVariant?.isInAuction) {
-      toast.error("Sản phẩm đang trong phiên đấu giá, không thể thêm vào giỏ hàng.");
+      toast.error(
+        "Sản phẩm đang trong phiên đấu giá, không thể thêm vào giỏ hàng."
+      );
       return;
     }
     if (!variantId) {
@@ -245,13 +298,16 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       return;
     }
     if (quantity > (selectedVariant?.stock || totalStock)) {
-      toast.error(`Chỉ còn ${selectedVariant?.stock || totalStock} sản phẩm trong kho`);
+      toast.error(
+        `Chỉ còn ${selectedVariant?.stock || totalStock} sản phẩm trong kho`
+      );
       return;
     }
     const variantToAdd =
       selectedVariant || (validVariants.length > 0 ? validVariants[0] : null);
     if (variantToAdd) {
-      if (variantToAdd && !isAuction) handleAddToCart(variantToAdd.id, quantity);
+      if (variantToAdd && !isAuction)
+        handleAddToCart(variantToAdd.id, quantity);
     } else {
       toast.error("Không có biến thể hợp lệ để thêm vào giỏ hàng.");
     }
@@ -261,18 +317,36 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
   const maxLength = 80;
   const isLongDescription = description.length > maxLength;
   const truncatedDescription =
-    isLongDescription && !isExpanded ? description.slice(0, maxLength) + "..." : description;
+    isLongDescription && !isExpanded
+      ? description.slice(0, maxLength) + "..."
+      : description;
 
-  const handleVariantSelect = (variant) => {
-    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0) return;
+  // cập nhật handleVariantSelect để nếu thiếu attributeValues thì tự hydrate
+  const handleVariantSelect = async (variant) => {
+    if (!variant || selectedVariant?.id === variant.id || variant.stock <= 0)
+      return;
 
-    setSelectedVariant(variant);
-    const newImages = variant.images || [];
+    // nếu variant thiếu dữ liệu, gọi API để lấy đủ
+    let next = variant;
+    const needHydrate =
+      !Array.isArray(variant.attributeValues) ||
+      variant.attributeValues.length === 0;
+    if (needHydrate) {
+      const full = await hydrateSelectedVariant(product.id, variant.id);
+      if (full) next = { ...variant, ...full };
+    }
+
+    setSelectedVariant(next);
+    const newImages = next.images || [];
     setVariantImages(newImages);
-    setSelectedImage(newImages.length > 0 ? newImages[0].image_url || product.thumbnail : product.thumbnail);
-    setAvgRating(parseFloat(variant.averageRating || 0));
-    setRatingCount(parseInt(variant.ratingCount || 0));
-    checkWishlistStatus(variant.id);
+    setSelectedImage(
+      newImages.length > 0
+        ? newImages[0].image_url || product.thumbnail
+        : product.thumbnail
+    );
+    setAvgRating(parseFloat(next.averageRating || 0));
+    setRatingCount(parseInt(next.ratingCount || 0));
+    checkWishlistStatus(next.id);
     setCurrentImageIndex(0);
   };
 
@@ -287,10 +361,15 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     }
 
     try {
-      const response = await axios.get(`${Constants.DOMAIN_API}/users/${userId}/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const isInWishlist = response.data.data.some((item) => item.product_variant_id === variantId);
+      const response = await axios.get(
+        `${Constants.DOMAIN_API}/users/${userId}/wishlist`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const isInWishlist = response.data.data.some(
+        (item) => item.product_variant_id === variantId
+      );
       setIsInWishlist(isInWishlist);
     } catch (error) {
       setIsInWishlist(false);
@@ -309,7 +388,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     const userId = decoded?.id;
 
     if (!token || !userId) {
-      toast.error("Bạn cần đăng nhập để thêm sản phẩm vào danh sách yêu thích.");
+      toast.error(
+        "Bạn cần đăng nhập để thêm sản phẩm vào danh sách yêu thích."
+      );
       return;
     }
 
@@ -318,11 +399,15 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         userId,
         productVariantId: selectedVariant.id,
       });
-      toast.success(response.data.message || "Đã thêm vào danh sách yêu thích!");
+      toast.success(
+        response.data.message || "Đã thêm vào danh sách yêu thích!"
+      );
       setIsInWishlist(true);
       await checkWishlistStatus(selectedVariant.id);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi khi thêm vào danh sách yêu thích.";
+      const errorMessage =
+        error.response?.data?.message ||
+        "Lỗi khi thêm vào danh sách yêu thích.";
       toast.error(errorMessage);
     }
   };
@@ -338,7 +423,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     const userId = decoded?.id;
 
     if (!token || !userId) {
-      toast.error("Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích.");
+      toast.error(
+        "Bạn cần đăng nhập để xóa sản phẩm khỏi danh sách yêu thích."
+      );
       return;
     }
 
@@ -353,7 +440,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       setIsInWishlist(false);
       await checkWishlistStatus(selectedVariant.id);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Lỗi khi xóa khỏi danh sách yêu thích.";
+      const errorMessage =
+        error.response?.data?.message ||
+        "Lỗi khi xóa khỏi danh sách yêu thích.";
       toast.error(errorMessage);
     }
   };
@@ -366,6 +455,31 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
 
   const [expanded, setExpanded] = useState(false);
   const attributes = selectedVariant?.attributeValues || [];
+
+  // cái này để lấy thuộc tính ra dialog
+  // khi mở dialog: nếu selectedVariant chưa có attributeValues thì hydrate
+  useEffect(() => {
+    (async () => {
+      if (!isQuickViewOpen || !product?.id || !selectedVariant?.id) return;
+      const hasAttrs =
+        Array.isArray(selectedVariant.attributeValues) &&
+        selectedVariant.attributeValues.length > 0;
+      if (hasAttrs) return;
+
+      const full = await hydrateSelectedVariant(product.id, selectedVariant.id);
+      if (full) {
+        setSelectedVariant((prev) => ({ ...prev, ...full }));
+        setVariantImages(full.images || []);
+        setSelectedImage(
+          full.images?.[0]?.image_url ||
+            product.thumbnail ||
+            "/images/no-image.jpg"
+        );
+        setAvgRating(parseFloat(full.averageRating || 0));
+        setRatingCount(parseInt(full.ratingCount || 0));
+      }
+    })();
+  }, [isQuickViewOpen, product?.id, selectedVariant?.id]);
 
   const QuickViewDialog = () =>
     isQuickViewOpen &&
@@ -398,7 +512,12 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <div className="overflow-hidden mt-5 relative">
@@ -411,7 +530,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               {variantImages.length > 1 && (
                 <button
                   onClick={() =>
-                    setCurrentImageIndex((prev) => (prev === 0 ? variantImages.length - 1 : prev - 1))
+                    setCurrentImageIndex((prev) =>
+                      prev === 0 ? variantImages.length - 1 : prev - 1
+                    )
                   }
                   className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
                 >
@@ -421,7 +542,9 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               {variantImages.length > 1 && (
                 <button
                   onClick={() =>
-                    setCurrentImageIndex((prev) => (prev === variantImages.length - 1 ? 0 : prev + 1))
+                    setCurrentImageIndex((prev) =>
+                      prev === variantImages.length - 1 ? 0 : prev + 1
+                    )
                   }
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/70 hover:bg-white text-gray-800 rounded-full p-1 shadow z-10"
                 >
@@ -432,43 +555,69 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
             {displayOriginalPrice > displayPrice && (
               <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10">
                 {discountType === "percentage"
-                  ? `-${Number(discountAmount).toLocaleString("vi-VN")}₫`
+                  ? `-${discountPercent}%`
                   : `-${Number(discountAmount).toLocaleString("vi-VN")}₫`}
               </span>
             )}
+
             <div className="grid grid-cols-4 gap-1.5 mt-5 max-h-28 overflow-y-auto">
               {variantImages.map((img) => (
                 <div
                   key={img.id || img.image_url}
                   onClick={() => setSelectedImage(img.image_url)}
                   className={`w-[60px] h-[60px] p-1 border rounded-md cursor-pointer ${
-                    selectedImage === img.image_url ? "border-blue-500" : "border-gray-200"
+                    selectedImage === img.image_url
+                      ? "border-blue-500"
+                      : "border-gray-200"
                   } hover:border-blue-400 transition-colors`}
                 >
-                  <img src={img.image_url} alt="" className="w-full h-full object-contain" />
+                  <img
+                    src={img.image_url}
+                    alt=""
+                    className="w-full h-full object-contain"
+                  />
                 </div>
               ))}
             </div>
           </div>
           <div className="flex flex-col space-y-3">
-            <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">{productName}</h2>
+            <h2 className="text-lg font-semibold text-gray-800 line-clamp-2">
+              {displayName}
+            </h2>
+
             <div className="flex items-center gap-2 mb-2">
               <StarRating rating={avgRating} readOnly />
               <span className="text-sm text-gray-600"></span>
             </div>
             {variants.length > 0 && (
               <div>
-                <span className="block text-xs font-medium text-gray-600 mb-1">Biến thể:</span>
+                <span className="block text-xs font-medium text-gray-600 mb-1">
+                  Biến thể:
+                </span>
                 <div className="grid grid-cols-2 gap-2">
                   {variants.map((variant) => {
                     const name = variant.name || variant.sku || "Unnamed";
+
+                    // TÍNH GIÁ TRƯỚC
                     const originalPrice = Number(variant.price || 0);
                     const salePrice = Number(
-                      variant.final_price || variant.promotion?.discounted_price || originalPrice
+                      variant.final_price ||
+                        variant.promotion?.discounted_price ||
+                        originalPrice
                     );
+
+                    // SAU ĐÓ MỚI TÍNH KIỂU GIẢM VÀ %
+                    const discountTypeOfVariant =
+                      variant.promotion?.discount_type;
+                    const percentOfVariant = formatDiscountPercent(
+                      originalPrice,
+                      salePrice
+                    );
+
                     const inStock = variant.stock > 0;
                     const inAuction = variant.isInAuction;
                     const isSelected = selectedVariant?.id === variant.id;
+
                     return (
                       <button
                         key={variant.id}
@@ -480,94 +629,109 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                             : "border-gray-300 hover:bg-gray-100 text-gray-800"
                         }`}
                         onClick={() => {
-                          if (inStock && !inAuction) handleVariantSelect(variant);
+                          if (inStock && !inAuction)
+                            handleVariantSelect(variant);
                         }}
                         disabled={!inStock || inAuction}
-                        title={inAuction ? "Biến thể đang trong phiên đấu giá" : undefined}
+                        title={
+                          inAuction
+                            ? "Biến thể đang trong phiên đấu giá"
+                            : undefined
+                        }
                       >
                         <p className="font-medium">{name}</p>
-                        <p className="text-qred font-semibold">{salePrice.toLocaleString("vi-VN")}₫</p>
+                        <p className="text-qred font-semibold">
+                          {salePrice.toLocaleString("vi-VN")}₫
+                        </p>
+
                         {salePrice < originalPrice && (
                           <div className="flex items-center justify-center space-x-1">
                             <p className="text-qgray line-through text-[10px]">
                               {originalPrice.toLocaleString("vi-VN")}₫
                             </p>
                             <span className="text-white text-[10px] font-semibold bg-qred px-1 rounded">
-                              -{Math.round(((originalPrice - salePrice) / originalPrice) * 100)}%
+                              {discountTypeOfVariant === "percentage"
+                                ? `-${percentOfVariant}%`
+                                : `-${(
+                                    originalPrice - salePrice
+                                  ).toLocaleString("vi-VN")}₫`}
                             </span>
                           </div>
                         )}
+
                         <p className="text-[10px] font-medium">
-                          {inAuction ? "Sản phẩm đang trong phiên đấu giá" : inStock ? `Còn: ${variant.stock}` : "Hết hàng"}
+                          {inAuction
+                            ? "Sản phẩm đang trong phiên đấu giá"
+                            : inStock
+                            ? `Còn: ${variant.stock}`
+                            : "Hết hàng"}
                         </p>
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            )}
-            {selectedVariant && selectedVariant.attributeValues?.length > 0 && (
-              <div className="text-xs mt-2">
-                <span className="block font-semibold text-gray-700 mb-1">Thuộc tính:</span>
-                <div
-                  className={`overflow-x-auto transition-all duration-300 border border-gray-300 ${
-                    expanded ? "max-h-none" : "max-h-24 overflow-y-hidden"
-                  }`}
-                >
-                  <table className="min-w-[200px] text-xs table-fixed w-full">
-                    <tbody>
-                      {attributes.map((attr, index) => {
-                        const attrName = attr.attribute?.name || "—";
-                        const attrValue = attr.value || "—";
-                        return (
-                          <tr key={index} className="border-t border-gray-200">
-                            <td className="w-1/2 border border-gray-300 p-1 text-gray-600 font-medium whitespace-nowrap">
-                              <b>{attrName}</b>
-                            </td>
-                            <td className="w-1/2 border border-gray-300 p-1 text-gray-800 whitespace-normal break-words">
-                              {attrName.toLowerCase() === "color" ? (
-                                <div className="flex items-center gap-1">
-                                  <div
-                                    className="w-4 h-4 rounded-full border border-gray-400"
-                                    style={{ backgroundColor: attrValue }}
-                                    title={attrValue}
-                                  />
-                                  <span>{attrValue}</span>
-                                </div>
-                              ) : (
-                                attrValue
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {attributes.length > 3 && (
-                  <button
-                    className="mt-1 text-dark-600 hover:underline text-[12px]"
-                    onClick={() => setExpanded(!expanded)}
-                  >
-                    {expanded ? "Thu gọn" : "Xem thêm"}
-                  </button>
+                {attributes.length > 0 && (
+                  <div className="mt-2">
+                    <span className="block text-xs font-medium text-gray-600 mb-1">
+                      Thuộc tính biến thể đã chọn
+                    </span>
+
+                    <table className="w-full text-[12px] border border-gray-200 rounded">
+                      <tbody>
+                        {(expanded ? attributes : attributes.slice(0, 4)).map(
+                          (av, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="px-2 py-1 text whitespace-nowrap">
+                                <b>
+                                {av?.attribute?.name || "-"}
+                                </b>
+                              </td>
+                              <td className="px-2 py-1  break-words">
+                                {av?.value || "-"}
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+
+                    {attributes.length > 4 && (
+                      <button
+                        className="mt-1 text-dark-600 hover:underline text-[12px]"
+                        onClick={() => setExpanded((v) => !v)}
+                      >
+                        {expanded
+                          ? "Thu gọn"
+                          : `Xem thêm ${attributes.length - 4}`}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
+
             <div className="flex items-center space-x-2">
               {hasStock ? (
                 <div className="price-container flex flex-col gap-1">
                   <span className="text-qred font-semibold text-[18px]">
-                    {displayPrice.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                    {displayPrice.toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })}
                   </span>
                   {displayOriginalPrice > displayPrice && (
                     <span className="text-qgray line-through text-[16px]">
-                      {displayOriginalPrice.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                      {displayOriginalPrice.toLocaleString("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      })}
                     </span>
                   )}
                 </div>
               ) : (
-                <p className="text-qred font-600 text-[16px]">Sản phẩm hết hàng</p>
+                <p className="text-qred font-600 text-[16px]">
+                  Sản phẩm hết hàng
+                </p>
               )}
             </div>
             {hasStock && (
@@ -579,7 +743,8 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                     const scrollTop = dialogRef.current?.scrollTop;
                     setQuantity((prev) => Math.max(1, prev - 1));
                     setTimeout(() => {
-                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                      if (dialogRef.current)
+                        dialogRef.current.scrollTop = scrollTop;
                     }, 0);
                   }}
                   disabled={quantity <= 1 || !hasStock}
@@ -594,11 +759,15 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                     setQuantity(
                       Math.max(
                         1,
-                        Math.min(selectedVariant?.stock || totalStock, Number(e.target.value))
+                        Math.min(
+                          selectedVariant?.stock || totalStock,
+                          Number(e.target.value)
+                        )
                       )
                     );
                     setTimeout(() => {
-                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                      if (dialogRef.current)
+                        dialogRef.current.scrollTop = scrollTop;
                     }, 0);
                   }}
                   className="w-12 text-center border border-gray-300 rounded text-sm"
@@ -612,12 +781,18 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     const scrollTop = dialogRef.current?.scrollTop;
-                    setQuantity((prev) => Math.min(selectedVariant?.stock || totalStock, prev + 1));
+                    setQuantity((prev) =>
+                      Math.min(selectedVariant?.stock || totalStock, prev + 1)
+                    );
                     setTimeout(() => {
-                      if (dialogRef.current) dialogRef.current.scrollTop = scrollTop;
+                      if (dialogRef.current)
+                        dialogRef.current.scrollTop = scrollTop;
                     }, 0);
                   }}
-                  disabled={quantity >= (selectedVariant?.stock || totalStock) || !hasStock}
+                  disabled={
+                    quantity >= (selectedVariant?.stock || totalStock) ||
+                    !hasStock
+                  }
                 >
                   +
                 </button>
@@ -628,18 +803,30 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                 type="button"
                 onClick={addToCart}
                 className={`flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded uppercase tracking-wide hover:bg-blue-700 transition-colors duration-200 ${
-                  !hasStock || (variants.length > 0 && !selectedVariant) || selectedVariant?.isInAuction
+                  !hasStock ||
+                  (variants.length > 0 && !selectedVariant) ||
+                  selectedVariant?.isInAuction
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
-                disabled={!hasStock || (variants.length > 0 && !selectedVariant) || selectedVariant?.isInAuction}
-                title={selectedVariant?.isInAuction ? "Biến thể đang trong phiên đấu giá" : undefined}
+                disabled={
+                  !hasStock ||
+                  (variants.length > 0 && !selectedVariant) ||
+                  selectedVariant?.isInAuction
+                }
+                title={
+                  selectedVariant?.isInAuction
+                    ? "Biến thể đang trong phiên đấu giá"
+                    : undefined
+                }
               >
                 <FiShoppingCart size={18} className="inline mr-2" />
                 Thêm giỏ hàng
               </button>
               <button
-                onClick={isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist}
+                onClick={
+                  isInWishlist ? handleRemoveFromWishlist : handleAddToWishlist
+                }
                 className="px-3 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
               >
                 <ThinLove
@@ -680,7 +867,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     >
       <div className="product-card-img w-full h-[300px] overflow-hidden relative">
         <div className="w-full h-full flex items-center justify-center">
-          <img src={thumbnail} alt={productName} className="max-w-full max-h-full object-contain" />
+          <img
+            src={thumbnail}
+            alt={displayName}
+            className="max-w-full max-h-full object-contain"
+          />
         </div>
         {discountPercent > 0 && displayOriginalPrice > displayPrice && (
           <span className="absolute top-2 right-2 text-white text-xs font-semibold bg-qred px-2 py-1 rounded z-10 sm:text-sm sm:px-3 sm:py-1.5">
@@ -691,43 +882,27 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
         )}
       </div>
       <div className="product-card-details px-[30px] pb-[30px] relative min-h-[150px]">
-        <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
-          <button
-            type="button"
-            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${
-              !hasStock || (variants.length > 0 && !selectedVariant) || selectedVariant?.isInAuction
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
-            disabled={!hasStock || (variants.length > 0 && !selectedVariant) || selectedVariant?.isInAuction}
-            title={
-              selectedVariant?.isInAuction
-                ? "Biến thể đang trong phiên đấu giá, không thể thêm vào giỏ hàng"
-                : undefined
-            }
-            onClick={addToCart}
-          >
-            <FiShoppingCart size={18} />
-            THÊM GIỎ HÀNG
-          </button>
-        </div>
+        <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10"></div>
         <div className="flex items-center gap-2 mb-2">
           <StarRating rating={avgRating} readOnly />
           <span className="text-sm text-gray-600"></span>
         </div>
+
         <p
           className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600 cursor-pointer"
           onClick={handleNavigate}
         >
-          {productName}
+          {displayName}
         </p>
-        <div className="price-container-wrapper group-hover:hidden transition-opacity duration-300">
+        <div className="price-container-wrapper transition-opacity duration-300">
           {hasStock ? (
             <div className="price-container flex flex-col gap-1">
               <div className="price flex items-center space-x-2">
                 <span
                   className={`${
-                    displayOriginalPrice > displayPrice ? "text-qred" : "text-qblack"
+                    displayOriginalPrice > displayPrice
+                      ? "text-qred"
+                      : "text-qblack"
                   } font-600 text-[18px]`}
                 >
                   {Number(displayPrice).toLocaleString("vi-VN", {
@@ -807,8 +982,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
               toast.error("Sản phẩm không có biến thể hợp lệ để so sánh.");
               return;
             }
-            const current = JSON.parse(localStorage.getItem("compareList")) || [];
-            const exists = current.find((item) => item.variantId === clickedVariant.variantId);
+            const current =
+              JSON.parse(localStorage.getItem("compareList")) || [];
+            const exists = current.find(
+              (item) => item.variantId === clickedVariant.variantId
+            );
             if (!exists) {
               const updated = [...current, clickedVariant].slice(0, 4);
               localStorage.setItem("compareList", JSON.stringify(updated));
