@@ -138,41 +138,32 @@ const AdminProductList = () => {
 
 
   const deleteProduct = async () => {
-    if (!selectedProduct) return;
+  if (!selectedProduct) return;
 
-    // Kiểm tra có biến thể không
+  try {
+    await axios.delete(
+      `${Constants.DOMAIN_API}/admin/products/${selectedProduct.id}`
+    );
+    toast.success("Xóa sản phẩm thành công");
+    if (products.length === 1 && currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    } else {
+      fetchProducts(currentPage, searchTerm);
+    }
+  } catch (error) {
+    console.error("Lỗi khi xóa sản phẩm:", error);
     if (
-      (selectedProduct.variantCount ?? selectedProduct.variants?.length ?? 0) >
-      0
+      error.response?.data?.error?.includes("foreign key constraint fails")
     ) {
-      toast.error("Không thể xóa sản phẩm có biến thể.");
-      setSelectedProduct(null);
-      return;
+      toast.error("Không thể xóa vì dữ liệu liên quan không thể xóa.");
+    } else {
+      toast.error("Xóa thất bại. Vui lòng thử lại.");
     }
+  } finally {
+    setSelectedProduct(null);
+  }
+};
 
-    try {
-      await axios.delete(
-        `${Constants.DOMAIN_API}/admin/products/${selectedProduct.id}`
-      );
-      toast.error("Xóa sản phẩm thành công");
-      if (products.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      } else {
-        fetchProducts(currentPage, searchTerm);
-      }
-    } catch (error) {
-      console.error("Lỗi khi xóa sản phẩm:", error);
-      if (
-        error.response?.data?.error?.includes("foreign key constraint fails")
-      ) {
-        toast.error("Không thể xóa vì có sản phẩm đang sử dụng sản phẩm này.");
-      } else {
-        toast.error("Xóa thất bại. Vui lòng thử lại.");
-      }
-    } finally {
-      setSelectedProduct(null);
-    }
-  };
 
 const fetchProducts = async (page, search = "") => {
   try {
@@ -532,7 +523,7 @@ const fetchProducts = async (page, search = "") => {
                         <FaPlus size={20} className="font-bold" />
                       </Link>
 
-                      {(!product.variants || product.variants.length === 0) && (
+                      {product.canDelete && (
                         <button
                           onClick={() => setSelectedProduct(product)}
                           className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition duration-200"
