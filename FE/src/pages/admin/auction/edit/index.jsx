@@ -43,6 +43,7 @@ const AuctionEdit = () => {
             const options = data.length
                 ? data.map((p) => ({
                     value: p.id,
+                    price: Number(p.price) || 0,
                     label: `${p.product?.name || "Không có sản phẩm"} (${p.sku}) - ${Number(p.price).toLocaleString("vi-VN")}₫`,
                 }))
                 : [
@@ -84,7 +85,7 @@ const AuctionEdit = () => {
 
             setForm({
                 product_variant_id: auction.product_variant_id,
-                priceStep: formatCurrency(auction.priceStep.toString()),
+                priceStep: "",
                 start_time: parseUTCStringAsLocal(auction.start_time),
                 end_time: parseUTCStringAsLocal(auction.end_time),
 
@@ -108,6 +109,15 @@ const AuctionEdit = () => {
             .then(() => setInitialLoad(false));
     }, []);
 
+        useEffect(() => {
+        if (!products?.length || !form.product_variant_id) return;
+        const selected = products.find(o => o.value === form.product_variant_id);
+        if (!selected) return;
+        const step = computeStep(selected.price);
+        setForm(prev => ({ ...prev, priceStep: step > 0 ? formatCurrency(step) : "" }));
+        setErrors(prev => ({ ...prev, priceStep: "" }));
+    }, [products, form.product_variant_id]);
+
     const formatCurrency = (value) => {
         if (!value) return "";
         const [intPart] = value.toString().split(".");
@@ -115,22 +125,24 @@ const AuctionEdit = () => {
         return num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     };
 
+    const computeStep = (price) => {
+        const roundTo = 10000;
+        return Math.ceil((Number(price || 0) * 0.1) / roundTo) * roundTo;
+    };
+
     const handlePriceChange = e => {
         const el = e.target;
         const rawBeforeCursor = el.value.slice(0, el.selectionStart).replace(/\D/g, "");
         const raw = el.value.replace(/\D/g, "");
 
-        // Format thêm dấu chấm
         const formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
         setForm(prev => ({ ...prev, priceStep: formatted }));
         validateField("priceStep", formatted);
 
-        // Tính vị trí mới: số ký tự trong phần beforeCursor sau khi format
         const formattedBeforeCursor = rawBeforeCursor.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         const newPos = formattedBeforeCursor.length;
 
-        // Đặt lại con trỏ sau khi React update (dùng setTimeout 0)
         setTimeout(() => {
             el.setSelectionRange(newPos, newPos);
         }, 0);
@@ -281,6 +293,7 @@ const AuctionEdit = () => {
                                 onChange={handlePriceChange}
                                 disabled={loading}
                             />
+
                         </div>
                         {errors.priceStep && (
                             <p className="text-red-500 text-sm mt-1">{errors.priceStep}</p>
