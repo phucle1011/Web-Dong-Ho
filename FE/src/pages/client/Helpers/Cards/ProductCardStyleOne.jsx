@@ -226,9 +226,17 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
     () => getVariantLabel(selectedVariant),
     [selectedVariant]
   );
-  const displayName = variantLabel
-    ? `${productName} - ${variantLabel}`
-    : productName;
+// Giới hạn độ dài tên sản phẩm khi hiển thị kèm biến thể
+const shortenText = (text, maxLength) => {
+  if (!text) return "";
+  return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+};
+
+// Nếu có biến thể thì cắt ngắn tên sản phẩm, ví dụ chỉ giữ 40 ký tự
+const displayName = variantLabel
+  ? `${shortenText(productName, 20)} - ${variantLabel}`
+  : productName;
+
 
   const maxStock = 5;
   const stockPercentage =
@@ -682,9 +690,7 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
                           (av, i) => (
                             <tr key={i} className="border-t">
                               <td className="px-2 py-1 text whitespace-nowrap">
-                                <b>
-                                {av?.attribute?.name || "-"}
-                                </b>
+                                <b>{av?.attribute?.name || "-"}</b>
                               </td>
                               <td className="px-2 py-1  break-words">
                                 {av?.value || "-"}
@@ -883,6 +889,32 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
       </div>
       <div className="product-card-details px-[30px] pb-[30px] relative min-h-[150px]">
         <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10"></div>
+        <div className="absolute w-full h-10 px-[30px] left-0 top-40 group-hover:top-[85px] transition-all duration-300 ease-in-out z-10">
+          <button
+            type="button"
+            className={`bg-blue-600 hover:bg-blue-700 text-white w-full h-full flex items-center justify-center gap-2 ${
+              !hasStock ||
+              (variants.length > 0 && !selectedVariant) ||
+              selectedVariant?.isInAuction
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
+            disabled={
+              !hasStock ||
+              (variants.length > 0 && !selectedVariant) ||
+              selectedVariant?.isInAuction
+            }
+            title={
+              selectedVariant?.isInAuction
+                ? "Biến thể đang trong phiên đấu giá, không thể thêm vào giỏ hàng"
+                : undefined
+            }
+            onClick={addToCart}
+          >
+            <FiShoppingCart size={18} />
+            THÊM GIỎ HÀNG
+          </button>
+        </div>
         <div className="flex items-center gap-2 mb-2">
           <StarRating rating={avgRating} readOnly />
           <span className="text-sm text-gray-600"></span>
@@ -892,9 +924,11 @@ export default function ProductCardStyleOne({ datas, type, onProductClick }) {
           className="title mb-2 text-[15px] font-600 text-qblack leading-[24px] line-clamp-2 hover:text-blue-600 cursor-pointer"
           onClick={handleNavigate}
         >
-          {displayName}
+          {displayName.replace(/ - /, " (") +
+            (displayName.includes(" - ") ? ")" : "")}
         </p>
-        <div className="price-container-wrapper transition-opacity duration-300">
+
+        <div className="price-container-wrapper group-hover:hidden transition-opacity duration-300">
           {hasStock ? (
             <div className="price-container flex flex-col gap-1">
               <div className="price flex items-center space-x-2">
