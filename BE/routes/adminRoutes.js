@@ -190,6 +190,9 @@ router.get('/dashboard/counts', DashboardController.getCounts);
 router.get('/dashboard/revenue/days', DashboardController.getRevenueByDaysInMonth);
 router.get('/dashboard/revenue/months', DashboardController.getRevenueByMonthsInYear);
 router.get('/dashboard/revenue', DashboardController.getRevenueByCustomRange);
+router.get('/dashboard/order-status', DashboardController.getOrderStatusBreakdown);
+router.get('/dashboard/promo-impact', DashboardController.getPromotionImpact);
+router.get('/dashboard/top-promotions', DashboardController.getTopPromotions);
 
 //------------------[ NOTIFICATION ]------------------\
 router.get('/notification', NotificationController.getNotifications);

@@ -56,7 +56,13 @@ function Dashboard() {
     }]
   });
 
+  const [orderStatus, setOrderStatus] = useState(null);
+const [promoImpact, setPromoImpact] = useState(null);
+const [topPromos, setTopPromos] = useState([]);
+
   const totalRevenueSelectedMonth = revenueData.datasets[0]?.data.reduce((sum, val) => sum + val, 0) || 0;
+
+  const safeNumber = (v) => (typeof v === 'number' ? v : Number(v) || 0);
 
   const formatVND = (number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(number);
@@ -79,6 +85,73 @@ function Dashboard() {
     }
     fetchCounts();
   }, []);
+
+  useEffect(() => {
+  const params = {};
+  if (customRange.from && customRange.to) {
+    params.from = customRange.from;
+    params.to = customRange.to;
+  }
+
+  (async () => {
+  try {
+    const params = {};
+    if (customRange.from && customRange.to) {
+      params.from = customRange.from;
+      params.to = customRange.to;
+    }
+
+    const [statusRes, impactRes, topRes] = await Promise.all([
+      axios.get(`${Constants.DOMAIN_API}/admin/dashboard/order-status`),
+      axios.get(`${Constants.DOMAIN_API}/admin/dashboard/promo-impact`, { params }),
+      axios.get(`${Constants.DOMAIN_API}/admin/dashboard/top-promotions`, { params: { ...params, limit: 5 } }),
+    ]);
+
+    setOrderStatus(statusRes.data?.data || null);
+
+    // ---- Chuẩn hoá promoImpact ----
+    const rawImpact = impactRes.data?.data || null;
+    let normalizedImpact = null;
+
+    if (rawImpact) {
+      if (rawImpact.totals && rawImpact.revenue) {
+        // API mới (có totals, revenue)
+        normalizedImpact = {
+          totalCompleted:    safeNumber(rawImpact.totals.totalCompleted),
+          ordersWithPromo:   safeNumber(rawImpact.totals.promoOrderCount),
+          ordersWithoutPromo:safeNumber(rawImpact.totals.ordersWithoutPromo),
+          redemptionRate:    safeNumber(rawImpact.totals.redemptionRate),
+
+          revenueWithPromo:    safeNumber(rawImpact.revenue.withPromo),
+          revenueWithoutPromo: safeNumber(rawImpact.revenue.withoutPromo),
+          totalDiscount:       safeNumber(rawImpact.revenue.totalDiscount),
+          AOVWithPromo:        safeNumber(rawImpact.revenue.AOVWithPromo),
+          AOVWithoutPromo:     safeNumber(rawImpact.revenue.AOVWithoutPromo),
+        };
+      } else {
+        // API cũ (phẳng)
+        normalizedImpact = {
+          totalCompleted:      safeNumber(rawImpact.totalCompleted),
+          ordersWithPromo:     safeNumber(rawImpact.ordersWithPromo),
+          ordersWithoutPromo:  safeNumber(rawImpact.ordersWithoutPromo),
+          redemptionRate:      safeNumber(rawImpact.redemptionRate),
+          revenueWithPromo:    safeNumber(rawImpact.revenueWithPromo),
+          revenueWithoutPromo: safeNumber(rawImpact.revenueWithoutPromo),
+          totalDiscount:       safeNumber(rawImpact.totalDiscount),
+          AOVWithPromo:        safeNumber(rawImpact.AOVWithPromo),
+          AOVWithoutPromo:     safeNumber(rawImpact.AOVWithoutPromo),
+        };
+      }
+    }
+
+    setPromoImpact(normalizedImpact);
+    setTopPromos(topRes.data?.data || []);
+  } catch (e) {
+    console.error('Fetch extra dashboard error:', e);
+  }
+})();
+
+}, [customRange]);
 
   useEffect(() => {
     async function fetchRevenue() {
@@ -205,6 +278,71 @@ function Dashboard() {
     { key: 'total_promotion', icon: <FaTag size={24} />, label: 'Khuyến mãi', bg: 'bg-dark' },
   ];
 
+const orderStatusLabels = ['Chờ xác nhận','Đã xác nhận','Đang giao', 'Đã giao hàng thành công', 'Hoàn thành','Đã hủy'];
+const orderStatusKeys   = ['pending','confirmed','shipping', 'delivered', 'completed','cancelled'];
+
+const orderStatusData = orderStatus ? {
+  labels: orderStatusLabels,
+  datasets: [{
+    label: 'Đơn hàng',
+    data: orderStatusKeys.map(k => orderStatus[k] || 0),
+    backgroundColor: ['#ffc107','#0d6efd','#17a2b8','#28a745','#dc3545','#6c757d'],
+    borderWidth: 1
+  }]
+} : null;
+
+const promoRevenueCompare = promoImpact ? {
+  labels: ['Không có','Có'],
+  datasets: [{
+    label: 'Doanh thu',
+    data: [
+      safeNumber(promoImpact.revenueWithoutPromo),
+      safeNumber(promoImpact.revenueWithPromo)
+    ],
+    backgroundColor: ['rgba(108,117,125,0.5)','rgba(40,167,69,0.5)'],
+    borderColor:     ['rgba(108,117,125,1)','rgba(40,167,69,1)'],
+    borderRadius: 6,
+    borderWidth: 1
+  }]
+} : null;
+
+const barCurrencyOpts = {
+  responsive: true,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: { label: ctx => ` ${formatVND(ctx.parsed.y)}` }
+    },
+    title: { display: false }
+  },
+  scales: {
+    y: { ticks: { callback: v => formatVND(v) } }
+  }
+};
+
+const topPromosChart = topPromos?.length ? {
+  labels: topPromos.map(p => `${p.name}${p.code ? ` (${p.code})` : ''}`),
+  datasets: [{
+    label: 'Số đơn dùng mã',
+    data: topPromos.map(p => p.ordersCount),
+    backgroundColor: 'rgba(13,110,253,0.5)',
+    borderColor: 'rgba(13,110,253,1)',
+    borderRadius: 6,
+    borderWidth: 1
+  }]
+} : null;
+
+const horizBarOpts = {
+  indexAxis: 'y',
+  responsive: true,
+  plugins: {
+    legend: { display: false },
+    tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} đơn` } }
+  }
+};
+
+const redemptionRateSafe = safeNumber(promoImpact?.redemptionRate);
+
   return (
     <div className="page-wrapper">
       <div className="page-breadcrumb">
@@ -223,7 +361,76 @@ function Dashboard() {
       </div>
 
       <div className="container-fluid">
-        <div className="row g-3">
+        
+ <div className="row mt-4">
+  <div className="col-lg-4">
+    <div className="card h-100">
+      <div className="card-header fw-semibold text-center">Trạng thái đơn hàng</div>
+      <div className="card-body">
+        {orderStatusData ? <Pie data={orderStatusData} /> : <div className="text-muted">Không có dữ liệu</div>}
+      </div>
+    </div>
+  </div>
+
+  <div className="col-lg-4">
+    <div className="card h-100">
+      <div className="card-header fw-semibold text-center">Doanh thu: Có khuyến mãi với không có khuyến mãi</div>
+      <div className="card-body">
+        {promoRevenueCompare ? <Bar data={promoRevenueCompare} options={barCurrencyOpts} /> : <div className="text-muted">Chọn khoảng ngày để xem</div>}
+      </div>
+    </div>
+  </div>
+
+  <div className="col-lg-4">
+    <div className="card h-100">
+      <div className="card-header fw-semibold text-center">Top 5 khuyến mãi được dùng nhiều</div>
+      <div className="card-body">
+        {topPromosChart ? <Bar data={topPromosChart} options={horizBarOpts} /> : <div className="text-muted">Chưa có dữ liệu</div>}
+      </div>
+    </div>
+  </div>
+</div>
+
+{promoImpact && (
+  <div className="row g-3 mt-3">
+    <div className="col-md-3 h-30">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <div className="text-muted small mb-1">Tỉ lệ dùng khuyến mãi</div>
+         <div className="h4 mb-0">{redemptionRateSafe.toFixed(1)}% </div>
+          <div className="small text-secondary mt-1">({promoImpact.ordersWithPromo}/{promoImpact.totalCompleted} đơn hoàn thành)</div>
+        </div>
+      </div>
+    </div>
+    <div className="col-md-3">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <div className="text-muted small mb-1">Tổng giảm giá đã áp dụng</div>
+          <div className="h4 mb-0">{formatVND(safeNumber(promoImpact?.totalDiscount))}</div>
+        </div>
+      </div>
+    </div>
+    <div className="col-md-3">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <div className="text-muted small mb-1">Tổng đơn hàng có khuyến mãi</div>
+          <div className="h4 mb-0">{formatVND(safeNumber(promoImpact?.AOVWithPromo))}</div>
+        </div>
+      </div>
+    </div>
+    <div className="col-md-3">
+      <div className="card shadow-sm">
+        <div className="card-body">
+          <div className="text-muted small mb-1">Tổng đơn hàng không có khuyến mãi</div>
+         <div className="h4 mb-0">{formatVND(safeNumber(promoImpact?.AOVWithoutPromo))}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+
+        {/* <div className="row g-3">
           {statsCards.map(({ key, icon, label, bg }, idx) => (
             <div className="col-6 col-md-4 col-lg-2" key={idx}>
               <div className="card border-0 shadow-sm rounded-2">
@@ -251,7 +458,9 @@ function Dashboard() {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
+
+
         {/* {bestSellingProduct ? (
   <div className="d-flex align-items-center justify-content-between">
     <div>

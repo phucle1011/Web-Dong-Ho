@@ -298,6 +298,179 @@ static async getRevenueByCustomRange(req, res) {
   }
 }
 
+static async getOrderStatusBreakdown(req, res) {
+  try {
+    const known = ['pending','confirmed','shipping','delivered','completed','cancelled'];
+
+    const rows = await OrderModel.findAll({
+      attributes: [
+        'status',
+        [Sequelize.fn('COUNT', Sequelize.literal('*')), 'count'] 
+      ],
+      group: ['status'],
+      raw: true,
+    });
+
+    const map = Object.fromEntries(known.map(s => [s, 0]));
+    rows.forEach(r => {
+      if (r.status && map[r.status] !== undefined) {
+        map[r.status] = Number(r.count) || 0;
+      }
+    });
+
+    const totalRow = await OrderModel.findOne({
+      attributes: [[Sequelize.fn('COUNT', Sequelize.literal('*')), 'total']],
+      raw: true,
+
+    });
+    const totalAll = Number(totalRow?.total) || 0;
+    const totalKnown = Object.values(map).reduce((a,b) => a + b, 0);
+    const other = Math.max(0, totalAll - totalKnown);
+    map.other = other; 
+
+    return res.status(200).json({ status: 200, data: map, totalAll });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ status: 500, message: 'Lỗi server breakdown trạng thái' });
+  }
+}
+
+static async getPromotionImpact(req, res) {
+  try {
+    const { from, to } = req.query || {};
+
+    const whereOrderBase = { status: 'completed' };
+    if (from && to) {
+      const startDate = new Date(from);
+      const endDate = new Date(to); endDate.setHours(23, 59, 59, 999);
+      whereOrderBase.created_at = { [Op.between]: [startDate, endDate] };
+    }
+
+    const totalCompleted = await OrderModel.count({ where: whereOrderBase });
+
+    const withPromoWhere = {
+      ...whereOrderBase,
+      promotion_id: { [Op.ne]: null } 
+    };
+
+    const withoutPromoWhere = {
+      ...whereOrderBase,
+      [Op.or]: [{ promotion_id: null }, { promotion_id: { [Op.is]: null } }]
+    };
+
+    const promoOrderCount    = await OrderModel.count({ where: withPromoWhere });
+    const ordersWithoutPromo = await OrderModel.count({ where: withoutPromoWhere });
+
+    const discountRow = await OrderModel.findOne({
+      where: withPromoWhere,
+      attributes: [
+        [Sequelize.fn('SUM', Sequelize.fn('COALESCE', Sequelize.col('discount_amount'), 0)), 'discountSum'],
+        [Sequelize.fn('SUM', Sequelize.fn('COALESCE', Sequelize.col('special_discount_amount'), 0)), 'specialDiscountSum'],
+      ],
+      raw: true
+    });
+    const totalDiscount =
+      (Number(discountRow?.discountSum) || 0) +
+      (Number(discountRow?.specialDiscountSum) || 0);
+
+    const revenueWithPromoRow = await OrderDetailModel.findOne({
+      attributes: [[Sequelize.fn('SUM', Sequelize.literal('price * quantity')), 'revenue']],
+      include: [{ model: OrderModel, as: 'order', where: withPromoWhere, attributes: [] }],
+      raw: true
+    });
+    const revenueWithoutPromoRow = await OrderDetailModel.findOne({
+      attributes: [[Sequelize.fn('SUM', Sequelize.literal('price * quantity')), 'revenue']],
+      include: [{ model: OrderModel, as: 'order', where: withoutPromoWhere, attributes: [] }],
+      raw: true
+    });
+
+    const revenueWithPromo    = Number(revenueWithPromoRow?.revenue) || 0;
+    const revenueWithoutPromo = Number(revenueWithoutPromoRow?.revenue) || 0;
+
+    const AOVWithPromo    = promoOrderCount    ? Math.round(revenueWithPromo / promoOrderCount) : 0;
+    const AOVWithoutPromo = ordersWithoutPromo ? Math.round(revenueWithoutPromo / ordersWithoutPromo) : 0;
+
+    const redemptionRate = totalCompleted ? (promoOrderCount / totalCompleted) * 100 : 0;
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        totals: {
+          totalCompleted,
+          promoOrderCount,   
+          ordersWithoutPromo, 
+          redemptionRate
+        },
+        revenue: {
+          withPromo: revenueWithPromo,
+          withoutPromo: revenueWithoutPromo,
+          totalDiscount,
+          AOVWithPromo,
+          AOVWithoutPromo
+        }
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ status: 500, message: 'Lỗi server promo impact' });
+  }
+}
+
+static async getTopPromotions(req, res) {
+  try {
+    const { from, to, limit = 5 } = req.query || {};
+    const whereOrder = { status: 'completed', promotion_id: { [Op.ne]: null } };
+    if (from && to) {
+      const startDate = new Date(from);
+      const endDate = new Date(to); endDate.setHours(23,59,59,999);
+      whereOrder.created_at = { [Op.between]: [startDate, endDate] };
+    }
+
+    const rows = await OrderModel.findAll({
+      where: whereOrder,
+      attributes: [
+
+        [Sequelize.col('orders.promotion_id'), 'promotion_id'],
+        [Sequelize.fn('COUNT', Sequelize.col('orders.id')), 'ordersCount'],
+        [
+          Sequelize.fn('SUM',
+            Sequelize.fn('COALESCE', Sequelize.col('orders.discount_amount'), 0)
+          ),
+          'discountSum'
+        ],
+        [
+          Sequelize.fn('SUM',
+            Sequelize.fn('COALESCE', Sequelize.col('orders.special_discount_amount'), 0)
+          ),
+          'specialDiscountSum'
+        ],
+      ],
+      include: [
+        { model: PromotionModel, as: 'promotion', attributes: ['id','name','code'] }
+      ],
+
+      group: [Sequelize.col('orders.promotion_id'), Sequelize.col('promotion.id')],
+      order: [[Sequelize.literal('ordersCount'), 'DESC']],
+      limit: Number(limit),
+      raw: true,
+      nest: true
+    });
+
+    const data = rows.map(r => ({
+      promotion_id: r.promotion_id,
+      name: r.promotion?.name || `#${r.promotion_id}`,
+      code: r.promotion?.code || '',
+      ordersCount: Number(r.ordersCount) || 0,
+      totalDiscount: (Number(r.discountSum)||0) + (Number(r.specialDiscountSum)||0),
+    }));
+
+    return res.status(200).json({ status: 200, data });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ status: 500, message: 'Lỗi server top promotions' });
+  }
+}
+
 }
 
 module.exports = DashboardController;

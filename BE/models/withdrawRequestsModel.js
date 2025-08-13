@@ -25,7 +25,7 @@ const WithdrawRequestsModel = connection.define('withdraw_requests', {
     },
     receiver_name: {
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     status: {
         type: DataTypes.ENUM('pending', 'approved', 'rejected'),
