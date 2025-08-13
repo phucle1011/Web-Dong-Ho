@@ -44,7 +44,7 @@ const PromotionModel = connection.define('Promotion', {
     allowNull: false
   },
   status: {
-    type: DataTypes.ENUM('active', 'inactive', 'upcoming', 'expired'),
+    type: DataTypes.ENUM('active', 'inactive', 'upcoming', 'expired','exhausted'),
     allowNull: false,
     defaultValue: 'active'
   },

@@ -87,6 +87,7 @@ router.delete('/category/:id', categoryController.delete);
 //------------------[ PROMOTIONS ]------------------\
 router.get('/promotions/list', promotionController.getAll);
 router.post("/promotions/create", promotionController.create);
+router.get('/promotions/usage', promotionController.getPromotionUsage);
 router.get('/promotions/getusers', promotionController.getHighValueBuyers);
 router.get('/promotions/applied', promotionController.getAppliedPromotions);
 router.get('/promotions/applied/:id', promotionController.getOrdersByPromotion);

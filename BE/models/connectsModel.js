@@ -47,7 +47,7 @@ BlogModel.belongsTo(UserModel, { foreignKey: 'user_id', as: 'user' });
 UserModel.hasMany(BlogModel, { foreignKey: 'user_id', as: 'blogs' });
 
 // Blog - blogCategory
-BlogModel.belongsTo(BlogCategory, { foreignKey: 'blogCategory_id',as: 'category' }); 
+BlogModel.belongsTo(BlogCategory, { foreignKey: 'blogCategory_id', as: 'category' });
 BlogCategory.hasMany(BlogModel, { foreignKey: 'blogCategory_id' });
 
 // User - Comment
@@ -152,6 +152,15 @@ PromotionModel.hasMany(PromotionProductModel, { foreignKey: 'promotion_id', as: 
 OrderModel.belongsTo(PromotionModel, { foreignKey: 'promotion_id', as: 'promotion' });
 PromotionModel.hasMany(OrderModel, { foreignKey: 'promotion_id', as: 'orders' });
 
+OrderDetailModel.belongsTo(PromotionProductModel, {
+  foreignKey: 'promotion_product_id',
+  as: 'promotionProduct',
+});
+PromotionProductModel.hasMany(OrderDetailModel, {
+  foreignKey: 'promotion_product_id',
+  as: 'orderDetails',
+});
+
 
 // Notification hasMany FlashSales
 NotificationModel.hasMany(FlashSaleModel, {
@@ -250,6 +259,6 @@ module.exports = {
   FlashSaleModel,
   WithdrawRequestsModel,
   BlogCategory,
-  AuctionBidModel, 
+  AuctionBidModel,
   AuctionsModel
 };
