@@ -10,6 +10,9 @@ const OrderDetail = require("../../models/orderDetailsModel");
 const CartItem = require("../../models/cartDetailsModel");
 const PromotionProduct = require("../../models/promotionProductsModel");
 const Promotion = require("../../models/promotionsModel");
+const AuctionsModel = require("../../models/auctionsModel");
+const CartDetailModel = require("../../models/cartDetailsModel");
+const OrderDetailModel = require("../../models/orderDetailsModel");
 
 const { Op,Sequelize } = require("sequelize");
 
@@ -33,26 +36,34 @@ static async getAllAttributes(req, res) {
 }
 
   // Lấy tất cả sản phẩm có biến thể
+
 static async getDraftProducts(req, res) {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page  = Math.max(parseInt(req.query.page)  || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 10, 1);
     const offset = (page - 1) * limit;
-    const searchTerm = req.query.searchTerm || "";
 
+    const rawSearch = (req.query.searchTerm || "").trim();
+    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : null;
+    const brandId    = req.query.brandId    ? parseInt(req.query.brandId)    : null;
+
+    // where cho bảng Product (AND nhiều từ khóa)
     const whereClause = {
       publication_status: "draft",
+      ...(categoryId ? { category_id: categoryId } : {}),
+      ...(brandId    ? { brand_id: brandId }       : {}),
+      ...(rawSearch
+        ? {
+            [Op.and]: rawSearch.split(/\s+/).map(kw => ({
+              name: { [Op.like]: `%${kw}%` }
+            })),
+          }
+        : {}
+      ),
     };
 
-    // Nếu có searchTerm thì lọc theo tên sản phẩm
-    if (searchTerm) {
-      whereClause.name = { [Op.like]: `%${searchTerm}%` };
-    }
-
-    // Đếm tổng sản phẩm theo điều kiện lọc
     const totalProducts = await Product.count({ where: whereClause });
 
-    // Lấy sản phẩm theo trang và lọc
     const products = await Product.findAll({
       where: whereClause,
       order: [["created_at", "DESC"]],
@@ -62,50 +73,57 @@ static async getDraftProducts(req, res) {
         {
           model: ProductVariant,
           as: "variants",
+          attributes: ["id","sku","price","stock","product_id"],
           include: [
             {
               model: ProductVariantAttributeValue,
               as: "attributeValues",
-              include: [
-                {
-                  model: ProductAttribute,
-                  as: "attribute",
-                },
-              ],
+              include: [{ model: ProductAttribute, as: "attribute" }],
+              required: false,
             },
             {
               model: VariantImage,
               as: "images",
+              attributes: ["id","image_url"],
+              required: false,
             },
+            // kiểm tra biến thể đang được dùng
+            { model: CartDetailModel,  as: "carts",        attributes: ["id"], required: false },
+            { model: OrderDetailModel, as: "orderDetails", attributes: ["id"], required: false },
+            { model: AuctionsModel,    as: "auctions",     attributes: ["id"], required: false },
           ],
         },
-        {
-          model: CategoryModel,
-          as: "category",
-          attributes: ["id", "name"],
-        },
-        {
-          model: BrandModel,
-          as: "brand",
-          attributes: ["id", "name"],
-        },
+        { model: CategoryModel, as: "category", attributes: ["id","name"] },
+        { model: BrandModel,    as: "brand",    attributes: ["id","name"] },
       ],
     });
 
-    const productsWithVariantCount = products.map((product) => {
-      const productJson = product.toJSON();
-      productJson.variantCount = product.variants?.length || 0;
-      return productJson;
+    const productsWithFlags = products.map((product) => {
+      const p = product.toJSON();
+      p.variantCount = p.variants?.length || 0;
+
+      const anyVariantInUse = (p.variants || []).some(v =>
+        (v.carts?.length > 0) || (v.orderDetails?.length > 0) || (v.auctions?.length > 0)
+      );
+
+      // chỉ cho xoá khi không có biến thể, hoặc có nhưng KHÔNG biến thể nào đang dùng
+      p.canDelete = (p.variantCount === 0) || !anyVariantInUse;
+
+      // có thể nhẹ payload:
+      // p.variants?.forEach(v => { delete v.carts; delete v.orderDetails; delete v.auctions; });
+
+      return p;
     });
 
-    const totalVariants = products.reduce((sum, product) => {
-      return sum + (product.variants?.length || 0);
-    }, 0);
+    const totalVariants = products.reduce(
+      (sum, product) => sum + (product.variants?.length || 0),
+      0
+    );
 
     res.status(200).json({
       status: 200,
       message: "Lấy danh sách sản phẩm (DRAFT) thành công",
-      data: productsWithVariantCount,
+      data: productsWithFlags,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalProducts / limit),
@@ -119,18 +137,28 @@ static async getDraftProducts(req, res) {
 }
 
 
+
+
 static async getPublishedProducts(req, res) {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const totalProducts = await Product.count({
-      where: { publication_status: 'published' },
-    });
+    const { searchTerm = "", categoryId, brandId } = req.query;
+
+    // where cho bảng Product
+    const whereClause = {
+      publication_status: "published",
+      ...(searchTerm ? { name: { [Op.like]: `%${searchTerm}%` } } : {}),
+      ...(categoryId ? { category_id: categoryId } : {}),
+      ...(brandId ? { brand_id: brandId } : {}),
+    };
+
+    const totalProducts = await Product.count({ where: whereClause });
 
     const products = await Product.findAll({
-      where: { publication_status: 'published' },
+      where: whereClause,
       order: [["created_at", "DESC"]],
       limit,
       offset,
@@ -138,50 +166,56 @@ static async getPublishedProducts(req, res) {
         {
           model: ProductVariant,
           as: "variants",
+          attributes: ["id","sku","price","stock","product_id"],
           include: [
             {
               model: ProductVariantAttributeValue,
               as: "attributeValues",
-              include: [
-                {
-                  model: ProductAttribute,
-                  as: "attribute",
-                },
-              ],
+              include: [{ model: ProductAttribute, as: "attribute" }],
+              required: false,
             },
             {
               model: VariantImage,
               as: "images",
+              attributes: ["id","image_url"],
+              required: false,
             },
+            // Kiểm tra biến thể đang được dùng
+            { model: CartDetailModel,  as: "carts",        attributes: ["id"], required: false },
+            { model: OrderDetailModel, as: "orderDetails", attributes: ["id"], required: false },
+            { model: AuctionsModel,    as: "auctions",     attributes: ["id"], required: false },
           ],
         },
-        {
-          model: CategoryModel,
-          as: "category",
-          attributes: ["id", "name"],
-        },
-        {
-          model: BrandModel,
-          as: "brand",
-          attributes: ["id", "name"],
-        },
+        { model: CategoryModel, as: "category", attributes: ["id", "name"] },
+        { model: BrandModel,    as: "brand",    attributes: ["id", "name"]  },
       ],
     });
 
-    const productsWithVariantCount = products.map((product) => {
-      const productJson = product.toJSON();
-      productJson.variantCount = product.variants?.length || 0;
-      return productJson;
+    const productsWithFlags = products.map((product) => {
+      const p = product.toJSON();
+      p.variantCount = p.variants?.length || 0;
+
+      const anyVariantInUse = (p.variants || []).some(v =>
+        (v.carts?.length > 0) ||
+        (v.orderDetails?.length > 0) ||
+        (v.auctions?.length > 0)
+      );
+
+      // Chỉ cho xoá khi không có biến thể, hoặc có nhưng KHÔNG biến thể nào đang được dùng
+      p.canDelete = (p.variantCount === 0) || !anyVariantInUse;
+
+      // (tuỳ chọn) nhẹ payload:
+      // p.variants?.forEach(v => { delete v.carts; delete v.orderDetails; delete v.auctions; });
+
+      return p;
     });
 
-    const totalVariants = products.reduce((sum, product) => {
-      return sum + (product.variants?.length || 0);
-    }, 0);
+    const totalVariants = products.reduce((sum, p) => sum + (p.variants?.length || 0), 0);
 
     res.status(200).json({
       status: 200,
       message: "Lấy danh sách sản phẩm (PUBLISHED) thành công",
-      data: productsWithVariantCount,
+      data: productsWithFlags,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalProducts / limit),
@@ -194,22 +228,32 @@ static async getPublishedProducts(req, res) {
   }
 }
 
+
+
+
 static async getPublishedAuctionProducts(req, res) {
   try {
-    const page  = parseInt(req.query.page)  || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page  = Math.max(parseInt(req.query.page)  || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 10, 1);
     const offset = (page - 1) * limit;
 
-    const searchTerm = (req.query.searchTerm || "").trim();
+    const rawSearch = (req.query.searchTerm || "").trim();
     const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : null;
     const brandId    = req.query.brandId    ? parseInt(req.query.brandId)    : null;
 
-    // where cho Product
+    // where cho Product (tìm nhiều từ khóa theo AND)
     const productWhere = {
-      publication_status: 'published',
+      publication_status: "published",
       ...(categoryId ? { category_id: categoryId } : {}),
       ...(brandId    ? { brand_id: brandId }       : {}),
-      ...(searchTerm ? { name: { [Op.like]: `%${searchTerm}%` } } : {}),
+      ...(rawSearch
+        ? {
+            [Op.and]: rawSearch.split(/\s+/).map(kw => ({
+              name: { [Op.like]: `%${kw}%` }
+            })),
+          }
+        : {}
+      ),
     };
 
     // --- Query 1: đếm + lấy IDs (bắt buộc có variant is_auction_only=1) ---
@@ -218,28 +262,24 @@ static async getPublishedAuctionProducts(req, res) {
       include: [
         {
           model: ProductVariant,
-          as: 'variants',
+          as: "variants",
           where: { is_auction_only: 1 },
           required: true,
           attributes: [], // không lấy dữ liệu variant khi đếm
         },
       ],
-      order: [['created_at', 'DESC']],
+      order: [["created_at", "DESC"]],
       limit,
       offset,
-      distinct: true, // để count theo Product, không bị nhân bản bởi include
+      distinct: true, // count theo Product, không bị nhân bản
     });
 
     if (!products.length) {
       return res.status(200).json({
         status: 200,
-        message: 'Không có sản phẩm đấu giá phù hợp',
+        message: "Không có sản phẩm đấu giá phù hợp",
         data: [],
-        pagination: {
-          currentPage: page,
-          totalPages: 0,
-          totalProducts: 0,
-        },
+        pagination: { currentPage: page, totalPages: 0, totalProducts: 0 },
         totalVariants: 0,
       });
     }
@@ -249,30 +289,44 @@ static async getPublishedAuctionProducts(req, res) {
     // --- Query 2: lấy đầy đủ thông tin cho các id vừa tìm được ---
     const productsFull = await Product.findAll({
       where: { id: productIds },
-      order: [['created_at', 'DESC']],
+      order: [["created_at", "DESC"]],
       include: [
         {
           model: ProductVariant,
-          as: 'variants',
+          as: "variants",
           where: { is_auction_only: 1 },
           required: true,
+          attributes: ["id","sku","price","stock","product_id"],
           include: [
             {
               model: ProductVariantAttributeValue,
-              as: 'attributeValues',
-              include: [{ model: ProductAttribute, as: 'attribute' }],
+              as: "attributeValues",
+              include: [{ model: ProductAttribute, as: "attribute" }],
+              required: false,
             },
-            { model: VariantImage, as: 'images' },
+            { model: VariantImage, as: "images", attributes: ["id","image_url"], required: false },
+
+            // (tuỳ chọn) để tính canDelete như các API khác
+            { model: CartDetailModel,  as: "carts",        attributes: ["id"], required: false },
+            { model: OrderDetailModel, as: "orderDetails", attributes: ["id"], required: false },
+            { model: AuctionsModel,    as: "auctions",     attributes: ["id"], required: false },
           ],
         },
-        { model: CategoryModel, as: 'category', attributes: ['id', 'name'] },
-        { model: BrandModel,    as: 'brand',    attributes: ['id', 'name'] },
+        { model: CategoryModel, as: "category", attributes: ["id","name"] },
+        { model: BrandModel,    as: "brand",    attributes: ["id","name"]  },
       ],
     });
 
     const data = productsFull.map((p) => {
       const j = p.toJSON();
-      j.variantCount = p.variants?.length || 0;
+      j.variantCount = j.variants?.length || 0;
+
+      // (tuỳ chọn) canDelete: ẩn nút xoá nếu có biến thể đấu giá đã dùng
+      const anyVariantInUse = (j.variants || []).some(v =>
+        (v.carts?.length > 0) || (v.orderDetails?.length > 0) || (v.auctions?.length > 0)
+      );
+      j.canDelete = (j.variantCount === 0) || !anyVariantInUse;
+
       return j;
     });
 
@@ -283,7 +337,7 @@ static async getPublishedAuctionProducts(req, res) {
 
     return res.status(200).json({
       status: 200,
-      message: 'Lấy danh sách sản phẩm đấu giá đã xuất bản thành công',
+      message: "Lấy danh sách sản phẩm đấu giá đã xuất bản thành công",
       data,
       pagination: {
         currentPage: page,
@@ -293,10 +347,12 @@ static async getPublishedAuctionProducts(req, res) {
       totalVariants,
     });
   } catch (error) {
-    console.error('Lỗi getPublishedAuctionProducts:', error);
+    console.error("Lỗi getPublishedAuctionProducts:", error);
     return res.status(500).json({ error: error.message });
   }
 }
+
+
 
 
 
@@ -672,53 +728,57 @@ static async createProduct(req, res) {
   }
 }
 
+// Nhớ import Op
+// const { Op } = require('sequelize');
+
 static async searchProducts(req, res) {
   try {
-    const { searchTerm, categoryId, brandId, publicationStatus, page = 1, limit = 10 } = req.query;
+    // --------- params & defaults ----------
+    const page  = Math.max(parseInt(req.query.page)  || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+    const offset = (page - 1) * limit;
 
+    const rawSearch = (req.query.searchTerm || "").trim();
+    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId) : null;
+    const brandId    = req.query.brandId    ? parseInt(req.query.brandId)    : null;
+    const publicationStatus = (req.query.publicationStatus || "").trim(); // 'published' | 'draft' | ''
+
+    // --------- where builder ----------
     const whereConditions = [];
 
-    // Tìm theo tên sản phẩm
-    if (searchTerm && searchTerm.trim() !== "") {
-      whereConditions.push({
-        name: {
-          [Op.like]: `%${searchTerm}%`,
-        },
+    // Lọc theo tên sản phẩm với nhiều từ khóa rời (AND)
+    if (rawSearch) {
+      const keywords = rawSearch.split(/\s+/); // VD: "Samsung Watch8" -> ["Samsung","Watch8"]
+      keywords.forEach((kw) => {
+        whereConditions.push({
+          name: { [Op.like]: `%${kw}%` },
+        });
       });
     }
 
-    // Tìm theo danh mục
     if (categoryId) {
-      whereConditions.push({
-        category_id: categoryId,
-      });
+      whereConditions.push({ category_id: categoryId });
     }
 
-    // Tìm theo thương hiệu
     if (brandId) {
-      whereConditions.push({
-        brand_id: brandId,
-      });
+      whereConditions.push({ brand_id: brandId });
     }
 
-    // Lọc theo publication_status
-    if (publicationStatus && publicationStatus.trim() !== "") {
-      whereConditions.push({
-        publication_status: publicationStatus,
-      });
+    if (publicationStatus) {
+      whereConditions.push({ publication_status: publicationStatus });
     }
 
-    const where = {
-      [Op.and]: whereConditions,
-    };
+    const where = whereConditions.length ? { [Op.and]: whereConditions } : {};
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    // --------- count ----------
+    const totalProducts = await Product.count({ where });
 
+    // --------- query data ----------
     const products = await Product.findAll({
       where,
-      offset,
-      limit: parseInt(limit),
       order: [["created_at", "DESC"]],
+      limit,
+      offset,
       include: [
         {
           model: ProductVariant,
@@ -727,49 +787,63 @@ static async searchProducts(req, res) {
             {
               model: ProductVariantAttributeValue,
               as: "attributeValues",
-              include: [
-                {
-                  model: ProductAttribute,
-                  as: "attribute",
-                },
-              ],
+              include: [{ model: ProductAttribute, as: "attribute" }],
+              required: false,
             },
             {
               model: VariantImage,
               as: "images",
+              required: false,
             },
           ],
+          required: false,
         },
-        {
-          model: CategoryModel,
-          as: "category",
-          attributes: ["id", "name"],
-        },
-        {
-          model: BrandModel,
-          as: "brand",
-          attributes: ["id", "name"],
-        },
+        { model: CategoryModel, as: "category", attributes: ["id", "name"] },
+        { model: BrandModel,    as: "brand",    attributes: ["id", "name"]  },
       ],
     });
 
-    if (products.length === 0) {
+    if (!products.length) {
       return res.status(200).json({
         status: 200,
         message: "Không tìm thấy sản phẩm nào.",
         data: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 0,
+          totalProducts: 0,
+        },
+        totalVariants: 0,
       });
     }
 
-    res.status(200).json({
+    // Tính variantCount cho mỗi product + tổng biến thể
+    const data = products.map(p => {
+      const j = p.toJSON();
+      j.variantCount = j.variants?.length || 0;
+      return j;
+    });
+
+    const totalVariants = products.reduce((sum, p) => sum + (p.variants?.length || 0), 0);
+
+    // --------- response ----------
+    return res.status(200).json({
       status: 200,
       message: "Tìm kiếm sản phẩm thành công",
-      data: products,
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+      },
+      totalVariants,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("searchProducts error:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
+
 
 
 
