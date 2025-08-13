@@ -494,12 +494,25 @@ class PromotionController {
             model: OrderModel,
             as: 'orders',
             required: true,
-            attributes: ['id', 'order_code', 'total_price', 'status', 'created_at', 'payment_method', 'shipping_address', 'note'],
+            attributes: [
+              'id',
+              'order_code',
+              'status',
+              'created_at',
+              'payment_method',
+              'shipping_address',
+              'note',
+              'total_price',
+              'shipping_fee',
+              'discount_amount',
+              'special_discount_amount',
+              'wallet_balance',
+            ],
             include: [
               {
                 model: UserModel,
                 as: 'user',
-                attributes: ['id', 'name', 'email']
+                attributes: ['id', 'name', 'email', 'phone'],
               },
               {
                 model: require('../../models/orderDetailsModel'),
@@ -508,19 +521,20 @@ class PromotionController {
                   {
                     model: require('../../models/productVariantsModel'),
                     as: 'variant',
+                    attributes: ['id', 'sku', 'price', 'stock'],
                     include: [
                       {
                         model: require('../../models/productsModel'),
                         as: 'product',
-                        attributes: ['id', 'name']
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+                        attributes: ['id', 'name'],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       });
 
       if (!promotion) {
@@ -529,7 +543,7 @@ class PromotionController {
 
       res.status(200).json({
         success: true,
-        orders: promotion.orders
+        orders: promotion.orders,
       });
     } catch (error) {
       console.error('Lỗi khi lấy đơn hàng theo khuyến mãi:', error);
@@ -537,7 +551,123 @@ class PromotionController {
     }
   }
 
+  static async getPromotionUsage(req, res) {
+    try {
+      const promotionId = req.query.promotionId ? Number(req.query.promotionId) : null;
 
+      // whitelist trạng thái để build IN() an toàn
+      const whitelist = new Set(['pending', 'confirmed', 'shipping', 'completed', 'delivered', 'cancelled']);
+      const defaultStatuses = ['confirmed', 'shipping', 'completed', 'delivered'];
+      const statuses = (req.query.statuses ? String(req.query.statuses).split(',') : defaultStatuses)
+        .map(s => s.trim())
+        .filter(s => whitelist.has(s));
+      if (statuses.length === 0) statuses.push(...defaultStatuses);
+
+      const from = req.query.from ? new Date(req.query.from) : null;
+      const to = req.query.to ? new Date(req.query.to) : null;
+
+      // helper format ‘YYYY-MM-DD HH:mm:ss’
+      const fmt = (d) => d ? new Date(d).toISOString().replace('T', ' ').substring(0, 19) : null;
+
+      const inStatuses = `(${statuses.map(s => `'${s}'`).join(',')})`;
+      const fromClause = from ? `AND o.created_at >= '${fmt(from)}'` : '';
+      const toClause = to ? `AND o.created_at <  '${fmt(to)}'` : '';
+
+      // subqueries bằng literal — tham chiếu alias bảng promotions là "Promotion"
+      const orderUsedLiteral = literal(`
+        COALESCE((
+          SELECT COUNT(*)
+          FROM orders o
+          WHERE o.promotion_id = Promotion.id
+            AND o.status IN ${inStatuses}
+            ${fromClause} ${toClause}
+        ), 0)
+      `);
+
+      const specialUsedLiteral = literal(`
+        COALESCE((
+          SELECT COUNT(*)
+          FROM orders o
+          JOIN promotion_users pu ON pu.id = o.promotion_user_id
+          WHERE pu.promotion_id = Promotion.id
+            AND o.status IN ${inStatuses}
+            ${fromClause} ${toClause}
+        ), 0)
+      `);
+
+      const productQtyLiteral = literal(`
+        COALESCE((
+          SELECT SUM(od.promotion_applied_qty)
+          FROM order_details od
+          JOIN promotion_products pp ON pp.id = od.promotion_product_id
+          JOIN orders o ON o.id = od.order_id
+          WHERE pp.promotion_id = Promotion.id
+            AND o.status IN ${inStatuses}
+            ${fromClause} ${toClause}
+        ), 0)
+      `);
+
+      const totalDiscountLiteral = literal(`
+        COALESCE((
+          SELECT SUM(COALESCE(o.discount_amount,0) + COALESCE(o.special_discount_amount,0))
+          FROM orders o
+          WHERE o.promotion_id = Promotion.id
+            AND o.status IN ${inStatuses}
+            ${fromClause} ${toClause}
+        ), 0)
+      `);
+
+      const where = {};
+      if (promotionId) where.id = promotionId;
+
+      const rows = await PromotionModel.findAll({
+        where,
+        attributes: [
+          'id',
+          'name',
+          'special_promotion',
+          'applicable_to',
+          [orderUsedLiteral, 'order_used_count'],
+          [specialUsedLiteral, 'special_used_count'],
+          [productQtyLiteral, 'product_used_qty'],
+          [totalDiscountLiteral, 'total_discount_amount'],
+        ],
+        order: [['created_at', 'DESC']],
+      });
+
+      const data = rows.map(r => {
+        const order_used_count = Number(r.get('order_used_count') || 0);
+        const special_used_count = Number(r.get('special_used_count') || 0);
+        const product_used_qty = Number(r.get('product_used_qty') || 0);
+        const total_discount_amount = Number(r.get('total_discount_amount') || 0);
+        return {
+          promotion_id: r.id,
+          name: r.name,
+          special_promotion: !!r.special_promotion,
+          applicable_to: r.applicable_to,
+          order_used_count,
+          special_used_count,
+          product_used_qty,
+          used_total_effective: order_used_count + special_used_count + product_used_qty,
+          total_discount_amount,
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        filters: {
+          promotionId: promotionId || null,
+          statuses,
+          from: from ? fmt(from) : null,
+          to: to ? fmt(to) : null,
+        },
+        data,
+      });
+    } catch (error) {
+      console.error('Lỗi khi lấy usage khuyến mãi:', error);
+      return res.status(500).json({ success: false, message: 'Lỗi máy chủ.' });
+    }
+  }
 }
 
 module.exports = PromotionController;

@@ -170,7 +170,7 @@ function PromotionGetAll() {
         }
     };
 
-    const deletePromotion = async () => {
+       const deletePromotion = async () => {
         if (!selectedPromotion) return;
         try {
             await axios.delete(`${Constants.DOMAIN_API}/admin/promotion/${selectedPromotion.id}`);
@@ -251,7 +251,7 @@ function PromotionGetAll() {
                     }}
                     className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm rounded ml-2"
                 >
-                    đã sử dụng
+                    Đã sử dụng
                 </button>
             </div>
 

@@ -168,7 +168,7 @@ class OrderController {
         }
     }
 
-    static async cancelOrder(req, res) {
+static async cancelOrder(req, res) {
         const t = await sequelize.transaction();
         try {
             const { id } = req.params;
@@ -217,6 +217,72 @@ class OrderController {
                     );
                 }
             }
+const promoDetails = await OrderDetail.findAll({
+  where: {
+    order_id: order.id,
+    promotion_product_id: { [Op.ne]: null },
+    promotion_applied_qty: { [Op.gt]: 0 },
+  },
+  include: [
+    {
+      model: PromotionProductModel,
+      as: "promotionProduct",          // chỉnh alias cho đúng dự án bạn
+      attributes: ["id", "promotion_id"],
+      include: [
+        {
+          model: PromotionModel,
+          as: "promotion",             // alias đúng với association
+          attributes: ["id", "special_promotion"],
+        },
+      ],
+    },
+  ],
+  transaction: t,
+  lock: t.LOCK.UPDATE,
+});
+
+// 2) Gom tổng
+const promoTotals = new Map();     // promotion_id -> total qty
+const productTotals = new Map();   // promotion_product_id -> total qty
+const involvedPromotionIds = new Set();
+
+for (const d of promoDetails) {
+  const qty = Number(d.promotion_applied_qty || 0);
+  const pp = d.promotionProduct;
+  if (!pp || !qty) continue;
+
+  const promoId = pp.promotion_id || pp.promotion?.id;
+  if (!promoId) continue;
+
+  involvedPromotionIds.add(promoId);
+  promoTotals.set(promoId, (promoTotals.get(promoId) || 0) + qty);
+  productTotals.set(pp.id, (productTotals.get(pp.id) || 0) + qty);
+}
+// 3) Hoàn về Promotion.quantity, có bù trừ nếu trùng promo.id đã +1 ở block cũ
+for (const [promotion_id, totalQty] of promoTotals) {
+  const adjust = (promo && promotion_id === promo.id)
+    ? Math.max(totalQty - 1, 0)   // đã +1 ở block cũ → chỉ cộng thêm (tổng-1)
+    : totalQty;
+
+  if (adjust > 0) {
+    await PromotionModel.increment("quantity", {
+      by: adjust,
+      where: { id: promotion_id },
+      transaction: t,
+    });
+  }
+}
+
+// 4) Hoàn về PromotionProduct.variant_quantity theo từng dòng
+for (const [promotion_product_id, byQty] of productTotals) {
+  await PromotionProductModel.increment("variant_quantity", {
+    by: byQty,
+    where: { id: promotion_product_id },
+    transaction: t,
+  });
+}
+
+// 5) Mở lại PromotionUser.used=false cho các promotion khác (promo.id đã mở ở block cũ)
 
             order.status = "cancelled";
             order.cancellation_reason = cancellation_reason || null;
